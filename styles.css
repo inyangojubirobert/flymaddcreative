@@ -13,3 +13,10 @@
 
 /* Improve word wrapping and hyphenation for long words on small screens */
 h1, h2, h3, h4, h5, h6, p { overflow-wrap: anywhere; hyphens: auto; }
+
+/* Keep onboarding controls visible above slides and inside safe areas */
+.onboarding-controls {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); /* ~bottom-4 plus safe area */
+  z-index: 10; /* above slide content */
+}
