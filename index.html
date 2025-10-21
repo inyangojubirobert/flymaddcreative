@@ -16,8 +16,66 @@
         <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
     </div>
 
-    <!-- Object-Oriented Canvas Animation (background) -->
-    <canvas id="scene" class="absolute inset-0 w-full h-full z-0"></canvas>
+    <!-- Onboarding Storyboard -->
+    <div id="onboarding" class="absolute inset-0 w-full h-full z-0 overflow-hidden bg-black">
+        <div id="slides" class="h-full w-full whitespace-nowrap transition-transform duration-700 ease-out will-change-transform">
+            <!-- Slide 1: Mission -->
+            <section class="inline-block align-top w-full h-full relative">
+                <img src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=1600&auto=format&fit=crop" alt="Global creative mission" class="w-full h-full object-cover opacity-70" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="max-w-3xl mx-auto px-6 text-center text-white">
+                        <h2 class="text-4xl md:text-6xl font-bold mb-4">Flymadd Creative</h2>
+                        <p class="text-lg md:text-2xl opacity-90">Branding for global clients. We craft experiences that connect, convert, and scale.</p>
+                    </div>
+                </div>
+            </section>
+            <!-- Slide 2: Graphics & Brand Identity -->
+            <section class="inline-block align-top w-full h-full relative">
+                <img src="https://images.unsplash.com/photo-1529336953121-a0ce66f9b2ea?q=80&w=1600&auto=format&fit=crop" alt="Brand identity and graphics" class="w-full h-full object-cover opacity-70" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="max-w-3xl mx-auto px-6 text-center text-white">
+                        <h2 class="text-3xl md:text-5xl font-semibold mb-3">Graphics & Brand Identity</h2>
+                        <p class="text-lg md:text-xl opacity-90">From logos to launch kits—distinctive visuals that set your brand apart and stay consistent across every touchpoint.</p>
+                    </div>
+                </div>
+            </section>
+            <!-- Slide 3: UI/UX Design -->
+            <section class="inline-block align-top w-full h-full relative">
+                <img src="https://images.unsplash.com/photo-1559027615-5e05f6f66f8f?q=80&w=1600&auto=format&fit=crop" alt="UI UX design" class="w-full h-full object-cover opacity-70" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="max-w-3xl mx-auto px-6 text-center text-white">
+                        <h2 class="text-3xl md:text-5xl font-semibold mb-3">UI/UX Design</h2>
+                        <p class="text-lg md:text-xl opacity-90">Human-centered interfaces that drive clarity and delight, validated through research and prototyping.</p>
+                    </div>
+                </div>
+            </section>
+            <!-- Slide 4: Full‑Stack Development -->
+            <section class="inline-block align-top w-full h-full relative">
+                <img src="https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1600&auto=format&fit=crop" alt="Full stack development" class="w-full h-full object-cover opacity-70" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="max-w-3xl mx-auto px-6 text-center text-white">
+                        <h2 class="text-3xl md:text-5xl font-semibold mb-3">Full‑Stack Development</h2>
+                        <p class="text-lg md:text-xl opacity-90">Robust, scalable apps and websites—built with modern stacks, performance, and SEO baked in.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Controls -->
+        <div class="absolute bottom-6 left-0 right-0 flex items-center justify-between px-6">
+            <button id="btnBack" class="text-white/80 hover:text-white text-sm md:text-base px-3 py-2 rounded">Back</button>
+            <div id="dots" class="flex items-center gap-2"></div>
+            <div class="flex items-center gap-2">
+                <button id="btnSkip" class="text-white/80 hover:text-white text-sm md:text-base px-3 py-2 rounded">Skip</button>
+                <button id="btnNext" class="bg-white/90 hover:bg-white text-black text-sm md:text-base font-medium px-4 py-2 rounded">Next</button>
+                <button id="btnStart" class="hidden bg-blue-500 hover:bg-blue-600 text-white text-sm md:text-base font-medium px-4 py-2 rounded">Get Started</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <div id="mainContent" class="opacity-0 transition-opacity duration-1000 text-center px-4 relative z-10">
@@ -28,238 +86,95 @@
     </div>
 
     <script>
-        // High-tech circuit animation (OOP)
-        class Track {
-            constructor(points, color = '#22d3ee') {
-                this.points = points; // [{x,y}, ...]
-                this.color = color;
+        // Onboarding slider logic
+        class Onboarding {
+            constructor(root, slidesEl, dotsEl, backBtn, nextBtn, skipBtn, startBtn) {
+                this.root = root;
+                this.slidesEl = slidesEl;
+                this.dotsEl = dotsEl;
+                this.backBtn = backBtn;
+                this.nextBtn = nextBtn;
+                this.skipBtn = skipBtn;
+                this.startBtn = startBtn;
+                this.index = 0;
+                this.count = slidesEl.children.length;
+                this.initDots();
+                this.update();
+                this.bind();
             }
-            length() {
-                let L = 0;
-                for (let i = 0; i < this.points.length - 1; i++) {
-                    const a = this.points[i], b = this.points[i + 1];
-                    L += Math.hypot(b.x - a.x, b.y - a.y);
+            initDots() {
+                this.dotsEl.innerHTML = '';
+                for (let i = 0; i < this.count; i++) {
+                    const b = document.createElement('button');
+                    b.className = 'w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-white/40 hover:bg-white transition-colors';
+                    b.setAttribute('aria-label', `Go to slide ${i + 1}`);
+                    b.addEventListener('click', () => { this.index = i; this.update(true); });
+                    this.dotsEl.appendChild(b);
                 }
-                return L;
             }
-            draw(ctx) {
-                ctx.save();
-                ctx.lineWidth = 1.5;
-                ctx.strokeStyle = this.color;
-                ctx.shadowColor = this.color;
-                ctx.shadowBlur = 8;
-                ctx.beginPath();
-                ctx.moveTo(this.points[0].x, this.points[0].y);
-                for (let i = 1; i < this.points.length; i++) ctx.lineTo(this.points[i].x, this.points[i].y);
-                ctx.stroke();
-                ctx.restore();
+            bind() {
+                this.backBtn.addEventListener('click', () => { this.prev(); });
+                this.nextBtn.addEventListener('click', () => { this.next(); });
+                this.skipBtn.addEventListener('click', () => { this.finish(); });
+                this.startBtn.addEventListener('click', () => { this.finish(); });
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight') this.next();
+                    if (e.key === 'ArrowLeft') this.prev();
+                });
+            }
+            prev() { if (this.index > 0) { this.index--; this.update(true); } }
+            next() { if (this.index < this.count - 1) { this.index++; this.update(true); } }
+            update(animate = false) {
+                const w = this.root.clientWidth;
+                this.slidesEl.style.transitionDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '0ms' : (animate ? '700ms' : '0ms');
+                this.slidesEl.style.transform = `translateX(-${this.index * w}px)`;
+                // dots
+                Array.from(this.dotsEl.children).forEach((d, i) => {
+                    d.classList.toggle('bg-white', i === this.index);
+                    d.classList.toggle('bg-white/40', i !== this.index);
+                });
+                // buttons
+                this.backBtn.classList.toggle('opacity-40', this.index === 0);
+                this.backBtn.disabled = this.index === 0;
+                const atEnd = this.index === this.count - 1;
+                this.nextBtn.classList.toggle('hidden', atEnd);
+                this.startBtn.classList.toggle('hidden', !atEnd);
+            }
+            finish() {
+                this.root.style.display = 'none';
+                const main = document.getElementById('mainContent');
+                if (main) main.classList.add('opacity-100');
             }
         }
 
-        class Pulse {
-            constructor(track, speed, size = 3, color = '#38bdf8') {
-                this.track = track; this.speed = speed; this.size = size; this.color = color;
-                this.seg = 0; this.t = 0; // position along current segment
-            }
-            update(dt) {
-                // advance along polyline
-                while (dt > 0) {
-                    const a = this.track.points[this.seg];
-                    const b = this.track.points[this.seg + 1];
-                    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
-                    const remain = (1 - this.t) * segLen;
-                    const step = Math.min(remain, this.speed * dt);
-                    this.t += step / segLen;
-                    dt -= step / this.speed;
-                    if (this.t >= 1) { this.t = 0; this.seg = (this.seg + 1) % (this.track.points.length - 1); }
-                }
-            }
-            position() {
-                const a = this.track.points[this.seg];
-                const b = this.track.points[this.seg + 1];
-                return { x: a.x + (b.x - a.x) * this.t, y: a.y + (b.y - a.y) * this.t };
-            }
-            draw(ctx) {
-                const p = this.position();
-                ctx.save();
-                ctx.fillStyle = this.color;
-                ctx.shadowColor = this.color;
-                ctx.shadowBlur = 16;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-            }
-        }
-
-        class Scene {
-            constructor(canvas) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-                this.tracks = [];
-                this.pulses = [];
-                this.animationId = null;
-                this.lastTime = performance.now();
-                this.handleResize = this.resize.bind(this);
-                this.resize();
-                window.addEventListener('resize', this.handleResize);
-                this.init();
-            }
-            resize() {
-                const { clientWidth: w, clientHeight: h } = this.canvas;
-                this.canvas.width = Math.floor(w * this.pixelRatio);
-                this.canvas.height = Math.floor(h * this.pixelRatio);
-                this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
-            }
-            init() {
-                const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-                const grid = 48; // grid size for right-angle paths
-                const margin = grid * 1.5;
-                const palette = ['#22d3ee', '#60a5fa', '#34d399', '#a78bfa'];
-
-                // background grid lines for tech look
-                this.bgGrid = { grid, color: 'rgba(148,163,184,0.10)' };
-
-                const trackCount = Math.max(12, Math.floor((w + h) / 120));
-                this.tracks = [];
-                for (let i = 0; i < trackCount; i++) {
-                    const color = palette[i % palette.length];
-                    const pts = [];
-                    let x = margin + Math.floor(Math.random() * ((w - margin * 2) / grid)) * grid;
-                    let y = margin + Math.floor(Math.random() * ((h - margin * 2) / grid)) * grid;
-                    pts.push({ x, y });
-                    const steps = 3 + Math.floor(Math.random() * 5);
-                    let dir = Math.random() < 0.5 ? 'h' : 'v';
-                    for (let s = 0; s < steps; s++) {
-                        if (dir === 'h') {
-                            const maxStep = Math.floor((w - margin - x) / grid);
-                            const minStep = -Math.floor((x - margin) / grid);
-                            const step = Math.max(-3, Math.min(3, (Math.random() * 6 | 0) - 3));
-                            const move = Math.max(1, Math.min(dir === 'h' ? maxStep : 0, Math.abs(step)));
-                            x += Math.sign(step || 1) * move * grid;
-                        } else {
-                            const maxStep = Math.floor((h - margin - y) / grid);
-                            const minStep = -Math.floor((y - margin) / grid);
-                            const step = Math.max(-3, Math.min(3, (Math.random() * 6 | 0) - 3));
-                            const move = Math.max(1, Math.min(dir === 'v' ? maxStep : 0, Math.abs(step)));
-                            y += Math.sign(step || 1) * move * grid;
-                        }
-                        pts.push({ x, y });
-                        dir = dir === 'h' ? 'v' : 'h';
-                    }
-                    this.tracks.push(new Track(pts, color));
-                }
-
-                // pulses on tracks
-                this.pulses = [];
-                for (const t of this.tracks) {
-                    const n = 1 + (Math.random() < 0.5 ? 1 : 0);
-                    for (let k = 0; k < n; k++) {
-                        const speed = 80 + Math.random() * 140; // px/sec
-                        const p = new Pulse(t, speed, 2.5 + Math.random() * 1.5, t.color);
-                        p.seg = Math.floor(Math.random() * (t.points.length - 1));
-                        p.t = Math.random();
-                        this.pulses.push(p);
-                    }
-                }
-            }
-            drawGrid() {
-                const { grid, color } = this.bgGrid;
-                const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
-                const ctx = this.ctx;
-                ctx.save();
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 1;
-                for (let x = 0; x <= w; x += grid) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
-                for (let y = 0; y <= h; y += grid) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-                ctx.restore();
-            }
-            step(dt) {
-                const w = this.canvas.clientWidth; const h = this.canvas.clientHeight;
-                const ctx = this.ctx;
-                ctx.clearRect(0, 0, w, h);
-
-                // subtle dark gradient background overlay
-                const grad = ctx.createLinearGradient(0, 0, w, h);
-                grad.addColorStop(0, 'rgba(2,6,23,0.25)');
-                grad.addColorStop(1, 'rgba(15,23,42,0.25)');
-                ctx.fillStyle = grad;
-                ctx.fillRect(0, 0, w, h);
-
-                this.drawGrid();
-
-                // draw tracks
-                for (const t of this.tracks) t.draw(ctx);
-
-                // update and draw pulses
-                for (const p of this.pulses) { p.update(dt); p.draw(ctx); }
-
-                // occasional scanline sweep
-                const time = performance.now() * 0.001;
-                const sweepY = (Math.sin(time * 0.5) * 0.5 + 0.5) * h;
-                const grad2 = ctx.createLinearGradient(0, sweepY - 40, 0, sweepY + 40);
-                grad2.addColorStop(0, 'rgba(56,189,248,0)');
-                grad2.addColorStop(0.5, 'rgba(56,189,248,0.12)');
-                grad2.addColorStop(1, 'rgba(56,189,248,0)');
-                ctx.fillStyle = grad2;
-                ctx.fillRect(0, sweepY - 40, w, 80);
-            }
-            start() {
-                const loop = (now) => {
-                    const dt = Math.min(0.05, (now - this.lastTime) / 1000);
-                    this.lastTime = now;
-                    this.step(dt);
-                    this.animationId = requestAnimationFrame(loop);
-                };
-                this.lastTime = performance.now();
-                this.animationId = requestAnimationFrame(loop);
-            }
-            stop() { if (this.animationId) cancelAnimationFrame(this.animationId); }
-            destroy() {
-                this.stop();
-                window.removeEventListener('resize', this.handleResize);
-            }
-        }
-
-        // Wait until the page fully loads, then fade out preloader and start scene
+        // Wait until page loads: fade preloader, then enable onboarding
         window.addEventListener('load', () => {
             const preloader = document.getElementById('preloader');
             const mainContent = document.getElementById('mainContent');
-            const canvas = document.getElementById('scene');
+            const onboarding = document.getElementById('onboarding');
+            const slides = document.getElementById('slides');
+            const dots = document.getElementById('dots');
+            const btnBack = document.getElementById('btnBack');
+            const btnNext = document.getElementById('btnNext');
+            const btnSkip = document.getElementById('btnSkip');
+            const btnStart = document.getElementById('btnStart');
 
             preloader.style.opacity = '0';
             setTimeout(() => {
                 preloader.style.display = 'none';
-                mainContent.classList.add('opacity-100');
-
-                const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                if (!prefersReduced) {
-                    canvas.width = canvas.clientWidth;
-                    canvas.height = canvas.clientHeight;
-                    const scene = new Scene(canvas);
-                    scene.start();
-                }
+                // keep main content hidden until onboarding finish
+                mainContent.classList.remove('opacity-100');
+                const ob = new Onboarding(onboarding, slides, dots, btnBack, btnNext, btnSkip, btnStart);
+                // handle window resize to keep slide position
+                window.addEventListener('resize', () => ob.update(false));
             }, 500);
         });
     </script>
 
     <style>
-        /* Ensure canvas fills background without causing scroll */
-        #scene {
-            display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-        }
-
         /* Respect reduced motion preferences */
         @media (prefers-reduced-motion: reduce) {
-            #scene {
-                display: none;
-            }
+            #slides { transition: none !important; }
         }
     </style>
 
