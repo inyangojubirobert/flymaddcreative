@@ -21,20 +21,18 @@
 
         <!-- Onboarding Storyboard -->
         <div id="onboarding" class="relative w-full h-[60vh] overflow-hidden bg-slate-950 rounded-[29px] shadow-xl m-2">
-            <div class="p-1 sm:p-2 h-full">
-                <div id="slides"
-                    class="h-full w-full whitespace-nowrap transition-transform duration-700 ease-out will-change-transform">
-                <!-- Slide 1: Mission -->
-                <section class="inline-block align-top w-full h-full relative">
-                    <img src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?q=80&w=1600&auto=format&fit=crop"
-                        alt="Global creative mission" class="w-full h-full object-cover opacity-60" />
+            <div id="slides" class="flex h-full w-full transition-transform duration-700 ease-out">
+                <!-- Slide 1 -->
+                <section class="flex-shrink-0 w-full h-full relative">
+                    <img src="..." alt="..." class="w-full h-full object-cover opacity-60" />
                     <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/40 to-transparent">
                     </div>
                     <div class="absolute inset-0 flex items-center justify-center">
-                        <div class="max-w-3xl mx-auto px-3 sm:px-4 text-center text-white">
+                        <div class="max-w-3xl mx-auto px-4 text-center text-white">
                             <h2 class="text-4xl md:text-6xl font-bold mb-4 fade-up">Flymadd Creative</h2>
                             <p class="text-lg md:text-2xl text-slate-200/90 fade-up" style="animation-delay:.15s">
-                                Branding for global clients. We craft experiences that connect, convert, and scale.</p>
+                                Branding for global clients. We craft experiences that connect, convert, and scale.
+                            </p>
                         </div>
                     </div>
                 </section>
@@ -86,11 +84,12 @@
 
             <!-- Controls below slides -->
             <div id="controlsRow" class="flex items-center justify-between px-6 sm:px-8 mt-2 mb-4">
-                <button id="btnBack"
-                    class="text-slate-700 hover:text-slate-900 text-sm md:text-base px-3 py-2 rounded"
+                <button id="btnBack" class="text-slate-700 hover:text-slate-900 text-sm md:text-base px-3 py-2 rounded"
                     aria-label="Back">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
-                        <path fill-rule="evenodd" d="M15.78 4.72a.75.75 0 0 1 0 1.06L9.56 12l6.22 6.22a.75.75 0 1 1-1.06 1.06l-6.75-6.75a.75.75 0 0 1 0-1.06l6.75-6.75a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+                        <path fill-rule="evenodd"
+                            d="M15.78 4.72a.75.75 0 0 1 0 1.06L9.56 12l6.22 6.22a.75.75 0 1 1-1.06 1.06l-6.75-6.75a.75.75 0 0 1 0-1.06l6.75-6.75a.75.75 0 0 1 1.06 0Z"
+                            clip-rule="evenodd" />
                     </svg>
                 </button>
                 <div id="dots" class="flex items-center gap-2 justify-center"></div>
@@ -103,124 +102,125 @@
                         class="hidden bg-blue-600 hover:bg-blue-700 text-white text-sm md:text-base font-medium px-4 py-2 rounded shadow-sm">Get
                         Started</button>
                 </div>
-                </div>
             </div>
         </div>
+    </div>
 
-        <!-- Main Content -->
-        <div id="mainContent" class="opacity-0 transition-opacity duration-1000 text-center px-6 sm:px-10 py-8 relative z-10">
-            <h1 class="text-5xl font-bold mb-4 text-gray-800">Welcome to Flymadd Creative</h1>
-            <p class="text-xl text-gray-600">Our website is coming soon 🚀</p>
-            <button class="mt-8 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Contact
-                Us</button>
-        </div>
+    <!-- Main Content -->
+    <div id="mainContent"
+        class="opacity-0 transition-opacity duration-1000 text-center px-6 sm:px-10 py-8 relative z-10">
+        <h1 class="text-5xl font-bold mb-4 text-gray-800">Welcome to Flymadd Creative</h1>
+        <p class="text-xl text-gray-600">Our website is coming soon 🚀</p>
+        <button class="mt-8 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Contact
+            Us</button>
+    </div>
 
-        <script>
-            // Onboarding slider logic with autoplay
-            class Onboarding {
-                constructor(root, slidesEl, dotsEl, backBtn, nextBtn, skipBtn, startBtn) {
-                    this.root = root;
-                    this.slidesEl = slidesEl;
-                    this.dotsEl = dotsEl;
-                    this.backBtn = backBtn;
-                    this.nextBtn = nextBtn;
-                    this.skipBtn = skipBtn;
-                    this.startBtn = startBtn;
-                    this.index = 0;
-                    this.count = slidesEl.children.length;
-                    this.timer = null;
-                    this.intervalMs = 5000;
-                    this.initDots();
-                    this.update();
-                    this.bind();
-                    this.autoplay();
-                }
-                initDots() {
-                    this.dotsEl.innerHTML = '';
-                    for (let i = 0; i < this.count; i++) {
-                        const b = document.createElement('button');
-                        b.className = 'w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-gray-300 hover:bg-gray-400 transition-colors';
-                        b.setAttribute('aria-label', `Go to slide ${i + 1}`);
-                        b.addEventListener('click', () => { this.index = i; this.update(true); });
-                        this.dotsEl.appendChild(b);
-                    }
-                }
-                bind() {
-                    this.backBtn.addEventListener('click', () => { this.prev(); });
-                    this.nextBtn.addEventListener('click', () => { this.next(); });
-                    this.skipBtn.addEventListener('click', () => { this.finish(); });
-                    this.startBtn.addEventListener('click', () => { this.finish(); });
-                    window.addEventListener('keydown', (e) => {
-                        if (e.key === 'ArrowRight') this.next();
-                        if (e.key === 'ArrowLeft') this.prev();
-                    });
-                    // pause autoplay while interacting
-                    [this.backBtn, this.nextBtn, this.skipBtn, this.startBtn, this.dotsEl].forEach(el => {
-                        el.addEventListener('mouseenter', () => this.stopAutoplay());
-                        el.addEventListener('mouseleave', () => this.autoplay());
-                    });
-                }
-                prev() { if (this.index > 0) { this.index--; this.update(true); } }
-                next() { if (this.index < this.count - 1) { this.index++; this.update(true); } }
-                nextOrFinish() {
-                    if (this.index < this.count - 1) { this.next(); }
-                    else { this.finish(); }
-                }
-                update(animate = false) {
-                    const w = this.root.clientWidth;
-                    this.slidesEl.style.transitionDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '0ms' : (animate ? '700ms' : '0ms');
-                    this.slidesEl.style.transform = `translateX(-${this.index * w}px)`;
-                    // dots
-                    Array.from(this.dotsEl.children).forEach((d, i) => {
-                        d.classList.toggle('bg-blue-600', i === this.index);
-                        d.classList.toggle('bg-gray-300', i !== this.index);
-                    });
-                    // buttons
-                    this.backBtn.classList.toggle('opacity-40', this.index === 0);
-                    this.backBtn.disabled = this.index === 0;
-                    const atEnd = this.index === this.count - 1;
-                    this.nextBtn.classList.toggle('hidden', atEnd);
-                    this.startBtn.classList.toggle('hidden', !atEnd);
-                }
-                finish() {
-                    this.root.style.display = 'none';
-                    const controls = document.getElementById('controlsRow');
-                    if (controls) controls.style.display = 'none';
-                    const main = document.getElementById('mainContent');
-                    if (main) main.classList.add('opacity-100');
-                    this.stopAutoplay();
-                }
-                autoplay() {
-                    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-                    this.stopAutoplay();
-                    this.timer = setInterval(() => this.nextOrFinish(), this.intervalMs);
-                }
-                stopAutoplay() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
+    <script>
+        // Onboarding slider logic with autoplay
+        class Onboarding {
+            constructor(root, slidesEl, dotsEl, backBtn, nextBtn, skipBtn, startBtn) {
+                this.root = root;
+                this.slidesEl = slidesEl;
+                this.dotsEl = dotsEl;
+                this.backBtn = backBtn;
+                this.nextBtn = nextBtn;
+                this.skipBtn = skipBtn;
+                this.startBtn = startBtn;
+                this.index = 0;
+                this.count = slidesEl.children.length;
+                this.timer = null;
+                this.intervalMs = 5000;
+                this.initDots();
+                this.update();
+                this.bind();
+                this.autoplay();
             }
+            initDots() {
+                this.dotsEl.innerHTML = '';
+                for (let i = 0; i < this.count; i++) {
+                    const b = document.createElement('button');
+                    b.className = 'w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-gray-300 hover:bg-gray-400 transition-colors';
+                    b.setAttribute('aria-label', `Go to slide ${i + 1}`);
+                    b.addEventListener('click', () => { this.index = i; this.update(true); });
+                    this.dotsEl.appendChild(b);
+                }
+            }
+            bind() {
+                this.backBtn.addEventListener('click', () => { this.prev(); });
+                this.nextBtn.addEventListener('click', () => { this.next(); });
+                this.skipBtn.addEventListener('click', () => { this.finish(); });
+                this.startBtn.addEventListener('click', () => { this.finish(); });
+                window.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight') this.next();
+                    if (e.key === 'ArrowLeft') this.prev();
+                });
+                // pause autoplay while interacting
+                [this.backBtn, this.nextBtn, this.skipBtn, this.startBtn, this.dotsEl].forEach(el => {
+                    el.addEventListener('mouseenter', () => this.stopAutoplay());
+                    el.addEventListener('mouseleave', () => this.autoplay());
+                });
+            }
+            prev() { if (this.index > 0) { this.index--; this.update(true); } }
+            next() { if (this.index < this.count - 1) { this.index++; this.update(true); } }
+            nextOrFinish() {
+                if (this.index < this.count - 1) { this.next(); }
+                else { this.finish(); }
+            }
+            update(animate = false) {
+                const w = this.root.clientWidth;
+                this.slidesEl.style.transitionDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '0ms' : (animate ? '700ms' : '0ms');
+                this.slidesEl.style.transform = `translateX(-${this.index * w}px)`;
+                // dots
+                Array.from(this.dotsEl.children).forEach((d, i) => {
+                    d.classList.toggle('bg-blue-600', i === this.index);
+                    d.classList.toggle('bg-gray-300', i !== this.index);
+                });
+                // buttons
+                this.backBtn.classList.toggle('opacity-40', this.index === 0);
+                this.backBtn.disabled = this.index === 0;
+                const atEnd = this.index === this.count - 1;
+                this.nextBtn.classList.toggle('hidden', atEnd);
+                this.startBtn.classList.toggle('hidden', !atEnd);
+            }
+            finish() {
+                this.root.style.display = 'none';
+                const controls = document.getElementById('controlsRow');
+                if (controls) controls.style.display = 'none';
+                const main = document.getElementById('mainContent');
+                if (main) main.classList.add('opacity-100');
+                this.stopAutoplay();
+            }
+            autoplay() {
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                this.stopAutoplay();
+                this.timer = setInterval(() => this.nextOrFinish(), this.intervalMs);
+            }
+            stopAutoplay() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
+        }
 
-            // Wait until page loads: fade preloader, then enable onboarding
-            window.addEventListener('load', () => {
-                const preloader = document.getElementById('preloader');
-                const mainContent = document.getElementById('mainContent');
-                const onboarding = document.getElementById('onboarding');
-                const slides = document.getElementById('slides');
-                const dots = document.getElementById('dots');
-                const btnBack = document.getElementById('btnBack');
-                const btnNext = document.getElementById('btnNext');
-                const btnSkip = document.getElementById('btnSkip');
-                const btnStart = document.getElementById('btnStart');
+        // Wait until page loads: fade preloader, then enable onboarding
+        window.addEventListener('load', () => {
+            const preloader = document.getElementById('preloader');
+            const mainContent = document.getElementById('mainContent');
+            const onboarding = document.getElementById('onboarding');
+            const slides = document.getElementById('slides');
+            const dots = document.getElementById('dots');
+            const btnBack = document.getElementById('btnBack');
+            const btnNext = document.getElementById('btnNext');
+            const btnSkip = document.getElementById('btnSkip');
+            const btnStart = document.getElementById('btnStart');
 
-                preloader.style.opacity = '0';
-                setTimeout(() => {
-                    preloader.style.display = 'none';
-                    // keep main content hidden until onboarding finish
-                    mainContent.classList.remove('opacity-100');
-                    const ob = new Onboarding(onboarding, slides, dots, btnBack, btnNext, btnSkip, btnStart);
-                    // handle window resize to keep slide position
-                    window.addEventListener('resize', () => ob.update(false));
-                }, 500);
-            });
-        </script>
+            preloader.style.opacity = '0';
+            setTimeout(() => {
+                preloader.style.display = 'none';
+                // keep main content hidden until onboarding finish
+                mainContent.classList.remove('opacity-100');
+                const ob = new Onboarding(onboarding, slides, dots, btnBack, btnNext, btnSkip, btnStart);
+                // handle window resize to keep slide position
+                window.addEventListener('resize', () => ob.update(false));
+            }, 500);
+        });
+    </script>
 
 
     </div>
