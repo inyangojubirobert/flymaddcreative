@@ -1,13 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flymadd Creative</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body style="text-align:center; font-family:sans-serif; padding-top:50px;">
-    <h1>Welcome to Flymadd Creative</h1>
-    <p>Our website is coming soon 🚀</p>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen overflow-hidden relative">
+    <!-- Preloader / Animation -->
+    <div id="preloader"
+        class="absolute inset-0 bg-white flex items-center justify-center z-50 transition-opacity duration-500">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="opacity-0 transition-opacity duration-1000 text-center px-4">
+        <h1 class="text-5xl font-bold mb-4 text-gray-800 animate-fadeIn">Welcome to Flymadd Creative</h1>
+        <p class="text-xl text-gray-600 animate-fadeIn delay-500">Our website is coming soon 🚀</p>
+        <button class="mt-8 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">Contact
+            Us</button>
+    </div>
+
+    <script>
+        // Wait until the page fully loads
+        window.addEventListener("load", () => {
+            const preloader = document.getElementById("preloader");
+            const mainContent = document.getElementById("mainContent");
+
+            preloader.style.opacity = "0";
+            setTimeout(() => {
+                preloader.style.display = "none";
+                mainContent.classList.add("opacity-100");
+            }, 500); // match the transition
+        });
+    </script>
+
+    <style>
+        /* Tailwind animation utilities for fade-in */
+        .animate-fadeIn {
+            animation: fadeIn 1s ease forwards;
+        }
+
+        .animate-fadeIn.delay-500 {
+            animation-delay: 0.5s;
+        }
+
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </body>
 
 </html>
