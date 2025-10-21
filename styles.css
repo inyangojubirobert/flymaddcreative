@@ -1,0 +1,15 @@
+/* Subtle text fade */
+.fade-up { opacity: 0; transform: translateY(12px); animation: fadeUp .6s ease forwards; }
+@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  #slides { transition: none !important; }
+  .fade-up { animation: none; opacity: 1; transform: none; }
+}
+
+/* Ensure text inside slides wraps normally (override track's nowrap) */
+#slides section { white-space: normal; }
+
+/* Improve word wrapping and hyphenation for long words on small screens */
+h1, h2, h3, h4, h5, h6, p { overflow-wrap: anywhere; hyphens: auto; }
