@@ -28,21 +28,67 @@
     </div>
 
     <script>
-        // Object-Oriented Canvas Animation
-        class Particle {
-            constructor(x, y, vx, vy, r, color) {
-                this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.r = r; this.color = color;
+        // High-tech circuit animation (OOP)
+        class Track {
+            constructor(points, color = '#22d3ee') {
+                this.points = points; // [{x,y}, ...]
+                this.color = color;
             }
-            update(width, height) {
-                this.x += this.vx; this.y += this.vy;
-                if (this.x - this.r < 0 || this.x + this.r > width) this.vx *= -1;
-                if (this.y - this.r < 0 || this.y + this.r > height) this.vy *= -1;
+            length() {
+                let L = 0;
+                for (let i = 0; i < this.points.length - 1; i++) {
+                    const a = this.points[i], b = this.points[i + 1];
+                    L += Math.hypot(b.x - a.x, b.y - a.y);
+                }
+                return L;
             }
             draw(ctx) {
+                ctx.save();
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 8;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+                ctx.moveTo(this.points[0].x, this.points[0].y);
+                for (let i = 1; i < this.points.length; i++) ctx.lineTo(this.points[i].x, this.points[i].y);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        class Pulse {
+            constructor(track, speed, size = 3, color = '#38bdf8') {
+                this.track = track; this.speed = speed; this.size = size; this.color = color;
+                this.seg = 0; this.t = 0; // position along current segment
+            }
+            update(dt) {
+                // advance along polyline
+                while (dt > 0) {
+                    const a = this.track.points[this.seg];
+                    const b = this.track.points[this.seg + 1];
+                    const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+                    const remain = (1 - this.t) * segLen;
+                    const step = Math.min(remain, this.speed * dt);
+                    this.t += step / segLen;
+                    dt -= step / this.speed;
+                    if (this.t >= 1) { this.t = 0; this.seg = (this.seg + 1) % (this.track.points.length - 1); }
+                }
+            }
+            position() {
+                const a = this.track.points[this.seg];
+                const b = this.track.points[this.seg + 1];
+                return { x: a.x + (b.x - a.x) * this.t, y: a.y + (b.y - a.y) * this.t };
+            }
+            draw(ctx) {
+                const p = this.position();
+                ctx.save();
                 ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 16;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.restore();
             }
         }
 
@@ -50,13 +96,15 @@
             constructor(canvas) {
                 this.canvas = canvas;
                 this.ctx = canvas.getContext('2d');
-                this.particles = [];
-                this.animationId = null;
-                this.handleResize = this.resize.bind(this);
                 this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+                this.tracks = [];
+                this.pulses = [];
+                this.animationId = null;
+                this.lastTime = performance.now();
+                this.handleResize = this.resize.bind(this);
                 this.resize();
                 window.addEventListener('resize', this.handleResize);
-                this.initParticles();
+                this.init();
             }
             resize() {
                 const { clientWidth: w, clientHeight: h } = this.canvas;
@@ -64,60 +112,108 @@
                 this.canvas.height = Math.floor(h * this.pixelRatio);
                 this.ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
             }
-            initParticles() {
-                this.particles = [];
-                const w = this.canvas.clientWidth; const h = this.canvas.clientHeight;
-                const count = Math.max(20, Math.floor((w * h) / 25000));
-                const palette = ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b'];
-                for (let i = 0; i < count; i++) {
-                    const r = 3 + Math.random() * 6;
-                    const x = r + Math.random() * (w - 2 * r);
-                    const y = r + Math.random() * (h - 2 * r);
-                    const speed = 0.4 + Math.random() * 1.2;
-                    const angle = Math.random() * Math.PI * 2;
-                    const vx = Math.cos(angle) * speed;
-                    const vy = Math.sin(angle) * speed;
-                    const color = palette[i % palette.length];
-                    this.particles.push(new Particle(x, y, vx, vy, r, color));
-                }
-            }
-            step() {
-                const w = this.canvas.clientWidth; const h = this.canvas.clientHeight;
-                this.ctx.clearRect(0, 0, w, h);
-                // soft background gradient
-                const grad = this.ctx.createLinearGradient(0, 0, w, h);
-                grad.addColorStop(0, 'rgba(59,130,246,0.06)');
-                grad.addColorStop(1, 'rgba(16,185,129,0.06)');
-                this.ctx.fillStyle = grad;
-                this.ctx.fillRect(0, 0, w, h);
+            init() {
+                const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+                const grid = 48; // grid size for right-angle paths
+                const margin = grid * 1.5;
+                const palette = ['#22d3ee', '#60a5fa', '#34d399', '#a78bfa'];
 
-                // draw connections
-                for (let i = 0; i < this.particles.length; i++) {
-                    const a = this.particles[i];
-                    a.update(w, h);
-                    a.draw(this.ctx);
-                    for (let j = i + 1; j < this.particles.length; j++) {
-                        const b = this.particles[j];
-                        const dx = a.x - b.x, dy = a.y - b.y;
-                        const dist2 = dx * dx + dy * dy;
-                        if (dist2 < 140 * 140) {
-                            const alpha = Math.max(0, 1 - Math.sqrt(dist2) / 140) * 0.6;
-                            this.ctx.strokeStyle = `rgba(59,130,246,${alpha})`;
-                            this.ctx.lineWidth = 1;
-                            this.ctx.beginPath();
-                            this.ctx.moveTo(a.x, a.y);
-                            this.ctx.lineTo(b.x, b.y);
-                            this.ctx.stroke();
+                // background grid lines for tech look
+                this.bgGrid = { grid, color: 'rgba(148,163,184,0.10)' };
+
+                const trackCount = Math.max(12, Math.floor((w + h) / 120));
+                this.tracks = [];
+                for (let i = 0; i < trackCount; i++) {
+                    const color = palette[i % palette.length];
+                    const pts = [];
+                    let x = margin + Math.floor(Math.random() * ((w - margin * 2) / grid)) * grid;
+                    let y = margin + Math.floor(Math.random() * ((h - margin * 2) / grid)) * grid;
+                    pts.push({ x, y });
+                    const steps = 3 + Math.floor(Math.random() * 5);
+                    let dir = Math.random() < 0.5 ? 'h' : 'v';
+                    for (let s = 0; s < steps; s++) {
+                        if (dir === 'h') {
+                            const maxStep = Math.floor((w - margin - x) / grid);
+                            const minStep = -Math.floor((x - margin) / grid);
+                            const step = Math.max(-3, Math.min(3, (Math.random() * 6 | 0) - 3));
+                            const move = Math.max(1, Math.min(dir === 'h' ? maxStep : 0, Math.abs(step)));
+                            x += Math.sign(step || 1) * move * grid;
+                        } else {
+                            const maxStep = Math.floor((h - margin - y) / grid);
+                            const minStep = -Math.floor((y - margin) / grid);
+                            const step = Math.max(-3, Math.min(3, (Math.random() * 6 | 0) - 3));
+                            const move = Math.max(1, Math.min(dir === 'v' ? maxStep : 0, Math.abs(step)));
+                            y += Math.sign(step || 1) * move * grid;
                         }
+                        pts.push({ x, y });
+                        dir = dir === 'h' ? 'v' : 'h';
+                    }
+                    this.tracks.push(new Track(pts, color));
+                }
+
+                // pulses on tracks
+                this.pulses = [];
+                for (const t of this.tracks) {
+                    const n = 1 + (Math.random() < 0.5 ? 1 : 0);
+                    for (let k = 0; k < n; k++) {
+                        const speed = 80 + Math.random() * 140; // px/sec
+                        const p = new Pulse(t, speed, 2.5 + Math.random() * 1.5, t.color);
+                        p.seg = Math.floor(Math.random() * (t.points.length - 1));
+                        p.t = Math.random();
+                        this.pulses.push(p);
                     }
                 }
             }
+            drawGrid() {
+                const { grid, color } = this.bgGrid;
+                const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                for (let x = 0; x <= w; x += grid) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+                for (let y = 0; y <= h; y += grid) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+                ctx.restore();
+            }
+            step(dt) {
+                const w = this.canvas.clientWidth; const h = this.canvas.clientHeight;
+                const ctx = this.ctx;
+                ctx.clearRect(0, 0, w, h);
+
+                // subtle dark gradient background overlay
+                const grad = ctx.createLinearGradient(0, 0, w, h);
+                grad.addColorStop(0, 'rgba(2,6,23,0.25)');
+                grad.addColorStop(1, 'rgba(15,23,42,0.25)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+
+                this.drawGrid();
+
+                // draw tracks
+                for (const t of this.tracks) t.draw(ctx);
+
+                // update and draw pulses
+                for (const p of this.pulses) { p.update(dt); p.draw(ctx); }
+
+                // occasional scanline sweep
+                const time = performance.now() * 0.001;
+                const sweepY = (Math.sin(time * 0.5) * 0.5 + 0.5) * h;
+                const grad2 = ctx.createLinearGradient(0, sweepY - 40, 0, sweepY + 40);
+                grad2.addColorStop(0, 'rgba(56,189,248,0)');
+                grad2.addColorStop(0.5, 'rgba(56,189,248,0.12)');
+                grad2.addColorStop(1, 'rgba(56,189,248,0)');
+                ctx.fillStyle = grad2;
+                ctx.fillRect(0, sweepY - 40, w, 80);
+            }
             start() {
-                const loop = () => {
-                    this.step();
+                const loop = (now) => {
+                    const dt = Math.min(0.05, (now - this.lastTime) / 1000);
+                    this.lastTime = now;
+                    this.step(dt);
                     this.animationId = requestAnimationFrame(loop);
                 };
-                loop();
+                this.lastTime = performance.now();
+                this.animationId = requestAnimationFrame(loop);
             }
             stop() { if (this.animationId) cancelAnimationFrame(this.animationId); }
             destroy() {
@@ -139,13 +235,12 @@
 
                 const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                 if (!prefersReduced) {
-                    // ensure canvas sizes match current viewport
                     canvas.width = canvas.clientWidth;
                     canvas.height = canvas.clientHeight;
                     const scene = new Scene(canvas);
                     scene.start();
                 }
-            }, 500); // match the transition
+            }, 500);
         });
     </script>
 
