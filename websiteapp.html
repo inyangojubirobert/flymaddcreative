@@ -9,8 +9,8 @@
   <link rel="preconnect" href="https://res.cloudinary.com" />
   <link rel="dns-prefetch" href="https://res.cloudinary.com" />
 </head>
-<body class="bg-gray-100 min-h-screen">
-  <div id="app" class="min-h-screen flex flex-col min-h-0">
+<body class="bg-gray-100 h-[100dvh] md:h-screen">
+  <div id="app" class="h-full flex flex-col min-h-0">
     <!-- Header -->
     <header class="w-full bg-white shadow-sm flex-none">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-3 flex items-center gap-3">
@@ -39,7 +39,7 @@
       </nav>
 
       <!-- Content area takes remaining viewport height -->
-      <section class="flex-1 min-h-0">
+      <section class="flex-1 min-h-0 overflow-hidden">
         <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 h-full min-h-0">
           <div class="h-full min-h-0">
             <iframe id="tabFrame" title="Section Content" class="w-full h-full block" src="about:blank"></iframe>
