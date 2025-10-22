@@ -227,15 +227,25 @@
                 const dotsEl = document.getElementById('dots');
                 if (dotsEl) dotsEl.style.display = 'none';
                 const main = document.getElementById('mainContent');
-                if (main) main.classList.add('opacity-100');
-                // After a brief delay, reveal the tabs panel
                 const tabsPanel = document.getElementById('tabsPanel');
-                if (tabsPanel) {
-                    setTimeout(() => {
+                // 1) Briefly show the main content
+                if (main) {
+                    main.style.display = '';
+                    main.classList.add('opacity-100');
+                }
+                // 2) After delay, fade out main and reveal tabs
+                setTimeout(() => {
+                    if (main) {
+                        main.classList.remove('opacity-100');
+                        main.classList.add('opacity-0');
+                        // wait for fade-out, then hide
+                        setTimeout(() => { if (main) main.style.display = 'none'; }, 400);
+                    }
+                    if (tabsPanel) {
                         tabsPanel.classList.remove('opacity-0', 'pointer-events-none');
                         tabsPanel.classList.add('opacity-100');
-                    }, 600);
-                }
+                    }
+                }, 800);
                 this.stopAutoplay();
             }
             autoplay() {
