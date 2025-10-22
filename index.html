@@ -88,7 +88,7 @@
             </div>
         </div>
         <!-- Controls below slides, outside onboarding -->
-        <div id="dots" class="flex items-center gap-2 justify-center my-3"></div>
+        <div id="dots" class="hidden"></div>
         <div id="controlsBar" class="flex items-center justify-between gap-4 px-0 mb-4 flex-wrap ml-6 mr-6 sm:ml-8 sm:mr-8 md:ml-10 md:mr-10">
             <button id="btnBack" class="bg-white shadow-md hover:shadow-lg border border-slate-200 text-slate-700 hover:text-slate-900 text-sm md:text-base p-2 rounded-full"
                 aria-label="Back">
@@ -122,19 +122,26 @@
 
     <!-- Tabs Panel (appears after onboarding) -->
     <div id="tabsPanel" class="opacity-0 pointer-events-none transition-opacity duration-700 mt-4">
-        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[220px,1fr] gap-4 px-4 sm:px-6 md:px-8">
-            <nav class="bg-white rounded-2xl shadow-xl p-3">
+        <div class="max-w-7xl mx-auto grid grid-cols-[160px,1fr] md:grid-cols-[220px,1fr] gap-4 px-4 sm:px-6 md:px-8">
+            <nav class="bg-white rounded-2xl shadow-xl p-3 h-full">
+                <header class="flex items-center gap-3 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-semibold shadow-md">FC</div>
+                    <div>
+                        <div class="text-slate-900 font-bold leading-tight">Flymadd Creative LLC</div>
+                        <div class="text-slate-600 text-xs">Excellence in design. Precision in delivery.</div>
+                    </div>
+                </header>
                 <ul class="space-y-2">
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white" data-src="vision.html" id="tab-vision">Vision</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white" data-src="services.html" id="tab-services">Services</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white" data-src="collaborate.html" id="tab-collaborate">Collaborate</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white" data-src="portfolio.html" id="tab-portfolio">Portfolio</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white" data-src="contact.html" id="tab-contact">Contact</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white" data-src="blogs.html" id="tab-blogs">Blogs</button></li>
+                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="vision.html" id="tab-vision">Vision</button></li>
+                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="services.html" id="tab-services">Services</button></li>
+                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="collaborate.html" id="tab-collaborate">Collaborate</button></li>
+                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="portfolio.html" id="tab-portfolio">Portfolio</button></li>
+                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="contact.html" id="tab-contact">Contact</button></li>
+                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="blogs.html" id="tab-blogs">Blogs</button></li>
                 </ul>
             </nav>
-            <div class="bg-white rounded-2xl shadow-xl overflow-hidden min-h-[60vh]">
-                <iframe id="tabFrame" src="about:blank" title="Section Content" class="w-full h-[60vh]"></iframe>
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden min-h-[70vh] md:min-h-[75vh]">
+                <iframe id="tabFrame" src="about:blank" title="Section Content" class="w-full h-[70vh] md:h-[75vh]"></iframe>
             </div>
         </div>
     </div>
@@ -213,7 +220,10 @@
                 const dotsEl = document.getElementById('dots');
                 if (dotsEl) dotsEl.style.display = 'none';
                 const main = document.getElementById('mainContent');
-                if (main) main.classList.add('opacity-100');
+                if (main) {
+                    main.classList.remove('opacity-100');
+                    main.style.display = 'none';
+                }
                 // After a brief delay, reveal the tabs panel
                 const tabsPanel = document.getElementById('tabsPanel');
                 if (tabsPanel) {
