@@ -222,11 +222,11 @@
                         if (main) {
                             main.classList.remove('opacity-100', 'translate-y-0');
                             main.classList.add('opacity-0', '-translate-y-4');
-                            setTimeout(() => { window.location.href = 'websiteapp.html'; }, 1000);
+                            setTimeout(() => { window.location.href = 'websiteapp.html'; }, 3000);
                         } else {
                             window.location.href = 'websiteapp.html';
                         }
-                    }, 1000);
+                    }, 3000);
                 }
                 autoplay() {
                     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -257,7 +257,7 @@
                     const ob = new Onboarding(onboarding, slides, dots, btnBack, btnNext, btnSkip, btnStart);
                     // handle window resize to keep slide position
                     window.addEventListener('resize', () => ob.update(false));
-                }, 1500);
+                }, 100);
 
 
 
