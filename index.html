@@ -198,8 +198,23 @@
                 if (controlsBar) controlsBar.style.display = 'none';
                 const dotsEl = document.getElementById('dots');
                 if (dotsEl) dotsEl.style.display = 'none';
-                // Navigate to the dedicated app page for the six tabs
-                window.location.href = 'websiteapp.html';
+                const main = document.getElementById('mainContent');
+                // 1) Briefly show the main content
+                if (main) {
+                    main.style.display = '';
+                    main.classList.remove('opacity-0', '-translate-y-4');
+                    main.classList.add('opacity-100', 'translate-y-0');
+                }
+                // 2) After delay, slide up and navigate to websiteapp
+                setTimeout(() => {
+                    if (main) {
+                        main.classList.remove('opacity-100', 'translate-y-0');
+                        main.classList.add('opacity-0', '-translate-y-4');
+                        setTimeout(() => { window.location.href = 'websiteapp.html'; }, 400);
+                    } else {
+                        window.location.href = 'websiteapp.html';
+                    }
+                }, 800);
             }
             autoplay() {
                 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
