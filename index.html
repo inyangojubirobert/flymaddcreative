@@ -220,10 +220,7 @@
                 const dotsEl = document.getElementById('dots');
                 if (dotsEl) dotsEl.style.display = 'none';
                 const main = document.getElementById('mainContent');
-                if (main) {
-                    main.classList.remove('opacity-100');
-                    main.style.display = 'none';
-                }
+                if (main) main.classList.add('opacity-100');
                 // After a brief delay, reveal the tabs panel
                 const tabsPanel = document.getElementById('tabsPanel');
                 if (tabsPanel) {
