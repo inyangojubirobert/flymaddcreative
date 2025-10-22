@@ -24,3 +24,7 @@ h1, h2, h3, h4, h5, h6, p { overflow-wrap: anywhere; hyphens: auto; }
 .tab-btn { transition: background-color .3s ease, color .3s ease, box-shadow .3s ease; }
 .tab-active { animation: tabGlow 1.8s ease-in-out infinite alternate; }
 @keyframes tabGlow { from { box-shadow: 0 0 0 rgba(0,0,0,0); } to { box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12); } }
+
+/* Hide scrollbar for horizontal tab list while keeping scrollability */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
