@@ -121,28 +121,35 @@
     </div>
 
     <!-- Tabs Panel (appears after onboarding) -->
-    <div id="tabsPanel" class="opacity-0 pointer-events-none transition-opacity duration-700 mt-4">
-        <div class="max-w-7xl mx-auto grid grid-cols-[160px,1fr] md:grid-cols-[220px,1fr] gap-4 px-4 sm:px-6 md:px-8">
-            <nav class="bg-white rounded-2xl shadow-xl p-3 h-full">
-                <header class="flex items-center gap-3 mb-4">
-                    <div class="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-semibold shadow-md">FC</div>
-                    <div>
-                        <div class="text-slate-900 font-bold leading-tight">Flymadd Creative LLC</div>
-                        <div class="text-slate-600 text-xs">Excellence in design. Precision in delivery.</div>
+    <div id="tabsPanel" class="opacity-0 pointer-events-none transition-opacity duration-700 mt-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+            <section class="bg-white rounded-2xl shadow-xl p-4 sm:p-5 md:p-6">
+                <!-- Header with logo, title, motto -->
+                <div class="flex items-center gap-4 md:gap-5 mb-4 md:mb-5">
+                    <div class="w-12 h-12 rounded-full overflow-hidden shadow-md flex items-center justify-center bg-slate-100">
+                        <img src="https://via.placeholder.com/96" alt="Flymadd Creative Logo" class="w-full h-full object-cover" />
                     </div>
-                </header>
-                <ul class="space-y-2">
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="vision.html" id="tab-vision">Vision</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="services.html" id="tab-services">Services</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="collaborate.html" id="tab-collaborate">Collaborate</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="portfolio.html" id="tab-portfolio">Portfolio</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="contact.html" id="tab-contact">Contact</button></li>
-                    <li><button class="tab-btn w-full text-left px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="blogs.html" id="tab-blogs">Blogs</button></li>
-                </ul>
-            </nav>
-            <div class="bg-white rounded-2xl shadow-xl overflow-hidden min-h-[70vh] md:min-h-[75vh]">
-                <iframe id="tabFrame" src="about:blank" title="Section Content" class="w-full h-[70vh] md:h-[75vh]"></iframe>
-            </div>
+                    <div>
+                        <div class="text-slate-900 font-extrabold text-lg md:text-xl leading-tight">Flymadd Creative LLC</div>
+                        <div class="text-slate-600 text-xs md:text-sm">Excellence in design. Precision in delivery.</div>
+                    </div>
+                </div>
+
+                <!-- Top subheader tabs -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-2 -mb-1">
+                    <button class="tab-btn whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="vision.html" id="tab-vision">Vision</button>
+                    <button class="tab-btn whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="services.html" id="tab-services">Services</button>
+                    <button class="tab-btn whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="collaborate.html" id="tab-collaborate">Collaborate</button>
+                    <button class="tab-btn whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="portfolio.html" id="tab-portfolio">Portfolio</button>
+                    <button class="tab-btn whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="contact.html" id="tab-contact">Contact</button>
+                    <button class="tab-btn whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base" data-src="blogs.html" id="tab-blogs">Blogs</button>
+                </div>
+
+                <!-- Content area -->
+                <div class="mt-3 md:mt-4 rounded-xl overflow-hidden border border-slate-100 shadow-sm">
+                    <iframe id="tabFrame" src="about:blank" title="Section Content" class="w-full h-[70vh] md:h-[75vh]"></iframe>
+                </div>
+            </section>
         </div>
     </div>
 
