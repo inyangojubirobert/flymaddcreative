@@ -152,6 +152,7 @@
                     this.count = slidesEl.children.length;
                     this.timer = null;
                     this.intervalMs = 8000;
+                    this.finished = false;
                     this.initDots();
                     this.update();
                     this.bind();
@@ -205,6 +206,9 @@
                     this.startBtn.classList.toggle('hidden', !atEnd);
                 }
                 finish() {
+                    if (this.finished) return;
+                    this.finished = true;
+                    this.stopAutoplay();
                     this.root.style.display = 'none';
                     const controlsBar = document.getElementById('controlsBar');
                     if (controlsBar) controlsBar.style.display = 'none';
