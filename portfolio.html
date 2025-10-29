@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,27 +8,157 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="bg-gray-100">
-  <div class="max-w-6xl mx-auto p-4 sm:p-6 md:p-8">
-    <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
-      <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Portfolio</h1>
-      <p class="text-gray-600 mb-6">Showcase selected works and case studies. Replace with your own projects.</p>
 
+<body class="bg-gray-100">
+  <div class="max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-12">
+
+    <!-- Graphic Design Section -->
+    <section>
+      <h2 class="text-2xl font-bold mb-4">Graphic Design</h2>
+      <p class="text-gray-600 mb-6">Selected Instagram posts showcasing branding, illustration, and visual design.</p>
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        <article class="bg-white rounded-xl shadow-md p-4">
-          <h2 class="text-lg font-semibold text-gray-800 mb-1">Project Alpha</h2>
-          <p class="text-gray-600 text-sm">Short description of the project, goals, and outcomes.</p>
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <img src="link-to-instagram-image1.jpg" alt="Graphic Design Post" class="rounded-lg mb-2">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Brand Poster Alpha</h3>
+          <p class="text-gray-600 text-sm">Created for [client/project]. Focused on color, typography, and composition.
+          </p>
         </article>
-        <article class="bg-white rounded-xl shadow-md p-4">
-          <h2 class="text-lg font-semibold text-gray-800 mb-1">Project Beta</h2>
-          <p class="text-gray-600 text-sm">Key results and what made it successful.</p>
-        </article>
-        <article class="bg-white rounded-xl shadow-md p-4">
-          <h2 class="text-lg font-semibold text-gray-800 mb-1">Project Gamma</h2>
-          <p class="text-gray-600 text-sm">Technologies used and screenshots.</p>
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <img src="link-to-instagram-image2.jpg" alt="Graphic Design Post" class="rounded-lg mb-2">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Illustration Beta</h3>
+          <p class="text-gray-600 text-sm">Concept art for a brand campaign, emphasizing visual storytelling.</p>
         </article>
       </div>
-    </div>
+    </section>
+
+    <!-- UI/UX Design Section -->
+    <section>
+      <h2 class="text-2xl font-bold mb-4">UI/UX Design</h2>
+      <p class="text-gray-600 mb-6">Case studies and walkthroughs from YouTube demonstrating user-centered design
+        processes.</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <iframe class="w-full h-48 rounded-lg mb-2" src="https://www.youtube.com/embed/YOUR_VIDEO_ID1"
+            title="UI/UX Case Study" frameborder="0" allowfullscreen></iframe>
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">App Redesign Case Study</h3>
+          <p class="text-gray-600 text-sm">Redesign of a fintech app, focusing on usability and visual hierarchy.</p>
+        </article>
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <iframe class="w-full h-48 rounded-lg mb-2" src="https://www.youtube.com/embed/YOUR_VIDEO_ID2"
+            title="UI/UX Case Study" frameborder="0" allowfullscreen></iframe>
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">E-Commerce App Flow</h3>
+          <p class="text-gray-600 text-sm">User research and interactive prototyping to improve conversion rates.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Mobile App Development Section -->
+    <section>
+      <h2 class="text-2xl font-bold mb-4">Mobile App Development</h2>
+      <p class="text-gray-600 mb-6">Screenshots and demos from mobile apps hosted on Google Drive or other cloud
+        services.</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <img src="link-to-app-screenshot1.jpg" alt="Mobile App Screenshot" class="rounded-lg mb-2">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Finance Tracker App</h3>
+          <p class="text-gray-600 text-sm">React Native app with Supabase backend for managing personal finances.</p>
+          <a href="https://drive.google.com/link-to-project1" target="_blank"
+            class="text-blue-600 font-medium hover:underline">View Demo →</a>
+        </article>
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <img src="link-to-app-screenshot2.jpg" alt="Mobile App Screenshot" class="rounded-lg mb-2">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Task Manager App</h3>
+          <p class="text-gray-600 text-sm">Organizes tasks, deadlines, and notifications with React Native & Supabase.
+          </p>
+          <a href="https://drive.google.com/link-to-project2" target="_blank"
+            class="text-blue-600 font-medium hover:underline">View Demo →</a>
+        </article>
+      </div>
+    </section>
+
   </div>
 </body>
+
+</html>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio • Flymadd Creative</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body class="bg-gray-100">
+  <div class="max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-12">
+
+    <!-- Graphic Design Section -->
+    <section>
+      <h2 class="text-2xl font-bold mb-4">Graphic Design</h2>
+      <p class="text-gray-600 mb-6">Selected Instagram posts showcasing branding, illustration, and visual design.</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <img src="link-to-instagram-image1.jpg" alt="Graphic Design Post" class="rounded-lg mb-2">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Brand Poster Alpha</h3>
+          <p class="text-gray-600 text-sm">Created for [client/project]. Focused on color, typography, and composition.
+          </p>
+        </article>
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <img src="link-to-instagram-image2.jpg" alt="Graphic Design Post" class="rounded-lg mb-2">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Illustration Beta</h3>
+          <p class="text-gray-600 text-sm">Concept art for a brand campaign, emphasizing visual storytelling.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- UI/UX Design Section -->
+    <section>
+      <h2 class="text-2xl font-bold mb-4">UI/UX Design</h2>
+      <p class="text-gray-600 mb-6">Case studies and walkthroughs from YouTube demonstrating user-centered design
+        processes.</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <iframe class="w-full h-48 rounded-lg mb-2" src="https://www.youtube.com/embed/YOUR_VIDEO_ID1"
+            title="UI/UX Case Study" frameborder="0" allowfullscreen></iframe>
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">App Redesign Case Study</h3>
+          <p class="text-gray-600 text-sm">Redesign of a fintech app, focusing on usability and visual hierarchy.</p>
+        </article>
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <iframe class="w-full h-48 rounded-lg mb-2" src="https://www.youtube.com/embed/YOUR_VIDEO_ID2"
+            title="UI/UX Case Study" frameborder="0" allowfullscreen></iframe>
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">E-Commerce App Flow</h3>
+          <p class="text-gray-600 text-sm">User research and interactive prototyping to improve conversion rates.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Mobile App Development Section -->
+    <section>
+      <h2 class="text-2xl font-bold mb-4">Mobile App Development</h2>
+      <p class="text-gray-600 mb-6">Screenshots and demos from mobile apps hosted on Google Drive or other cloud
+        services.</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <img src="link-to-app-screenshot1.jpg" alt="Mobile App Screenshot" class="rounded-lg mb-2">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Finance Tracker App</h3>
+          <p class="text-gray-600 text-sm">React Native app with Supabase backend for managing personal finances.</p>
+          <a href="https://drive.google.com/link-to-project1" target="_blank"
+            class="text-blue-600 font-medium hover:underline">View Demo →</a>
+        </article>
+        <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
+          <img src="link-to-app-screenshot2.jpg" alt="Mobile App Screenshot" class="rounded-lg mb-2">
+          <h3 class="text-lg font-semibold text-gray-800 mb-1">Task Manager App</h3>
+          <p class="text-gray-600 text-sm">Organizes tasks, deadlines, and notifications with React Native & Supabase.
+          </p>
+          <a href="https://drive.google.com/link-to-project2" target="_blank"
+            class="text-blue-600 font-medium hover:underline">View Demo →</a>
+        </article>
+      </div>
+    </section>
+
+  </div>
+</body>
+
 </html>
