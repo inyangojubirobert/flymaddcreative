@@ -12,21 +12,40 @@
 <body class="bg-gray-100">
   <div class="max-w-6xl mx-auto p-4 sm:p-6 md:p-8 space-y-12">
 
-    <!-- Graphic Design Section -->
+    <!-- Social Media Embeds Section -->
     <section>
-      <h2 class="text-2xl font-bold mb-4">Graphic Design</h2>
-      <p class="text-gray-600 mb-6">Selected Instagram posts showcasing branding, illustration, and visual design.</p>
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+      <h2 class="text-2xl font-bold mb-4">Social Media Content</h2>
+      <p class="text-gray-600 mb-6">Featured content from our social media channels.</p>
+      <div class="grid sm:grid-cols-2 gap-6">
+        <!-- Instagram Embed -->
         <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
-          <img src="https://www.instagram.com/p/B9cU3QMBQ1U/" alt="Graphic Design Post" class="rounded-lg mb-2">
-          <h3 class="text-lg font-semibold text-gray-800 mb-1">Brand Poster Alpha</h3>
-          <p class="text-gray-600 text-sm">Created for [client/project]. Focused on color, typography, and composition.
-          </p>
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">Instagram Post</h3>
+          <div class="aspect-w-1 aspect-h-1">
+            <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/B9cU3QMBQ1U/"
+              data-instgrm-version="14"
+              style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
+              <div style="padding:16px;">
+                <a href="https://www.instagram.com/p/B9cU3QMBQ1U/"
+                  style="color:#000; font-family:Arial,sans-serif; font-size:14px; font-style:normal; font-weight:normal; line-height:17px; text-decoration:none;"
+                  target="_blank">A post shared by Instagram (@instagram)</a>
+              </div>
+            </blockquote>
+          </div>
         </article>
+
+        <!-- YouTube Embed -->
         <article class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition">
-          <img src="https://www.instagram.com/p/B9cAN9ShCCM/" alt="Graphic Design Post" class="rounded-lg mb-2">
-          <h3 class="text-lg font-semibold text-gray-800 mb-1">Illustration Beta</h3>
-          <p class="text-gray-600 text-sm">Concept art for a brand campaign, emphasizing visual storytelling.</p>
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">YouTube Video</h3>
+          <div class="aspect-w-16 aspect-h-9">
+            <iframe class="w-full h-64 rounded-lg" src="https://www.youtube.com/embed/T83kFI_ntp0"
+              title="YouTube video player" frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen>
+            </iframe>
+          </div>
+          <h4 class="font-medium text-gray-800 mt-3">App Redesign Case Study</h4>
+          <p class="text-gray-600 text-sm mt-1">Redesign of an e-commerce app, focusing on usability and visual
+            hierarchy.</p>
         </article>
       </div>
     </section>
@@ -80,6 +99,9 @@
     </section>
 
   </div>
+  
+  <!-- Instagram Embed Script -->
+  <script async src="//www.instagram.com/embed.js"></script>
 </body>
 
 </html>
