@@ -20,10 +20,10 @@
         <!-- Instagram Embed -->
         <article class="bg-white rounded-xl shadow-md p-3 sm:p-4 hover:shadow-lg transition">
           <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Instagram Post</h3>
-          <div class="aspect-w-1 aspect-h-1">
-            <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/B9cU3QMBQ1U/"
+          <div class="aspect-w-1 aspect-h-1 w-full overflow-hidden">
+            <blockquote class="instagram-media w-full h-full" data-instgrm-permalink="https://www.instagram.com/p/B9cU3QMBQ1U/"
               data-instgrm-version="14"
-              style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
+              style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:0; padding:0; width:100%; height:100%;">
               <div style="padding:16px;">
                 <a href="https://www.instagram.com/p/B9cU3QMBQ1U/"
                   style="color:#000; font-family:Arial,sans-serif; font-size:14px; font-style:normal; font-weight:normal; line-height:17px; text-decoration:none;"
@@ -35,10 +35,10 @@
 
         <article class="bg-white rounded-xl shadow-md p-3 sm:p-4 hover:shadow-lg transition">
           <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-2 sm:mb-3">Instagram Post</h3>
-          <div class="aspect-w-1 aspect-h-1">
-            <blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/p/B9cAN9ShCCM/"
+          <div class="aspect-w-1 aspect-h-1 w-full overflow-hidden">
+            <blockquote class="instagram-media w-full h-full" data-instgrm-permalink="https://www.instagram.com/p/B9cAN9ShCCM/"
               data-instgrm-version="14"
-              style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin: 1px; max-width:540px; min-width:326px; padding:0; width:99.375%; width:-webkit-calc(100% - 2px); width:calc(100% - 2px);">
+              style="background:#FFF; border:0; border-radius:3px; box-shadow:0 0 1px 0 rgba(0,0,0,0.5),0 1px 10px 0 rgba(0,0,0,0.15); margin:0; padding:0; width:100%; height:100%;">
               <div style="padding:16px;">
                 <a href="https://www.instagram.com/p/B9cAN9ShCCM/"
                   style="color:#000; font-family:Arial,sans-serif; font-size:14px; font-style:normal; font-weight:normal; line-height:17px; text-decoration:none;"
@@ -115,8 +115,16 @@
   </div>
 
 
-  <!-- Instagram Embed Script -->
+  <!-- Instagram Embed Script with Resize Handler -->
   <script async src="//www.instagram.com/embed.js"></script>
+  <script>
+    // Force Instagram embeds to resize on window resize
+    window.addEventListener('resize', function() {
+      if (typeof instgrm !== 'undefined') {
+        instgrm.Embeds.process();
+      }
+    });
+  </script>
 </body>
 
 </html>
