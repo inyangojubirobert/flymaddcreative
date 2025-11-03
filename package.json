@@ -5,12 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "python -m http.server 8000",
-    "build": "echo 'Static site - no build needed'",
     "start": "python -m http.server 8000",
     "serve": "python -m http.server 8000"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   },
   "keywords": [
     "design",

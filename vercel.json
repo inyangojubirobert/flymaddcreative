@@ -1,5 +1,9 @@
 {
   "version": 2,
+  "buildCommand": "echo 'Static site - no build needed'",
+  "outputDirectory": ".",
+  "installCommand": "echo 'No dependencies to install'",
+  "framework": null,
   "public": true,
   "trailingSlash": false,
   "cleanUrls": true,
