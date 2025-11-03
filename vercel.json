@@ -17,6 +17,10 @@
       "destination": "/websiteapp.html"
     },
     {
+      "source": "/websiteapp",
+      "destination": "/websiteapp.html"
+    },
+    {
       "source": "/onedream",
       "destination": "/Onedream.html"
     }
