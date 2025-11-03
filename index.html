@@ -1,275 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flymadd Creative</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="preconnect" href="https://res.cloudinary.com">
-    <link rel="dns-prefetch" href="https://res.cloudinary.com">
+    <meta http-equiv="refresh" content="0; url=/websiteapp.html">
+    <title>FlyMadd Creative - Professional Design Services</title>
+    <link rel="canonical" href="/websiteapp.html">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        .loading {
+            max-width: 400px;
+            padding: 2rem;
+        }
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-
 <body>
-    <div id="app"
-        class="bg-gray-100 flex flex-col items-center justify-start gap-6 min-h-screen overflow-hidden relative">
-        <div
-            class="bg-white rounded-2xl shadow-lg w-11/12 sm:w-5/6 md:w-4/5 max-w-4xl h-full overflow-hidden mx-auto my-3 sm:my-4 md:my-6">
-
-            <!-- Preloader / Animation -->
-            <div id="preloader"
-                class="absolute inset-0 bg-white flex items-center justify-center z-50 transition-opacity duration-500">
-                <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
-            </div>
-
-            <!-- Onboarding Storyboard -->
-            <div id="onboarding" class="relative h-[60vh] overflow-hidden bg-slate-950 rounded-[29px] shadow-xl 
-            mt-6 ml-6 mr-6 sm:mt-8 sm:ml-8 sm:mr-8 md:mt-10 md:ml-10 md:mr-10">
-                <div id="slides"
-                    class="flex h-full w-full transition-transform duration-1000 ease-in-out will-change-transform">
-                    <!-- Slide 1 -->
-                    <section class="flex-shrink-0 w-full h-full relative">
-                        <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761087274/Brand_cuv2rc.jpg"
-                            alt="Global creative mission" class="block w-full h-full object-cover opacity-60"
-                            loading="eager" fetchpriority="high" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/50 via-blue-900/20 to-transparent">
-                        </div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="max-w-3xl mx-auto px-3 sm:px-4 text-center text-white">
-                                <h2 class="text-4xl md:text-6xl font-bold mb-4 fade-up">Flymadd Creative</h2>
-                                <p class="text-lg md:text-2xl text-slate-200/90 fade-up" style="animation-delay:.15s">
-                                    Branding for global clients. We craft experiences that connect, convert, and scale.
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-                    <!-- Slide 2: Graphics & Brand Identity -->
-                    <section class="flex-shrink-0 w-full h-full relative">
-                        <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761089558/graphics_fei33a.jpg"
-                            alt="Brand identity and graphics" class="block w-full h-full object-cover opacity-60"
-                            loading="lazy" decoding="async" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/50 via-blue-900/20 to-transparent">
-                        </div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="max-w-3xl mx-auto px-3 sm:px-4 text-center text-white">
-                                <h2 class="text-3xl md:text-5xl font-semibold mb-3 fade-up">Graphics & Brand Identity
-                                </h2>
-                                <p class="text-lg md:text-xl text-slate-200/90 fade-up" style="animation-delay:.15s">
-                                    From
-                                    logos to launch kits—distinctive visuals that set your brand apart and stay
-                                    consistent
-                                    across every touchpoint.</p>
-                            </div>
-                        </div>
-                    </section>
-                    <!-- Slide 3: UI/UX Design -->
-                    <section class="flex-shrink-0 w-full h-full relative">
-                        <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761090056/research_yj3wwm.jpg"
-                            alt="UI UX design" class="block w-full h-full object-cover opacity-60" loading="lazy"
-                            decoding="async" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/50 via-blue-900/20 to-transparent">
-                        </div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="max-w-3xl mx-auto px-3 sm:px-4 text-center text-white">
-                                <h2 class="text-3xl md:text-5xl font-semibold mb-3 fade-up">UI/UX Design</h2>
-                                <p class="text-lg md:text-xl text-slate-200/90 fade-up" style="animation-delay:.15s">
-                                    Human-centered interfaces that drive clarity and delight, validated through research
-                                    and
-                                    prototyping.</p>
-                            </div>
-                        </div>
-                    </section>
-                    <!-- Slide 4: Full‑Stack Development -->
-                    <section class="flex-shrink-0 w-full h-full relative">
-                        <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761090447/mob_znki5o.jpg"
-                            alt="Full stack development" class="block w-full h-full object-cover opacity-60"
-                            loading="lazy" decoding="async" />
-                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/50 via-blue-900/20 to-transparent">
-                        </div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="max-w-3xl mx-auto px-3 sm:px-4 text-center text-white">
-                                <h2 class="text-3xl md:text-5xl font-semibold mb-3 fade-up">Full‑Stack Development</h2>
-                                <p class="text-lg md:text-xl text-slate-200/90 fade-up" style="animation-delay:.15s">
-                                    Robust,
-                                    scalable apps and websites—built with modern stacks, performance, and SEO baked in.
-                                </p>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-            <!-- Controls below slides, outside onboarding -->
-            <div id="dots" class="flex items-center gap-2 justify-center mt-3 mb-2"></div>
-            <div id="controlsBar"
-                class="flex items-center justify-between gap-4 px-0 mb-4 flex-wrap ml-6 mr-6 sm:ml-8 sm:mr-8 md:ml-10 md:mr-10">
-                <button id="btnBack"
-                    class="bg-white shadow-md hover:shadow-lg border border-slate-200 text-slate-700 hover:text-slate-900 text-sm md:text-base p-2 rounded-full"
-                    aria-label="Back">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
-                        <path fill-rule="evenodd"
-                            d="M15.78 4.72a.75.75 0 0 1 0 1.06L9.56 12l6.22 6.22a.75.75 0 1 1-1.06 1.06l-6.75-6.75a.75.75 0 0 1 0-1.06l6.75-6.75a.75.75 0 0 1 1.06 0Z"
-                            clip-rule="evenodd" />
-                    </svg>
-                </button>
-                <div class="flex items-center gap-2">
-                    <button id="btnSkip"
-                        class="text-slate-700 hover:text-slate-900 text-sm md:text-base px-3 py-2 rounded">Skip</button>
-                    <button id="btnNext"
-                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm md:text-base font-medium px-5 py-2 rounded-full shadow-sm">Next</button>
-                    <button id="btnStart"
-                        class="hidden bg-blue-600 hover:bg-blue-700 text-white text-sm md:text-base font-medium px-4 py-2 rounded-full shadow-sm">Get
-                        Started</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <div id="mainContent" class="opacity-0 transition-all duration-1500 ease-out text-center 
-            px-8 sm:px-10 md:px-12 lg:px-16 py-8 
-            relative z-10 bg-white rounded-[29px] shadow-xl 
-            max-w-4xl mx-auto mt-2  m-2 w-11/12 sm:w-5/6 md:w-4/5 mx-auto pt-5">
-
-            <h1 class="text-5xl font-bold mb-4 text-gray-800">Welcome to Flymadd Creative</h1>
-            <p class="text-xl text-gray-600">We look forward to working with you !!! 🚀</p>
-        </div>
-
-
-
-        <script>
-            // Onboarding slider logic with autoplay
-            class Onboarding {
-                constructor(root, slidesEl, dotsEl, backBtn, nextBtn, skipBtn, startBtn) {
-                    this.root = root;
-                    this.slidesEl = slidesEl;
-                    this.dotsEl = dotsEl;
-                    this.backBtn = backBtn;
-                    this.nextBtn = nextBtn;
-                    this.skipBtn = skipBtn;
-                    this.startBtn = startBtn;
-                    this.index = 0;
-                    this.count = slidesEl.children.length;
-                    this.timer = null;
-                    this.intervalMs = 8000;
-                    this.finished = false;
-                    this.initDots();
-                    this.update();
-                    this.bind();
-                    this.autoplay();
-                }
-                initDots() {
-                    this.dotsEl.innerHTML = '';
-                    for (let i = 0; i < this.count; i++) {
-                        const b = document.createElement('button');
-                        b.className = 'w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-gray-300 hover:bg-gray-400 transition-colors';
-                        b.setAttribute('aria-label', `Go to slide ${i + 1}`);
-                        b.addEventListener('click', () => { this.index = i; this.update(true); });
-                        this.dotsEl.appendChild(b);
-                    }
-                }
-                bind() {
-                    this.backBtn.addEventListener('click', () => { this.prev(); });
-                    this.nextBtn.addEventListener('click', () => { this.next(); });
-                    this.skipBtn.addEventListener('click', () => { this.finish(); });
-                    this.startBtn.addEventListener('click', () => { this.finish(); });
-                    window.addEventListener('keydown', (e) => {
-                        if (e.key === 'ArrowRight') this.next();
-                        if (e.key === 'ArrowLeft') this.prev();
-                    });
-                    // pause autoplay while interacting
-                    [this.backBtn, this.nextBtn, this.skipBtn, this.startBtn, this.dotsEl].forEach(el => {
-                        el.addEventListener('mouseenter', () => this.stopAutoplay());
-                        el.addEventListener('mouseleave', () => this.autoplay());
-                    });
-                }
-                prev() { if (this.index > 0) { this.index--; this.update(true); } }
-                next() { if (this.index < this.count - 1) { this.index++; this.update(true); } }
-                nextOrFinish() {
-                    if (this.index < this.count - 1) { this.next(); }
-                    else { this.finish(); }
-                }
-                update(animate = false) {
-                    const w = this.root.clientWidth;
-                    this.slidesEl.style.transitionDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '0ms' : (animate ? '1200ms' : '0ms');
-                    this.slidesEl.style.transform = `translateX(-${this.index * w}px)`;
-                    // dots
-                    Array.from(this.dotsEl.children).forEach((d, i) => {
-                        d.classList.toggle('bg-blue-600', i === this.index);
-                        d.classList.toggle('bg-gray-300', i !== this.index);
-                    });
-                    // buttons
-                    this.backBtn.classList.toggle('opacity-40', this.index === 0);
-                    this.backBtn.disabled = this.index === 0;
-                    const atEnd = this.index === this.count - 1;
-                    this.nextBtn.classList.toggle('hidden', atEnd);
-                    this.startBtn.classList.toggle('hidden', !atEnd);
-                }
-                finish() {
-                    if (this.finished) return;
-                    this.finished = true;
-                    this.stopAutoplay();
-                    this.root.style.display = 'none';
-                    const controlsBar = document.getElementById('controlsBar');
-                    if (controlsBar) controlsBar.style.display = 'none';
-                    const dotsEl = document.getElementById('dots');
-                    if (dotsEl) dotsEl.style.display = 'none';
-                    const main = document.getElementById('mainContent');
-                    // 1) Briefly show the main content
-                    if (main) {
-                        main.style.display = '';
-                        main.classList.remove('opacity-0', '-translate-y-4');
-                        main.classList.add('opacity-100', 'translate-y-0');
-                    }
-                    // 2) After delay, slide up and navigate to websiteapp
-                    setTimeout(() => {
-                        if (main) {
-                            main.classList.remove('opacity-100', 'translate-y-0');
-                            main.classList.add('opacity-0', '-translate-y-4');
-                            setTimeout(() => { window.location.href = 'websiteapp.html'; }, 3000);
-                        } else {
-                            window.location.href = 'websiteapp.html';
-                        }
-                    }, 3000);
-                }
-                autoplay() {
-                    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-                    this.stopAutoplay();
-                    this.timer = setInterval(() => this.nextOrFinish(), this.intervalMs);
-                }
-                stopAutoplay() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
-            }
-
-            // Wait until page loads: fade preloader, then enable onboarding
-            window.addEventListener('load', () => {
-                const preloader = document.getElementById('preloader');
-                const mainContent = document.getElementById('mainContent');
-                const onboarding = document.getElementById('onboarding');
-                const slides = document.getElementById('slides');
-                const dots = document.getElementById('dots');
-                const btnBack = document.getElementById('btnBack');
-                const btnNext = document.getElementById('btnNext');
-                const btnSkip = document.getElementById('btnSkip');
-                const btnStart = document.getElementById('btnStart');
-
-
-                preloader.style.opacity = '0';
-                setTimeout(() => {
-                    preloader.style.display = 'none';
-                    // keep main content hidden until onboarding finish
-                    mainContent.classList.remove('opacity-100');
-                    const ob = new Onboarding(onboarding, slides, dots, btnBack, btnNext, btnSkip, btnStart);
-                    // handle window resize to keep slide position
-                    window.addEventListener('resize', () => ob.update(false));
-                }, 100);
-
-
-
-
-            });
-        </script>
-
+    <div class="loading">
+        <div class="spinner"></div>
+        <h1>FlyMadd Creative</h1>
+        <p>Redirecting to main application...</p>
+        <p><a href="/websiteapp.html" style="color: #ffd700;">Click here if not redirected automatically</a></p>
     </div>
+    
+    <script>
+        // Fallback redirect
+        setTimeout(() => {
+            window.location.href = '/websiteapp.html';
+        }, 1000);
+    </script>
 </body>
-
 </html>
