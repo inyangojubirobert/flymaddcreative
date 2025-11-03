@@ -1,0 +1,19 @@
+RewriteEngine On
+
+# Redirect www to non-www
+RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Handle clean URLs
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^app/?$ /websiteapp.html [L]
+RewriteRule ^websiteapp/?$ /websiteapp.html [L]
+RewriteRule ^onedream/?$ /Onedream.html [L]
+
+# Default fallback
+DirectoryIndex index.html websiteapp.html
