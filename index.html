@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="1; url=./websiteapp.html">
     <title>FlyMadd Creative - Professional Design Services</title>
     <style>
         body {
@@ -40,12 +41,20 @@
         <div class="spinner"></div>
         <h1>FlyMadd Creative</h1>
         <p>Loading main application...</p>
-        <p><a href="websiteapp.html" style="color: #ffd700;">Click here if not redirected automatically</a></p>
+        <p><a href="./websiteapp.html" style="color: #ffd700;">Click here if not redirected automatically</a></p>
     </div>
     
     <script>
-        // Immediate redirect to main app
-        window.location.replace('websiteapp.html');
+        // Immediate redirect to main app - try multiple methods
+        try {
+            window.location.replace('./websiteapp.html');
+        } catch(e) {
+            try {
+                window.location.href = './websiteapp.html';
+            } catch(e2) {
+                window.location = './websiteapp.html';
+            }
+        }
     </script>
 </body>
 </html>
