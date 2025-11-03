@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One Dream Initiative - Harnessing Support Through Social Influence | FlyMadd Creative</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* One Dream Initiative Specific Styles */
+        :root {
+            --primary-color: #004AAD;
+            --accent-color: #FFD700;
+            --background-color: #FFFFFF;
+            --text-dark: #1a1a1a;
+            --text-light: #666;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0066cc 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+            opacity: 0.3;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero-vision {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+
+        .hero-description {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: var(--accent-color);
+            color: var(--primary-color);
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .progress-section {
+            background: white;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px auto;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, var(--primary-color), #0066cc);
+            height: 100%;
+            width: 24.79%; /* Example: 247,853 / 1,000,000 */
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shine 2s infinite;
+        }
+
+        @keyframes shine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            max-width: 800px;
+            margin: 40px auto 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .how-it-works {
+            background: #f8f9fa;
+            padding: 80px 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            color: var(--text-dark);
+            margin-bottom: 3rem;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .step-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .step-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 20px;
+        }
+
+        .step-title {
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            margin-bottom: 15px;
+        }
+
+        .prizes-section {
+            background: var(--primary-color);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .prizes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            max-width: 900px;
+            margin: 40px auto 0;
+        }
+
+        .prize-card {
+            background: rgba(255,255,255,0.1);
+            padding: 40px 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .prize-card.grand {
+            background: linear-gradient(135deg, var(--accent-color), #ffcc00);
+            color: var(--primary-color);
+            transform: scale(1.05);
+        }
+
+        .prize-amount {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .threshold-section {
+            background: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .threshold-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 40px;
+            border-radius: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .navigation {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-light);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-color);
+        }
+
+        .nav-button {
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background: #003a8a;
+            transform: translateY(-1px);
+        }
+
+        footer {
+            background: var(--text-dark);
+            color: white;
+            padding: 60px 20px 20px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        .footer-section h3 {
+            color: var(--accent-color);
+            margin-bottom: 20px;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            color: #ccc;
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .hero-vision {
+                font-size: 1.2rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .steps-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .prizes-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navigation">
+        <div class="container">
+            <div class="nav-content">
+                <a href="index.html" class="logo">FlyMadd Creative</a>
+                <div class="nav-links">
+                    <a href="#how-it-works" class="nav-link">How It Works</a>
+                    <a href="#prizes" class="nav-link">Prizes</a>
+                    <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+                    <a href="login.html" class="nav-link">Login</a>
+                    <a href="register.html" class="nav-button">Join Now</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">One Dream Initiative</h1>
+            <p class="hero-vision">Harnessing support through social influence</p>
+            <p class="hero-description">
+                In partnership with FlyMadd Creative, we're creating a movement where your social influence 
+                translates into meaningful rewards. Share, vote, and win together as we reach for our collective goal.
+            </p>
+            <a href="register.html" class="cta-button">Start Your Journey</a>
+        </div>
+    </section>
+
+    <!-- Progress Section -->
+    <section class="progress-section">
+        <div class="container">
+            <h2>Global Progress to 1 Million Votes</h2>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <p>247,853 votes collected • 752,147 votes remaining</p>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">247K+</div>
+                    <div>Total Votes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">$494K+</div>
+                    <div>Total Value</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">1,247</div>
+                    <div>Participants</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <h2 class="section-title">How It Works</h2>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-icon">1</div>
+                    <h3 class="step-title">Register</h3>
+                    <p>Create your account and get your unique referral link. It takes just 30 seconds to join the movement.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-icon">2</div>
+                    <h3 class="step-title">Share</h3>
+                    <p>Share your unique link on social media, with friends, or anyone who supports your dream. Every click counts!</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-icon">3</div>
+                    <h3 class="step-title">Earn Votes</h3>
+                    <p>Get votes from visits and contributions. Each vote is valued at $2 toward your total. Climb the leaderboard!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Prizes Section -->
+    <section id="prizes" class="prizes-section">
+        <div class="container">
+            <h2 class="section-title" style="color: white;">Amazing Prizes Await</h2>
+            <p style="font-size: 1.2rem; margin-bottom: 0;">When we reach 1,000,000 collective votes, the top winners receive:</p>
+            
+            <div class="prizes-grid">
+                <div class="prize-card grand">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">🏆</div>
+                    <div class="prize-amount">$1,000</div>
+                    <h3>Grand Prize</h3>
+                    <p>For the participant with the highest total votes</p>
+                </div>
+                <div class="prize-card">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">🥈</div>
+                    <div class="prize-amount">$500</div>
+                    <h3>Second Place</h3>
+                    <p>For the runner-up champion</p>
+                </div>
+                <div class="prize-card">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">🥉</div>
+                    <div class="prize-amount">$200</div>
+                    <h3>Third Place</h3>
+                    <p>For the bronze medal winner</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Threshold Explanation -->
+    <section class="threshold-section">
+        <div class="container">
+            <div class="threshold-card">
+                <h2 style="margin-bottom: 30px;">The 1 Million Vote Threshold</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 30px; text-align: left;">
+                    <div>
+                        <h3 style="color: var(--accent-color); margin-bottom: 15px;">How it works:</h3>
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="margin-bottom: 10px;">✓ Each vote is valued at exactly <strong>$2</strong></li>
+                            <li style="margin-bottom: 10px;">✓ A round concludes when we reach <strong>1,000,000 total votes</strong></li>
+                            <li style="margin-bottom: 10px;">✓ Winners are determined by <strong>highest individual vote counts</strong></li>
+                            <li style="margin-bottom: 10px;">✓ New rounds begin after each milestone</li>
+                        </ul>
+                    </div>
+                    <div style="text-align: center;">
+                        <h3 style="color: var(--accent-color); margin-bottom: 15px;">Current Status</h3>
+                        <div style="font-size: 3rem; font-weight: 700; color: var(--accent-color);">24.8%</div>
+                        <p style="margin: 10px 0;">Complete</p>
+                        <p style="font-size: 0.9rem; opacity: 0.8;">752,147 votes remaining to reach the threshold</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section style="background: linear-gradient(135deg, var(--accent-color), #ffcc00); padding: 80px 20px; text-align: center;">
+        <div class="container">
+            <h2 style="color: var(--primary-color); font-size: 2.5rem; margin-bottom: 20px;">Ready to Make Your Dream Reality?</h2>
+            <p style="color: var(--primary-color); font-size: 1.2rem; margin-bottom: 40px;">
+                Join thousands of participants already sharing their dreams with the world.
+            </p>
+            <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                <a href="register.html" style="background: var(--primary-color); color: white; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; transition: all 0.3s ease;">
+                    Join the Initiative
+                </a>
+                <a href="leaderboard.html" style="border: 2px solid var(--primary-color); color: var(--primary-color); padding: 13px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; transition: all 0.3s ease;">
+                    View Leaderboard
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>One Dream Initiative</h3>
+                    <p>In partnership with FlyMadd Creative, harnessing support through social influence to make dreams reality.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <p><a href="register.html" style="color: #ccc; text-decoration: none;">Register</a></p>
+                    <p><a href="leaderboard.html" style="color: #ccc; text-decoration: none;">Leaderboard</a></p>
+                    <p><a href="login.html" style="color: #ccc; text-decoration: none;">Login</a></p>
+                </div>
+                <div class="footer-section">
+                    <h3>Support</h3>
+                    <p><a href="#" style="color: #ccc; text-decoration: none;">Help Center</a></p>
+                    <p><a href="#" style="color: #ccc; text-decoration: none;">Contact Us</a></p>
+                    <p><a href="#" style="color: #ccc; text-decoration: none;">Terms of Service</a></p>
+                </div>
+                <div class="footer-section">
+                    <h3>FlyMadd Creative</h3>
+                    <p><a href="index.html" style="color: #ccc; text-decoration: none;">Main Website</a></p>
+                    <p><a href="portfolio.html" style="color: #ccc; text-decoration: none;">Portfolio</a></p>
+                    <p><a href="services.html" style="color: #ccc; text-decoration: none;">Services</a></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 One Dream Initiative in partnership with FlyMadd Creative. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Add smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add dynamic progress animation
+        window.addEventListener('load', function() {
+            const progressFill = document.querySelector('.progress-fill');
+            if (progressFill) {
+                progressFill.style.width = '0%';
+                setTimeout(() => {
+                    progressFill.style.transition = 'width 2s ease-out';
+                    progressFill.style.width = '24.79%';
+                }, 500);
+            }
+        });
+
+        // Add counter animation for stats
+        function animateCounters() {
+            const statNumbers = document.querySelectorAll('.stat-number');
+            statNumbers.forEach(stat => {
+                const target = parseInt(stat.textContent.replace(/[^0-9]/g, ''));
+                let current = 0;
+                const increment = target / 50;
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    
+                    let display = Math.floor(current);
+                    if (display >= 1000) {
+                        display = Math.floor(display / 1000) + 'K+';
+                    }
+                    if (stat.textContent.includes('$')) {
+                        display = '$' + display;
+                    }
+                    stat.textContent = display;
+                }, 40);
+            });
+        }
+
+        // Trigger counter animation when section is in view
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounters();
+                    observer.unobserve(entry.target);
+                }
+            });
+        });
+
+        observer.observe(document.querySelector('.progress-section'));
+    </script>
+</body>
+</html>

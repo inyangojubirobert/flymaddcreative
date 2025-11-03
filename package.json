@@ -1,0 +1,69 @@
+{
+  "name": "flymaddcreative-onedream",
+  "version": "1.0.0",
+  "description": "One Dream Initiative - A social influence-based voting platform integrated with FlyMadd Creative website",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed": "node onedream/scripts/seed.js",
+    "seed:mock": "node onedream/scripts/seed.js --mock",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "next": "14.0.4",
+    "react": "^18",
+    "react-dom": "^18",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.4",
+    "@testing-library/react": "^14.1.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/uuid": "^9.0.7",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "nextjs",
+    "react",
+    "voting",
+    "social-influence",
+    "referral-system",
+    "supabase",
+    "tailwindcss",
+    "flymadd-creative",
+    "one-dream-initiative"
+  ],
+  "author": "FlyMadd Creative",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inyangojubirobert/flymaddcreative.git"
+  },
+  "bugs": {
+    "url": "https://github.com/inyangojubirobert/flymaddcreative/issues"
+  },
+  "homepage": "https://flymaddcreative.com/onedream"
+}
