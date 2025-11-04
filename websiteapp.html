@@ -36,88 +36,68 @@
       <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-8">
         <div id="tabsRow"
           class="flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap snap-x snap-mandatory scroll-px-2 py-2">
-          <button class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base transition-all" data-page="vision.html">Vision</button>
-          <button class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm md:text-base font-semibold shadow-md transition-all" data-page="Onedream.html">
-            <span class="flex items-center gap-1">
-              <span class="text-yellow-300">✨</span>
-              <span>One Dream</span>
-            </span>
-          </button>
-          <button class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base transition-all" data-page="services.html">Services</button>
-          <button class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base transition-all" data-page="Team.html">Team</button>
-          <button class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base transition-all" data-page="opportunities.html">Opportunities</button>
-          <button class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base transition-all" data-page="portfolio.html">Portfolio</button>
-          <button class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base transition-all" data-page="contact.html">Contact</button>
-          <button class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base transition-all" data-page="blogs.html">Blogs</button>
+          <button class="tab-btn active-tab" data-page="vision.html">Vision</button>
+          <button class="tab-btn" data-page="Onedream.html">One Dream ✨</button>
+          <button class="tab-btn" data-page="services.html">Services</button>
+          <button class="tab-btn" data-page="Team.html">Team</button>
+          <button class="tab-btn" data-page="opportunities.html">Opportunities</button>
+          <button class="tab-btn" data-page="portfolio.html">Portfolio</button>
+          <button class="tab-btn" data-page="contact.html">Contact</button>
+          <button class="tab-btn" data-page="blogs.html">Blogs</button>
         </div>
       </div>
     </nav>
 
-    <!-- Content area with iframe -->
-    <main class="flex-1 min-h-0 overflow-hidden">
-      <div class="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 h-full min-h-0">
-        <div class="h-full min-h-0">
-          <iframe id="tabFrame" title="Section Content" class="w-full h-full block border-0" src="about:blank"></iframe>
-        </div>
+    <!-- Dynamic content area -->
+    <main class="flex-1 min-h-0 overflow-y-auto">
+      <div id="contentArea" class="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-4 text-center text-slate-600">
+        <p>Loading content...</p>
       </div>
     </main>
 
   </div>
 
   <script>
-    // Tabs behavior with iframe and responsive styling
-    const tabFrame = document.getElementById('tabFrame');
-    
-    function setActiveTab(button) {
-      document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('bg-white', 'text-slate-900', 'tab-active');
-        // Reset One Dream tab to its special gradient styling
-        if (b.getAttribute('data-page') === 'Onedream.html') {
-          b.classList.remove('bg-gradient-to-r', 'from-yellow-400', 'to-yellow-500', 'text-blue-900', 'tab-active', 'font-bold', 'shadow-lg');
-          b.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-blue-700', 'text-white', 'font-semibold', 'shadow-md');
-        } else {
-          b.classList.remove('bg-white', 'text-slate-900');
-          b.classList.add('bg-slate-500', 'text-white');
-        }
-        b.setAttribute('aria-selected', 'false');
+    // Apply base styles to tabs
+    const styleTabs = () => {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.add(
+          'px-3', 'py-2', 'rounded-lg', 'bg-slate-500', 'text-white',
+          'text-sm', 'md:text-base', 'transition-all', 'duration-200'
+        );
       });
-      
-      // Set active state for the clicked button
-      if (button.getAttribute('data-page') === 'Onedream.html') {
-        button.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-blue-700');
-        button.classList.add('bg-gradient-to-r', 'from-yellow-400', 'to-yellow-500', 'text-blue-900', 'tab-active', 'font-bold', 'shadow-lg');
-      } else {
-        button.classList.remove('bg-slate-500', 'text-white');
-        button.classList.add('bg-white', 'text-slate-900', 'tab-active');
+    };
+
+    // Load page dynamically via fetch
+    async function loadPage(page) {
+      const content = document.getElementById('contentArea');
+      content.innerHTML = `<p class="animate-pulse text-slate-400">Loading ${page}...</p>`;
+      try {
+        const res = await fetch(page);
+        if (!res.ok) throw new Error('Page not found');
+        const html = await res.text();
+        content.innerHTML = html;
+      } catch (err) {
+        content.innerHTML = `<p class="text-red-500 font-medium">Failed to load ${page}: ${err.message}</p>`;
       }
-      button.setAttribute('aria-selected', 'true');
     }
 
+    // Handle tab clicks
     function initTabs() {
-      const defaultBtn = document.querySelector('[data-page="vision.html"]');
+      styleTabs();
       const buttons = document.querySelectorAll('.tab-btn');
-      
+
       buttons.forEach(btn => {
         btn.addEventListener('click', () => {
-          const src = btn.getAttribute('data-page');
-          if (src && tabFrame) {
-            tabFrame.src = src;
-            setActiveTab(btn);
-            // Ensure the active tab is visible on small screens with smooth scroll
-            btn.scrollIntoView({ 
-              inline: 'nearest', 
-              behavior: 'smooth', 
-              block: 'nearest' 
-            });
-          }
+          buttons.forEach(b => b.classList.remove('active-tab', 'bg-yellow-400', 'text-slate-900'));
+          btn.classList.add('active-tab', 'bg-yellow-400', 'text-slate-900');
+          const page = btn.getAttribute('data-page');
+          loadPage(page);
         });
       });
-      
+
       // Load default tab
-      if (defaultBtn && tabFrame) {
-        setActiveTab(defaultBtn);
-        tabFrame.src = defaultBtn.getAttribute('data-page');
-      }
+      loadPage('vision.html');
     }
 
     window.addEventListener('DOMContentLoaded', initTabs);
