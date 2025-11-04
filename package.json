@@ -6,7 +6,28 @@
   "scripts": {
     "dev": "python -m http.server 8000",
     "start": "python -m http.server 8000",
-    "serve": "python -m http.server 8000"
+    "serve": "python -m http.server 8000",
+    "tailwind:watch": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --watch",
+    "tailwind:build": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --minify",
+    "react:dev": "next dev",
+    "react:build": "next build"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.0.18",
+    "@supabase/supabase-js": "^2.38.0",
+    "framer-motion": "^10.16.4",
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.6",
+    "@tailwindcss/typography": "^0.5.10",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.50.0",
+    "eslint-config-next": "^14.0.0",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5"
   },
   "keywords": [
     "design",
@@ -16,7 +37,14 @@
     "html",
     "css",
     "javascript",
-    "one-dream-initiative"
+    "one-dream-initiative",
+    "voting",
+    "leaderboard",
+    "referral",
+    "gamification",
+    "react",
+    "tailwindcss",
+    "supabase"
   ],
   "author": "FlyMadd Creative",
   "license": "MIT",
