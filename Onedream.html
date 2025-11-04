@@ -410,6 +410,19 @@
     </style>
 </head>
 <body>
+    <!-- Browser Compatibility Notification -->
+    <div id="browser-compatibility-notice" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(90deg, #FF6B6B, #4ECDC4); color: white; padding: 10px; text-align: center; z-index: 10000; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap;">
+            <span style="display: flex; align-items: center; gap: 5px;">
+                <span style="font-size: 18px;">⚠️</span>
+                <strong>Browser Compatibility Notice:</strong>
+            </span>
+            <span id="browser-message">For the best experience, please use a modern browser like Chrome, Firefox, Safari, or Edge.</span>
+            <button onclick="this.parentElement.parentElement.style.display='none'" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 5px 10px; border-radius: 15px; cursor: pointer; font-size: 12px; margin-left: auto;">
+                Dismiss ✕
+            </button>
+        </div>
+    </div>
     <div class="iframe-container">
     <!-- Mobile-optimized Navigation -->
     <nav class="navigation">
@@ -440,28 +453,36 @@
     <section class="progress-section">
         <div class="container">
             <h2 class="section-title">Community Dream Progress</h2>
-            <div class="progress-bar">
-                <div class="onedream-progress-fill"></div>
+            <!-- Toggle Button for Testing -->
+            <div style="text-align: center; margin-bottom: 20px; padding: 0 15px;">
+                <button onclick="toggleLiveData()" style="background: #FFD700; color: #004AAD; padding: 10px 20px; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: clamp(11px, 3vw, 14px); min-height: 44px; box-shadow: 0 2px 8px rgba(255,215,0,0.3); transition: all 0.3s ease;">
+                    🔄 Toggle Live/Mock Data
+                </button>
+                <br style="display: block; content: ''; margin: 5px 0;">
+                <span id="data-status" style="font-size: clamp(10px, 2.5vw, 12px); color: #FFD700; font-weight: bold; display: inline-block; margin-top: 8px;">MOCK DATA ACTIVE</span>
             </div>
-            <p style="font-size: 1.1rem; margin: 20px 0; color: var(--text-light);">
-                <strong>▓▓▓░░░ 24.8% Complete</strong> • The community is pushing forward! Keep sharing your dream.
+            <div class="progress-bar">
+                <div class="onedream-progress-fill" id="main-progress-fill"></div>
+            </div>
+            <p id="progress-text" style="font-size: 1.1rem; margin: 20px 0; color: #FFD700;">
+                <strong id="progress-percentage">24.8% Complete</strong> • <span id="progress-message">The community is pushing forward! Keep sharing your dream.</span>
             </p>
             
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-number">🥉</div>
-                    <div>Bronze Stage</div>
-                    <small>Building momentum together</small>
+                    <div class="stat-number" id="stage-emoji">🥉</div>
+                    <div id="stage-name">Bronze Stage</div>
+                    <small id="stage-description">Building momentum together</small>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">1,247</div>
+                    <div class="stat-number" id="total-participants">1,247</div>
                     <div>Dream Builders</div>
                     <small>Growing our community</small>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">25%</div>
+                    <div class="stat-number" id="next-milestone">25%</div>
                     <div>Next Milestone</div>
-                    <small>Silver Stage awaits!</small>
+                    <small id="next-stage">Silver Stage awaits!</small>
                 </div>
             </div>
         </div>
@@ -550,24 +571,24 @@
     </section>
 
     <!-- Interactive Leaderboard & User Dashboard -->
-    <section id="interactive-section" style="padding: 80px 20px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
-        <div class="container">
-            <div class="text-center" style="margin-bottom: 60px;">
-                <h2 style="color: var(--primary-color); font-size: 2.5rem; margin-bottom: 20px;">
-                    🚀 Live Leaderboard & Progress Tracking 🚀
+    <section id="interactive-section" style="padding: 60px 20px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+        <div class="container" style="max-width: 1200px; margin: 0 auto;">
+            <div class="text-center" style="margin-bottom: 40px;">
+                <h2 style="color: var(--primary-color); font-size: clamp(1.8rem, 5vw, 2.5rem); margin-bottom: 20px; line-height: 1.2;">
+                    🚀 Live Progress & Community 🚀
                 </h2>
-                <p style="font-size: 1.2rem; color: var(--text-light); max-width: 600px; margin: 0 auto;">
-                    Track real-time progress, see top participants, and manage your personal dream journey
+                <p style="font-size: clamp(1rem, 3vw, 1.2rem); color: var(--text-light); max-width: 600px; margin: 0 auto; padding: 0 15px;">
+                    Track real-time progress and join our growing community of dreamers
                 </p>
             </div>
             
             <!-- React App Root -->
-            <div id="onedream-app-root" style="min-height: 600px;">
+            <div id="onedream-app-root" style="min-height: 500px;">
                 <!-- React components will render here -->
-                <div style="text-align: center; padding: 60px 20px; color: var(--text-light);">
-                    <div style="font-size: 3rem; margin-bottom: 20px;">⏳</div>
-                    <h3>Loading Interactive Features...</h3>
-                    <p>Please wait while we load the leaderboard and user dashboard.</p>
+                <div style="text-align: center; padding: 40px 20px; color: var(--text-light);">
+                    <div style="font-size: clamp(2rem, 8vw, 3rem); margin-bottom: 20px;">⏳</div>
+                    <h3 style="font-size: clamp(1.2rem, 4vw, 1.5rem); margin-bottom: 10px;">Loading Interactive Features...</h3>
+                    <p style="font-size: clamp(0.9rem, 3vw, 1rem);">Please wait while we load the progress tracker and community features.</p>
                 </div>
             </div>
         </div>
@@ -625,6 +646,199 @@
     </footer>
 
     <script>
+        // Browser Detection & Compatibility Setup
+        const BrowserDetector = {
+            init() {
+                this.detectBrowser();
+                this.applyCompatibilityFixes();
+                this.setupPerformanceOptimizations();
+            },
+            
+            detectBrowser() {
+                const ua = navigator.userAgent;
+                const engines = {
+                    webkit: /WebKit/.test(ua),
+                    blink: /Chrome/.test(ua) && /WebKit/.test(ua),
+                    gecko: /Gecko/.test(ua) && !/WebKit/.test(ua),
+                    edge: /Edge/.test(ua),
+                    safari: /Safari/.test(ua) && !/Chrome/.test(ua),
+                    firefox: /Firefox/.test(ua),
+                    opera: /Opera|OPR/.test(ua),
+                    brave: /Brave/.test(ua),
+                    tor: /Tor/.test(ua),
+                    mobile: /Mobile|Android|iPhone|iPad/.test(ua),
+                    ios: /iPhone|iPad|iPod/.test(ua),
+                    android: /Android/.test(ua)
+                };
+                
+                // Store browser info globally
+                window.browserInfo = engines;
+                
+                // Add browser classes to document for CSS targeting
+                document.documentElement.className += engines.webkit ? ' webkit' : '';
+                document.documentElement.className += engines.blink ? ' blink' : '';
+                document.documentElement.className += engines.gecko ? ' gecko' : '';
+                document.documentElement.className += engines.safari ? ' safari' : '';
+                document.documentElement.className += engines.firefox ? ' firefox' : '';
+                document.documentElement.className += engines.mobile ? ' mobile' : '';
+                document.documentElement.className += engines.ios ? ' ios' : '';
+                
+                console.log('🌐 Browser detected:', engines);
+            },
+            
+            applyCompatibilityFixes() {
+                // IE/Legacy Edge fallbacks
+                if (!window.fetch) {
+                    console.warn('⚠️ Fetch API not supported, using XMLHttpRequest fallback');
+                    this.addFetchPolyfill();
+                }
+                
+                // CSS Grid fallback for older browsers
+                if (!CSS.supports('display', 'grid')) {
+                    console.warn('⚠️ CSS Grid not supported, applying flexbox fallback');
+                    this.addGridFallback();
+                }
+                
+                // Custom Properties fallback
+                if (!CSS.supports('color', 'var(--test)')) {
+                    console.warn('⚠️ CSS Custom Properties not supported');
+                    this.addCustomPropertiesFallback();
+                }
+            },
+            
+            setupPerformanceOptimizations() {
+                // Reduce animations for privacy browsers or low-end devices
+                if (window.browserInfo.tor || navigator.hardwareConcurrency <= 2) {
+                    document.documentElement.style.setProperty('--animation-duration', '0.1s');
+                    console.log('🔒 Reduced animations for privacy/performance');
+                }
+                
+                // Mobile optimizations
+                if (window.browserInfo.mobile) {
+                    // Prevent zoom on input focus (iOS Safari)
+                    if (window.browserInfo.ios) {
+                        const inputs = document.querySelectorAll('input, select, textarea');
+                        inputs.forEach(input => {
+                            if (parseFloat(window.getComputedStyle(input).fontSize) < 16) {
+                                input.style.fontSize = '16px';
+                            }
+                        });
+                    }
+                    
+                    // Add touch-friendly classes
+                    document.body.classList.add('touch-device');
+                }
+                
+                // Show compatibility notice for unsupported browsers
+                this.checkCompatibilityAndNotify();
+            },
+            
+            checkCompatibilityAndNotify() {
+                const notice = document.getElementById('browser-compatibility-notice');
+                const messageEl = document.getElementById('browser-message');
+                let shouldShow = false;
+                let message = '';
+                
+                // Check for specific browser issues
+                if (!window.fetch) {
+                    shouldShow = true;
+                    message = 'Your browser doesn\'t support modern web features. Please update or switch to Chrome, Firefox, Safari, or Edge.';
+                } else if (window.navigator.userAgent.includes('MSIE') || window.navigator.userAgent.includes('Trident')) {
+                    shouldShow = true;
+                    message = 'Internet Explorer is not supported. Please use Chrome, Firefox, Safari, or Edge for the best experience.';
+                } else if (!CSS.supports('display', 'grid')) {
+                    shouldShow = true;
+                    message = 'Your browser has limited CSS support. Some features may not work properly. Consider updating your browser.';
+                } else if (window.browserInfo.tor) {
+                    shouldShow = true;
+                    message = '🔒 Tor Browser detected. Some features may be limited for privacy. All core functionality will work.';
+                    notice.style.background = 'linear-gradient(90deg, #7B68EE, #483D8B)';
+                }
+                
+                if (shouldShow && notice && messageEl) {
+                    messageEl.textContent = message;
+                    notice.style.display = 'block';
+                    
+                    // Auto-hide after 10 seconds (except for critical issues)
+                    if (!message.includes('Internet Explorer') && !message.includes('doesn\'t support')) {
+                        setTimeout(() => {
+                            notice.style.display = 'none';
+                        }, 10000);
+                    }
+                }
+            },
+            
+            addFetchPolyfill() {
+                // Simple fetch polyfill for IE/old browsers
+                if (!window.fetch) {
+                    window.fetch = function(url, options = {}) {
+                        return new Promise((resolve, reject) => {
+                            const xhr = new XMLHttpRequest();
+                            xhr.open(options.method || 'GET', url);
+                            
+                            if (options.headers) {
+                                Object.keys(options.headers).forEach(key => {
+                                    xhr.setRequestHeader(key, options.headers[key]);
+                                });
+                            }
+                            
+                            xhr.onload = () => {
+                                resolve({
+                                    ok: xhr.status >= 200 && xhr.status < 300,
+                                    status: xhr.status,
+                                    json: () => Promise.resolve(JSON.parse(xhr.responseText)),
+                                    text: () => Promise.resolve(xhr.responseText)
+                                });
+                            };
+                            
+                            xhr.onerror = () => reject(new Error('Network error'));
+                            xhr.send(options.body);
+                        });
+                    };
+                }
+            },
+            
+            addGridFallback() {
+                // Add flexbox fallback styles
+                const style = document.createElement('style');
+                style.textContent = `
+                    .grid-fallback { display: flex; flex-wrap: wrap; }
+                    .grid-fallback > * { flex: 1 1 300px; margin: 0.5rem; }
+                `;
+                document.head.appendChild(style);
+                
+                // Apply fallback class
+                setTimeout(() => {
+                    document.querySelectorAll('.grid').forEach(el => {
+                        el.classList.add('grid-fallback');
+                    });
+                }, 100);
+            },
+            
+            addCustomPropertiesFallback() {
+                // Define fallback colors for browsers without CSS custom properties
+                const style = document.createElement('style');
+                style.textContent = `
+                    .no-custom-properties {
+                        --primary-color: #004AAD;
+                        --secondary-color: #FFD700;
+                        --text-light: #666;
+                    }
+                    .no-custom-properties .onedream-progress-fill { background: #FFD700; }
+                    .no-custom-properties button { background: #FFD700; color: #004AAD; }
+                `;
+                document.head.appendChild(style);
+                document.documentElement.classList.add('no-custom-properties');
+            }
+        };
+        
+        // Initialize browser detection on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => BrowserDetector.init());
+        } else {
+            BrowserDetector.init();
+        }
+
         // Add smooth scrolling for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
@@ -635,17 +849,122 @@
             });
         });
 
-        // Add dynamic progress animation
-        window.addEventListener('load', function() {
-            const progressFill = document.querySelector('.progress-fill');
+        // Add dynamic progress animation with live data support
+        let isLiveDataActive = false; // Toggle this to switch between mock and live data
+        
+        // Mock data for fallback
+        const mockData = {
+            progress: 24.8,
+            stage: 'Bronze',
+            participants: 1247,
+            votes: 12470,
+            nextMilestone: 25
+        };
+
+        // Function to update progress with live or mock data
+        function updateProgress(data = null) {
+            const progressData = data || mockData;
+            
+            // Update progress bar
+            const progressFill = document.getElementById('main-progress-fill');
+            const progressPercentage = document.getElementById('progress-percentage');
+            const totalParticipants = document.getElementById('total-participants');
+            const stageEmoji = document.getElementById('stage-emoji');
+            const stageName = document.getElementById('stage-name');
+            
             if (progressFill) {
                 progressFill.style.width = '0%';
                 setTimeout(() => {
                     progressFill.style.transition = 'width 2s ease-out';
-                    progressFill.style.width = '24.79%';
+                    progressFill.style.width = `${progressData.progress}%`;
                 }, 500);
             }
+            
+            // Update text elements
+            if (progressPercentage) {
+                progressPercentage.textContent = `${progressData.progress}% Complete`;
+            }
+            
+            if (totalParticipants) {
+                totalParticipants.textContent = progressData.participants.toLocaleString();
+            }
+            
+            // Update stage info
+            const stageInfo = {
+                'Bronze': { emoji: '🥉', color: '#CD7F32' },
+                'Silver': { emoji: '🥈', color: '#C0C0C0' },
+                'Gold': { emoji: '🥇', color: '#FFD700' },
+                'Diamond': { emoji: '💎', color: '#4A90E2' }
+            };
+            
+            const currentStage = stageInfo[progressData.stage] || stageInfo.Bronze;
+            if (stageEmoji) stageEmoji.textContent = currentStage.emoji;
+            if (stageName) stageName.textContent = `${progressData.stage} Stage`;
+        }
+
+        // Function to fetch live data from Supabase
+        async function fetchLiveProgress() {
+            if (!isLiveDataActive) {
+                updateProgress(); // Use mock data
+                return;
+            }
+            
+            try {
+                // This will connect to your React component's live data
+                if (window.supabase) {
+                    const { data: statsData, error } = await window.supabase
+                        .from('global_stats')
+                        .select('*')
+                        .single();
+                    
+                    if (!error && statsData) {
+                        const liveData = {
+                            progress: ((statsData.total_votes || 0) / (statsData.campaign_goal || 1000000)) * 100,
+                            stage: statsData.current_stage || 'Bronze',
+                            participants: statsData.total_participants || 0,
+                            votes: statsData.total_votes || 0,
+                            nextMilestone: 25 // Calculate based on stage
+                        };
+                        updateProgress(liveData);
+                        console.log('🎯 Live progress updated:', liveData);
+                    } else {
+                        console.log('📊 Using mock data (no live data available)');
+                        updateProgress(); // Fallback to mock
+                    }
+                } else {
+                    updateProgress(); // Fallback to mock
+                }
+            } catch (error) {
+                console.error('❌ Error fetching live progress:', error);
+                updateProgress(); // Fallback to mock
+            }
+        }
+
+        window.addEventListener('load', function() {
+            // Initial progress update
+            fetchLiveProgress();
+            
+            // Set up periodic updates for live data (every 30 seconds)
+            if (isLiveDataActive) {
+                setInterval(fetchLiveProgress, 30000);
+            }
         });
+
+        // Function to toggle between mock and live data
+        window.toggleLiveData = function() {
+            isLiveDataActive = !isLiveDataActive;
+            const status = isLiveDataActive ? 'LIVE DATA ACTIVE' : 'MOCK DATA ACTIVE';
+            const statusElement = document.getElementById('data-status');
+            
+            console.log(`🔄 Switched to: ${status}`);
+            
+            if (statusElement) {
+                statusElement.textContent = status;
+                statusElement.style.color = isLiveDataActive ? '#00FF00' : '#FFD700';
+            }
+            
+            fetchLiveProgress();
+        };
 
         // Add counter animation for stats
         function animateCounters() {
@@ -692,29 +1011,84 @@
 
     <!-- React App Components -->
     <script type="text/babel">
-        // Initialize Supabase with actual credentials
+        // Enhanced Supabase initialization with browser compatibility
         const supabaseUrl = 'https://pjtuisyvpvoswmcgxsfs.supabase.co';
         const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
         
-        // Utility Functions
+        // Cross-browser Supabase initialization
+        let supabase;
+        try {
+            if (window.supabase && window.supabase.createClient) {
+                supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
+                    auth: {
+                        autoRefreshToken: true,
+                        persistSession: true,
+                        detectSessionInUrl: false
+                    },
+                    db: {
+                        schema: 'public'
+                    },
+                    global: {
+                        headers: {
+                            'User-Agent': `OneDreamInitiative-${window.browserInfo?.webkit ? 'Webkit' : window.browserInfo?.gecko ? 'Gecko' : 'Unknown'}`
+                        }
+                    }
+                });
+                console.log('✅ Supabase initialized successfully');
+            } else {
+                throw new Error('Supabase library not loaded');
+            }
+        } catch (error) {
+            console.error('❌ Supabase initialization failed:', error);
+            // Fallback for browsers without Supabase support
+            supabase = {
+                from: () => ({
+                    select: () => Promise.resolve({ data: [], error: null }),
+                    insert: () => Promise.resolve({ data: null, error: 'Supabase not available' }),
+                    update: () => Promise.resolve({ data: null, error: 'Supabase not available' })
+                }),
+                functions: {
+                    invoke: () => Promise.resolve({ data: null, error: 'Functions not available' })
+                }
+            };
+        }
+        
+        // Enhanced utility functions with browser compatibility
         const generateShareableUrl = (username) => {
             return `${window.location.origin}/vote/${username}`;
         };
 
         const copyToClipboard = async (text) => {
             try {
-                await navigator.clipboard.writeText(text);
-                return true;
+                // Modern browsers (Chrome, Firefox, Safari, Edge)
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } 
+                // Fallback for older browsers or non-HTTPS
+                else {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    let successful = false;
+                    try {
+                        successful = document.execCommand('copy');
+                    } catch (err) {
+                        console.warn('Copy fallback failed:', err);
+                    }
+                    
+                    document.body.removeChild(textArea);
+                    return successful;
+                }
             } catch (err) {
-                // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                return true;
+                console.error('Copy to clipboard failed:', err);
+                return false;
             }
         };
         
@@ -1332,96 +1706,158 @@
                     }, '🌟 Real-time updates from your Supabase database! 🌟')
                 ]),
                 
-                // Leaderboard Section
-                React.createElement('div', {
-                    className: 'p-8',
-                    key: 'leaderboard'
-                }, [
-                    React.createElement('h3', {
-                        className: 'text-2xl font-bold text-gray-800 mb-6',
-                        key: 'title'
-                    }, `Top ${participants.length} Participants`),
-                    
-                    participants.length === 0 ? 
+                // Conditional Leaderboard Section - Only shows with live data
+                (participants.length > 0 && isLiveDataActive) ? 
+                    React.createElement('div', {
+                        className: 'p-4 md:p-8',
+                        key: 'leaderboard'
+                    }, [
                         React.createElement('div', {
-                            className: 'text-center py-12',
-                            key: 'empty'
+                            className: 'flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3',
+                            key: 'header'
                         }, [
-                            React.createElement('div', {
-                                className: 'text-6xl mb-4',
-                                key: 'icon'
-                            }, '🌱'),
-                            React.createElement('h4', {
-                                className: 'text-xl font-bold text-gray-800 mb-2',
+                            React.createElement('h3', {
+                                className: 'text-xl md:text-2xl font-bold text-gray-800',
                                 key: 'title'
-                            }, 'Be the First Dreamer!'),
-                            React.createElement('p', {
-                                className: 'text-gray-600',
-                                key: 'message'
-                            }, 'No participants yet. Register to start the leaderboard!')
-                        ]) :
+                            }, `🏆 Top ${Math.min(participants.length, 10)} Dreamers`),
+                            React.createElement('div', {
+                                className: 'flex items-center gap-2 text-sm text-gray-600',
+                                key: 'live-indicator'
+                            }, [
+                                React.createElement('div', {
+                                    className: 'w-2 h-2 bg-green-500 rounded-full animate-pulse',
+                                    key: 'dot'
+                                }),
+                                React.createElement('span', {
+                                    key: 'text'
+                                }, 'Live Results')
+                            ])
+                        ]),
+                        
                         React.createElement('div', {
-                            className: 'space-y-4',
+                            className: 'grid gap-3 md:gap-4',
                             key: 'participants'
-                        }, participants.map((participant, index) => {
+                        }, participants.slice(0, 10).map((participant, index) => {
                             const isTopThree = index < 3;
                             const rankEmojis = ['🥇', '🥈', '🥉'];
+                            const stageColors = {
+                                'Diamond': 'from-blue-500 to-cyan-400',
+                                'Gold': 'from-yellow-500 to-amber-400', 
+                                'Silver': 'from-gray-400 to-slate-300',
+                                'Bronze': 'from-amber-600 to-orange-500'
+                            };
                             
                             return React.createElement('div', {
-                                className: `flex items-center p-4 rounded-xl border-2 transition-all hover:shadow-lg ${
-                                    isTopThree ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200' : 'bg-gray-50 border-gray-200'
+                                className: `flex items-center p-3 md:p-4 rounded-xl border-2 transition-all hover:shadow-lg ${
+                                    isTopThree ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-300' : 'bg-white border-gray-200'
                                 }`,
                                 key: participant.id
                             }, [
+                                // Rank Badge
                                 React.createElement('div', {
-                                    className: `text-2xl font-bold mr-4 min-w-12 ${isTopThree ? 'text-yellow-500' : 'text-gray-500'}`,
+                                    className: `flex-shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center mr-3 md:mr-4 ${
+                                        isTopThree ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white' : 'bg-gray-100 text-gray-600'
+                                    }`,
                                     key: 'rank'
-                                }, index < 3 ? rankEmojis[index] : `#${index + 1}`),
+                                }, [
+                                    React.createElement('span', {
+                                        className: 'text-lg md:text-xl font-bold'
+                                    }, index < 3 ? rankEmojis[index] : `#${index + 1}`)
+                                ]),
+                                
+                                // Avatar
                                 React.createElement('div', {
-                                    className: 'mr-4',
+                                    className: 'flex-shrink-0 mr-3 md:mr-4',
                                     key: 'avatar'
                                 }, React.createElement('div', {
-                                    className: 'w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg'
-                                }, participant.name.charAt(0))),
+                                    className: `w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br ${stageColors[participant.current_stage] || stageColors['Bronze']} flex items-center justify-center text-white font-bold text-sm md:text-lg shadow-lg`
+                                }, participant.name.charAt(0).toUpperCase())),
+                                
+                                // Participant Info
                                 React.createElement('div', {
-                                    className: 'flex-1',
+                                    className: 'flex-1 min-w-0',
                                     key: 'info'
                                 }, [
                                     React.createElement('div', {
-                                        className: 'flex items-center gap-2 mb-1',
+                                        className: 'flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1',
                                         key: 'name-row'
                                     }, [
                                         React.createElement('h4', {
-                                            className: 'font-semibold text-gray-800',
+                                            className: 'font-semibold text-gray-800 text-sm md:text-base truncate',
                                             key: 'name'
                                         }, participant.name),
                                         React.createElement('span', {
-                                            className: `text-xs px-2 py-1 rounded-full font-medium ${
+                                            className: `inline-block text-xs px-2 py-1 rounded-full font-medium ${
                                                 participant.current_stage === 'Diamond' ? 'bg-blue-100 text-blue-800' :
                                                 participant.current_stage === 'Gold' ? 'bg-yellow-100 text-yellow-800' :
                                                 participant.current_stage === 'Silver' ? 'bg-gray-100 text-gray-800' :
                                                 'bg-amber-100 text-amber-800'
                                             }`,
                                             key: 'stage'
-                                        }, participant.current_stage)
+                                        }, `${participant.current_stage} ✨`)
                                     ]),
                                     React.createElement('div', {
-                                        className: 'text-sm text-gray-600',
+                                        className: 'text-xs md:text-sm text-gray-600',
                                         key: 'stats'
                                     }, [
                                         React.createElement('div', {
                                             className: 'font-medium',
                                             key: 'votes'
-                                        }, `${participant.total_votes} votes • $${participant.total_amount}`),
+                                        }, `${participant.total_votes.toLocaleString()} votes • $${participant.total_amount.toLocaleString()}`),
                                         React.createElement('div', {
-                                            className: 'text-xs opacity-75',
+                                            className: 'text-xs opacity-75 truncate',
                                             key: 'username'
                                         }, `@${participant.username}`)
                                     ])
-                                ])
+                                ]),
+                                
+                                // Stage Badge (Mobile)
+                                React.createElement('div', {
+                                    className: 'flex-shrink-0 ml-2',
+                                    key: 'stage-badge'
+                                }, React.createElement('div', {
+                                    className: 'text-lg md:text-xl'
+                                }, participant.current_stage === 'Diamond' ? '💎' :
+                                   participant.current_stage === 'Gold' ? '🏆' :
+                                   participant.current_stage === 'Silver' ? '🥈' : '🥉'))
                             ]);
-                        }))
-                ])
+                        })),
+                        
+                        // Show More Button (if more than 10 participants)
+                        participants.length > 10 ? React.createElement('div', {
+                            className: 'text-center mt-6',
+                            key: 'show-more'
+                        }, React.createElement('button', {
+                            className: 'px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-white font-semibold rounded-full hover:from-yellow-600 hover:to-amber-600 transition-all shadow-lg',
+                            onClick: () => alert(`${participants.length - 10} more participants! Full leaderboard coming soon...`)
+                        }, `View All ${participants.length} Dreamers`)) : null
+                    ]) :
+                    
+                    // Coming Soon Message (when no live data or in mock mode)
+                    React.createElement('div', {
+                        className: 'p-6 md:p-8 text-center',
+                        key: 'coming-soon'
+                    }, [
+                        React.createElement('div', {
+                            className: 'text-4xl md:text-6xl mb-4',
+                            key: 'icon'
+                        }, '🌟'),
+                        React.createElement('h4', {
+                            className: 'text-lg md:text-xl font-bold text-gray-800 mb-2',
+                            key: 'title'
+                        }, 'Community Leaderboard Coming Soon!'),
+                        React.createElement('p', {
+                            className: 'text-sm md:text-base text-gray-600 mb-4 max-w-md mx-auto',
+                            key: 'message'
+                        }, 'Our live leaderboard will activate once we start sharing live results. Be the first to join our community of dreamers!'),
+                        React.createElement('div', {
+                            className: 'flex justify-center',
+                            key: 'cta'
+                        }, React.createElement('button', {
+                            className: 'px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-white font-semibold rounded-full hover:from-yellow-600 hover:to-amber-600 transition-all shadow-lg text-sm md:text-base',
+                            onClick: () => document.getElementById('get-started')?.scrollIntoView({behavior: 'smooth'})
+                        }, '🚀 Join the Movement'))
+                    ]),
             ]);
         };
 
