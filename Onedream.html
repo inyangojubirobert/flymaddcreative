@@ -826,9 +826,15 @@
         
         // Initialize browser detection on DOM ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => BrowserDetector.init());
+            document.addEventListener('DOMContentLoaded', () => {
+                BrowserDetector.init();
+                // Also initialize progress bar early
+                setTimeout(() => updateProgress(), 200);
+            });
         } else {
             BrowserDetector.init();
+            // Initialize progress bar immediately if DOM is already ready
+            setTimeout(() => updateProgress(), 100);
         }
 
         // Add smooth scrolling for navigation links
@@ -840,6 +846,22 @@
                 });
             });
         });
+
+        // Immediate progress bar initialization (fallback)
+        function initializeProgressBar() {
+            const progressFill = document.getElementById('main-progress-fill');
+            if (progressFill) {
+                // Set mock data immediately to ensure bar is visible
+                progressFill.style.width = '24.8%';
+                progressFill.style.transition = 'width 2s ease-out';
+                console.log('🎯 Progress bar initialized with mock data (24.8%)');
+            }
+        }
+
+        // Try to initialize immediately if elements exist
+        if (document.readyState === 'complete') {
+            initializeProgressBar();
+        }
 
         // Add dynamic progress animation with intelligent live/mock data detection
         let hasLiveData = false; // Will be set to true when real data is detected
@@ -902,6 +924,8 @@
 
         // Function to apply progress data to UI elements
         function applyProgressData(data) {
+            console.log('🎯 Applying progress data:', data);
+            
             // Update progress bar
             const progressFill = document.getElementById('main-progress-fill');
             const progressPercentage = document.getElementById('progress-percentage');
@@ -910,12 +934,24 @@
             const stageName = document.getElementById('stage-name');
             const nextMilestone = document.getElementById('next-milestone');
             
+            console.log('📊 Progress fill element found:', !!progressFill);
+            
             if (progressFill) {
+                // Reset to 0% first
                 progressFill.style.width = '0%';
+                progressFill.style.transition = 'none';
+                
+                // Force a reflow
+                progressFill.offsetHeight;
+                
+                // Then animate to target percentage
                 setTimeout(() => {
                     progressFill.style.transition = 'width 2s ease-out';
                     progressFill.style.width = `${data.progress}%`;
-                }, 500);
+                    console.log(`✅ Progress bar animated to ${data.progress}%`);
+                }, 100);
+            } else {
+                console.error('❌ Progress fill element not found!');
             }
             
             // Update text elements
@@ -940,25 +976,45 @@
             };
             
             const currentStage = stageInfo[data.stage] || stageInfo.Bronze;
-            if (stageEmoji) stageEmoji.textContent = currentStage.emoji;
-            if (stageName) stageName.textContent = `${data.stage} Stage`;
+            if (stageEmoji) {
+                stageEmoji.textContent = currentStage.emoji;
+                console.log(`✅ Stage emoji updated to: ${currentStage.emoji} for ${data.stage} stage`);
+            }
+            if (stageName) {
+                stageName.textContent = `${data.stage} Stage`;
+                console.log(`✅ Stage name updated to: ${data.stage} Stage`);
+            }
         }
 
         window.addEventListener('load', function() {
-            // Initial progress update with automatic live/mock detection
-            updateProgress();
-            
-            // Set up periodic updates to check for new live data every 30 seconds
-            setInterval(() => {
+            // Ensure DOM is fully loaded before initializing progress
+            setTimeout(() => {
+                // Initial progress update with automatic live/mock detection
                 updateProgress();
-            }, 30000);
+                
+                // Set up periodic updates to check for new live data every 30 seconds
+                setInterval(() => {
+                    updateProgress();
+                }, 30000);
+            }, 100); // Small delay to ensure all elements are rendered
         });
 
-        // Add counter animation for stats
+        // Add counter animation for stats (excluding emoji elements)
         function animateCounters() {
             const statNumbers = document.querySelectorAll('.stat-number');
             statNumbers.forEach(stat => {
+                // Skip emoji elements and elements that don't contain numbers
+                if (stat.id === 'stage-emoji' || !/\d/.test(stat.textContent)) {
+                    return;
+                }
+                
                 const target = parseInt(stat.textContent.replace(/[^0-9]/g, ''));
+                
+                // Skip if target is NaN or 0
+                if (isNaN(target) || target === 0) {
+                    return;
+                }
+                
                 let current = 0;
                 const increment = target / 50;
                 const timer = setInterval(() => {
@@ -974,6 +1030,9 @@
                     }
                     if (stat.textContent.includes('$')) {
                         display = '$' + display;
+                    }
+                    if (stat.textContent.includes('%')) {
+                        display = display + '%';
                     }
                     stat.textContent = display;
                 }, 40);
