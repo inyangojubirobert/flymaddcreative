@@ -28,3 +28,42 @@ h1, h2, h3, h4, h5, h6, p { overflow-wrap: anywhere; hyphens: auto; }
 /* Hide scrollbar for horizontal tab list while keeping scrollability */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* One Dream Initiative Specific Styles */
+.onedream-hero-gradient {
+  background: linear-gradient(135deg, #004AAD 0%, #0066cc 100%);
+}
+
+.onedream-progress-fill {
+  width: 24.79%;
+  background: linear-gradient(90deg, #004AAD, #0066cc);
+  position: relative;
+  overflow: hidden;
+}
+
+.onedream-progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  animation: onedreamShine 2s infinite;
+}
+
+@keyframes onedreamShine {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.onedream-hero-pattern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+  opacity: 0.3;
+}
