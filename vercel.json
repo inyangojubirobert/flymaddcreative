@@ -19,10 +19,6 @@
     {
       "source": "/websiteapp",
       "destination": "/websiteapp.html"
-    },
-    {
-      "source": "/onedream",
-      "destination": "/Onedream.html"
     }
   ],
   "headers": [
@@ -40,15 +36,6 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
-        }
-      ]
-    },
-    {
-      "source": "/Onedream.html",
-      "headers": [
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
         }
       ]
     }
