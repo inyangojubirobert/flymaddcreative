@@ -38,6 +38,14 @@
               class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base"
               data-src="vision.html" id="tab-vision">Vision</button>
             <button
+              class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm md:text-base font-semibold shadow-md"
+              data-src="Onedream.html" id="tab-onedream">
+              <span class="flex items-center gap-1">
+                <span class="text-yellow-300">✨</span>
+                <span>One Dream</span>
+              </span>
+            </button>
+            <button
               class="tab-btn snap-start whitespace-nowrap px-3 py-2 rounded-lg bg-slate-500 text-white text-sm md:text-base"
               data-src="services.html" id="tab-services">Services</button>
             <button
@@ -76,11 +84,23 @@
     function setActiveTab(button) {
       document.querySelectorAll('.tab-btn').forEach(b => {
         b.classList.remove('bg-white', 'text-slate-900', 'tab-active');
-        b.classList.add('bg-slate-500', 'text-white');
+        // Reset One Dream tab to its special gradient styling
+        if (b.id === 'tab-onedream') {
+          b.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-blue-700', 'text-white', 'font-semibold', 'shadow-md');
+        } else {
+          b.classList.add('bg-slate-500', 'text-white');
+        }
         b.setAttribute('aria-selected', 'false');
       });
-      button.classList.remove('bg-slate-500', 'text-white');
-      button.classList.add('bg-white', 'text-slate-900', 'tab-active');
+      
+      // Set active state for the clicked button
+      if (button.id === 'tab-onedream') {
+        button.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-blue-700');
+        button.classList.add('bg-gradient-to-r', 'from-yellow-400', 'to-yellow-500', 'text-blue-900', 'tab-active', 'font-bold', 'shadow-lg');
+      } else {
+        button.classList.remove('bg-slate-500', 'text-white');
+        button.classList.add('bg-white', 'text-slate-900', 'tab-active');
+      }
       button.setAttribute('aria-selected', 'true');
     }
 
