@@ -453,14 +453,6 @@
     <section class="progress-section">
         <div class="container">
             <h2 class="section-title">Community Dream Progress</h2>
-            <!-- Toggle Button for Testing -->
-            <div style="text-align: center; margin-bottom: 20px; padding: 0 15px;">
-                <button onclick="toggleLiveData()" style="background: #FFD700; color: #004AAD; padding: 10px 20px; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: clamp(11px, 3vw, 14px); min-height: 44px; box-shadow: 0 2px 8px rgba(255,215,0,0.3); transition: all 0.3s ease;">
-                    🔄 Toggle Live/Mock Data
-                </button>
-                <br style="display: block; content: ''; margin: 5px 0;">
-                <span id="data-status" style="font-size: clamp(10px, 2.5vw, 12px); color: #FFD700; font-weight: bold; display: inline-block; margin-top: 8px;">MOCK DATA ACTIVE</span>
-            </div>
             <div class="progress-bar">
                 <div class="onedream-progress-fill" id="main-progress-fill"></div>
             </div>
@@ -849,10 +841,10 @@
             });
         });
 
-        // Add dynamic progress animation with live data support
-        let isLiveDataActive = false; // Toggle this to switch between mock and live data
+        // Add dynamic progress animation with intelligent live/mock data detection
+        let hasLiveData = false; // Will be set to true when real data is detected
         
-        // Mock data for fallback
+        // Mock data for fallback (only used when no live data exists)
         const mockData = {
             progress: 24.8,
             stage: 'Bronze',
@@ -861,32 +853,82 @@
             nextMilestone: 25
         };
 
-        // Function to update progress with live or mock data
-        function updateProgress(data = null) {
-            const progressData = data || mockData;
+        // Function to update progress with automatic live/mock data detection
+        async function updateProgress() {
+            try {
+                // First, try to fetch live data from Supabase
+                if (window.supabase) {
+                    const { data: statsData, error } = await window.supabase
+                        .from('global_stats')
+                        .select('*')
+                        .single();
+                    
+                    // Check if we have meaningful live data
+                    if (!error && statsData && (statsData.total_participants > 0 || statsData.total_votes > 0)) {
+                        hasLiveData = true;
+                        const liveData = {
+                            progress: ((statsData.total_votes || 0) / (statsData.campaign_goal || 1000000)) * 100,
+                            stage: statsData.current_stage || 'Bronze',
+                            participants: statsData.total_participants || 0,
+                            votes: statsData.total_votes || 0,
+                            nextMilestone: calculateNextMilestone(statsData.current_stage || 'Bronze')
+                        };
+                        
+                        applyProgressData(liveData);
+                        console.log('✅ Using live data from Supabase:', liveData);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.warn('⚠️ Could not fetch live data:', error.message);
+            }
             
+            // Fallback to mock data when no live data is available
+            hasLiveData = false;
+            applyProgressData(mockData);
+            console.log('📊 Using mock data (no live data available):', mockData);
+        }
+
+        // Function to calculate next milestone based on current stage
+        function calculateNextMilestone(stage) {
+            const milestones = {
+                'Bronze': 25,
+                'Silver': 50, 
+                'Gold': 75,
+                'Diamond': 100
+            };
+            return milestones[stage] || 25;
+        }
+
+        // Function to apply progress data to UI elements
+        function applyProgressData(data) {
             // Update progress bar
             const progressFill = document.getElementById('main-progress-fill');
             const progressPercentage = document.getElementById('progress-percentage');
             const totalParticipants = document.getElementById('total-participants');
             const stageEmoji = document.getElementById('stage-emoji');
             const stageName = document.getElementById('stage-name');
+            const nextMilestone = document.getElementById('next-milestone');
             
             if (progressFill) {
                 progressFill.style.width = '0%';
                 setTimeout(() => {
                     progressFill.style.transition = 'width 2s ease-out';
-                    progressFill.style.width = `${progressData.progress}%`;
+                    progressFill.style.width = `${data.progress}%`;
                 }, 500);
             }
             
             // Update text elements
             if (progressPercentage) {
-                progressPercentage.textContent = `${progressData.progress}% Complete`;
+                progressPercentage.textContent = `${data.progress}% Complete`;
             }
             
             if (totalParticipants) {
-                totalParticipants.textContent = progressData.participants.toLocaleString();
+                totalParticipants.textContent = data.participants.toLocaleString();
+            }
+            
+            if (nextMilestone) {
+                nextMilestone.textContent = `${data.nextMilestone}%`;
             }
             
             // Update stage info
@@ -897,74 +939,20 @@
                 'Diamond': { emoji: '💎', color: '#4A90E2' }
             };
             
-            const currentStage = stageInfo[progressData.stage] || stageInfo.Bronze;
+            const currentStage = stageInfo[data.stage] || stageInfo.Bronze;
             if (stageEmoji) stageEmoji.textContent = currentStage.emoji;
-            if (stageName) stageName.textContent = `${progressData.stage} Stage`;
-        }
-
-        // Function to fetch live data from Supabase
-        async function fetchLiveProgress() {
-            if (!isLiveDataActive) {
-                updateProgress(); // Use mock data
-                return;
-            }
-            
-            try {
-                // This will connect to your React component's live data
-                if (window.supabase) {
-                    const { data: statsData, error } = await window.supabase
-                        .from('global_stats')
-                        .select('*')
-                        .single();
-                    
-                    if (!error && statsData) {
-                        const liveData = {
-                            progress: ((statsData.total_votes || 0) / (statsData.campaign_goal || 1000000)) * 100,
-                            stage: statsData.current_stage || 'Bronze',
-                            participants: statsData.total_participants || 0,
-                            votes: statsData.total_votes || 0,
-                            nextMilestone: 25 // Calculate based on stage
-                        };
-                        updateProgress(liveData);
-                        console.log('🎯 Live progress updated:', liveData);
-                    } else {
-                        console.log('📊 Using mock data (no live data available)');
-                        updateProgress(); // Fallback to mock
-                    }
-                } else {
-                    updateProgress(); // Fallback to mock
-                }
-            } catch (error) {
-                console.error('❌ Error fetching live progress:', error);
-                updateProgress(); // Fallback to mock
-            }
+            if (stageName) stageName.textContent = `${data.stage} Stage`;
         }
 
         window.addEventListener('load', function() {
-            // Initial progress update
-            fetchLiveProgress();
+            // Initial progress update with automatic live/mock detection
+            updateProgress();
             
-            // Set up periodic updates for live data (every 30 seconds)
-            if (isLiveDataActive) {
-                setInterval(fetchLiveProgress, 30000);
-            }
+            // Set up periodic updates to check for new live data every 30 seconds
+            setInterval(() => {
+                updateProgress();
+            }, 30000);
         });
-
-        // Function to toggle between mock and live data
-        window.toggleLiveData = function() {
-            isLiveDataActive = !isLiveDataActive;
-            const status = isLiveDataActive ? 'LIVE DATA ACTIVE' : 'MOCK DATA ACTIVE';
-            const statusElement = document.getElementById('data-status');
-            
-            console.log(`🔄 Switched to: ${status}`);
-            
-            if (statusElement) {
-                statusElement.textContent = status;
-                statusElement.style.color = isLiveDataActive ? '#00FF00' : '#FFD700';
-            }
-            
-            fetchLiveProgress();
-        };
 
         // Add counter animation for stats
         function animateCounters() {
@@ -1706,8 +1694,8 @@
                     }, '🌟 Real-time updates from your Supabase database! 🌟')
                 ]),
                 
-                // Conditional Leaderboard Section - Only shows with live data
-                (participants.length > 0 && isLiveDataActive) ? 
+                // Conditional Leaderboard Section - Only shows when real live data exists
+                (participants.length > 0 && globalStats && (globalStats.total_participants > 0 || globalStats.total_votes > 0)) ? 
                     React.createElement('div', {
                         className: 'p-4 md:p-8',
                         key: 'leaderboard'
@@ -1833,7 +1821,7 @@
                         }, `View All ${participants.length} Dreamers`)) : null
                     ]) :
                     
-                    // Coming Soon Message (when no live data or in mock mode)
+                    // Coming Soon Message (when no real registrations/votes yet)
                     React.createElement('div', {
                         className: 'p-6 md:p-8 text-center',
                         key: 'coming-soon'
@@ -1849,7 +1837,7 @@
                         React.createElement('p', {
                             className: 'text-sm md:text-base text-gray-600 mb-4 max-w-md mx-auto',
                             key: 'message'
-                        }, 'Our live leaderboard will activate once we start sharing live results. Be the first to join our community of dreamers!'),
+                        }, 'Our live leaderboard will activate once participants start registering and voting. Be the first to join our community of dreamers!'),
                         React.createElement('div', {
                             className: 'flex justify-center',
                             key: 'cta'
