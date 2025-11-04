@@ -8,10 +8,35 @@
     <!-- Main site styles (consistent with other pages) -->
     <link rel="stylesheet" href="styles.css">
     
+    <!-- Tailwind CSS for React components -->
+    <link rel="stylesheet" href="src/styles/globals.css">
+    
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- React and dependencies -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Framer Motion -->
+    <script src="https://unpkg.com/framer-motion@10/dist/framer-motion.umd.js"></script>
+    
+    <!-- Heroicons (for React components) -->
+    <script type="module">
+        window.HeroIcons = await import('https://cdn.skypack.dev/@heroicons/react/24/outline');
+    </script>
+    
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Paystack Inline -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
     
     <style>
         /* One Dream Initiative CSS Variables */
@@ -405,7 +430,7 @@
             <p class="hero-vision">Harnessing support through social influence</p>
             <p class="hero-description">
                 In partnership with FlyMadd Creative, we're creating a movement where your social influence 
-                translates into meaningful rewards. Share, vote, and win together as we reach for our collective goal.
+                translates into meaningful rewards. Share, vote, and win  together as we reach for our collective goal.
             </p>
             <a href="register.html" class="cta-button">Start Your Journey</a>
         </div>
@@ -414,24 +439,29 @@
     <!-- Progress Section -->
     <section class="progress-section">
         <div class="container">
-            <h2 class="section-title">Global Progress to 1 Million Votes</h2>
+            <h2 class="section-title">Community Dream Progress</h2>
             <div class="progress-bar">
                 <div class="onedream-progress-fill"></div>
             </div>
-            <p>247,853 votes collected • 752,147 votes remaining</p>
+            <p style="font-size: 1.1rem; margin: 20px 0; color: var(--text-light);">
+                <strong>▓▓▓░░░ 24.8% Complete</strong> • The community is pushing forward! Keep sharing your dream.
+            </p>
             
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-number">247K+</div>
-                    <div>Total Votes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">$494K+</div>
-                    <div>Total Value</div>
+                    <div class="stat-number">🥉</div>
+                    <div>Bronze Stage</div>
+                    <small>Building momentum together</small>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">1,247</div>
-                    <div>Participants</div>
+                    <div>Dream Builders</div>
+                    <small>Growing our community</small>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">25%</div>
+                    <div>Next Milestone</div>
+                    <small>Silver Stage awaits!</small>
                 </div>
             </div>
         </div>
@@ -465,24 +495,24 @@
     <section id="prizes" class="prizes-section">
         <div class="container">
             <h2 class="section-title" style="color: white;">Amazing Prizes Await</h2>
-            <p style="font-size: 1.2rem; margin-bottom: 2rem;">When we reach 1,000,000 collective votes, the top winners receive:</p>
+            <p style="font-size: 1.2rem; margin-bottom: 2rem;">When we reach end of game circle, the top winners receive:</p>
             
             <div class="prizes-grid">
                 <div class="prize-card grand">
                     <div style="font-size: 4rem; margin-bottom: 20px;">🏆</div>
-                    <div class="prize-amount">$1,000</div>
+                    <div class="prize-amount">$3,000</div>
                     <h3>Grand Prize</h3>
                     <p>For the participant with the highest total votes</p>
                 </div>
                 <div class="prize-card">
                     <div style="font-size: 4rem; margin-bottom: 20px;">🥈</div>
-                    <div class="prize-amount">$500</div>
+                    <div class="prize-amount">$2000</div>
                     <h3>Second Place</h3>
                     <p>For the runner-up champion</p>
                 </div>
                 <div class="prize-card">
                     <div style="font-size: 4rem; margin-bottom: 20px;">🥉</div>
-                    <div class="prize-amount">$200</div>
+                    <div class="prize-amount">$1000</div>
                     <h3>Third Place</h3>
                     <p>For the bronze medal winner</p>
                 </div>
@@ -499,18 +529,45 @@
                     <div>
                         <h3 style="color: var(--accent-color); margin-bottom: 15px;">How it works:</h3>
                         <ul style="list-style: none; padding: 0;">
-                            <li style="margin-bottom: 10px;">✓ Each vote is valued at exactly <strong>$2</strong></li>
-                            <li style="margin-bottom: 10px;">✓ A round concludes when we reach <strong>1,000,000 total votes</strong></li>
-                            <li style="margin-bottom: 10px;">✓ Winners are determined by <strong>highest individual vote counts</strong></li>
-                            <li style="margin-bottom: 10px;">✓ New rounds begin after each milestone</li>
+                            <li style="margin-bottom: 10px;">✓ Every supporter matters and helps your dream grow</li>
+                            <li style="margin-bottom: 10px;">✓ Progress through <strong>Bronze → Silver → Gold → Diamond</strong> stages</li>
+                            <li style="margin-bottom: 10px;">✓ Winners are the <strong>most supported dreamers</strong> in each round</li>
+                            <li style="margin-bottom: 10px;">✓ New opportunities unlock with each stage milestone</li>
                         </ul>
                     </div>
                     <div style="text-align: center;">
-                        <h3 style="color: var(--accent-color); margin-bottom: 15px;">Current Status</h3>
-                        <div style="font-size: 3rem; font-weight: 700; color: var(--accent-color);">24.8%</div>
-                        <p style="margin: 10px 0;">Complete</p>
-                        <p style="font-size: 0.9rem; opacity: 0.8;">752,147 votes remaining to reach the threshold</p>
+                        <h3 style="color: var(--accent-color); margin-bottom: 15px;">Current Round Status</h3>
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--accent-color); margin-bottom: 10px;">🥉 Bronze Stage</div>
+                        <div style="font-size: 1.8rem; font-weight: 600; color: var(--primary-color); margin-bottom: 15px;">24.8% Progress</div>
+                        <p style="font-size: 1rem; color: var(--text-light); line-height: 1.5;">
+                            The community is building momentum!<br>
+                            <strong>Silver Stage unlocks at 25% milestone</strong>
+                        </p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Leaderboard & User Dashboard -->
+    <section id="interactive-section" style="padding: 80px 20px; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+        <div class="container">
+            <div class="text-center" style="margin-bottom: 60px;">
+                <h2 style="color: var(--primary-color); font-size: 2.5rem; margin-bottom: 20px;">
+                    🚀 Live Leaderboard & Progress Tracking 🚀
+                </h2>
+                <p style="font-size: 1.2rem; color: var(--text-light); max-width: 600px; margin: 0 auto;">
+                    Track real-time progress, see top participants, and manage your personal dream journey
+                </p>
+            </div>
+            
+            <!-- React App Root -->
+            <div id="onedream-app-root" style="min-height: 600px;">
+                <!-- React components will render here -->
+                <div style="text-align: center; padding: 60px 20px; color: var(--text-light);">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">⏳</div>
+                    <h3>Loading Interactive Features...</h3>
+                    <p>Please wait while we load the leaderboard and user dashboard.</p>
                 </div>
             </div>
         </div>
@@ -631,6 +688,1039 @@
         if (progressSection) {
             observer.observe(progressSection);
         }
+    </script>
+
+    <!-- React App Components -->
+    <script type="text/babel">
+        // Initialize Supabase with actual credentials
+        const supabaseUrl = 'https://pjtuisyvpvoswmcgxsfs.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+        
+        // Utility Functions
+        const generateShareableUrl = (username) => {
+            return `${window.location.origin}/vote/${username}`;
+        };
+
+        const copyToClipboard = async (text) => {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (err) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                return true;
+            }
+        };
+        
+        // 💳 Payment Component with Multiple Options (Stripe, Paystack, Crypto, PayPal)
+        const PaymentComponent = ({ targetUsername, targetName }) => {
+            const [isProcessing, setIsProcessing] = React.useState(false);
+            const [selectedMethod, setSelectedMethod] = React.useState('paystack');
+            const [amount, setAmount] = React.useState(2.00);
+
+            // Paystack Payment Handler
+            const handlePaystackPayment = async () => {
+                if (!currentUser) {
+                    alert('Please login first to vote!');
+                    return;
+                }
+
+                setIsProcessing(true);
+
+                try {
+                    const paystackOptions = {
+                        key: 'pk_test_your_paystack_public_key', // Replace with your actual key
+                        email: currentUser.email,
+                        amount: amount * 100 * 400, // Convert to kobo (₦400 = $1)
+                        currency: 'NGN',
+                        ref: `ODI_${targetUsername}_${Date.now()}`,
+                        
+                        customer: {
+                            email: currentUser.email,
+                            first_name: currentUser.name.split(' ')[0],
+                            last_name: currentUser.name.split(' ')[1] || ''
+                        },
+
+                        metadata: {
+                            username: targetUsername,
+                            participant_username: targetUsername,
+                            purpose: 'one_dream_initiative_vote',
+                            vote_amount: amount,
+                            voter_id: currentUser.id
+                        },
+
+                        callback: function(response) {
+                            console.log('✅ Paystack payment successful:', response);
+                            alert(`🎉 Payment successful! Your vote for ${targetName} is being processed.`);
+                            setIsProcessing(false);
+                            window.location.reload();
+                        },
+
+                        onClose: function() {
+                            console.log('Payment cancelled');
+                            setIsProcessing(false);
+                        }
+                    };
+
+                    const paystack = new PaystackPop();
+                    paystack.setup(paystackOptions);
+                    paystack.openIframe();
+                } catch (error) {
+                    console.error('Payment error:', error);
+                    alert('Payment failed. Please try again.');
+                    setIsProcessing(false);
+                }
+            };
+
+            // Test Payment Handler (for development)
+            const handleTestPayment = async () => {
+                if (!currentUser) {
+                    alert('Please login first to vote!');
+                    return;
+                }
+
+                setIsProcessing(true);
+
+                try {
+                    const response = await fetch('https://pjtuisyvpvoswmcgxsfs.supabase.co/functions/v1/test-payment', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${supabase.supabaseKey}`
+                        },
+                        body: JSON.stringify({
+                            username: targetUsername,
+                            transaction_id: `test_${Date.now()}`,
+                            payment_method: 'test',
+                            amount: amount,
+                            payer_email: currentUser.email,
+                            payer_name: currentUser.name
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert(`🎉 Test vote successful! ${result.votes_added} votes added for ${result.participant_name}`);
+                        window.location.reload();
+                    } else {
+                        alert(`❌ Vote failed: ${result.error}`);
+                    }
+                } catch (error) {
+                    console.error('Test payment error:', error);
+                    alert('Test payment failed. Please try again.');
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            return React.createElement('div', {
+                className: 'bg-white rounded-xl p-6 shadow-lg border border-gray-200'
+            }, [
+                React.createElement('h3', {
+                    className: 'text-xl font-bold text-gray-800 mb-4',
+                    key: 'title'
+                }, `💰 Vote for ${targetName}`),
+
+                React.createElement('div', {
+                    className: 'mb-4',
+                    key: 'amount-selector'
+                }, [
+                    React.createElement('label', {
+                        className: 'block text-sm font-medium text-gray-700 mb-2',
+                        key: 'label'
+                    }, 'Vote Amount (USD)'),
+                    React.createElement('select', {
+                        value: amount,
+                        onChange: (e) => setAmount(parseFloat(e.target.value)),
+                        className: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500',
+                        key: 'select'
+                    }, [
+                        React.createElement('option', { value: 2.00, key: '2' }, '$2.00 - 1 Vote'),
+                        React.createElement('option', { value: 10.00, key: '10' }, '$10.00 - 5 Votes'),
+                        React.createElement('option', { value: 20.00, key: '20' }, '$20.00 - 10 Votes'),
+                        React.createElement('option', { value: 50.00, key: '50' }, '$50.00 - 25 Votes')
+                    ])
+                ]),
+
+                React.createElement('div', {
+                    className: 'mb-6',
+                    key: 'payment-methods'
+                }, [
+                    React.createElement('label', {
+                        className: 'block text-sm font-medium text-gray-700 mb-3',
+                        key: 'label'
+                    }, 'Payment Method'),
+                    React.createElement('div', {
+                        className: 'grid grid-cols-2 gap-3',
+                        key: 'methods'
+                    }, [
+                        React.createElement('button', {
+                            onClick: () => setSelectedMethod('paystack'),
+                            className: `p-3 border-2 rounded-lg text-center transition-all ${
+                                selectedMethod === 'paystack' 
+                                    ? 'border-green-500 bg-green-50 text-green-700' 
+                                    : 'border-gray-200 hover:border-gray-300'
+                            }`,
+                            key: 'paystack'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-lg font-bold',
+                                key: 'icon'
+                            }, '🇳🇬'),
+                            React.createElement('div', {
+                                className: 'text-sm font-medium',
+                                key: 'text'
+                            }, 'Paystack'),
+                            React.createElement('div', {
+                                className: 'text-xs text-gray-500',
+                                key: 'desc'
+                            }, 'Cards, Bank Transfer')
+                        ]),
+                        React.createElement('button', {
+                            onClick: () => setSelectedMethod('stripe'),
+                            className: `p-3 border-2 rounded-lg text-center transition-all ${
+                                selectedMethod === 'stripe' 
+                                    ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                    : 'border-gray-200 hover:border-gray-300'
+                            }`,
+                            key: 'stripe'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-lg font-bold',
+                                key: 'icon'
+                            }, '💳'),
+                            React.createElement('div', {
+                                className: 'text-sm font-medium',
+                                key: 'text'
+                            }, 'Stripe'),
+                            React.createElement('div', {
+                                className: 'text-xs text-gray-500',
+                                key: 'desc'
+                            }, 'Credit/Debit Cards')
+                        ]),
+                        React.createElement('button', {
+                            onClick: () => setSelectedMethod('crypto'),
+                            className: `p-3 border-2 rounded-lg text-center transition-all ${
+                                selectedMethod === 'crypto' 
+                                    ? 'border-orange-500 bg-orange-50 text-orange-700' 
+                                    : 'border-gray-200 hover:border-gray-300'
+                            }`,
+                            key: 'crypto'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-lg font-bold',
+                                key: 'icon'
+                            }, '₿'),
+                            React.createElement('div', {
+                                className: 'text-sm font-medium',
+                                key: 'text'
+                            }, 'Crypto'),
+                            React.createElement('div', {
+                                className: 'text-xs text-gray-500',
+                                key: 'desc'
+                            }, 'BTC, ETH, USDC')
+                        ]),
+                        React.createElement('button', {
+                            onClick: () => setSelectedMethod('test'),
+                            className: `p-3 border-2 rounded-lg text-center transition-all ${
+                                selectedMethod === 'test' 
+                                    ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                                    : 'border-gray-200 hover:border-gray-300'
+                            }`,
+                            key: 'test'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-lg font-bold',
+                                key: 'icon'
+                            }, '🧪'),
+                            React.createElement('div', {
+                                className: 'text-sm font-medium',
+                                key: 'text'
+                            }, 'Test Mode'),
+                            React.createElement('div', {
+                                className: 'text-xs text-gray-500',
+                                key: 'desc'
+                            }, 'Free Testing')
+                        ])
+                    ])
+                ]),
+
+                React.createElement('div', {
+                    className: 'space-y-3',
+                    key: 'payment-buttons'
+                }, [
+                    selectedMethod === 'paystack' && React.createElement('button', {
+                        onClick: handlePaystackPayment,
+                        disabled: isProcessing,
+                        className: `w-full py-3 px-4 rounded-lg font-medium transition-all ${
+                            isProcessing 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`,
+                        key: 'paystack-btn'
+                    }, isProcessing ? '⏳ Processing...' : `💳 Pay ₦${(amount * 400).toLocaleString()} with Paystack`),
+
+                    selectedMethod === 'stripe' && React.createElement('button', {
+                        onClick: () => alert('Stripe integration coming soon!'),
+                        className: 'w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all',
+                        key: 'stripe-btn'
+                    }, `💳 Pay $${amount} with Stripe`),
+
+                    selectedMethod === 'crypto' && React.createElement('button', {
+                        onClick: () => alert('Crypto payments coming soon!'),
+                        className: 'w-full py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-all',
+                        key: 'crypto-btn'
+                    }, `₿ Pay $${amount} with Crypto`),
+
+                    selectedMethod === 'test' && React.createElement('button', {
+                        onClick: handleTestPayment,
+                        disabled: isProcessing,
+                        className: `w-full py-3 px-4 rounded-lg font-medium transition-all ${
+                            isProcessing 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : 'bg-purple-600 hover:bg-purple-700 text-white'
+                        }`,
+                        key: 'test-btn'
+                    }, isProcessing ? '⏳ Processing...' : `🧪 Test Vote ($${amount})`)
+                ]),
+
+                React.createElement('div', {
+                    className: 'mt-4 p-3 bg-blue-50 rounded-lg',
+                    key: 'info'
+                }, [
+                    React.createElement('div', {
+                        className: 'text-sm text-blue-800',
+                        key: 'text'
+                    }, `💡 Your vote helps ${targetName} climb the leaderboard! Every $2 = 1 vote.`)
+                ])
+            ]);
+        };
+
+        // Registration Component
+        const RegistrationForm = ({ onRegistrationSuccess }) => {
+            const [formData, setFormData] = React.useState({
+                name: '',
+                email: '',
+                username: ''
+            });
+            const [isLoading, setIsLoading] = React.useState(false);
+            const [message, setMessage] = React.useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setMessage('');
+
+                try {
+                    // Register participant
+                    const { data, error } = await supabase
+                        .from('participants')
+                        .insert([{
+                            name: formData.name,
+                            email: formData.email,
+                            username: formData.username || null // Let trigger generate if empty
+                        }])
+                        .select()
+                        .single();
+
+                    if (error) {
+                        if (error.code === '23505') {
+                            setMessage('❌ Email or username already exists. Please try different ones.');
+                        } else {
+                            setMessage(`❌ Registration error: ${error.message}`);
+                        }
+                        return;
+                    }
+
+                    setMessage('✅ Registration successful! Loading your dashboard...');
+                    setTimeout(() => {
+                        onRegistrationSuccess(data);
+                    }, 1500);
+
+                } catch (err) {
+                    setMessage(`❌ Unexpected error: ${err.message}`);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return React.createElement('div', {
+                className: 'bg-white rounded-2xl shadow-xl p-8 max-w-md mx-auto'
+            }, [
+                React.createElement('div', {
+                    className: 'text-center mb-6',
+                    key: 'header'
+                }, [
+                    React.createElement('div', {
+                        className: 'text-6xl mb-4',
+                        key: 'icon'
+                    }, '🌟'),
+                    React.createElement('h2', {
+                        className: 'text-2xl font-bold text-gray-800 mb-2',
+                        key: 'title'
+                    }, 'Join One Dream Initiative'),
+                    React.createElement('p', {
+                        className: 'text-gray-600',
+                        key: 'subtitle'
+                    }, 'Start your journey and get your shareable link!')
+                ]),
+                
+                React.createElement('form', {
+                    onSubmit: handleSubmit,
+                    key: 'form'
+                }, [
+                    React.createElement('div', {
+                        className: 'mb-4',
+                        key: 'name-field'
+                    }, [
+                        React.createElement('label', {
+                            className: 'block text-sm font-medium text-gray-700 mb-2',
+                            key: 'label'
+                        }, 'Full Name *'),
+                        React.createElement('input', {
+                            type: 'text',
+                            required: true,
+                            value: formData.name,
+                            onChange: (e) => setFormData({...formData, name: e.target.value}),
+                            className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                            placeholder: 'Enter your full name',
+                            key: 'input'
+                        })
+                    ]),
+                    
+                    React.createElement('div', {
+                        className: 'mb-4',
+                        key: 'email-field'
+                    }, [
+                        React.createElement('label', {
+                            className: 'block text-sm font-medium text-gray-700 mb-2',
+                            key: 'label'
+                        }, 'Email Address *'),
+                        React.createElement('input', {
+                            type: 'email',
+                            required: true,
+                            value: formData.email,
+                            onChange: (e) => setFormData({...formData, email: e.target.value}),
+                            className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                            placeholder: 'Enter your email',
+                            key: 'input'
+                        })
+                    ]),
+                    
+                    React.createElement('div', {
+                        className: 'mb-6',
+                        key: 'username-field'
+                    }, [
+                        React.createElement('label', {
+                            className: 'block text-sm font-medium text-gray-700 mb-2',
+                            key: 'label'
+                        }, 'Username (Optional)'),
+                        React.createElement('input', {
+                            type: 'text',
+                            value: formData.username,
+                            onChange: (e) => setFormData({...formData, username: e.target.value}),
+                            className: 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                            placeholder: 'Leave blank for auto-generation',
+                            key: 'input'
+                        }),
+                        React.createElement('p', {
+                            className: 'text-xs text-gray-500 mt-1',
+                            key: 'help'
+                        }, 'This will be used in your shareable link: /vote/yourusername')
+                    ]),
+                    
+                    React.createElement('button', {
+                        type: 'submit',
+                        disabled: isLoading,
+                        className: `w-full py-3 px-4 rounded-lg font-medium transition-all ${
+                            isLoading 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`,
+                        key: 'submit'
+                    }, isLoading ? '⏳ Registering...' : '🚀 Join the Initiative')
+                ]),
+                
+                message && React.createElement('div', {
+                    className: `mt-4 p-3 rounded-lg text-center ${
+                        message.includes('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`,
+                    key: 'message'
+                }, message)
+            ]);
+        };
+
+        // Real-time Leaderboard Component
+        const LiveLeaderboard = () => {
+            const [participants, setParticipants] = React.useState([]);
+            const [globalStats, setGlobalStats] = React.useState(null);
+            const [isLoading, setIsLoading] = React.useState(true);
+            const [error, setError] = React.useState('');
+
+            const fetchData = async () => {
+                try {
+                    // Fetch top participants
+                    const { data: participantsData, error: participantsError } = await supabase
+                        .from('participants')
+                        .select('*')
+                        .order('total_votes', { ascending: false })
+                        .limit(10);
+
+                    if (participantsError) throw participantsError;
+
+                    // Fetch global stats
+                    const { data: statsData, error: statsError } = await supabase
+                        .from('global_stats')
+                        .select('*')
+                        .single();
+
+                    if (statsError) throw statsError;
+
+                    setParticipants(participantsData || []);
+                    setGlobalStats(statsData);
+                    setError('');
+                } catch (err) {
+                    setError(`Failed to load data: ${err.message}`);
+                    console.error('Leaderboard fetch error:', err);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            React.useEffect(() => {
+                fetchData();
+                
+                // Set up real-time subscription
+                const subscription = supabase
+                    .channel('leaderboard')
+                    .on('postgres_changes', 
+                        { event: '*', schema: 'public', table: 'participants' },
+                        () => fetchData()
+                    )
+                    .on('postgres_changes',
+                        { event: '*', schema: 'public', table: 'global_stats' },
+                        () => fetchData()
+                    )
+                    .subscribe();
+
+                return () => subscription.unsubscribe();
+            }, []);
+
+            if (isLoading) {
+                return React.createElement('div', {
+                    className: 'bg-white rounded-2xl shadow-xl p-8 animate-pulse'
+                }, [
+                    React.createElement('div', { className: 'h-8 bg-gray-200 rounded mb-6', key: 'title' }),
+                    React.createElement('div', { className: 'h-6 bg-gray-200 rounded mb-8', key: 'subtitle' }),
+                    ...Array(5).fill(0).map((_, i) => 
+                        React.createElement('div', { className: 'h-16 bg-gray-200 rounded mb-4', key: i })
+                    )
+                ]);
+            }
+
+            if (error) {
+                return React.createElement('div', {
+                    className: 'bg-white rounded-2xl shadow-xl p-8 text-center'
+                }, [
+                    React.createElement('div', {
+                        className: 'text-6xl mb-4',
+                        key: 'icon'
+                    }, '⚠️'),
+                    React.createElement('h3', {
+                        className: 'text-xl font-bold text-red-600 mb-2',
+                        key: 'title'
+                    }, 'Connection Error'),
+                    React.createElement('p', {
+                        className: 'text-gray-600 mb-4',
+                        key: 'message'
+                    }, error),
+                    React.createElement('button', {
+                        onClick: () => {
+                            setIsLoading(true);
+                            fetchData();
+                        },
+                        className: 'bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700',
+                        key: 'retry'
+                    }, 'Retry Connection')
+                ]);
+            }
+
+            const progress = globalStats ? (globalStats.total_votes / globalStats.campaign_goal * 100) : 0;
+            const getStageInfo = (stage) => {
+                const stages = {
+                    'Bronze': { emoji: '🥉', color: 'amber' },
+                    'Silver': { emoji: '🥈', color: 'gray' },
+                    'Gold': { emoji: '🥇', color: 'yellow' },
+                    'Diamond': { emoji: '💎', color: 'blue' }
+                };
+                return stages[stage] || stages.Bronze;
+            };
+
+            const stageInfo = getStageInfo(globalStats?.current_stage);
+
+            return React.createElement('div', {
+                className: 'bg-white rounded-2xl shadow-xl overflow-hidden'
+            }, [
+                // Global Progress Section
+                React.createElement('div', {
+                    className: `bg-gradient-to-r from-${stageInfo.color}-600 to-${stageInfo.color}-800 p-8 text-white`,
+                    key: 'progress'
+                }, [
+                    React.createElement('div', {
+                        className: 'flex items-center justify-between mb-4',
+                        key: 'header'
+                    }, [
+                        React.createElement('div', { key: 'left' }, [
+                            React.createElement('h2', {
+                                className: 'text-3xl font-bold mb-2',
+                                key: 'title'
+                            }, 'Live Community Progress'),
+                            React.createElement('p', {
+                                className: 'text-lg opacity-90',
+                                key: 'subtitle'
+                            }, `${globalStats?.total_participants || 0} dreamers building together`)
+                        ]),
+                        React.createElement('div', {
+                            className: 'text-right',
+                            key: 'right'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-5xl mb-2',
+                                key: 'badge'
+                            }, stageInfo.emoji),
+                            React.createElement('div', {
+                                className: 'text-xl font-semibold',
+                                key: 'stage'
+                            }, `${globalStats?.current_stage || 'Bronze'} Stage`)
+                        ])
+                    ]),
+                    React.createElement('div', {
+                        className: 'mb-4',
+                        key: 'progress-bar'
+                    }, [
+                        React.createElement('div', {
+                            className: 'flex justify-between items-center mb-2',
+                            key: 'progress-header'
+                        }, [
+                            React.createElement('span', {
+                                className: 'text-lg font-medium',
+                                key: 'label'
+                            }, 'Progress to 1M Votes'),
+                            React.createElement('span', {
+                                className: 'text-2xl font-bold',
+                                key: 'percentage'
+                            }, `${(globalStats?.total_votes || 0).toLocaleString()} votes (${progress.toFixed(2)}%)`)
+                        ]),
+                        React.createElement('div', {
+                            className: 'w-full bg-white bg-opacity-20 rounded-full h-4 overflow-hidden',
+                            key: 'bar'
+                        }, React.createElement('div', {
+                            className: 'bg-white h-full rounded-full shadow-lg transition-all duration-1000 ease-out',
+                            style: { width: `${Math.min(progress, 100)}%` }
+                        }))
+                    ]),
+                    React.createElement('div', {
+                        className: 'text-center text-lg font-medium',
+                        key: 'motivational'
+                    }, '🌟 Real-time updates from your Supabase database! 🌟')
+                ]),
+                
+                // Leaderboard Section
+                React.createElement('div', {
+                    className: 'p-8',
+                    key: 'leaderboard'
+                }, [
+                    React.createElement('h3', {
+                        className: 'text-2xl font-bold text-gray-800 mb-6',
+                        key: 'title'
+                    }, `Top ${participants.length} Participants`),
+                    
+                    participants.length === 0 ? 
+                        React.createElement('div', {
+                            className: 'text-center py-12',
+                            key: 'empty'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-6xl mb-4',
+                                key: 'icon'
+                            }, '🌱'),
+                            React.createElement('h4', {
+                                className: 'text-xl font-bold text-gray-800 mb-2',
+                                key: 'title'
+                            }, 'Be the First Dreamer!'),
+                            React.createElement('p', {
+                                className: 'text-gray-600',
+                                key: 'message'
+                            }, 'No participants yet. Register to start the leaderboard!')
+                        ]) :
+                        React.createElement('div', {
+                            className: 'space-y-4',
+                            key: 'participants'
+                        }, participants.map((participant, index) => {
+                            const isTopThree = index < 3;
+                            const rankEmojis = ['🥇', '🥈', '🥉'];
+                            
+                            return React.createElement('div', {
+                                className: `flex items-center p-4 rounded-xl border-2 transition-all hover:shadow-lg ${
+                                    isTopThree ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200' : 'bg-gray-50 border-gray-200'
+                                }`,
+                                key: participant.id
+                            }, [
+                                React.createElement('div', {
+                                    className: `text-2xl font-bold mr-4 min-w-12 ${isTopThree ? 'text-yellow-500' : 'text-gray-500'}`,
+                                    key: 'rank'
+                                }, index < 3 ? rankEmojis[index] : `#${index + 1}`),
+                                React.createElement('div', {
+                                    className: 'mr-4',
+                                    key: 'avatar'
+                                }, React.createElement('div', {
+                                    className: 'w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg'
+                                }, participant.name.charAt(0))),
+                                React.createElement('div', {
+                                    className: 'flex-1',
+                                    key: 'info'
+                                }, [
+                                    React.createElement('div', {
+                                        className: 'flex items-center gap-2 mb-1',
+                                        key: 'name-row'
+                                    }, [
+                                        React.createElement('h4', {
+                                            className: 'font-semibold text-gray-800',
+                                            key: 'name'
+                                        }, participant.name),
+                                        React.createElement('span', {
+                                            className: `text-xs px-2 py-1 rounded-full font-medium ${
+                                                participant.current_stage === 'Diamond' ? 'bg-blue-100 text-blue-800' :
+                                                participant.current_stage === 'Gold' ? 'bg-yellow-100 text-yellow-800' :
+                                                participant.current_stage === 'Silver' ? 'bg-gray-100 text-gray-800' :
+                                                'bg-amber-100 text-amber-800'
+                                            }`,
+                                            key: 'stage'
+                                        }, participant.current_stage)
+                                    ]),
+                                    React.createElement('div', {
+                                        className: 'text-sm text-gray-600',
+                                        key: 'stats'
+                                    }, [
+                                        React.createElement('div', {
+                                            className: 'font-medium',
+                                            key: 'votes'
+                                        }, `${participant.total_votes} votes • $${participant.total_amount}`),
+                                        React.createElement('div', {
+                                            className: 'text-xs opacity-75',
+                                            key: 'username'
+                                        }, `@${participant.username}`)
+                                    ])
+                                ])
+                            ]);
+                        }))
+                ])
+            ]);
+        };
+
+        // Simple User Stats Component
+        const SimpleUserStats = ({ user }) => {
+            if (!user) {
+                return React.createElement('div', {
+                    className: 'text-center py-12'
+                }, [
+                    React.createElement('div', {
+                        className: 'text-6xl mb-4',
+                        key: 'icon'
+                    }, '🔐'),
+                    React.createElement('h3', {
+                        className: 'text-2xl font-bold text-gray-800 mb-2',
+                        key: 'title'
+                    }, 'Login Required'),
+                    React.createElement('p', {
+                        className: 'text-gray-600 mb-6',
+                        key: 'description'
+                    }, 'Please login to view your personal statistics and share your dream.'),
+                    React.createElement('button', {
+                        className: 'btn btn-primary',
+                        onClick: () => alert('Login feature coming soon!'),
+                        key: 'button'
+                    }, 'Login Now')
+                ]);
+            }
+
+            return React.createElement('div', {
+                className: 'bg-white rounded-2xl shadow-xl overflow-hidden'
+            }, [
+                React.createElement('div', {
+                    className: 'bg-gradient-to-r from-purple-600 to-blue-600 p-8 text-white',
+                    key: 'header'
+                }, [
+                    React.createElement('h2', {
+                        className: 'text-2xl font-bold mb-6',
+                        key: 'title'
+                    }, `Welcome, ${user.name}!`),
+                    React.createElement('div', {
+                        className: 'grid grid-cols-1 md:grid-cols-3 gap-6',
+                        key: 'stats'
+                    }, [
+                        React.createElement('div', {
+                            className: 'bg-white bg-opacity-20 rounded-xl p-4 text-center',
+                            key: 'progress'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-3xl font-bold mb-1',
+                                key: 'number'
+                            }, '3.2%'),
+                            React.createElement('div', {
+                                className: 'text-sm opacity-90',
+                                key: 'label'
+                            }, 'Personal Growth'),
+                            React.createElement('div', {
+                                className: 'text-xs opacity-75 mt-1',
+                                key: 'message'
+                            }, 'Amazing progress!')
+                        ]),
+                        React.createElement('div', {
+                            className: 'bg-white bg-opacity-20 rounded-xl p-4 text-center',
+                            key: 'level'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-2xl mb-1',
+                                key: 'badge'
+                            }, '🌱'),
+                            React.createElement('div', {
+                                className: 'font-semibold',
+                                key: 'name'
+                            }, 'Seedling'),
+                            React.createElement('div', {
+                                className: 'text-xs opacity-75 mt-1',
+                                key: 'level'
+                            }, 'Level 1')
+                        ]),
+                        React.createElement('div', {
+                            className: 'bg-white bg-opacity-20 rounded-xl p-4 text-center',
+                            key: 'supporters'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-2xl font-bold mb-1',
+                                key: 'number'
+                            }, '47'),
+                            React.createElement('div', {
+                                className: 'text-sm opacity-90',
+                                key: 'label'
+                            }, 'Dream Supporters'),
+                            React.createElement('div', {
+                                className: 'text-xs opacity-75 mt-1',
+                                key: 'message'
+                            }, 'Every one counts!')
+                        ])
+                    ])
+                ])
+            ]);
+        };
+
+        // Main App Component
+        const OneDreamApp = () => {
+            const [activeView, setActiveView] = React.useState('leaderboard');
+            const [currentUser, setCurrentUser] = React.useState(null);
+            const [showRegistration, setShowRegistration] = React.useState(false);
+
+            const handleRegistrationSuccess = (userData) => {
+                setCurrentUser(userData);
+                setShowRegistration(false);
+                setActiveView('dashboard');
+            };
+
+            const handleLogin = () => {
+                setShowRegistration(true);
+            };
+
+            const handleLogout = () => {
+                setCurrentUser(null);
+                setActiveView('leaderboard');
+                setShowRegistration(false);
+            };
+
+            // Show registration form when requested
+            if (showRegistration && !currentUser) {
+                return React.createElement('div', {
+                    className: 'min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12'
+                }, [
+                    React.createElement('div', {
+                        className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8',
+                        key: 'container'
+                    }, [
+                        React.createElement('div', {
+                            className: 'text-center mb-8',
+                            key: 'header'
+                        }, [
+                            React.createElement('button', {
+                                onClick: () => setShowRegistration(false),
+                                className: 'mb-4 text-blue-600 hover:text-blue-800 transition-colors',
+                                key: 'back'
+                            }, '← Back to Leaderboard'),
+                            React.createElement('h1', {
+                                className: 'text-4xl font-bold text-gray-900 mb-4',
+                                key: 'title'
+                            }, 'Join the One Dream Initiative'),
+                            React.createElement('p', {
+                                className: 'text-xl text-gray-600',
+                                key: 'subtitle'
+                            }, 'Register now to get your shareable link and start your journey!')
+                        ]),
+                        React.createElement(RegistrationForm, {
+                            onRegistrationSuccess: handleRegistrationSuccess,
+                            key: 'registration'
+                        })
+                    ])
+                ]);
+            }
+
+            return React.createElement('div', {
+                className: 'min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50'
+            }, [
+                // Header
+                React.createElement('header', {
+                    className: 'bg-white shadow-sm border-b border-gray-200',
+                    key: 'header'
+                }, React.createElement('div', {
+                    className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
+                }, React.createElement('div', {
+                    className: 'flex justify-between items-center h-16'
+                }, [
+                    React.createElement('div', {
+                        className: 'flex items-center gap-4',
+                        key: 'left'
+                    }, [
+                        React.createElement('h1', {
+                            className: 'text-2xl font-bold gradient-text',
+                            key: 'title'
+                        }, 'One Dream Initiative'),
+                        React.createElement('div', {
+                            className: 'hidden sm:flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium',
+                            key: 'badge'
+                        }, [
+                            React.createElement('span', { key: 'icon' }, '🎯'),
+                            React.createElement('span', { key: 'text' }, 'Live Testing Mode')
+                        ])
+                    ]),
+                    React.createElement('div', {
+                        className: 'flex items-center gap-4',
+                        key: 'right'
+                    }, [
+                        // View switcher
+                        React.createElement('div', {
+                            className: 'flex bg-gray-100 rounded-lg p-1',
+                            key: 'switcher'
+                        }, [
+                            React.createElement('button', {
+                                onClick: () => setActiveView('leaderboard'),
+                                className: `px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                                    activeView === 'leaderboard'
+                                        ? 'bg-white shadow-md text-blue-600'
+                                        : 'text-gray-600 hover:text-gray-800'
+                                }`,
+                                key: 'leaderboard'
+                            }, '🏆 Leaderboard'),
+                            currentUser && React.createElement('button', {
+                                onClick: () => setActiveView('dashboard'),
+                                className: `px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                                    activeView === 'dashboard'
+                                        ? 'bg-white shadow-md text-blue-600'
+                                        : 'text-gray-600 hover:text-gray-800'
+                                }`,
+                                key: 'dashboard'
+                            }, '📊 My Dashboard')
+                        ]),
+                        // User menu
+                        currentUser ? React.createElement('div', {
+                            className: 'flex items-center gap-3',
+                            key: 'user-menu'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-sm',
+                                key: 'greeting'
+                            }, React.createElement('div', {
+                                className: 'font-medium text-gray-900'
+                            }, `Hello, ${currentUser.name.split(' ')[0]}! 👋`)),
+                            React.createElement('button', {
+                                onClick: handleLogout,
+                                className: 'bg-red-100 text-red-800 px-3 py-1 rounded-lg text-sm hover:bg-red-200 transition-all',
+                                key: 'logout'
+                            }, 'Logout')
+                        ]) : React.createElement('button', {
+                            onClick: handleLogin,
+                            className: 'bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all',
+                            key: 'login'
+                        }, '🚀 Join Initiative')
+                    ])
+                ]))),
+
+                // Main Content
+                React.createElement('main', {
+                    className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8',
+                    key: 'main'
+                }, 
+                    activeView === 'leaderboard' ? 
+                        React.createElement('div', {
+                            className: 'space-y-8'
+                        }, [
+                            React.createElement('div', {
+                                className: 'text-center',
+                                key: 'header'
+                            }, [
+                                React.createElement('h2', {
+                                    className: 'text-3xl font-bold text-gray-900 mb-2',
+                                    key: 'title'
+                                }, '🌟 Live Dream Leaderboard 🌟'),
+                                React.createElement('p', {
+                                    className: 'text-lg text-gray-600',
+                                    key: 'subtitle'
+                                }, 'Real-time data from your Supabase database!')
+                            ]),
+                            React.createElement(LiveLeaderboard, { key: 'leaderboard' })
+                        ]) :
+                        activeView === 'dashboard' && currentUser ?
+                            React.createElement('div', {
+                                className: 'space-y-8'
+                            }, [
+                                React.createElement(UserDashboard, { 
+                                    user: currentUser,
+                                    onLogout: handleLogout,
+                                    key: 'dashboard' 
+                                })
+                            ]) :
+                            React.createElement('div', {
+                                className: 'text-center py-12'
+                            }, [
+                                React.createElement('div', {
+                                    className: 'text-6xl mb-4',
+                                    key: 'icon'
+                                }, '🔐'),
+                                React.createElement('h3', {
+                                    className: 'text-2xl font-bold text-gray-800 mb-2',
+                                    key: 'title'
+                                }, 'Please Register First'),
+                                React.createElement('p', {
+                                    className: 'text-gray-600 mb-6',
+                                    key: 'description'
+                                }, 'Join the initiative to access your personal dashboard.'),
+                                React.createElement('button', {
+                                    onClick: handleLogin,
+                                    className: 'bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all',
+                                    key: 'register'
+                                }, '🚀 Register Now')
+                            ])
+                )
+            ]);
+        };
+
+        // Initialize the app
+        const root = ReactDOM.createRoot(document.getElementById('onedream-app-root'));
+        root.render(React.createElement(OneDreamApp));
     </script>
     </div> <!-- Close iframe-container -->
 </body>
