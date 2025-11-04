@@ -37,6 +37,48 @@
     
     <!-- Paystack Inline -->
     <script src="https://js.paystack.co/v1/inline.js"></script>
+
+    <!-- Library Loading Check Script -->
+    <script>
+        console.log('🚀 Starting One Dream Initiative...');
+        
+        // Check library loading status
+        function checkLibraries() {
+            const checks = {
+                React: !!window.React,
+                ReactDOM: !!window.ReactDOM,
+                Babel: !!window.Babel,
+                Supabase: !!window.supabase,
+                Paystack: !!window.PaystackPop,
+                CSS: typeof CSS !== 'undefined' && CSS.supports,
+                Fetch: typeof fetch !== 'undefined'
+            };
+            
+            console.log('📚 Library loading status:', checks);
+            
+            // Count loaded libraries
+            const loadedCount = Object.values(checks).filter(Boolean).length;
+            const totalCount = Object.keys(checks).length;
+            
+            if (loadedCount === totalCount) {
+                console.log('✅ All libraries loaded successfully!');
+                window.librariesReady = true;
+            } else {
+                console.warn(`⚠️ ${totalCount - loadedCount} libraries failed to load`);
+                window.librariesReady = false;
+            }
+            
+            return checks;
+        }
+        
+        // Check immediately
+        window.librariesReady = false;
+        
+        // Check after a short delay to allow async loading
+        setTimeout(() => {
+            checkLibraries();
+        }, 2000);
+    </script>
     
     <style>
         /* One Dream Initiative CSS Variables */
@@ -1061,6 +1103,9 @@
         // Enhanced Supabase initialization with browser compatibility
         const supabaseUrl = 'https://pjtuisyvpvoswmcgxsfs.supabase.co';
         const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY';
+        
+        // Global variables for React components
+        let currentUser = null;
         
         // Cross-browser Supabase initialization
         let supabase;
@@ -2201,9 +2246,111 @@
             ]);
         };
 
-        // Initialize the app
-        const root = ReactDOM.createRoot(document.getElementById('onedream-app-root'));
-        root.render(React.createElement(OneDreamApp));
+        // Initialize the app (compatible with React 18)
+        const renderApp = () => {
+            console.log('🎯 Attempting to render React app...');
+            
+            // Check if container exists
+            const container = document.getElementById('onedream-app-root');
+            if (!container) {
+                console.error('❌ Container #onedream-app-root not found');
+                return;
+            }
+            
+            // Check if libraries are loaded
+            if (!window.React) {
+                console.error('❌ React not loaded');
+                showErrorMessage(container, 'React library failed to load');
+                return;
+            }
+            
+            if (!window.ReactDOM) {
+                console.error('❌ ReactDOM not loaded');
+                showErrorMessage(container, 'ReactDOM library failed to load');
+                return;
+            }
+            
+            try {
+                console.log('🔄 Creating React app...');
+                
+                // Try React 18 createRoot method first
+                if (ReactDOM.createRoot) {
+                    console.log('Using React 18 createRoot method');
+                    const root = ReactDOM.createRoot(container);
+                    root.render(React.createElement(OneDreamApp));
+                    console.log('✅ React app rendered using createRoot (React 18)');
+                } 
+                // Fallback to legacy render method
+                else if (ReactDOM.render) {
+                    console.log('Using legacy ReactDOM.render method');
+                    ReactDOM.render(
+                        React.createElement(OneDreamApp), 
+                        container
+                    );
+                    console.log('✅ React app rendered using legacy render method');
+                }
+                else {
+                    throw new Error('No ReactDOM render method available');
+                }
+            } catch (error) {
+                console.error('❌ Failed to render React app:', error);
+                showErrorMessage(container, error.message);
+            }
+        };
+
+        function showErrorMessage(container, errorMsg) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px; background: white; border-radius: 20px; margin: 20px; border: 2px solid #fecaca;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">⚠️</div>
+                    <h3 style="color: #dc2626; margin-bottom: 15px;">React App Failed to Load</h3>
+                    <p style="color: #666; margin-bottom: 10px;">The interactive features are temporarily unavailable.</p>
+                    <details style="margin: 20px 0; text-align: left;">
+                        <summary style="cursor: pointer; color: #3b82f6; margin-bottom: 10px;">Technical Details</summary>
+                        <pre style="background: #f3f4f6; padding: 15px; border-radius: 5px; font-size: 0.8rem; overflow-x: auto;">${errorMsg}</pre>
+                    </details>
+                    <div style="margin-top: 20px;">
+                        <button onclick="location.reload()" style="background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 5px; margin-right: 10px; cursor: pointer;">
+                            🔄 Retry Loading
+                        </button>
+                        <button onclick="window.open('test-debug.html', '_blank')" style="background: #6b7280; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+                            🔧 Debug Mode
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Enhanced initialization with multiple retry attempts
+        let renderAttempts = 0;
+        const maxAttempts = 3;
+
+        function attemptRender() {
+            renderAttempts++;
+            console.log(`🔄 Render attempt ${renderAttempts}/${maxAttempts}`);
+            
+            if (window.librariesReady || renderAttempts >= maxAttempts) {
+                renderApp();
+            } else {
+                console.log('⏳ Waiting for libraries to load...');
+                setTimeout(attemptRender, 1000);
+            }
+        }
+
+        // Start rendering when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(attemptRender, 500);
+            });
+        } else {
+            setTimeout(attemptRender, 500);
+        }
+
+        // Also try after full page load
+        window.addEventListener('load', () => {
+            if (renderAttempts === 0) {
+                setTimeout(attemptRender, 1000);
+            }
+        });
     </script>
     </div> <!-- Close iframe-container -->
 </body>
