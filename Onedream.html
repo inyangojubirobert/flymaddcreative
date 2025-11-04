@@ -498,7 +498,7 @@
                 <div class="onedream-progress-fill" id="main-progress-fill"></div>
             </div>
             <p id="progress-text" style="font-size: 1.1rem; margin: 20px 0; color: #FFD700;">
-                <strong id="progress-percentage">24% Complete</strong> • <span id="progress-message">The community is pushing forward! Keep sharing your dream.</span>
+                <strong id="progress-percentage">24.8% Complete</strong> • <span id="progress-message">The community is pushing forward! Keep sharing your dream.</span>
             </p>
             
             <div class="stats-grid">
@@ -592,7 +592,7 @@
                     <div style="text-align: center;">
                         <h3 style="color: #FFD700; margin-bottom: 15px;">Current Round Status</h3>
                         <div style="font-size: 2.5rem; font-weight: 700; color: #FFD700; margin-bottom: 10px;">🥉 Bronze Stage</div>
-                        <div style="font-size: 1.8rem; font-weight: 600; color: #FFD700; margin-bottom: 15px;">24% Progress</div>
+                        <div style="font-size: 1.8rem; font-weight: 600; color: #FFD700; margin-bottom: 15px;">24.8% Progress</div>
                         <p style="font-size: 1rem; color: #FFD700; line-height: 1.5;">
                             The community is building momentum!<br>
                             <strong>Silver Stage unlocks at 25% milestone</strong>
@@ -864,9 +864,9 @@
             const progressFill = document.getElementById('main-progress-fill');
             if (progressFill) {
                 // Set mock data immediately to ensure bar is visible
-                progressFill.style.width = '24%';
+                progressFill.style.width = '24.8%';
                 progressFill.style.transition = 'width 2s ease-out';
-                console.log('🎯 Progress bar initialized with mock data (24%)');
+                console.log('🎯 Progress bar initialized with mock data (24.8%)');
             }
         }
 
@@ -887,14 +887,7 @@
             nextMilestone: 25
         };
 
-        // Backend configuration (not displayed in UI)
-        const BACKEND_CONFIG = {
-            VOTE_THRESHOLD_FOR_WINNER: 1000000, // 1 million votes needed to declare winner
-            SWITCH_TO_LIVE_DATA_AT: 24, // Switch from mock to live data when reaching 24%
-            CAMPAIGN_GOAL: 1000000 // Total campaign goal for 100% completion
-        };
-
-        // Function to update progress with intelligent live/mock data switching
+        // Function to update progress with automatic live/mock data detection
         async function updateProgress() {
             try {
                 // First, try to fetch live data from Supabase
@@ -904,43 +897,30 @@
                         .select('*')
                         .single();
                     
-                    // Calculate current progress percentage
-                    const currentProgress = statsData ? ((statsData.total_votes || 0) / BACKEND_CONFIG.CAMPAIGN_GOAL) * 100 : 0;
-                    
-                    // Check if we should switch to live data (at 24% threshold or if we have substantial data)
-                    const shouldUseLiveData = !error && statsData && (
-                        currentProgress >= BACKEND_CONFIG.SWITCH_TO_LIVE_DATA_AT || 
-                        statsData.total_participants >= 50 || 
-                        statsData.total_votes >= (BACKEND_CONFIG.CAMPAIGN_GOAL * 0.24)
-                    );
-                    
-                    if (shouldUseLiveData) {
+                    // Check if we have meaningful live data
+                    if (!error && statsData && (statsData.total_participants > 0 || statsData.total_votes > 0)) {
                         hasLiveData = true;
                         const liveData = {
-                            progress: currentProgress,
+                            progress: ((statsData.total_votes || 0) / (statsData.campaign_goal || 1000000)) * 100,
                             stage: statsData.current_stage || 'Bronze',
                             participants: statsData.total_participants || 0,
                             votes: statsData.total_votes || 0,
-                            nextMilestone: calculateNextMilestone(statsData.current_stage || 'Bronze'),
-                            isWinnerEligible: statsData.total_votes >= BACKEND_CONFIG.VOTE_THRESHOLD_FOR_WINNER
+                            nextMilestone: calculateNextMilestone(statsData.current_stage || 'Bronze')
                         };
                         
                         applyProgressData(liveData);
                         console.log('✅ Using live data from Supabase:', liveData);
-                        console.log(`🏆 Backend Status: ${statsData.total_votes}/${BACKEND_CONFIG.VOTE_THRESHOLD_FOR_WINNER} votes for winner eligibility`);
                         return;
-                    } else {
-                        console.log(`📊 Live data available but below 24% threshold (${currentProgress.toFixed(1)}%) - continuing with mock data`);
                     }
                 }
             } catch (error) {
                 console.warn('⚠️ Could not fetch live data:', error.message);
             }
             
-            // Fallback to mock data when threshold not reached or no live data available
+            // Fallback to mock data when no live data is available
             hasLiveData = false;
             applyProgressData(mockData);
-            console.log('📊 Using mock data (live data switches at 24% or 240,000+ votes):', mockData);
+            console.log('📊 Using mock data (no live data available):', mockData);
         }
 
         // Function to calculate next milestone based on current stage
