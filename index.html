@@ -11,19 +11,19 @@
     <link rel="preconnect" href="https://res.cloudinary.com">
     <link rel="dns-prefetch" href="https://res.cloudinary.com">
   <style>
-  /* Pagination (Dots) — smaller, colorful version */
+  /* Pagination (Dots) — extra small, colorful version */
   #dots {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 1rem 0;
-    gap: 5px;
+    margin: 0.5rem 0;
+    gap: 4px;
   }
 
   #dots button {
-    width: 2px;
-    height: 2px;
-    background-color: #cbd5e1; /* slate-300 */
+    width: 5px;
+    height: 5px;
+    background-color: #94a3b8; /* slate-400 */
     border: none;
     border-radius: 50%;
     cursor: pointer;
@@ -31,20 +31,21 @@
   }
 
   #dots button:hover {
-    background-color: #64748b; /* slate-500 */
-    transform: scale(1.2);
+    background-color: #60a5fa; /* blue-400 */
+    transform: scale(1.3);
   }
 
   #dots button.active {
     background-color: #2563eb; /* blue-600 */
-    transform: scale(1.2);
+    transform: scale(1.4);
+    box-shadow: 0 0 3px #60a5fa;
   }
 
-  /* Responsive sizes (smaller on mobile) */
+  /* Even smaller on mobile */
   @media (max-width: 640px) {
     #dots button {
-      width: 1px;
-      height: 1px;
+      width: 4px;
+      height: 4px;
       gap: 3px;
     }
   }
