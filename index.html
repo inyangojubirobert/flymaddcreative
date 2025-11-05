@@ -11,40 +11,40 @@
     <link rel="preconnect" href="https://res.cloudinary.com">
     <link rel="dns-prefetch" href="https://res.cloudinary.com">
   <style>
-  /* Pagination (Dots) — ultra tiny for mobile */
+  /* Pagination (Dots) — proper sizing for desktop, tiny for mobile */
   #dots {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 0.25rem 0;
-    gap: 1px;
+    margin: 0.75rem 0;
+    gap: 3px;
   }
 
   #dots button {
-    width: 4px;
-    height: 4px;
+    width: 10px;
+    height: 10px;
     background-color: #cbd5e1; /* slate-300 */
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.25s ease;
   }
 
   #dots button:hover {
     background-color: #64748b; /* slate-500 */
-    transform: scale(1.1);
+    transform: scale(1.2);
   }
 
   #dots button.active {
     background-color: #2563eb; /* blue-600 */
-    transform: scale(1.1);
+    transform: scale(1.2);
   }
 
-  /* Ultra tiny on mobile devices */
+  /* Ultra tiny ONLY on mobile devices */
   @media (max-width: 640px) {
     #dots {
-      margin: 0.125rem 0;
-      gap: 0.5px;
+      margin: 0.25rem 0;
+      gap: 1px;
     }
     #dots button {
       width: 2px;
@@ -219,11 +219,11 @@
    b.className = 'dot';
 b.style.backgroundColor = '#d1d5db'; // Default gray color
 b.style.borderRadius = '50%';
-b.style.width = '3px';
-b.style.height = '3px';
-b.style.margin = '0 1px';
+b.style.width = '10px';
+b.style.height = '10px';
+b.style.margin = '0 3px';
 b.style.border = 'none';
-b.style.transition = 'all 0.15s ease';
+b.style.transition = 'all 0.25s ease';
 b.style.cursor = 'pointer';
 
 // Hover and active effects (dynamic styling)
@@ -256,9 +256,9 @@ resizeDots() {
   const size =
     width < 480 ? 1.5 :   // Ultra tiny for very small screens
     width < 640 ? 2 :     // Tiny for mobile
-    width < 1024 ? 3 : 4; // Small for medium and desktop
+    width < 1024 ? 10 : 12; // Good size for medium and desktop
   const margin =
-    width < 640 ? 0.5 : 1; // Minimal margin on mobile
+    width < 640 ? 0.5 : 3; // Minimal margin on mobile, normal on desktop
   
   Array.from(this.dotsEl.children).forEach(btn => {
     btn.style.width = `${size}px`;
