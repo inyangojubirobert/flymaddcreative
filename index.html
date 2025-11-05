@@ -101,7 +101,7 @@
                 </div>
             </div>
             <!-- Controls below slides, outside onboarding -->
-            <div id="dots" class="flex items-center gap-2 justify-center mt-3 mb-2"></div>
+            <div id="dots" class="flex items-center gap-1 sm:gap-1.5 md:gap-2 justify-center mt-2 mb-1 sm:mt-3 sm:mb-2"></div>
             <div id="controlsBar"
                 class="flex items-center justify-between gap-4 px-0 mb-4 flex-wrap ml-6 mr-6 sm:ml-8 sm:mr-8 md:ml-10 md:mr-10">
                 <button id="btnBack"
@@ -162,7 +162,7 @@
                     this.dotsEl.innerHTML = '';
                     for (let i = 0; i < this.count; i++) {
                         const b = document.createElement('button');
-                        b.className = 'w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-gray-300 hover:bg-gray-400 transition-colors';
+                        b.className = 'w-1.5 h-1.5 sm:w-2 sm:h-2 md:w-2.5 md:h-2.5 rounded-full bg-gray-300 hover:bg-gray-400 transition-colors';
                         b.setAttribute('aria-label', `Go to slide ${i + 1}`);
                         b.addEventListener('click', () => { this.index = i; this.update(true); });
                         this.dotsEl.appendChild(b);
