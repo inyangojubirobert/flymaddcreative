@@ -47,29 +47,29 @@
   /* Ultra tiny ONLY on mobile devices */
   @media (max-width: 640px) {
     #dots {
-      margin:3 rem 0;     /* MOBILE: Vertical margin */
-      gap: 2px;            /* MOBILE: Gap between dots */
+      margin:5rem 0;     /* MOBILE: Vertical margin */
+      gap: 5;            /* MOBILE: Gap between dots */
     }
     #dots button {
-      width: 0.5px;            /* MOBILE: Dot width */
-      height: 0.5px;           /* MOBILE: Dot height */
+      width: 0.5;            /* MOBILE: Dot width */
+      height: 0.5;           /* MOBILE: Dot height */
     }
     #dots button:hover {
-      transform: scale(1); /* MOBILE: Hover scale effect */
+      transform: scale(0.2); /* MOBILE: Hover scale effect */
     }
     #dots button.active {
-      transform: scale(1); /* MOBILE: Active scale effect */
+      transform: scale(0,2); /* MOBILE: Active scale effect */
     }
   }
 
   /* Even smaller for very small screens */
   @media (max-width: 480px) {
     #dots {
-      gap: 0.5px;           /* VERY SMALL: Gap between dots */
+      gap: 0.5;           /* VERY SMALL: Gap between dots */
     }
     #dots button {
-      width: 0.2px;          /* VERY SMALL: Dot width */
-      height: 0.2px;         /* VERY SMALL: Dot height */
+      width: 0.2;          /* VERY SMALL: Dot width */
+      height: 0.2;         /* VERY SMALL: Dot height */
     }
   }
   
