@@ -58,12 +58,31 @@
   </div>
 
   <script>
-    // Apply base styles to tabs
+    // Apply base styles to tabs with dynamic sizing
     const styleTabs = () => {
       document.querySelectorAll('.tab-btn').forEach(btn => {
+        // Remove any existing classes first
+        btn.classList.remove('px-1', 'px-2', 'px-3', 'px-4', 'px-5', 'px-6');
+        
+        // Get text content length to determine padding
+        const textLength = btn.textContent.trim().length;
+        let paddingClass;
+        
+        // Dynamic padding based on text length
+        if (textLength <= 4) {
+          paddingClass = 'px-4'; // Short text like "Team"
+        } else if (textLength <= 8) {
+          paddingClass = 'px-3'; // Medium text like "Vision", "Contact"
+        } else if (textLength <= 12) {
+          paddingClass = 'px-2'; // Longer text like "Services", "Portfolio"
+        } else {
+          paddingClass = 'px-1'; // Very long text like "Opportunities", "One Dream ✨"
+        }
+        
         btn.classList.add(
-          'px-4', 'sm:px-3', 'py-2', 'rounded-lg', 'bg-slate-500', 'text-white',
-          'text-sm', 'md:text-base', 'transition-all', 'duration-200'
+          paddingClass, 'py-2', 'rounded-lg', 'bg-slate-500', 'text-white',
+          'text-sm', 'md:text-base', 'transition-all', 'duration-200',
+          'whitespace-nowrap', 'flex-shrink-0'
         );
       });
     };
