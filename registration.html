@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration - FlyMadd Creative</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-inter">
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-gray-900">FlyMadd Creative</h1>
+                </div>
+                <nav class="flex space-x-4">
+                    <a href="websiteapp.html" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Home</a>
+                    <a href="leadershipBoard.html" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Leadership Board</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <!-- Header Section -->
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-12 text-center text-white">
+                <h2 class="text-4xl font-bold mb-4">Join FlyMadd Creative</h2>
+                <p class="text-xl opacity-90 max-w-2xl mx-auto">
+                    Ready to transform your creative vision into reality? Register today and become part of our global creative community.
+                </p>
+            </div>
+
+            <!-- Registration Form -->
+            <div class="px-8 py-12">
+                <form id="registrationForm" class="space-y-8">
+                    <!-- Personal Information -->
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-semibold text-gray-900 border-b border-gray-200 pb-2">Personal Information</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                                <input type="text" id="firstName" name="firstName" required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            </div>
+                            <div>
+                                <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+                                <input type="text" id="lastName" name="lastName" required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                                <input type="email" id="email" name="email" required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            </div>
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                                <input type="tel" id="phone" name="phone"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Country *</label>
+                                <select id="country" name="country" required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                    <option value="">Select your country</option>
+                                    <option value="US">United States</option>
+                                    <option value="CA">Canada</option>
+                                    <option value="UK">United Kingdom</option>
+                                    <option value="AU">Australia</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="FR">France</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="NG">Nigeria</option>
+                                    <option value="ZA">South Africa</option>
+                                    <option value="BR">Brazil</option>
+                                    <option value="IN">India</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="company" class="block text-sm font-medium text-gray-700 mb-2">Company/Organization</label>
+                                <input type="text" id="company" name="company"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Professional Information -->
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-semibold text-gray-900 border-b border-gray-200 pb-2">Professional Information</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Current Role *</label>
+                                <select id="role" name="role" required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                    <option value="">Select your role</option>
+                                    <option value="designer">Designer</option>
+                                    <option value="developer">Developer</option>
+                                    <option value="manager">Project Manager</option>
+                                    <option value="director">Creative Director</option>
+                                    <option value="entrepreneur">Entrepreneur</option>
+                                    <option value="freelancer">Freelancer</option>
+                                    <option value="student">Student</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="experience" class="block text-sm font-medium text-gray-700 mb-2">Years of Experience *</label>
+                                <select id="experience" name="experience" required
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                    <option value="">Select experience level</option>
+                                    <option value="0-1">0-1 years</option>
+                                    <option value="2-5">2-5 years</option>
+                                    <option value="6-10">6-10 years</option>
+                                    <option value="11-15">11-15 years</option>
+                                    <option value="15+">15+ years</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="skills" class="block text-sm font-medium text-gray-700 mb-2">Skills & Expertise</label>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="skills" value="branding" class="mr-2 text-blue-600">
+                                    <span class="text-sm">Branding</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="skills" value="ui-ux" class="mr-2 text-blue-600">
+                                    <span class="text-sm">UI/UX Design</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="skills" value="web-dev" class="mr-2 text-blue-600">
+                                    <span class="text-sm">Web Development</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="skills" value="mobile-dev" class="mr-2 text-blue-600">
+                                    <span class="text-sm">Mobile Development</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="skills" value="marketing" class="mr-2 text-blue-600">
+                                    <span class="text-sm">Digital Marketing</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="skills" value="strategy" class="mr-2 text-blue-600">
+                                    <span class="text-sm">Strategy</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="portfolio" class="block text-sm font-medium text-gray-700 mb-2">Portfolio/Website URL</label>
+                            <input type="url" id="portfolio" name="portfolio" placeholder="https://"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                        </div>
+                    </div>
+
+                    <!-- Project Interests -->
+                    <div class="space-y-6">
+                        <h3 class="text-2xl font-semibold text-gray-900 border-b border-gray-200 pb-2">Project Interests</h3>
+                        
+                        <div>
+                            <label for="projectType" class="block text-sm font-medium text-gray-700 mb-2">What type of projects interest you most? *</label>
+                            <div class="space-y-3">
+                                <label class="flex items-center">
+                                    <input type="radio" name="projectType" value="startup" class="mr-3 text-blue-600">
+                                    <span>Startup Branding & Development</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="projectType" value="enterprise" class="mr-3 text-blue-600">
+                                    <span>Enterprise Solutions</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="projectType" value="nonprofit" class="mr-3 text-blue-600">
+                                    <span>Non-profit & Social Impact</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="projectType" value="ecommerce" class="mr-3 text-blue-600">
+                                    <span>E-commerce & Retail</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="radio" name="projectType" value="creative" class="mr-3 text-blue-600">
+                                    <span>Creative & Artistic Projects</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="goals" class="block text-sm font-medium text-gray-700 mb-2">What are your goals with FlyMadd Creative?</label>
+                            <textarea id="goals" name="goals" rows="4" placeholder="Tell us about your aspirations and what you hope to achieve..."
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Terms and Submit -->
+                    <div class="space-y-6">
+                        <div class="flex items-start">
+                            <input type="checkbox" id="terms" name="terms" required class="mt-1 mr-3 text-blue-600">
+                            <label for="terms" class="text-sm text-gray-700">
+                                I agree to the <a href="#" class="text-blue-600 hover:text-blue-800">Terms of Service</a> and 
+                                <a href="#" class="text-blue-600 hover:text-blue-800">Privacy Policy</a> *
+                            </label>
+                        </div>
+
+                        <div class="flex items-start">
+                            <input type="checkbox" id="newsletter" name="newsletter" class="mt-1 mr-3 text-blue-600">
+                            <label for="newsletter" class="text-sm text-gray-700">
+                                I would like to receive updates about new opportunities and creative insights
+                            </label>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" 
+                                class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
+                                Join FlyMadd Creative
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Success Message (Hidden by default) -->
+        <div id="successMessage" class="hidden bg-green-50 border border-green-200 rounded-lg p-6 mt-8">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-lg font-medium text-green-800">Registration Successful!</h3>
+                    <p class="text-green-700 mt-1">Welcome to FlyMadd Creative! We'll be in touch soon with next steps.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center">
+                <p class="text-gray-600">&copy; 2025 FlyMadd Creative. All rights reserved.</p>
+                <p class="text-sm text-gray-500 mt-2">Ready to create something amazing together?</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('registrationForm');
+            const successMessage = document.getElementById('successMessage');
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                // Simulate form submission
+                const submitButton = form.querySelector('button[type="submit"]');
+                const originalText = submitButton.textContent;
+                
+                // Show loading state
+                submitButton.textContent = 'Processing...';
+                submitButton.disabled = true;
+                
+                // Simulate API call
+                setTimeout(() => {
+                    // Hide form and show success message
+                    form.style.display = 'none';
+                    successMessage.classList.remove('hidden');
+                    
+                    // Scroll to success message
+                    successMessage.scrollIntoView({ behavior: 'smooth' });
+                    
+                    // Reset button (in case form is shown again)
+                    submitButton.textContent = originalText;
+                    submitButton.disabled = false;
+                }, 2000);
+            });
+
+            // Add real-time validation feedback
+            const inputs = form.querySelectorAll('input[required], select[required]');
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    if (this.value.trim() === '') {
+                        this.classList.add('border-red-500');
+                        this.classList.remove('border-gray-300');
+                    } else {
+                        this.classList.remove('border-red-500');
+                        this.classList.add('border-green-500');
+                    }
+                });
+
+                input.addEventListener('input', function() {
+                    if (this.value.trim() !== '') {
+                        this.classList.remove('border-red-500');
+                        this.classList.add('border-green-500');
+                    }
+                });
+            });
+
+            // Email validation
+            const emailInput = document.getElementById('email');
+            emailInput.addEventListener('blur', function() {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (this.value && !emailRegex.test(this.value)) {
+                    this.classList.add('border-red-500');
+                    this.classList.remove('border-green-500');
+                } else if (this.value) {
+                    this.classList.remove('border-red-500');
+                    this.classList.add('border-green-500');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
