@@ -168,19 +168,23 @@
                     this.update();
                     this.bind();
                     this.autoplay();
-                }
-                initDots() {
-                    this.dotsEl.innerHTML = '';
-                      const isMobile = window.matchMedia('(max-width: 640px)').matches;
-                    for (let i = 0; i < this.count; i++) {
-                        const b = document.createElement('button');
-                     b.className = 'w-[0.35rem] h-[0.35rem] sm:w-[0.5rem] sm:h-[0.5rem] md:w-[0.6rem] md:h-[0.6rem] rounded-full bg-gray-300 hover:bg-gray-400 transition-colors';
+                }initDots() {
+  this.dotsEl.innerHTML = '';
+  const isMobile = window.matchMedia('(max-width: 640px)').matches;
+  const totalDots = isMobile ? Math.min(this.count, 3) : this.count; // 🌟 Added: fewer dots on mobile
+  
+  for (let i = 0; i < totalDots; i++) {
+    const b = document.createElement('button');
+    // 🌟 Added responsive sizes
+    b.className = 'w-[0.35rem] h-[0.35rem] sm:w-[0.5rem] sm:h-[0.5rem] md:w-[0.6rem] md:h-[0.6rem] rounded-full bg-gray-300 hover:bg-gray-400 transition-colors';
+    b.setAttribute('aria-label', `Go to slide ${i + 1}`);
+    b.addEventListener('click', () => { this.index = i; this.update(true); });
+    this.dotsEl.appendChild(b);
+  }
+}
 
-                        b.setAttribute('aria-label', `Go to slide ${i + 1}`);
-                        b.addEventListener('click', () => { this.index = i; this.update(true); });
-                        this.dotsEl.appendChild(b);
-                    }
-                }
+
+                 
                 bind() {
                     this.backBtn.addEventListener('click', () => { this.prev(); });
                     this.nextBtn.addEventListener('click', () => { this.next(); });
