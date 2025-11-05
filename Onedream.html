@@ -859,14 +859,29 @@
             });
         });
 
-        // Immediate progress bar initialization (fallback)
+        // Immediate progress bar initialization with mock data
         function initializeProgressBar() {
             const progressFill = document.getElementById('main-progress-fill');
             if (progressFill) {
-                // Set mock data immediately to ensure bar is visible
-                progressFill.style.width = '24.8%';
-                progressFill.style.transition = 'width 2s ease-out';
-                console.log('🎯 Progress bar initialized with mock data (24.8%)');
+                // Show mock data immediately
+                console.log('📊 Showing mock data until live progress ≥ 24%');
+                applyProgressData(mockData);
+                
+                // Start periodic checking for live data
+                const checkInterval = setInterval(async () => {
+                    if (!hasLiveData) {
+                        console.log('🔄 Checking for live data...');
+                        await updateProgress();
+                        
+                        // If we've switched to live data, stop checking
+                        if (hasLiveData) {
+                            console.log('✅ Switched to live data - stopping periodic checks');
+                            clearInterval(checkInterval);
+                        }
+                    }
+                }, 5000); // Check every 5 seconds
+                
+                console.log('🎯 Progress bar initialized with mock data (24%)');
             }
         }
 
@@ -892,25 +907,50 @@
             try {
                 // First, try to fetch live data from Supabase
                 if (window.supabase) {
-                    const { data: statsData, error } = await window.supabase
-                        .from('global_stats')
-                        .select('*')
-                        .single();
+                    // Fetch data from existing tables
+                    const [participantsResult, votesResult, paymentsResult] = await Promise.all([
+                        window.supabase.from('participants').select('id', { count: 'exact', head: true }),
+                        window.supabase.from('votes').select('id', { count: 'exact', head: true }),
+                        window.supabase.from('payments').select('amount').eq('status', 'completed')
+                    ]);
+                    
+                    // Calculate live stats
+                    const totalParticipants = participantsResult.count || 0;
+                    const totalVotes = votesResult.count || 0;
+                    const totalAmount = paymentsResult.data?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
                     
                     // Check if we have meaningful live data
-                    if (!error && statsData && (statsData.total_participants > 0 || statsData.total_votes > 0)) {
-                        hasLiveData = true;
+                    if (!participantsResult.error && !votesResult.error && !paymentsResult.error && 
+                        (totalParticipants > 0 || totalVotes > 0)) {
+                        
+                        // Calculate progress and stage
+                        const campaignGoal = 1000000;
+                        const liveProgress = (totalVotes / campaignGoal) * 100;
+                        
+                        let stage = 'Bronze';
+                        if (totalVotes >= 750000) stage = 'Diamond';
+                        else if (totalVotes >= 500000) stage = 'Gold';
+                        else if (totalVotes >= 250000) stage = 'Silver';
+                        
                         const liveData = {
-                            progress: ((statsData.total_votes || 0) / (statsData.campaign_goal || 1000000)) * 100,
-                            stage: statsData.current_stage || 'Bronze',
-                            participants: statsData.total_participants || 0,
-                            votes: statsData.total_votes || 0,
-                            nextMilestone: calculateNextMilestone(statsData.current_stage || 'Bronze')
+                            progress: liveProgress,
+                            stage: stage,
+                            participants: totalParticipants,
+                            votes: totalVotes,
+                            amount: totalAmount,
+                            nextMilestone: calculateNextMilestone(stage)
                         };
                         
-                        applyProgressData(liveData);
-                        console.log('✅ Using live data from Supabase:', liveData);
-                        return;
+                        // 🎯 KEY LOGIC: Only switch to live data when progress >= 24%
+                        if (liveProgress >= mockData.progress) {
+                            console.log(`✅ Live data (${liveProgress.toFixed(1)}%) >= mock (${mockData.progress}%) - switching to live data`);
+                            hasLiveData = true;
+                            applyProgressData(liveData);
+                            return;
+                        } else {
+                            console.log(`⏳ Live data (${liveProgress.toFixed(1)}%) below mock (${mockData.progress}%) - keeping mock data visible`);
+                            // Continue to show mock data below
+                        }
                     }
                 }
             } catch (error) {
@@ -1611,13 +1651,22 @@
 
                     if (participantsError) throw participantsError;
 
-                    // Fetch global stats
-                    const { data: statsData, error: statsError } = await supabase
-                        .from('global_stats')
-                        .select('*')
-                        .single();
+                    // Calculate global stats from existing tables
+                    const [votesResult, paymentsResult] = await Promise.all([
+                        supabase.from('votes').select('id', { count: 'exact', head: true }),
+                        supabase.from('payments').select('amount').eq('status', 'completed')
+                    ]);
 
-                    if (statsError) throw statsError;
+                    const totalVotes = votesResult.count || 0;
+                    const totalAmount = paymentsResult.data?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
+                    
+                    const statsData = {
+                        total_participants: participantsData?.length || 0,
+                        total_votes: totalVotes,
+                        total_amount: totalAmount,
+                        campaign_goal: 1000000,
+                        current_stage: totalVotes >= 750000 ? 'Diamond' : totalVotes >= 500000 ? 'Gold' : totalVotes >= 250000 ? 'Silver' : 'Bronze'
+                    };
 
                     setParticipants(participantsData || []);
                     setGlobalStats(statsData);
@@ -1641,7 +1690,11 @@
                         () => fetchData()
                     )
                     .on('postgres_changes',
-                        { event: '*', schema: 'public', table: 'global_stats' },
+                        { event: '*', schema: 'public', table: 'votes' },
+                        () => fetchData()
+                    )
+                    .on('postgres_changes',
+                        { event: '*', schema: 'public', table: 'payments' },
                         () => fetchData()
                     )
                     .subscribe();
