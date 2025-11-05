@@ -45,33 +45,38 @@
   /* ============================================ */
   
   /* Ultra tiny ONLY on mobile devices */
-  @media (max-width: 640px) {
-    #dots {
-      margin:5rem 0;     /* MOBILE: Vertical margin */
-      gap: 5;            /* MOBILE: Gap between dots */
-    }
-    #dots button {
-      width: 0.5;            /* MOBILE: Dot width */
-      height: 0.5;           /* MOBILE: Dot height */
-    }
-    #dots button:hover {
-      transform: scale(0.2); /* MOBILE: Hover scale effect */
-    }
-    #dots button.active {
-      transform: scale(0,2); /* MOBILE: Active scale effect */
-    }
+ @media (max-width: 640px) {
+  #dots {
+    margin: 5rem 0;       /* MOBILE: Keeps vertical spacing */
+    gap: 10px;            /* 🔹 Increased gap between dots */
   }
 
-  /* Even smaller for very small screens */
-  @media (max-width: 480px) {
-    #dots {
-      gap: 0.5;           /* VERY SMALL: Gap between dots */
-    }
-    #dots button {
-      width: 0.2;          /* VERY SMALL: Dot width */
-      height: 0.2;         /* VERY SMALL: Dot height */
-    }
+  #dots button {
+    width: 0.4px;         /* 🔹 Smaller dot width */
+    height: 0.4px;        /* 🔹 Smaller dot height */
   }
+
+  #dots button:hover {
+    transform: scale(0.3); /* 🔹 Slight hover scale */
+  }
+
+  #dots button.active {
+    transform: scale(0.6); /* 🔹 Slightly larger active dot */
+  }
+}
+
+/* Even smaller for very small screens */
+@media (max-width: 480px) {
+  #dots {
+    gap: 8px;             /* 🔹 Wider spacing between dots */
+  }
+
+  #dots button {
+    width: 0.3px;         /* 🔹 Smaller dot width */
+    height: 0.3px;        /* 🔹 Smaller dot height */
+  }
+}
+
   
   /* ============================================ */
   /* END MOBILE DEVICE STYLING */
