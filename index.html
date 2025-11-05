@@ -1,266 +1,371 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flymadd Creative — Onboarding (dots fixed)</title>
-
-  <!-- Tailwind kept for layout elsewhere; dots themselves use custom CSS only -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flymadd Creative</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://res.cloudinary.com">
+    <link rel="dns-prefetch" href="https://res.cloudinary.com">
   <style>
-    /* ---------- PAGINATION DOT STYLES (pure CSS, no Tailwind) ---------- */
-    #dots {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin-top: 8px;
-      margin-bottom: 8px;
-    }
-
-    /* base dot */
-    .pager-dot {
-      display: inline-block;
-      width: 10px;           /* desktop default */
-      height: 10px;
-      border-radius: 999px;
-      background: #d1d5db;   /* slate-300 */
-      border: none;
-      padding: 0;
-      box-sizing: content-box;
-      cursor: pointer;
-      transition: transform 180ms cubic-bezier(.2,.9,.2,1), background 180ms ease;
-      outline: none;
-    }
-
-    /* hover/focus */
-    .pager-dot:hover,
-    .pager-dot:focus {
-      background: #9ca3af; /* slate-400 */
-      transform: scale(1.05);
-    }
-
-    /* active (selected) dot */
-    .pager-dot.active {
-      background: #2563eb; /* blue-600 */
-      transform: scale(1.35);
-      box-shadow: 0 6px 18px rgba(37,99,235,0.18);
-    }
-
-    /* mobile: make dots smaller and tighter */
-    @media (max-width: 640px) {
-      .pager-dot { width: 6px; height: 6px; }
-      #dots { gap: 6px; }
-    }
-
-    /* tablet */
-    @media (min-width: 641px) and (max-width: 1024px) {
-      .pager-dot { width: 8px; height: 8px; }
-      #dots { gap: 7px; }
-    }
-
-    /* optionally hide dots on very small screens (uncomment if desired) */
-    /* @media (max-width: 360px) { #dots { display: none; } } */
-
-    /* keep existing page visuals unchanged below */
-    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
-  </style>
-</head>
-<body class="bg-gray-100 flex flex-col items-center justify-start gap-6 min-h-screen overflow-hidden relative">
-
-  <div class="bg-white rounded-2xl shadow-lg w-11/12 sm:w-5/6 md:w-4/5 max-w-4xl h-full overflow-hidden mx-auto my-6">
-
-    <!-- Preloader -->
-    <div id="preloader" class="absolute inset-0 bg-white flex items-center justify-center z-50 transition-opacity duration-500">
-      <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
-    </div>
-
-    <!-- Onboarding -->
-    <div id="onboarding" class="relative h-[60vh] overflow-hidden bg-slate-950 rounded-[29px] shadow-xl mt-6 mx-6 sm:mt-8 sm:mx-8 md:mt-10 md:mx-10">
-      <div id="slides" class="flex h-full w-full transition-transform duration-1000 ease-in-out will-change-transform">
-        <section class="flex-shrink-0 w-full h-full relative">
-          <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761087274/Brand_cuv2rc.jpg" alt="Slide 1" class="block w-full h-full object-cover opacity-60" />
-        </section>
-        <section class="flex-shrink-0 w-full h-full relative">
-          <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761089558/graphics_fei33a.jpg" alt="Slide 2" class="block w-full h-full object-cover opacity-60" />
-        </section>
-        <section class="flex-shrink-0 w-full h-full relative">
-          <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761090056/research_yj3wwm.jpg" alt="Slide 3" class="block w-full h-full object-cover opacity-60" />
-        </section>
-        <section class="flex-shrink-0 w-full h-full relative">
-          <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761090447/mob_znki5o.jpg" alt="Slide 4" class="block w-full h-full object-cover opacity-60" />
-        </section>
-      </div>
-    </div>
-
-    <!-- Pagination dots (JS will populate) -->
-    <div id="dots" aria-hidden="false"></div>
-
-    <!-- Controls (kept for completeness) -->
-    <div id="controlsBar" class="flex items-center justify-between gap-4 px-4 mb-4 flex-wrap ml-6 mr-6 sm:ml-8 sm:mr-8 md:ml-10 md:mr-10">
-      <div class="flex items-center gap-2">
-        <button id="btnBack" aria-label="Back" class="bg-white shadow border px-2 py-2 rounded-full">‹</button>
-        <button id="btnSkip" class="text-slate-700 px-3 py-2 rounded">Skip</button>
-        <button id="btnNext" class="bg-blue-600 text-white px-4 py-2 rounded-full">Next</button>
-        <button id="btnStart" class="hidden bg-blue-600 text-white px-4 py-2 rounded-full">Get Started</button>
-      </div>
-    </div>
-
-  </div>
-
-<script>
-  // Onboarding slider with pure-CSS dots
-  class Onboarding {
-    constructor(root, slidesEl, dotsEl, backBtn, nextBtn, skipBtn, startBtn) {
-      this.root = root;
-      this.slidesEl = slidesEl;
-      this.dotsEl = dotsEl;
-      this.backBtn = backBtn;
-      this.nextBtn = nextBtn;
-      this.skipBtn = skipBtn;
-      this.startBtn = startBtn;
-      this.index = 0;
-      this.count = slidesEl.children.length;
-      this.timer = null;
-      this.intervalMs = 8000;
-      this.finished = false;
-
-      this.initDots();   // create dots
-      this.update();     // position slides / highlight dot
-      this.bind();       // attach controls
-      this.autoplay();
-    }
-
-    initDots() {
-      // build dots (no inline sizing here — CSS handles sizes)
-      this.dotsEl.innerHTML = '';
-      for (let i = 0; i < this.count; i++) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'pager-dot';         // <-- pure-css class
-        btn.setAttribute('aria-label', `Go to slide ${i+1}`);
-        btn.dataset.index = i;
-        btn.addEventListener('click', (e) => {
-          const idx = parseInt(e.currentTarget.dataset.index, 10);
-          this.index = idx;
-          this.update(true);
-          this.restartAutoplay();
-        });
-        this.dotsEl.appendChild(btn);
-      }
-      // Ensure proper active state after (re)creating
-      this.setActiveDot();
-    }
-
-    bind() {
-      if (this.backBtn) this.backBtn.addEventListener('click', () => this.prev());
-      if (this.nextBtn) this.nextBtn.addEventListener('click', () => this.next());
-      if (this.skipBtn) this.skipBtn.addEventListener('click', () => this.finish());
-      if (this.startBtn) this.startBtn.addEventListener('click', () => this.finish());
-
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight') this.next();
-        if (e.key === 'ArrowLeft') this.prev();
-      });
-
-      // When viewport changes, we only need to reposition slides (CSS handles dot sizing)
-      window.addEventListener('resize', () => this.update(false));
-    }
-
-    prev() {
-      if (this.index > 0) { this.index--; this.update(true); this.restartAutoplay(); }
-    }
-
-    next() {
-      if (this.index < this.count - 1) { this.index++; this.update(true); this.restartAutoplay(); }
-      else this.finish();
-    }
-
-    nextOrFinish() {
-      if (this.index < this.count - 1) this.next();
-      else this.finish();
-    }
-
-    update(animate = false) {
-      const w = this.root.clientWidth || this.root.offsetWidth;
-      // Use transform with px to avoid fractional % issues
-      this.slidesEl.style.transitionDuration = (animate ? '1200ms' : '0ms');
-      this.slidesEl.style.transform = `translateX(-${this.index * w}px)`;
-      this.setActiveDot();
-
-      // button UI toggles (optional)
-      if (this.backBtn) {
-        this.backBtn.disabled = (this.index === 0);
-        this.backBtn.style.opacity = this.index === 0 ? '0.45' : '1';
-      }
-      if (this.nextBtn) {
-        const atEnd = this.index === this.count - 1;
-        this.nextBtn.style.display = atEnd ? 'none' : '';
-      }
-      if (this.startBtn) {
-        const atEnd = this.index === this.count - 1;
-        this.startBtn.style.display = atEnd ? '' : 'none';
-      }
-    }
-
-    setActiveDot() {
-      Array.from(this.dotsEl.children).forEach((dot, i) => {
-        if (i === this.index) dot.classList.add('active');
-        else dot.classList.remove('active');
-      });
-    }
-
-    finish() {
-      if (this.finished) return;
-      this.finished = true;
-      this.stopAutoplay();
-      this.root.style.display = 'none';
-      const main = document.getElementById('mainContent');
-      if (main) {
-        main.style.display = '';
-        setTimeout(() => { window.location.href = 'websiteapp.html'; }, 1000);
-      } else {
-        window.location.href = 'websiteapp.html';
-      }
-    }
-
-    autoplay() {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      this.stopAutoplay();
-      this.timer = setInterval(() => this.nextOrFinish(), this.intervalMs);
-    }
-    stopAutoplay() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
-    restartAutoplay() { this.stopAutoplay(); this.autoplay(); }
+  /* Pagination (Dots) — pure CSS version */
+  #dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 1rem 0;
+    gap: 8px;
   }
 
-  // Initialize on load
-  window.addEventListener('load', () => {
-    const onboarding = document.getElementById('onboarding');
-    const slides = document.getElementById('slides');
-    const dots = document.getElementById('dots');
-    const btnBack = document.getElementById('btnBack');
-    const btnNext = document.getElementById('btnNext');
-    const btnSkip = document.getElementById('btnSkip');
-    const btnStart = document.getElementById('btnStart');
+  #dots button {
+    width: 10px;
+    height: 10px;
+    background-color: #d1d5db; /* gray-300 */
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
 
-    // Hide mainContent until finished (preserve original behavior if mainContent exists)
-    const mainContent = document.getElementById('mainContent');
-    if (mainContent) mainContent.style.display = 'none';
+  #dots button:hover {
+    background-color: #9ca3af; /* gray-400 */
+    transform: scale(1.2);
+  }
 
-    // remove preloader
-    const preloader = document.getElementById('preloader');
-    if (preloader) {
-      preloader.style.opacity = '0';
-      setTimeout(() => { preloader.style.display = 'none'; }, 120);
+  #dots button.active {
+    background-color: #2563eb; /* blue-600 */
+    transform: scale(1.3);
+  }
+
+  /* Responsive sizes */
+  @media (max-width: 640px) {
+    #dots button {
+      width: 7px;
+      height: 7px;
+      gap: 4px;
     }
+  }
+</style>
 
-    // create onboarding instance
-    const ob = new Onboarding(onboarding, slides, dots, btnBack, btnNext, btnSkip, btnStart);
-    // ensure reposition on resize (keeps slide aligned)
-    window.addEventListener('resize', () => ob.update(false));
+
+</head>
+
+<body>
+    <div id="app"
+        class="bg-gray-100 flex flex-col items-center justify-start gap-6 min-h-screen overflow-hidden relative">
+        <div
+            class="bg-white rounded-2xl shadow-lg w-11/12 sm:w-5/6 md:w-4/5 max-w-4xl h-full overflow-hidden mx-auto my-3 sm:my-4 md:my-6">
+
+            <!-- Preloader / Animation -->
+            <div id="preloader"
+                class="absolute inset-0 bg-white flex items-center justify-center z-50 transition-opacity duration-500">
+                <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500"></div>
+            </div>
+
+            <!-- Onboarding Storyboard -->
+            <div id="onboarding" class="relative h-[60vh] overflow-hidden bg-slate-950 rounded-[29px] shadow-xl 
+            mt-6 ml-6 mr-6 sm:mt-8 sm:ml-8 sm:mr-8 md:mt-10 md:ml-10 md:mr-10">
+                <div id="slides"
+                    class="flex h-full w-full transition-transform duration-1000 ease-in-out will-change-transform">
+                    <!-- Slide 1 -->
+                    <section class="flex-shrink-0 w-full h-full relative">
+                        <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761087274/Brand_cuv2rc.jpg"
+                            alt="Global creative mission" class="block w-full h-full object-cover opacity-60"
+                            loading="eager" fetchpriority="high" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/50 via-blue-900/20 to-transparent">
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="max-w-3xl mx-auto px-3 sm:px-4 text-center text-white">
+                                <h2 class="text-4xl md:text-6xl font-bold mb-4 fade-up">Flymadd Creative</h2>
+                                <p class="text-lg md:text-2xl text-slate-200/90 fade-up" style="animation-delay:.15s">
+                                    Branding for global clients. We craft experiences that connect, convert, and scale.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                    <!-- Slide 2: Graphics & Brand Identity -->
+                    <section class="flex-shrink-0 w-full h-full relative">
+                        <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761089558/graphics_fei33a.jpg"
+                            alt="Brand identity and graphics" class="block w-full h-full object-cover opacity-60"
+                            loading="lazy" decoding="async" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/50 via-blue-900/20 to-transparent">
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="max-w-3xl mx-auto px-3 sm:px-4 text-center text-white">
+                                <h2 class="text-3xl md:text-5xl font-semibold mb-3 fade-up">Graphics & Brand Identity
+                                </h2>
+                                <p class="text-lg md:text-xl text-slate-200/90 fade-up" style="animation-delay:.15s">
+                                    From
+                                    logos to launch kits—distinctive visuals that set your brand apart and stay
+                                    consistent
+                                    across every touchpoint.</p>
+                            </div>
+                        </div>
+                    </section>
+                    <!-- Slide 3: UI/UX Design -->
+                    <section class="flex-shrink-0 w-full h-full relative">
+                        <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761090056/research_yj3wwm.jpg"
+                            alt="UI UX design" class="block w-full h-full object-cover opacity-60" loading="lazy"
+                            decoding="async" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/50 via-blue-900/20 to-transparent">
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="max-w-3xl mx-auto px-3 sm:px-4 text-center text-white">
+                                <h2 class="text-3xl md:text-5xl font-semibold mb-3 fade-up">UI/UX Design</h2>
+                                <p class="text-lg md:text-xl text-slate-200/90 fade-up" style="animation-delay:.15s">
+                                    Human-centered interfaces that drive clarity and delight, validated through research
+                                    and
+                                    prototyping.</p>
+                            </div>
+                        </div>
+                    </section>
+                    <!-- Slide 4: Full‑Stack Development -->
+                    <section class="flex-shrink-0 w-full h-full relative">
+                        <img src="https://res.cloudinary.com/dljcj00ht/image/upload/f_auto,q_auto,w_1600/v1761090447/mob_znki5o.jpg"
+                            alt="Full stack development" class="block w-full h-full object-cover opacity-60"
+                            loading="lazy" decoding="async" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-blue-900/50 via-blue-900/20 to-transparent">
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="max-w-3xl mx-auto px-3 sm:px-4 text-center text-white">
+                                <h2 class="text-3xl md:text-5xl font-semibold mb-3 fade-up">Full‑Stack Development</h2>
+                                <p class="text-lg md:text-xl text-slate-200/90 fade-up" style="animation-delay:.15s">
+                                    Robust,
+                                    scalable apps and websites—built with modern stacks, performance, and SEO baked in.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            <!-- Controls below slides, outside onboarding -->
+            <div id="dots" class="flex items-center gap-0.5 sm:gap-1 md:gap-1.5 justify-center mt-1 mb-1 sm:mt-2 sm:mb-1"></div>
+            <div id="controlsBar"
+                class="flex items-center justify-between gap-4 px-0 mb-4 flex-wrap ml-6 mr-6 sm:ml-8 sm:mr-8 md:ml-10 md:mr-10">
+                <button id="btnBack"
+                    class="bg-white shadow-md hover:shadow-lg border border-slate-200 text-slate-700 hover:text-slate-900 text-sm md:text-base p-2 rounded-full"
+                    aria-label="Back">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                        <path fill-rule="evenodd"
+                            d="M15.78 4.72a.75.75 0 0 1 0 1.06L9.56 12l6.22 6.22a.75.75 0 1 1-1.06 1.06l-6.75-6.75a.75.75 0 0 1 0-1.06l6.75-6.75a.75.75 0 0 1 1.06 0Z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div class="flex items-center gap-2">
+                    <button id="btnSkip"
+                        class="text-slate-700 hover:text-slate-900 text-sm md:text-base px-3 py-2 rounded">Skip</button>
+                    <button id="btnNext"
+                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm md:text-base font-medium px-5 py-2 rounded-full shadow-sm">Next</button>
+                    <button id="btnStart"
+                        class="hidden bg-blue-600 hover:bg-blue-700 text-white text-sm md:text-base font-medium px-4 py-2 rounded-full shadow-sm">Get
+                        Started</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" class="opacity-0 transition-all duration-1500 ease-out text-center 
+            px-8 sm:px-10 md:px-12 lg:px-16 py-8 
+            relative z-10 bg-white rounded-[29px] shadow-xl 
+            max-w-4xl mx-auto mt-2  m-2 w-11/12 sm:w-5/6 md:w-4/5 mx-auto pt-5">
+
+            <h1 class="text-5xl font-bold mb-4 text-gray-800">Welcome to Flymadd Creative</h1>
+            <p class="text-xl text-gray-600">We look forward to working with you !!! 🚀</p>
+        </div>
+
+
+
+        <script>
+            // Onboarding slider logic with autoplay
+            class Onboarding {
+                constructor(root, slidesEl, dotsEl, backBtn, nextBtn, skipBtn, startBtn) {
+                    this.root = root;
+                    this.slidesEl = slidesEl;
+                    this.dotsEl = dotsEl;
+                    this.backBtn = backBtn;
+                    this.nextBtn = nextBtn;
+                    this.skipBtn = skipBtn;
+                    this.startBtn = startBtn;
+                    this.index = 0;
+                    this.count = slidesEl.children.length;
+                    this.timer = null;
+                    this.intervalMs = 8000;
+                    this.finished = false;
+                    this.initDots();
+                    this.update();
+                    this.bind();
+                    this.autoplay();
+                }
+                initDots() {
+  this.dotsEl.innerHTML = '';
+
+  for (let i = 0; i < this.count; i++) {
+    const b = document.createElement('button');
+   b.className = 'dot';
+b.style.backgroundColor = '#d1d5db'; // Default gray color
+b.style.borderRadius = '50%';
+b.style.width = '10px';
+b.style.height = '10px';
+b.style.margin = '0 4px';
+b.style.border = 'none';
+b.style.transition = 'all 0.3s ease';
+b.style.cursor = 'pointer';
+
+// Hover and active effects (dynamic styling)
+b.addEventListener('mouseenter', () => {
+  b.style.backgroundColor = '#60a5fa'; // Light blue hover
+});
+b.addEventListener('mouseleave', () => {
+  if (i === this.index) {
+    b.style.backgroundColor = '#2563eb'; // Active blue
+  } else {
+    b.style.backgroundColor = '#d1d5db'; // Gray
+  }
+});
+
+    b.setAttribute('aria-label', `Go to slide ${i + 1}`);
+    b.addEventListener('click', () => {
+      this.index = i;
+      this.update(true);
+    });
+    this.dotsEl.appendChild(b);
+  }
+
+  // Apply initial sizing immediately
+  this.resizeDots();
+  window.addEventListener('resize', () => this.resizeDots());
+}
+
+resizeDots() {
+  const width = window.innerWidth;
+  const size =
+    width < 640 ? 6 :
+    width < 1024 ? 8 : 10; // pixels
+  Array.from(this.dotsEl.children).forEach(btn => {
+    btn.style.width = `${size}px`;
+    btn.style.height = `${size}px`;
   });
-</script>
+}
 
+
+
+                 
+                bind() {
+                    this.backBtn.addEventListener('click', () => { this.prev(); });
+                    this.nextBtn.addEventListener('click', () => { this.next(); });
+                    this.skipBtn.addEventListener('click', () => { this.finish(); });
+                    this.startBtn.addEventListener('click', () => { this.finish(); });
+                    window.addEventListener('keydown', (e) => {
+                        if (e.key === 'ArrowRight') this.next();
+                        if (e.key === 'ArrowLeft') this.prev();
+                    });
+                    // pause autoplay while interacting
+                    [this.backBtn, this.nextBtn, this.skipBtn, this.startBtn, this.dotsEl].forEach(el => {
+                        el.addEventListener('mouseenter', () => this.stopAutoplay());
+                        el.addEventListener('mouseleave', () => this.autoplay());
+                    });
+                }
+                prev() { if (this.index > 0) { this.index--; this.update(true); } }
+                next() { if (this.index < this.count - 1) { this.index++; this.update(true); } }
+                nextOrFinish() {
+                    if (this.index < this.count - 1) { this.next(); }
+                    else { this.finish(); }
+                }
+                update(animate = false) {
+                    const w = this.root.clientWidth;
+                    this.slidesEl.style.transitionDuration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? '0ms' : (animate ? '1200ms' : '0ms');
+                    this.slidesEl.style.transform = `translateX(-${this.index * w}px)`;
+                    // dots
+                // dots (pure CSS version)
+Array.from(this.dotsEl.children).forEach((d, i) => {
+
+
+  d.classList.toggle('active', i === this.index);
+
+  if (i === this.index) {
+    d.style.backgroundColor = '#2563eb'; // Blue when active
+    d.style.transform = 'scale(1.3)';
+  } else {
+    d.style.backgroundColor = '#d1d5db'; // Gray when inactive
+    d.style.transform = 'scale(1)';
+  }
+});
+
+                    // buttons
+                    this.backBtn.classList.toggle('opacity-40', this.index === 0);
+                    this.backBtn.disabled = this.index === 0;
+                    const atEnd = this.index === this.count - 1;
+                    this.nextBtn.classList.toggle('hidden', atEnd);
+                    this.startBtn.classList.toggle('hidden', !atEnd);
+                }
+                finish() {
+                    if (this.finished) return;
+                    this.finished = true;
+                    this.stopAutoplay();
+                    this.root.style.display = 'none';
+                    const controlsBar = document.getElementById('controlsBar');
+                    if (controlsBar) controlsBar.style.display = 'none';
+                    const dotsEl = document.getElementById('dots');
+                    if (dotsEl) dotsEl.style.display = 'none';
+                    const main = document.getElementById('mainContent');
+                    // 1) Briefly show the main content
+                    if (main) {
+                        main.style.display = '';
+                        main.classList.remove('opacity-0', '-translate-y-4');
+                        main.classList.add('opacity-100', 'translate-y-0');
+                    }
+                    // 2) After delay, slide up and navigate to websiteapp
+                    setTimeout(() => {
+                        if (main) {
+                            main.classList.remove('opacity-100', 'translate-y-0');
+                            main.classList.add('opacity-0', '-translate-y-4');
+                            setTimeout(() => { window.location.href = 'websiteapp.html'; }, 3000);
+                        } else {
+                            window.location.href = 'websiteapp.html';
+                        }
+                    }, 3000);
+                }
+                autoplay() {
+                    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                    this.stopAutoplay();
+                    this.timer = setInterval(() => this.nextOrFinish(), this.intervalMs);
+                }
+                stopAutoplay() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
+            }
+
+            // Wait until page loads: fade preloader, then enable onboarding
+            window.addEventListener('load', () => {
+                const preloader = document.getElementById('preloader');
+                const mainContent = document.getElementById('mainContent');
+                const onboarding = document.getElementById('onboarding');
+                const slides = document.getElementById('slides');
+                const dots = document.getElementById('dots');
+                const btnBack = document.getElementById('btnBack');
+                const btnNext = document.getElementById('btnNext');
+                const btnSkip = document.getElementById('btnSkip');
+                const btnStart = document.getElementById('btnStart');
+
+
+                preloader.style.opacity = '0';
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                    // keep main content hidden until onboarding finish
+                    mainContent.classList.remove('opacity-100');
+                    const ob = new Onboarding(onboarding, slides, dots, btnBack, btnNext, btnSkip, btnStart);
+                    // handle window resize to keep slide position
+                   window.addEventListener('resize', () => {
+  ob.initDots();   // rebuild dots with correct size/count
+  ob.update(false); // reposition slides
+});
+
+                }, 100);
+            });
+        </script>
+
+    </div>
 </body>
+
 </html>
