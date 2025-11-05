@@ -40,34 +40,42 @@
     transform: scale(1.2);
   }
 
+  /* ============================================ */
+  /* MOBILE DEVICE STYLING - ADJUST BELOW */
+  /* ============================================ */
+  
   /* Ultra tiny ONLY on mobile devices */
   @media (max-width: 640px) {
     #dots {
-      margin: 0.25rem 0;
-      gap: 0.5px;
+      margin:3 rem 0;     /* MOBILE: Vertical margin */
+      gap: 2px;            /* MOBILE: Gap between dots */
     }
     #dots button {
-      width: 1px;
-      height: 1px;
+      width: 0.5px;            /* MOBILE: Dot width */
+      height: 0.5px;           /* MOBILE: Dot height */
     }
     #dots button:hover {
-      transform: scale(1.5);
+      transform: scale(1); /* MOBILE: Hover scale effect */
     }
     #dots button.active {
-      transform: scale(1.5);
+      transform: scale(1); /* MOBILE: Active scale effect */
     }
   }
 
   /* Even smaller for very small screens */
   @media (max-width: 480px) {
     #dots {
-      gap: 0.25px;
+      gap: 0.5px;           /* VERY SMALL: Gap between dots */
     }
     #dots button {
-      width: 0.8px;
-      height: 0.8px;
+      width: 0.2px;          /* VERY SMALL: Dot width */
+      height: 0.2px;         /* VERY SMALL: Dot height */
     }
   }
+  
+  /* ============================================ */
+  /* END MOBILE DEVICE STYLING */
+  /* ============================================ */
 </style>
 
 
@@ -260,22 +268,30 @@ b.addEventListener('mouseleave', () => {
   window.addEventListener('resize', () => this.resizeDots());
 }
 
+/* ============================================ */
+/* MOBILE DEVICE JAVASCRIPT SIZING - ADJUST BELOW */
+/* ============================================ */
+
 resizeDots() {
   const width = window.innerWidth;
   const size =
-    width < 480 ? 0.8 :   // Ultra tiny for very small screens
-    width < 640 ? 1 :     // Tiny for mobile
-    width < 1024 ? 10 : 12; // Good size for medium and desktop
+    width < 480 ? 0.8 :   // VERY SMALL: Ultra tiny for very small screens
+    width < 640 ? 1 :     // MOBILE: Tiny for mobile devices  
+    width < 1024 ? 10 : 12; // DESKTOP: Good size for medium and desktop
   const margin =
-    width < 480 ? 0.25 :  // Minimal margin for very small
-    width < 640 ? 0.5 : 3; // Minimal margin on mobile, normal on desktop
+    width < 480 ? 0.25 :  // VERY SMALL: Minimal margin for very small
+    width < 640 ? 0.5 : 3; // MOBILE: Minimal margin on mobile, normal on desktop
   
   Array.from(this.dotsEl.children).forEach(btn => {
-    btn.style.width = `${size}px`;
-    btn.style.height = `${size}px`;
-    btn.style.margin = `0 ${margin}px`;
+    btn.style.width = `${size}px`;     // Dynamic dot width
+    btn.style.height = `${size}px`;    // Dynamic dot height
+    btn.style.margin = `0 ${margin}px`; // Dynamic dot spacing
   });
 }
+
+/* ============================================ */
+/* END MOBILE DEVICE JAVASCRIPT SIZING */
+/* ============================================ */
 
 
 
