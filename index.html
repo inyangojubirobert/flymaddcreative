@@ -10,16 +10,37 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://res.cloudinary.com">
     <link rel="dns-prefetch" href="https://res.cloudinary.com">
-    <style>
-  /* 🌐 Make pagination dots smaller on mobile */
+   <style>
+  /* Responsive dot sizes (fixed version) */
+  #dots button {
+    transition: width 0.2s, height 0.2s;
+  }
+
   @media (max-width: 640px) {
     #dots button {
-      width: 0.015rem !important;
-      height: 0.015rem !important;
-      margin: 0 0.1rem !important;
+      width: 0.35rem !important;
+      height: 0.35rem !important;
+      margin: 0 0.15rem !important;
+    }
+  }
+
+  @media (min-width: 641px) and (max-width: 1023px) {
+    #dots button {
+      width: 0.5rem !important;
+      height: 0.5rem !important;
+      margin: 0 0.2rem !important;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    #dots button {
+      width: 0.6rem !important;
+      height: 0.6rem !important;
+      margin: 0 0.25rem !important;
     }
   }
 </style>
+
 
 </head>
 
@@ -168,20 +189,37 @@
                     this.update();
                     this.bind();
                     this.autoplay();
-                }initDots() {
+                }
+                initDots() {
   this.dotsEl.innerHTML = '';
-  const isMobile = window.matchMedia('(max-width: 640px)').matches;
-  const totalDots = isMobile ? Math.min(this.count, 4) : this.count; // 🌟 Added: fewer dots on mobile
-  
-  for (let i = 0; i < totalDots; i++) {
+
+  for (let i = 0; i < this.count; i++) {
     const b = document.createElement('button');
-    // 🌟 Added responsive sizes
-    b.className = 'w-[0.35rem] h-[0.35rem] sm:w-[0.5rem] sm:h-[0.5rem] md:w-[0.6rem] md:h-[0.6rem] rounded-full bg-gray-300 hover:bg-gray-400 transition-colors';
+    b.className = 'rounded-full bg-gray-300 hover:bg-gray-400 transition-colors';
     b.setAttribute('aria-label', `Go to slide ${i + 1}`);
-    b.addEventListener('click', () => { this.index = i; this.update(true); });
+    b.addEventListener('click', () => {
+      this.index = i;
+      this.update(true);
+    });
     this.dotsEl.appendChild(b);
   }
+
+  // Apply initial sizing immediately
+  this.resizeDots();
+  window.addEventListener('resize', () => this.resizeDots());
 }
+
+resizeDots() {
+  const width = window.innerWidth;
+  const size =
+    width < 640 ? 6 :
+    width < 1024 ? 8 : 10; // pixels
+  Array.from(this.dotsEl.children).forEach(btn => {
+    btn.style.width = `${size}px`;
+    btn.style.height = `${size}px`;
+  });
+}
+
 
 
                  
