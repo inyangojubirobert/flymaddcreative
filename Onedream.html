@@ -498,8 +498,14 @@
                 <div class="onedream-progress-fill" id="main-progress-fill"></div>
             </div>
             <p id="progress-text" style="font-size: 1.1rem; margin: 20px 0; color: #FFD700;">
-                <strong id="progress-percentage">24.8% Complete</strong> • <span id="progress-message">The community is pushing forward! Keep sharing your dream.</span>
+                <strong id="progress-percentage">24% Complete</strong> • <span id="progress-message">The community is pushing forward! Keep sharing your dream.</span>
             </p>
+            
+            <!-- Status indicator inspired by your demo -->
+            <div style="margin: 10px 0; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 0.9rem;">
+                <span style="color: #94a3b8;">Status:</span> 
+                <span id="data-status" style="color: #7dd3fc; font-weight: 500;">Mock active - showing 24% until live data reaches threshold</span>
+            </div>
             
             <div class="stats-grid">
                 <div class="stat-card">
@@ -946,15 +952,36 @@
                             console.log(`✅ Live data (${liveProgress.toFixed(1)}%) >= mock (${mockData.progress}%) - switching to live data`);
                             hasLiveData = true;
                             applyProgressData(liveData);
+                            
+                            // Update status indicator (inspired by your demo)
+                            const statusEl = document.getElementById('data-status');
+                            if (statusEl) {
+                                statusEl.textContent = `Live active - showing real progress (${liveProgress.toFixed(1)}%)`;
+                                statusEl.style.color = '#86efac'; // green for live
+                            }
                             return;
                         } else {
                             console.log(`⏳ Live data (${liveProgress.toFixed(1)}%) below mock (${mockData.progress}%) - keeping mock data visible`);
+                            
+                            // Update status to show we're waiting (inspired by your demo)
+                            const statusEl = document.getElementById('data-status');
+                            if (statusEl) {
+                                statusEl.textContent = `Live below mock - ${liveProgress.toFixed(1)}% waiting to reach ${mockData.progress}%`;
+                                statusEl.style.color = '#fbbf24'; // yellow for waiting
+                            }
                             // Continue to show mock data below
                         }
                     }
                 }
             } catch (error) {
                 console.warn('⚠️ Could not fetch live data:', error.message);
+                
+                // Update status for error state (inspired by your demo)
+                const statusEl = document.getElementById('data-status');
+                if (statusEl) {
+                    statusEl.textContent = 'Error fetching live data - showing mock data';
+                    statusEl.style.color = '#f87171'; // red for error
+                }
             }
             
             // Fallback to mock data when no live data is available
