@@ -494,8 +494,11 @@
     <section class="progress-section">
         <div class="container">
             <h2 class="section-title">Community Dream Progress</h2>
-            <div class="progress-bar">
-                <div class="onedream-progress-fill" id="main-progress-fill"></div>
+            <div class="progress-bar-container" style="max-width: 500px; margin: 20px auto; text-align: center;">
+                <img src="https://res.cloudinary.com/dljcj00ht/image/upload/v1762303910/bar_szey2u.png" 
+                     alt="Progress Bar - 24% Complete" 
+                     id="progress-bar-image"
+                     style="width: 100%; height: auto; max-width: 500px; border-radius: 10px;" />
             </div>
             <p id="progress-text" style="font-size: 1.1rem; margin: 20px 0; color: #FFD700;">
                 <strong id="progress-percentage">24% Complete</strong> • <span id="progress-message">The community is pushing forward! Keep sharing your dream.</span>
@@ -867,8 +870,8 @@
 
         // Immediate progress bar initialization with mock data
         function initializeProgressBar() {
-            const progressFill = document.getElementById('main-progress-fill');
-            if (progressFill) {
+            const progressImage = document.getElementById('progress-bar-image');
+            if (progressImage) {
                 // Show mock data immediately
                 console.log('📊 Showing mock data until live progress ≥ 24%');
                 applyProgressData(mockData);
@@ -887,7 +890,7 @@
                     }
                 }, 5000); // Check every 5 seconds
                 
-                console.log('🎯 Progress bar initialized with mock data (24%)');
+                console.log('🎯 Progress bar image initialized with mock data (24%)');
             }
         }
 
@@ -1005,32 +1008,22 @@
         function applyProgressData(data) {
             console.log('🎯 Applying progress data:', data);
             
-            // Update progress bar
-            const progressFill = document.getElementById('main-progress-fill');
+            // Update progress bar image (since we're using static image, we'll keep the same image but update text)
+            const progressImage = document.getElementById('progress-bar-image');
             const progressPercentage = document.getElementById('progress-percentage');
             const totalParticipants = document.getElementById('total-participants');
             const stageEmoji = document.getElementById('stage-emoji');
             const stageName = document.getElementById('stage-name');
             const nextMilestone = document.getElementById('next-milestone');
             
-            console.log('📊 Progress fill element found:', !!progressFill);
+            console.log('📊 Progress image element found:', !!progressImage);
             
-            if (progressFill) {
-                // Reset to 0% first
-                progressFill.style.width = '0%';
-                progressFill.style.transition = 'none';
-                
-                // Force a reflow
-                progressFill.offsetHeight;
-                
-                // Then animate to target percentage
-                setTimeout(() => {
-                    progressFill.style.transition = 'width 2s ease-out';
-                    progressFill.style.width = `${data.progress}%`;
-                    console.log(`✅ Progress bar animated to ${data.progress}%`);
-                }, 100);
+            if (progressImage) {
+                // Update the alt text to reflect current progress
+                progressImage.alt = `Progress Bar - ${data.progress}% Complete`;
+                console.log(`✅ Progress image updated for ${data.progress}%`);
             } else {
-                console.error('❌ Progress fill element not found!');
+                console.error('❌ Progress image element not found!');
             }
             
             // Update text elements
