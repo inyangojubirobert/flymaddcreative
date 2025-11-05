@@ -44,19 +44,28 @@
   @media (max-width: 640px) {
     #dots {
       margin: 0.25rem 0;
-      gap: 1px;
+      gap: 0.5px;
     }
     #dots button {
-      width: 2px;
-      height: 2px;
+      width: 1px;
+      height: 1px;
+    }
+    #dots button:hover {
+      transform: scale(1.5);
+    }
+    #dots button.active {
+      transform: scale(1.5);
     }
   }
 
   /* Even smaller for very small screens */
   @media (max-width: 480px) {
+    #dots {
+      gap: 0.25px;
+    }
     #dots button {
-      width: 1.5px;
-      height: 1.5px;
+      width: 0.8px;
+      height: 0.8px;
     }
   }
 </style>
@@ -254,10 +263,11 @@ b.addEventListener('mouseleave', () => {
 resizeDots() {
   const width = window.innerWidth;
   const size =
-    width < 480 ? 1.5 :   // Ultra tiny for very small screens
-    width < 640 ? 2 :     // Tiny for mobile
+    width < 480 ? 0.8 :   // Ultra tiny for very small screens
+    width < 640 ? 1 :     // Tiny for mobile
     width < 1024 ? 10 : 12; // Good size for medium and desktop
   const margin =
+    width < 480 ? 0.25 :  // Minimal margin for very small
     width < 640 ? 0.5 : 3; // Minimal margin on mobile, normal on desktop
   
   Array.from(this.dotsEl.children).forEach(btn => {
