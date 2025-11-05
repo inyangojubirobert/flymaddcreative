@@ -124,13 +124,16 @@ h1, h2, h3, h4, h5, h6, p { overflow-wrap: anywhere; hyphens: auto; }
   
   /* Content-aware tab styling for mobile devices */
   .tab-btn {
-    height: 40px !important; /* Fixed height for consistency */
+    height: 32px !important; /* Reduced height for better mobile experience */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     white-space: nowrap !important; /* Prevent text wrapping */
     font-size: 0.875rem !important; /* Consistent text size */
     min-width: fit-content !important; /* Auto-size based on content */
+    padding-left: 0.75rem !important; /* Consistent left margin */
+    padding-right: 0.75rem !important; /* Consistent right margin */
+    margin: 0 !important; /* Reset any default margins */
   }
   
   /* Tab container adjustments - focus on consistent spacing */
@@ -148,13 +151,16 @@ h1, h2, h3, h4, h5, h6, p { overflow-wrap: anywhere; hyphens: auto; }
   
   /* Content-aware tab styling for very small screens */
   .tab-btn {
-    height: 36px !important; /* Slightly smaller height for small screens */
+    height: 30px !important; /* Reduced height for small screens */
     font-size: 0.8rem !important; /* Readable text size */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     white-space: nowrap !important;
     min-width: fit-content !important; /* Auto-size based on content */
+    padding-left: 0.6rem !important; /* Consistent left margin for small screens */
+    padding-right: 0.6rem !important; /* Consistent right margin for small screens */
+    margin: 0 !important; /* Reset any default margins */
   }
   
   /* Consistent spacing for very small screens */
