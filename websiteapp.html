@@ -65,18 +65,24 @@
         btn.classList.remove('px-1', 'px-2', 'px-3', 'px-4', 'px-5', 'px-6');
         
         // Get text content length to determine padding
-        const textLength = btn.textContent.trim().length;
+        const textContent = btn.textContent.trim();
+        const textLength = textContent.length;
         let paddingClass;
         
-        // Dynamic padding based on text length
-        if (textLength <= 4) {
+        // Dynamic padding based on text length with consistent margins
+        if (textLength <= 5) {
           paddingClass = 'px-4'; // Short text like "Team"
         } else if (textLength <= 8) {
           paddingClass = 'px-3'; // Medium text like "Vision", "Contact"
-        } else if (textLength <= 12) {
-          paddingClass = 'px-2'; // Longer text like "Services", "Portfolio"
+        } else if (textLength <= 10) {
+          paddingClass = 'px-3'; // Consistent for "Services", "Portfolio"
         } else {
-          paddingClass = 'px-1'; // Very long text like "Opportunities", "One Dream ✨"
+          paddingClass = 'px-3'; // Consistent for longer text like "Opportunities"
+        }
+        
+        // Special styling for One Dream tab with red emoji
+        if (textContent.includes('One Dream')) {
+          btn.innerHTML = 'One Dream <span style="color: #ef4444;">✨</span>';
         }
         
         btn.classList.add(
