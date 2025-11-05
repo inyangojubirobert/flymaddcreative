@@ -171,7 +171,7 @@
                 }initDots() {
   this.dotsEl.innerHTML = '';
   const isMobile = window.matchMedia('(max-width: 640px)').matches;
-  const totalDots = isMobile ? Math.min(this.count, 3) : this.count; // 🌟 Added: fewer dots on mobile
+  const totalDots = isMobile ? Math.min(this.count, 4) : this.count; // 🌟 Added: fewer dots on mobile
   
   for (let i = 0; i < totalDots; i++) {
     const b = document.createElement('button');
@@ -277,7 +277,11 @@
                     mainContent.classList.remove('opacity-100');
                     const ob = new Onboarding(onboarding, slides, dots, btnBack, btnNext, btnSkip, btnStart);
                     // handle window resize to keep slide position
-                    window.addEventListener('resize', () => ob.update(false));
+                   window.addEventListener('resize', () => {
+  ob.initDots();   // rebuild dots with correct size/count
+  ob.update(false); // reposition slides
+});
+
                 }, 100);
 
 
