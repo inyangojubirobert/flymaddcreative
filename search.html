@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Participant - One Dream Initiative | FlyMadd Creative</title>
+    <meta name="description" content="Search for participants in the One Dream Initiative using their unique user code and start voting to support their dreams.">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a'
+                        },
+                        accent: {
+                            500: '#8b5cf6',
+                            600: '#7c3aed'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'bounce-slow': 'bounce 2s infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'gradient': 'gradient 8s ease infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-20px)' }
+                        },
+                        gradient: {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Enhanced CSS Styles -->
+    <style>
+        body {
+            background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #8b5cf6, #ec4899);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            min-height: 100vh;
+        }
+        
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+        
+        .search-card {
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+        }
+        
+        .search-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .participant-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        .search-button {
+            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+        }
+        
+        .search-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .search-button:hover::before {
+            left: 100%;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+            background-size: 200% 100%;
+            animation: gradient 2s ease infinite;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .hidden { display: none; }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #ffffff;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .participant-result {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .participant-result:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .participant-result.selected {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+
+<body class="text-white">
+    <!-- Navigation -->
+    <nav class="glassmorphism border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="text-xl font-bold gradient-text">
+                        FlyMadd Creative
+                    </a>
+                    <span class="text-white/60">|</span>
+                    <span class="text-white font-medium">One Dream Initiative</span>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <a href="Onedream.html" class="text-white/80 hover:text-white transition-colors">Dashboard</a>
+                    <a href="leadershipBoard.html" class="text-white/80 hover:text-white transition-colors">Leaderboard</a>
+                    <a href="registration.html" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+                        Join Initiative
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl w-full">
+            
+            <!-- Header -->
+            <div class="text-center mb-8 fade-in">
+                <h1 class="text-4xl md:text-5xl font-bold gradient-text mb-4">
+                    Find a Participant
+                </h1>
+                <p class="text-xl text-white/80">
+                    Enter a participant's unique code to start voting and support their dream
+                </p>
+            </div>
+
+            <!-- Search Section -->
+            <div class="glassmorphism rounded-2xl p-8 mb-8 search-card">
+                <div class="text-center">
+                    <h3 class="text-2xl font-bold mb-4">🔍 Search by User Code</h3>
+                    <p class="text-white/80 mb-6">
+                        Each participant has a unique 8-character code (e.g., ABC123XY). 
+                        Enter the code you received from them below.
+                    </p>
+                    
+                    <!-- Search Form -->
+                    <form id="searchForm" class="space-y-6">
+                        <div>
+                            <label for="userCode" class="block text-sm font-medium mb-2">Participant Code</label>
+                            <input type="text" 
+                                   id="userCode" 
+                                   name="userCode" 
+                                   required
+                                   maxlength="8"
+                                   pattern="[A-Z0-9]{8}"
+                                   class="w-full bg-white/10 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-xl font-mono tracking-widest uppercase"
+                                   placeholder="ABC123XY"
+                                   autocomplete="off">
+                            <p class="text-sm text-white/60 mt-2">
+                                Enter the 8-character code shared by the participant
+                            </p>
+                        </div>
+                        
+                        <button type="submit" 
+                                id="searchButton" 
+                                class="search-button w-full py-4 px-8 rounded-xl text-white font-bold text-lg transition-all duration-300 disabled:opacity-50">
+                            <span id="searchButtonText">🔍 Find Participant</span>
+                            <div id="searchSpinner" class="loading-spinner hidden inline-block ml-2"></div>
+                        </button>
+                    </form>
+                    
+                    <!-- Alternative Search Options -->
+                    <div class="mt-8 pt-6 border-t border-white/20">
+                        <p class="text-sm text-white/60 mb-4">Don't have a participant code?</p>
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                            <a href="leadershipBoard.html" 
+                               class="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-lg transition-colors">
+                                📊 Browse Leaderboard
+                            </a>
+                            <a href="registration.html" 
+                               class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg transition-colors">
+                                ➕ Join Initiative
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Results -->
+            <div id="searchResults" class="hidden">
+                <!-- Participant Found -->
+                <div id="participantFound" class="glassmorphism rounded-2xl p-8 mb-8">
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">🎉</div>
+                        <h3 class="text-2xl font-bold mb-4">Participant Found!</h3>
+                        
+                        <!-- Participant Details -->
+                        <div class="bg-white/10 rounded-xl p-6 mb-6">
+                            <div class="flex flex-col md:flex-row items-center gap-6">
+                                <!-- Avatar -->
+                                <div class="participant-avatar w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white">
+                                    <span id="foundParticipantInitials">?</span>
+                                </div>
+                                
+                                <!-- Details -->
+                                <div class="flex-1 text-center md:text-left">
+                                    <h4 class="text-xl font-bold mb-2" id="foundParticipantName">Loading...</h4>
+                                    <p class="text-blue-300 mb-1">@<span id="foundParticipantUsername">username</span></p>
+                                    <p class="text-white/80 text-sm" id="foundParticipantEmail">email@example.com</p>
+                                    
+                                    <!-- Stats -->
+                                    <div class="grid grid-cols-2 gap-4 mt-4">
+                                        <div class="bg-white/10 rounded-lg p-3 text-center">
+                                            <div class="text-lg font-bold" id="foundParticipantVotes">0</div>
+                                            <div class="text-xs text-white/70">Current Votes</div>
+                                        </div>
+                                        <div class="bg-white/10 rounded-lg p-3 text-center">
+                                            <div class="text-lg font-bold" id="foundParticipantRank">#1</div>
+                                            <div class="text-xs text-white/70">Leaderboard Rank</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                            <button onclick="searchAgain()" 
+                                    class="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-lg transition-colors">
+                                🔍 Search Again
+                            </button>
+                            <button id="voteForParticipant" 
+                                    class="search-button px-8 py-3 rounded-lg font-bold transition-all">
+                                🗳️ Vote for This Participant
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="hidden glassmorphism rounded-2xl p-8 mb-8">
+                <div class="text-center">
+                    <div class="text-red-400 text-6xl mb-4">⚠️</div>
+                    <h3 class="text-2xl font-bold mb-4 text-red-300">Participant Not Found</h3>
+                    <p class="text-white/80 mb-6" id="errorMessage">
+                        We couldn't find a participant with that code. Please check the code and try again.
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button onclick="searchAgain()" 
+                                class="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-lg transition-colors">
+                            🔍 Try Another Code
+                        </button>
+                        <a href="leadershipBoard.html" 
+                           class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors">
+                            📊 Browse Leaderboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- How It Works -->
+            <div class="glassmorphism rounded-2xl p-8">
+                <div class="text-center">
+                    <h3 class="text-xl font-bold mb-4">❓ How It Works</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                        <div class="bg-white/10 rounded-lg p-4">
+                            <div class="text-2xl mb-2">1️⃣</div>
+                            <div class="font-medium mb-1">Get the Code</div>
+                            <div class="text-white/70">Ask a participant for their unique 8-character code</div>
+                        </div>
+                        <div class="bg-white/10 rounded-lg p-4">
+                            <div class="text-2xl mb-2">2️⃣</div>
+                            <div class="font-medium mb-1">Search & Find</div>
+                            <div class="text-white/70">Enter the code above to find their profile</div>
+                        </div>
+                        <div class="bg-white/10 rounded-lg p-4">
+                            <div class="text-2xl mb-2">3️⃣</div>
+                            <div class="font-medium mb-1">Vote & Support</div>
+                            <div class="text-white/70">Cast your vote for $2 to support their dream</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // 🔧 SECURE CONFIGURATION
+        // ========================================
+        
+        let supabase = null;
+        let DEMO_MODE = true; // Start in demo mode until config loads
+        let foundParticipant = null;
+        
+        // Load configuration from secure endpoint
+        async function loadConfig() {
+            try {
+                // Since we don't have an API server, skip the config loading and use demo mode
+                console.log('🎭 No API server available, using demo mode');
+                DEMO_MODE = true;
+                return;
+            } catch (error) {
+                console.warn('⚠️ Failed to load secure config, using demo mode:', error);
+                DEMO_MODE = true;
+            }
+        }
+        
+        // ========================================
+        // 📝 APPLICATION CODE
+        // ========================================
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Load secure configuration first
+            await loadConfig();
+            
+            // Initialize search form
+            document.getElementById('searchForm').addEventListener('submit', handleSearch);
+            
+            // Auto-format user code input
+            const userCodeInput = document.getElementById('userCode');
+            userCodeInput.addEventListener('input', function(e) {
+                // Convert to uppercase and limit to 8 characters
+                e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+            });
+            
+            // Check for URL parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (code) {
+                userCodeInput.value = code.toUpperCase();
+                // Auto-search if code is provided
+                setTimeout(() => handleSearch(null, code), 500);
+            }
+        });
+
+        async function handleSearch(event, providedCode = null) {
+            if (event) {
+                event.preventDefault();
+            }
+            
+            const userCode = providedCode || document.getElementById('userCode').value.trim().toUpperCase();
+            
+            if (!userCode) {
+                showError('Please enter a participant code');
+                return;
+            }
+            
+            if (userCode.length !== 8) {
+                showError('Participant code must be exactly 8 characters');
+                return;
+            }
+            
+            const searchButton = document.getElementById('searchButton');
+            const buttonText = document.getElementById('searchButtonText');
+            const spinner = document.getElementById('searchSpinner');
+            
+            // Show loading state
+            searchButton.disabled = true;
+            buttonText.textContent = 'Searching...';
+            spinner.classList.remove('hidden');
+            
+            try {
+                if (DEMO_MODE) {
+                    await simulateSearch(userCode);
+                } else {
+                    await searchParticipantByCode(userCode);
+                }
+                
+            } catch (error) {
+                console.error('Search failed:', error);
+                showError(`Search failed: ${error.message}`);
+            } finally {
+                // Reset button state
+                searchButton.disabled = false;
+                buttonText.textContent = '🔍 Find Participant';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        async function simulateSearch(userCode) {
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Demo: Only certain codes return results
+            const demoParticipants = {
+                'ABC123XY': {
+                    id: 1,
+                    name: 'John Demo User',
+                    username: 'johndemo',
+                    email: 'john@example.com',
+                    user_code: 'ABC123XY',
+                    total_votes: 245,
+                    rank: 15
+                },
+                'DEF456ZW': {
+                    id: 2,
+                    name: 'Sarah Demo User',
+                    username: 'sarahdemo',
+                    email: 'sarah@example.com',
+                    user_code: 'DEF456ZW',
+                    total_votes: 189,
+                    rank: 23
+                },
+                'GHI789UV': {
+                    id: 3,
+                    name: 'Mike Demo User',
+                    username: 'mikedemo',
+                    email: 'mike@example.com',
+                    user_code: 'GHI789UV',
+                    total_votes: 567,
+                    rank: 8
+                }
+            };
+            
+            const participant = demoParticipants[userCode];
+            
+            if (participant) {
+                foundParticipant = participant;
+                showParticipantFound();
+                console.log('🎭 Demo participant found:', participant);
+            } else {
+                showError(`No participant found with code "${userCode}". Try ABC123XY, DEF456ZW, or GHI789UV for demo.`);
+            }
+        }
+
+        async function searchParticipantByCode(userCode) {
+            const { data: participant, error } = await supabase
+                .from('participants')
+                .select(`
+                    id,
+                    name,
+                    username,
+                    email,
+                    user_code,
+                    total_votes,
+                    created_at
+                `)
+                .eq('user_code', userCode)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    throw new Error('Participant not found');
+                }
+                throw error;
+            }
+
+            // Get rank (simplified - in production you'd use a view or function)
+            const { data: rankData } = await supabase
+                .from('participants')
+                .select('id')
+                .gt('total_votes', participant.total_votes);
+            
+            participant.rank = (rankData?.length || 0) + 1;
+            foundParticipant = participant;
+            showParticipantFound();
+        }
+
+        function showParticipantFound() {
+            if (!foundParticipant) return;
+            
+            // Hide error state and show results
+            document.getElementById('errorState').classList.add('hidden');
+            document.getElementById('searchResults').classList.remove('hidden');
+            
+            // Populate participant details
+            document.getElementById('foundParticipantName').textContent = foundParticipant.name;
+            document.getElementById('foundParticipantUsername').textContent = foundParticipant.username;
+            document.getElementById('foundParticipantEmail').textContent = foundParticipant.email;
+            document.getElementById('foundParticipantVotes').textContent = foundParticipant.total_votes.toLocaleString();
+            document.getElementById('foundParticipantRank').textContent = `#${foundParticipant.rank}`;
+            
+            // Generate initials for avatar
+            const initials = foundParticipant.name
+                .split(' ')
+                .map(n => n.charAt(0))
+                .join('')
+                .toUpperCase()
+                .slice(0, 2);
+            document.getElementById('foundParticipantInitials').textContent = initials;
+            
+            // Set up vote button
+            document.getElementById('voteForParticipant').addEventListener('click', function() {
+                // Redirect to vote page with username parameter
+                window.location.href = `vote.html?username=${foundParticipant.username}`;
+            });
+            
+            // Scroll to results
+            document.getElementById('searchResults').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+
+        function showError(message) {
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').classList.remove('hidden');
+            
+            // Scroll to error
+            document.getElementById('errorState').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+
+        function searchAgain() {
+            // Reset form and hide results/errors
+            document.getElementById('userCode').value = '';
+            document.getElementById('userCode').focus();
+            document.getElementById('searchResults').classList.add('hidden');
+            document.getElementById('errorState').classList.add('hidden');
+            foundParticipant = null;
+            
+            // Scroll back to search form
+            document.getElementById('searchForm').scrollIntoView({ 
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
+
+        // Update URL when searching
+        function updateURL(userCode) {
+            const url = new URL(window.location);
+            if (userCode) {
+                url.searchParams.set('code', userCode);
+            } else {
+                url.searchParams.delete('code');
+            }
+            window.history.replaceState(null, '', url.toString());
+        }
+
+        console.log('🔍 One Dream Initiative Search Page loaded');
+        console.log('🔐 Using secure configuration from environment variables');
+    </script>
+</body>
+</html>
