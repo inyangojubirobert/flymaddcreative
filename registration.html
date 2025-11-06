@@ -200,6 +200,26 @@
                 </div>
             </div>
 
+            <!-- User Code Sharing -->
+            <div class="bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4 text-white">🎯 Easy Voting with Your Code</h3>
+                <div class="bg-black bg-opacity-20 rounded-lg p-4 mb-4">
+                    <div class="text-center">
+                        <div class="text-sm text-white/80 mb-2">Share this code for easy voting:</div>
+                        <div class="text-3xl font-mono font-bold text-yellow-300 tracking-widest" id="displayShareCode">ABC123XY</div>
+                        <div class="text-sm text-white/80 mt-2">People can search for you using this code</div>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <a href="search.html" class="inline-block bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-colors text-sm">
+                        🔍 Try the Search Page
+                    </a>
+                </div>
+                <p class="text-white text-sm mt-3">
+                    <strong>Tell your friends to visit the search page and enter your code!</strong> It's easier than sharing long links.
+                </p>
+            </div>
+
             <!-- Voting Link -->
             <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-6 mb-6">
                 <h3 class="text-xl font-bold mb-4 text-black">🔗 Your One Dream Voting Link</h3>
@@ -285,6 +305,7 @@
         
         let currentParticipant = null;
         let redirectTimer = null;
+        let redirectCountdown = 10;
 
         document.addEventListener('DOMContentLoaded', async function() {
             // Load secure configuration first
@@ -390,43 +411,142 @@
         function showSuccessModal() {
             if (!currentParticipant) return;
             
-            // Update welcome message
-            document.getElementById('welcomeUserName').textContent = currentParticipant.name;
+            // Hide registration form and show success section
+            document.getElementById('registrationSection').classList.add('hidden');
+            document.getElementById('successSection').classList.remove('hidden');
             
-            // Show modal
-            document.getElementById('successModal').classList.remove('hidden');
+            // Populate user details
+            document.getElementById('displayName').textContent = currentParticipant.name;
+            document.getElementById('displayEmail').textContent = currentParticipant.email;
+            document.getElementById('displayUsername').textContent = currentParticipant.username;
+            document.getElementById('displayUserCode').textContent = currentParticipant.user_code || generateUserCode();
+            document.getElementById('displayShareCode').textContent = currentParticipant.user_code || generateUserCode();
+            
+            // Generate and display the voting link
+            const voteLink = `vote.html?user=${currentParticipant.username}`;
+            document.getElementById('displayVoteLink').textContent = voteLink;
             
             // Start redirect countdown
             startRedirectCountdown();
         }
 
         function startRedirectCountdown() {
-            let countdown = 3;
-            const countdownEl = document.getElementById('redirectCountdown');
-            const progressEl = document.getElementById('redirectProgress');
+            if (!currentParticipant) return;
+            
+            const countdownElement = document.createElement('div');
+            countdownElement.id = 'redirectCountdown';
+            countdownElement.className = 'mt-6 text-center bg-slate-700 bg-opacity-50 rounded-lg p-4';
+            countdownElement.innerHTML = `
+                <div class="text-yellow-400 font-medium mb-2">🎉 Welcome ${currentParticipant.name}!</div>
+                <div class="text-slate-300 text-sm">
+                    Redirecting to leaderboard in <span id="countdownNumber" class="font-bold text-yellow-400">${redirectCountdown}</span> seconds...
+                </div>
+                <button onclick="cancelRedirect()" class="mt-2 text-slate-400 hover:text-white text-sm underline">
+                    Cancel redirect
+                </button>
+            `;
+            
+            document.getElementById('successSection').appendChild(countdownElement);
             
             redirectTimer = setInterval(() => {
-                countdown--;
-                countdownEl.textContent = countdown;
-                progressEl.style.width = ((3 - countdown) / 3 * 100) + '%';
+                redirectCountdown--;
+                const countdownNumber = document.getElementById('countdownNumber');
+                if (countdownNumber) {
+                    countdownNumber.textContent = redirectCountdown;
+                }
                 
-                if (countdown <= 0) {
+                if (redirectCountdown <= 0) {
                     clearInterval(redirectTimer);
-                    redirectToLeaderboard();
+                    window.location.href = `leadershipBoard.html?welcome=${encodeURIComponent(currentParticipant.name)}`;
                 }
             }, 1000);
         }
-
-        function redirectNow() {
+        
+        function cancelRedirect() {
             if (redirectTimer) {
                 clearInterval(redirectTimer);
+                redirectTimer = null;
             }
-            redirectToLeaderboard();
+            const countdownElement = document.getElementById('redirectCountdown');
+            if (countdownElement) {
+                countdownElement.remove();
+            }
         }
 
-        function redirectToLeaderboard() {
-            if (currentParticipant) {
-                window.location.href = `leadershipBoard.html?user=${encodeURIComponent(currentParticipant.username)}&welcome=true`;
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorDiv.classList.remove('hidden');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        function setLoading(loading) {
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const spinner = document.getElementById('loadingSpinner');
+            
+            if (loading) {
+                submitBtn.disabled = true;
+                submitText.textContent = 'Registering...';
+                spinner.classList.remove('hidden');
+            } else {
+                submitBtn.disabled = false;
+                submitText.textContent = 'Register for One Dream Initiative';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function generateUserCode() {
+            // Generate a random 8-character alphanumeric code
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function copyToClipboard(elementId, buttonId) {
+            const text = document.getElementById(elementId).textContent;
+            const button = document.getElementById(buttonId);
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                }, 2000);
+                
+                console.log('✅ Copied to clipboard:', text);
+            }).catch(err => {
+                console.error('❌ Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        function shareVotingLink() {
+            if (!currentParticipant) return;
+            
+            const voteLink = `${window.location.origin}/vote.html?user=${currentParticipant.username}`;
+            const shareText = `🌟 Vote for me in the One Dream Initiative! Visit this link to support me: ${voteLink}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'One Dream Initiative - Vote for Me!',
+                    text: shareText,
+                    url: voteLink
+                });
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(shareText).then(() => {
+                    alert('Sharing text copied to clipboard!');
+                });
             }
         }
 
@@ -473,137 +593,6 @@
 
         console.log('🌟 One Dream Initiative Registration loaded');
         console.log('🔧 Currently in DEMO MODE - set DEMO_MODE to false for production');
-    </script>
-            const errorDiv = document.getElementById('errorMessage');
-            document.getElementById('errorText').textContent = message;
-            errorDiv.classList.remove('hidden');
-            
-            // Auto-hide after 5 seconds
-            setTimeout(() => {
-                errorDiv.classList.add('hidden');
-            }, 5000);
-        }
-
-        function setLoading(loading) {
-            const submitBtn = document.getElementById('submitBtn');
-            const submitText = document.getElementById('submitText');
-            const spinner = document.getElementById('loadingSpinner');
-            
-            if (loading) {
-                submitBtn.disabled = true;
-                submitText.textContent = 'Registering...';
-                spinner.classList.remove('hidden');
-            } else {
-                submitBtn.disabled = false;
-                submitText.textContent = 'Register for One Dream Initiative';
-                spinner.classList.add('hidden');
-            }
-        }
-
-        function generateUserCode() {
-            // Generate a random 8-character alphanumeric code
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < 8; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        }
-
-        function isValidEmail(email) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(email);
-        }
-
-        function copyToClipboard(elementId, buttonId) {
-            const text = document.getElementById(elementId).textContent;
-            const button = document.getElementById(buttonId);
-            
-            navigator.clipboard.writeText(text).then(() => {
-                // Visual feedback
-                const originalHTML = button.innerHTML;
-                button.innerHTML = '<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-                
-                setTimeout(() => {
-                    button.innerHTML = originalHTML;
-                }, 2000);
-                
-                console.log('✅ Copied to clipboard:', text);
-            }).catch(err => {
-                console.error('❌ Failed to copy:', err);
-                alert('Failed to copy to clipboard');
-            });
-        }
-
-        function shareVotingLink() {
-            if (!currentParticipant) return;
-            
-            const voteCommand = `onedream vote support(${currentParticipant.username})`;
-            const shareText = `🌟 Vote for me in the One Dream Initiative! Use this command to support me: ${voteCommand}`;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: 'One Dream Initiative - Vote for Me!',
-                    text: shareText,
-                    url: ''
-                });
-            } else {
-                // Fallback: copy to clipboard
-                navigator.clipboard.writeText(shareText).then(() => {
-                    alert('Sharing text copied to clipboard!');
-                });
-            }
-        }
-
-        // Auto-redirect to leaderboard after successful registration
-        let redirectTimer = null;
-        let redirectCountdown = 10;
-        
-        function startRedirectCountdown() {
-            if (!currentParticipant) return;
-            
-            const countdownElement = document.createElement('div');
-            countdownElement.id = 'redirectCountdown';
-            countdownElement.className = 'mt-6 text-center bg-slate-700 bg-opacity-50 rounded-lg p-4';
-            countdownElement.innerHTML = `
-                <div class="text-yellow-400 font-medium mb-2">🎉 Welcome ${currentParticipant.name}!</div>
-                <div class="text-slate-300 text-sm">
-                    Redirecting to leaderboard in <span id="countdownNumber" class="font-bold text-yellow-400">${redirectCountdown}</span> seconds...
-                </div>
-                <button onclick="cancelRedirect()" class="mt-2 text-slate-400 hover:text-white text-sm underline">
-                    Cancel redirect
-                </button>
-            `;
-            
-            document.getElementById('successSection').appendChild(countdownElement);
-            
-            redirectTimer = setInterval(() => {
-                redirectCountdown--;
-                const countdownNumber = document.getElementById('countdownNumber');
-                if (countdownNumber) {
-                    countdownNumber.textContent = redirectCountdown;
-                }
-                
-                if (redirectCountdown <= 0) {
-                    clearInterval(redirectTimer);
-                    window.location.href = `leadershipBoard.html?welcome=${encodeURIComponent(currentParticipant.name)}`;
-                }
-            }, 1000);
-        }
-        
-        function cancelRedirect() {
-            if (redirectTimer) {
-                clearInterval(redirectTimer);
-                redirectTimer = null;
-            }
-            const countdownElement = document.getElementById('redirectCountdown');
-            if (countdownElement) {
-                countdownElement.remove();
-            }
-        }
-        
-        console.log('🌟 One Dream Initiative Registration loaded');
-        console.log('� Using secure configuration from environment variables');
     </script>
 </body>
 </html>
