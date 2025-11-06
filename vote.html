@@ -192,6 +192,7 @@
                 </div>
                 <div class="flex items-center space-x-6">
                     <a href="Onedream.html" class="text-white/80 hover:text-white transition-colors">Dashboard</a>
+                    <a href="search.html" class="text-white/80 hover:text-white transition-colors">Find Participant</a>
                     <a href="leadershipBoard.html" class="text-white/80 hover:text-white transition-colors">Leaderboard</a>
                     <a href="registration.html" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
                         Join Initiative
@@ -223,13 +224,17 @@
                         We couldn't find the participant you're looking for.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                        <a href="leadershipBoard.html" 
+                        <a href="search.html" 
                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors">
-                            View Leaderboard
+                            🔍 Find Participant
+                        </a>
+                        <a href="leadershipBoard.html" 
+                           class="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg transition-colors">
+                            📊 View Leaderboard
                         </a>
                         <a href="registration.html" 
-                           class="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg transition-colors">
-                            Join Initiative
+                           class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors">
+                            ➕ Join Initiative
                         </a>
                     </div>
                 </div>
@@ -445,24 +450,30 @@
         // Load configuration from secure endpoint
         async function loadConfig() {
             try {
-                const response = await fetch('/api/config');
-                if (!response.ok) throw new Error('Failed to load config');
+                // Since we don't have an API server, skip the config loading and use demo mode
+                console.log('🎭 No API server available, using demo mode');
+                DEMO_MODE = true;
+                return;
                 
-                const config = await response.json();
-                
-                // Initialize Supabase with loaded config
-                if (window.supabase && window.supabase.createClient) {
-                    supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
-                        auth: {
-                            persistSession: true,
-                            autoRefreshToken: true,
-                        }
-                    });
-                    DEMO_MODE = false;
-                    console.log('✅ Supabase initialized with secure config');
-                } else {
-                    throw new Error('Supabase library not loaded');
-                }
+                // Original code kept for reference when API is available:
+                // const response = await fetch('/api/config');
+                // if (!response.ok) throw new Error('Failed to load config');
+                // 
+                // const config = await response.json();
+                // 
+                // // Initialize Supabase with loaded config
+                // if (window.supabase && window.supabase.createClient) {
+                //     supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+                //         auth: {
+                //             persistSession: true,
+                //             autoRefreshToken: true,
+                //         }
+                //     });
+                //     DEMO_MODE = false;
+                //     console.log('✅ Supabase initialized with secure config');
+                // } else {
+                //     throw new Error('Supabase library not loaded');
+                // }
             } catch (error) {
                 console.warn('⚠️ Failed to load secure config, using demo mode:', error);
                 DEMO_MODE = true;
@@ -477,17 +488,22 @@
             // Load secure configuration first
             await loadConfig();
             
-            // Get participant from URL
+            // Get participant from URL - support multiple parameter formats
             const urlParams = new URLSearchParams(window.location.search);
             const username = urlParams.get('user') || urlParams.get('username');
+            const userCode = urlParams.get('code') || urlParams.get('user_code');
             
-            if (!username) {
-                showError('No participant specified in URL');
+            if (!username && !userCode) {
+                showError('No participant specified in URL. Please provide either username or user code.');
                 return;
             }
             
             // Load participant data
-            await loadParticipant(username);
+            if (userCode) {
+                await loadParticipantByCode(userCode);
+            } else {
+                await loadParticipant(username);
+            }
             
             // Initialize vote amount selection
             initializeVoteSelection();
@@ -495,6 +511,116 @@
             // Initialize vote button
             document.getElementById('voteButton').addEventListener('click', handleVote);
         });
+
+        async function loadParticipantByCode(userCode) {
+            try {
+                if (DEMO_MODE) {
+                    await simulateParticipantLoadByCode(userCode);
+                } else {
+                    await loadParticipantFromSupabaseByCode(userCode);
+                }
+                
+                showParticipant();
+                
+            } catch (error) {
+                console.error('Failed to load participant by code:', error);
+                showError(`Failed to load participant: ${error.message}`);
+            }
+        }
+
+        async function simulateParticipantLoadByCode(userCode) {
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Demo participants by user code
+            const demoParticipants = {
+                'ABC123XY': {
+                    id: 1001,
+                    name: 'John Demo User',
+                    username: 'johndemo',
+                    email: 'john@example.com',
+                    user_code: 'ABC123XY',
+                    total_votes: 245,
+                    rank: 15,
+                    created_at: new Date().toISOString()
+                },
+                'DEF456ZW': {
+                    id: 1002,
+                    name: 'Sarah Demo User',
+                    username: 'sarahdemo',
+                    email: 'sarah@example.com',
+                    user_code: 'DEF456ZW',
+                    total_votes: 189,
+                    rank: 23,
+                    created_at: new Date().toISOString()
+                },
+                'GHI789UV': {
+                    id: 1003,
+                    name: 'Mike Demo User',
+                    username: 'mikedemo',
+                    email: 'mike@example.com',
+                    user_code: 'GHI789UV',
+                    total_votes: 567,
+                    rank: 8,
+                    created_at: new Date().toISOString()
+                }
+            };
+            
+            const participant = demoParticipants[userCode.toUpperCase()];
+            
+            if (participant) {
+                currentParticipant = participant;
+                console.log('🎭 Demo participant loaded by code:', currentParticipant);
+            } else {
+                throw new Error(`Participant not found with code: ${userCode}. Try ABC123XY, DEF456ZW, or GHI789UV`);
+            }
+        }
+
+        async function loadParticipantFromSupabaseByCode(userCode) {
+            const { data: participant, error } = await supabase
+                .from('participants')
+                .select(`
+                    id,
+                    name,
+                    username,
+                    email,
+                    user_code,
+                    total_votes,
+                    created_at
+                `)
+                .eq('user_code', userCode)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    throw new Error('Participant not found');
+                }
+                throw error;
+            }
+
+            // Get rank (simplified - in production you'd use a view or function)
+            const { data: rankData } = await supabase
+                .from('participants')
+                .select('id')
+                .gt('total_votes', participant.total_votes);
+            
+            participant.rank = (rankData?.length || 0) + 1;
+            currentParticipant = participant;
+        }
+            try {
+                if (DEMO_MODE) {
+                    await simulateParticipantLoad(username);
+                } else {
+                    await loadParticipantFromSupabase(username);
+                }
+                
+                showParticipant();
+                
+            } catch (error) {
+                console.error('Failed to load participant:', error);
+                showError(`Failed to load participant: ${error.message}`);
+            }
+        }
 
         async function loadParticipant(username) {
             try {
@@ -909,60 +1035,6 @@
             
             console.log('✅ Payment processed and votes recorded:', data);
             return data;
-        }
-
-        // Helper function to get client IP (best effort)
-        async function getClientIP() {
-            try {
-                const response = await fetch('https://api.ipify.org?format=json');
-                const data = await response.json();
-                return data.ip;
-            } catch (error) {
-                console.warn('Could not get client IP:', error);
-                return null;
-            }
-        }
-            if (!currentParticipant) {
-                alert('No participant selected');
-                return;
-            }
-            
-            const voteButton = document.getElementById('voteButton');
-            const buttonText = document.getElementById('voteButtonText');
-            const spinner = document.getElementById('voteButtonSpinner');
-            
-            // Show loading state
-            voteButton.disabled = true;
-            buttonText.textContent = 'Processing...';
-            spinner.classList.remove('hidden');
-            
-            try {
-                if (DEMO_MODE) {
-                    await simulateVote();
-                } else {
-                    await processVoteWithSupabase();
-                }
-                
-                showSuccessModal();
-                
-            } catch (error) {
-                console.error('Vote processing failed:', error);
-                alert(`Vote failed: ${error.message}`);
-            } finally {
-                // Reset button state
-                voteButton.disabled = false;
-                buttonText.textContent = 'Cast Your Vote';
-                spinner.classList.add('hidden');
-            }
-        }
-
-        function showSuccessModal() {
-            document.getElementById('successParticipantName').textContent = currentParticipant.name;
-            document.getElementById('successVoteCount').textContent = selectedVoteAmount;
-            document.getElementById('successModal').classList.remove('hidden');
-            
-            // Update participant display
-            showParticipant();
         }
 
         // Helper function to get client IP (best effort)
