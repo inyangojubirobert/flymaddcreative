@@ -3,329 +3,607 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registration - FlyMadd Creative</title>
-    <!-- Tailwind CSS CDN -->
+    <title>One Dream Initiative Registration - FlyMadd Creative</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #FFD700, #FFA500, #FF6B35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .registration-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        
+        .input-glow:focus {
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+        
+        .pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+        
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.3); }
+        }
+        
+        .float-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px) scale(0.95); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+            }
+        }
+        
+        .success-modal {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+        }
+        
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-inter">
-    <!-- Header -->
-    <header class="bg-white shadow-sm">
+<body class="text-white">
+    
+    <!-- Navigation -->
+    <nav class="bg-black bg-opacity-30 backdrop-blur-md border-b border-white border-opacity-10 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <div class="flex items-center">
-                    <h1 class="text-2xl font-bold text-gray-900">FlyMadd Creative</h1>
+                <div class="flex items-center space-x-4">
+                    <a href="Onedream.html" class="text-xl font-bold gradient-text">🌟 One Dream Initiative</a>
                 </div>
-                <nav class="flex space-x-4">
-                    <a href="websiteapp.html" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Home</a>
-                    <a href="leadershipBoard.html" class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">Leadership Board</a>
-                </nav>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="Onedream.html" class="text-slate-300 hover:text-white transition-colors">Home</a>
+                    <a href="leadershipBoard.html" class="text-slate-300 hover:text-white transition-colors">Leaderboard</a>
+                    <a href="#" class="text-white font-medium">Register</a>
+                </div>
             </div>
         </div>
-    </header>
+    </nav>
 
     <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <!-- Header Section -->
-            <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-12 text-center text-white">
-                <h2 class="text-4xl font-bold mb-4">Join FlyMadd Creative</h2>
-                <p class="text-xl opacity-90 max-w-2xl mx-auto">
-                    Ready to transform your creative vision into reality? Register today and become part of our global creative community.
-                </p>
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Registration Form -->
+        <div id="registrationSection" class="registration-card rounded-2xl p-8 mb-8">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold mb-4">
+                    📝 <span class="gradient-text">Join One Dream Initiative</span>
+                </h1>
+                <p class="text-xl text-slate-300">Register to participate in the community voting and compete for top positions!</p>
             </div>
 
-            <!-- Registration Form -->
-            <div class="px-8 py-12">
-                <form id="registrationForm" class="space-y-8">
-                    <!-- Personal Information -->
-                    <div class="space-y-6">
-                        <h3 class="text-2xl font-semibold text-gray-900 border-b border-gray-200 pb-2">Personal Information</h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
-                                <input type="text" id="firstName" name="firstName" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                            </div>
-                            <div>
-                                <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
-                                <input type="text" id="lastName" name="lastName" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                            </div>
-                        </div>
+            <form id="registrationForm" class="space-y-6">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-slate-300 mb-2">Full Name *</label>
+                    <input type="text" id="name" name="name" required
+                           class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
+                           placeholder="Enter your full name">
+                </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-                                <input type="email" id="email" name="email" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                            </div>
-                            <div>
-                                <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                                <input type="tel" id="phone" name="phone"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                            </div>
-                        </div>
+                <div>
+                    <label for="email" class="block text-sm font-medium text-slate-300 mb-2">Email Address *</label>
+                    <input type="email" id="email" name="email" required
+                           class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
+                           placeholder="Enter your email address">
+                </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Country *</label>
-                                <select id="country" name="country" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                    <option value="">Select your country</option>
-                                    <option value="US">United States</option>
-                                    <option value="CA">Canada</option>
-                                    <option value="UK">United Kingdom</option>
-                                    <option value="AU">Australia</option>
-                                    <option value="DE">Germany</option>
-                                    <option value="FR">France</option>
-                                    <option value="JP">Japan</option>
-                                    <option value="NG">Nigeria</option>
-                                    <option value="ZA">South Africa</option>
-                                    <option value="BR">Brazil</option>
-                                    <option value="IN">India</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="company" class="block text-sm font-medium text-gray-700 mb-2">Company/Organization</label>
-                                <input type="text" id="company" name="company"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                            </div>
+                <div>
+                    <label for="username" class="block text-sm font-medium text-slate-300 mb-2">Username *</label>
+                    <input type="text" id="username" name="username" required
+                           class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
+                           placeholder="Choose a unique username">
+                    <p class="text-sm text-slate-400 mt-1">This will be used in your voting link</p>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" id="submitBtn"
+                            class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span id="submitText">Register for One Dream Initiative</span>
+                        <div id="loadingSpinner" class="hidden inline-block ml-2">
+                            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
                         </div>
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-6 text-center">
+                <p class="text-slate-400 text-sm">
+                    Already registered? 
+                    <a href="leadershipBoard.html" class="text-yellow-400 hover:text-yellow-300">View Leaderboard</a>
+                </p>
+            </div>
+        </div>
+
+        <!-- Success Section (Hidden by default) -->
+        <div id="successSection" class="hidden registration-card rounded-2xl p-8">
+            <div class="text-center mb-8">
+                <div class="text-6xl mb-4">🎉</div>
+                <h2 class="text-3xl font-bold gradient-text mb-4">Registration Successful!</h2>
+                <p class="text-xl text-slate-300 mb-6">Welcome to the One Dream Initiative community!</p>
+            </div>
+
+            <!-- User Details -->
+            <div class="bg-slate-800 bg-opacity-50 rounded-lg p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Your Participant Details</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Name:</span>
+                        <span class="font-medium" id="displayName">-</span>
                     </div>
-
-                    <!-- Professional Information -->
-                    <div class="space-y-6">
-                        <h3 class="text-2xl font-semibold text-gray-900 border-b border-gray-200 pb-2">Professional Information</h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label for="role" class="block text-sm font-medium text-gray-700 mb-2">Current Role *</label>
-                                <select id="role" name="role" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                    <option value="">Select your role</option>
-                                    <option value="designer">Designer</option>
-                                    <option value="developer">Developer</option>
-                                    <option value="manager">Project Manager</option>
-                                    <option value="director">Creative Director</option>
-                                    <option value="entrepreneur">Entrepreneur</option>
-                                    <option value="freelancer">Freelancer</option>
-                                    <option value="student">Student</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="experience" class="block text-sm font-medium text-gray-700 mb-2">Years of Experience *</label>
-                                <select id="experience" name="experience" required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                                    <option value="">Select experience level</option>
-                                    <option value="0-1">0-1 years</option>
-                                    <option value="2-5">2-5 years</option>
-                                    <option value="6-10">6-10 years</option>
-                                    <option value="11-15">11-15 years</option>
-                                    <option value="15+">15+ years</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="skills" class="block text-sm font-medium text-gray-700 mb-2">Skills & Expertise</label>
-                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="skills" value="branding" class="mr-2 text-blue-600">
-                                    <span class="text-sm">Branding</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="skills" value="ui-ux" class="mr-2 text-blue-600">
-                                    <span class="text-sm">UI/UX Design</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="skills" value="web-dev" class="mr-2 text-blue-600">
-                                    <span class="text-sm">Web Development</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="skills" value="mobile-dev" class="mr-2 text-blue-600">
-                                    <span class="text-sm">Mobile Development</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="skills" value="marketing" class="mr-2 text-blue-600">
-                                    <span class="text-sm">Digital Marketing</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="skills" value="strategy" class="mr-2 text-blue-600">
-                                    <span class="text-sm">Strategy</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="portfolio" class="block text-sm font-medium text-gray-700 mb-2">Portfolio/Website URL</label>
-                            <input type="url" id="portfolio" name="portfolio" placeholder="https://"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
-                        </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Email:</span>
+                        <span class="font-medium" id="displayEmail">-</span>
                     </div>
-
-                    <!-- Project Interests -->
-                    <div class="space-y-6">
-                        <h3 class="text-2xl font-semibold text-gray-900 border-b border-gray-200 pb-2">Project Interests</h3>
-                        
-                        <div>
-                            <label for="projectType" class="block text-sm font-medium text-gray-700 mb-2">What type of projects interest you most? *</label>
-                            <div class="space-y-3">
-                                <label class="flex items-center">
-                                    <input type="radio" name="projectType" value="startup" class="mr-3 text-blue-600">
-                                    <span>Startup Branding & Development</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="radio" name="projectType" value="enterprise" class="mr-3 text-blue-600">
-                                    <span>Enterprise Solutions</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="radio" name="projectType" value="nonprofit" class="mr-3 text-blue-600">
-                                    <span>Non-profit & Social Impact</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="radio" name="projectType" value="ecommerce" class="mr-3 text-blue-600">
-                                    <span>E-commerce & Retail</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="radio" name="projectType" value="creative" class="mr-3 text-blue-600">
-                                    <span>Creative & Artistic Projects</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="goals" class="block text-sm font-medium text-gray-700 mb-2">What are your goals with FlyMadd Creative?</label>
-                            <textarea id="goals" name="goals" rows="4" placeholder="Tell us about your aspirations and what you hope to achieve..."
-                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"></textarea>
-                        </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Username:</span>
+                        <span class="font-medium" id="displayUsername">-</span>
                     </div>
-
-                    <!-- Terms and Submit -->
-                    <div class="space-y-6">
-                        <div class="flex items-start">
-                            <input type="checkbox" id="terms" name="terms" required class="mt-1 mr-3 text-blue-600">
-                            <label for="terms" class="text-sm text-gray-700">
-                                I agree to the <a href="#" class="text-blue-600 hover:text-blue-800">Terms of Service</a> and 
-                                <a href="#" class="text-blue-600 hover:text-blue-800">Privacy Policy</a> *
-                            </label>
-                        </div>
-
-                        <div class="flex items-start">
-                            <input type="checkbox" id="newsletter" name="newsletter" class="mt-1 mr-3 text-blue-600">
-                            <label for="newsletter" class="text-sm text-gray-700">
-                                I would like to receive updates about new opportunities and creative insights
-                            </label>
-                        </div>
-
-                        <div class="text-center">
-                            <button type="submit" 
-                                class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 shadow-lg">
-                                Join FlyMadd Creative
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400">User Code:</span>
+                        <div class="flex items-center space-x-2">
+                            <span class="font-mono bg-slate-700 px-2 py-1 rounded text-yellow-400" id="displayUserCode">-</span>
+                            <button onclick="copyToClipboard('displayUserCode', 'copyCodeBtn')" id="copyCodeBtn" 
+                                    class="copy-button p-1 hover:bg-slate-700 rounded transition-colors">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
                             </button>
                         </div>
                     </div>
-                </form>
+                </div>
+            </div>
+
+            <!-- Voting Link -->
+            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4 text-black">🔗 Your One Dream Voting Link</h3>
+                <div class="bg-black bg-opacity-20 rounded-lg p-4">
+                    <div class="flex items-center justify-between">
+                        <code class="text-sm text-white font-mono break-all" id="displayVoteLink">onedream vote support(username)</code>
+                        <button onclick="copyToClipboard('displayVoteLink', 'copyLinkBtn')" id="copyLinkBtn"
+                                class="copy-button ml-3 p-2 bg-black bg-opacity-30 hover:bg-opacity-50 rounded transition-colors">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-black text-sm mt-3">
+                    <strong>Share this One Dream support command with others to get votes!</strong> People can type this command to vote for you and help you climb the leaderboard.
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button onclick="window.location.href='leadershipBoard.html'" 
+                        class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-6 rounded-lg transition-colors">
+                    🏆 View Leaderboard
+                </button>
+                <button onclick="shareVotingLink()" 
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
+                    📱 Share Your Link
+                </button>
             </div>
         </div>
 
-        <!-- Success Message (Hidden by default) -->
-        <div id="successMessage" class="hidden bg-green-50 border border-green-200 rounded-lg p-6 mt-8">
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden bg-red-600 bg-opacity-20 border border-red-500 rounded-lg p-4 mb-6">
             <div class="flex items-center">
-                <div class="flex-shrink-0">
-                    <svg class="h-8 w-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h3 class="text-lg font-medium text-green-800">Registration Successful!</h3>
-                    <p class="text-green-700 mt-1">Welcome to FlyMadd Creative! We'll be in touch soon with next steps.</p>
-                </div>
+                <svg class="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <span id="errorText" class="text-red-300"></span>
             </div>
         </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="text-center">
-                <p class="text-gray-600">&copy; 2025 FlyMadd Creative. All rights reserved.</p>
-                <p class="text-sm text-gray-500 mt-2">Ready to create something amazing together?</p>
-            </div>
-        </div>
-    </footer>
+    </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('registrationForm');
-            const successMessage = document.getElementById('successMessage');
-
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
+        // ========================================
+        // 🔧 SECURE CONFIGURATION
+        // ========================================
+        
+        // 🔐 Load configuration securely from API endpoint
+        let supabase = null;
+        let DEMO_MODE = true; // Start in demo mode until config loads
+        
+        // Load configuration from secure endpoint
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                if (!response.ok) throw new Error('Failed to load config');
                 
-                // Simulate form submission
-                const submitButton = form.querySelector('button[type="submit"]');
-                const originalText = submitButton.textContent;
+                const config = await response.json();
                 
-                // Show loading state
-                submitButton.textContent = 'Processing...';
-                submitButton.disabled = true;
-                
-                // Simulate API call
-                setTimeout(() => {
-                    // Hide form and show success message
-                    form.style.display = 'none';
-                    successMessage.classList.remove('hidden');
-                    
-                    // Scroll to success message
-                    successMessage.scrollIntoView({ behavior: 'smooth' });
-                    
-                    // Reset button (in case form is shown again)
-                    submitButton.textContent = originalText;
-                    submitButton.disabled = false;
-                }, 2000);
-            });
-
-            // Add real-time validation feedback
-            const inputs = form.querySelectorAll('input[required], select[required]');
-            inputs.forEach(input => {
-                input.addEventListener('blur', function() {
-                    if (this.value.trim() === '') {
-                        this.classList.add('border-red-500');
-                        this.classList.remove('border-gray-300');
-                    } else {
-                        this.classList.remove('border-red-500');
-                        this.classList.add('border-green-500');
-                    }
-                });
-
-                input.addEventListener('input', function() {
-                    if (this.value.trim() !== '') {
-                        this.classList.remove('border-red-500');
-                        this.classList.add('border-green-500');
-                    }
-                });
-            });
-
-            // Email validation
-            const emailInput = document.getElementById('email');
-            emailInput.addEventListener('blur', function() {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (this.value && !emailRegex.test(this.value)) {
-                    this.classList.add('border-red-500');
-                    this.classList.remove('border-green-500');
-                } else if (this.value) {
-                    this.classList.remove('border-red-500');
-                    this.classList.add('border-green-500');
+                // Initialize Supabase with loaded config
+                if (window.supabase && window.supabase.createClient) {
+                    supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+                        auth: {
+                            persistSession: true,
+                            autoRefreshToken: true,
+                        }
+                    });
+                    DEMO_MODE = false;
+                    console.log('✅ Supabase initialized with secure config');
+                } else {
+                    throw new Error('Supabase library not loaded');
                 }
+            } catch (error) {
+                console.warn('⚠️ Failed to load secure config, using demo mode:', error);
+                DEMO_MODE = true;
+            }
+        }
+        
+        // ========================================
+        // 📝 APPLICATION CODE
+        // ========================================
+        
+        let currentParticipant = null;
+        let redirectTimer = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Load secure configuration first
+            await loadConfig();
+            
+            // Initialize form handler
+            document.getElementById('registrationForm').addEventListener('submit', handleRegistration);
+            
+            // Add input animations
+            const inputs = document.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.parentElement.classList.add('scale-105');
+                });
+                input.addEventListener('blur', function() {
+                    this.parentElement.classList.remove('scale-105');
+                });
             });
         });
+
+        async function handleRegistration(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                username: document.getElementById('username').value.trim()
+            };
+            
+            // Validation
+            if (!formData.name || !formData.email || !formData.username) {
+                showError('Please fill in all required fields.');
+                return;
+            }
+            
+            if (!isValidEmail(formData.email)) {
+                showError('Please enter a valid email address.');
+                return;
+            }
+            
+            if (formData.username.length < 3) {
+                showError('Username must be at least 3 characters long.');
+                return;
+            }
+            
+            // Show loading state
+            setLoading(true);
+            
+            try {
+                if (DEMO_MODE) {
+                    await simulateRegistration(formData);
+                } else {
+                    await registerWithSupabase(formData);
+                }
+                
+                showSuccessModal();
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                showError(error.message || 'Registration failed. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        async function simulateRegistration(formData) {
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            currentParticipant = {
+                id: Math.floor(Math.random() * 10000),
+                ...formData,
+                user_code: generateUserCode(),
+                created_at: new Date().toISOString()
+            };
+            
+            console.log('🎉 Demo registration successful:', currentParticipant);
+        }
+
+        async function registerWithSupabase(formData) {
+            // Real Supabase integration
+            const { data: participant, error } = await supabase
+                .from('participants')
+                .insert([formData])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Generate vote link for this participant
+            const voteLink = `https://www.flymaddcreative.online/vote.html?user=${participant.username}`;
+
+            // Create referral link entry with the vote link
+            await supabase.from('referral_links').insert([{
+                participant_id: participant.id,
+                link_url: voteLink,
+                link_type: 'vote'
+            }]);
+
+            currentParticipant = participant;
+        }
+
+        function showSuccessModal() {
+            if (!currentParticipant) return;
+            
+            // Update welcome message
+            document.getElementById('welcomeUserName').textContent = currentParticipant.name;
+            
+            // Show modal
+            document.getElementById('successModal').classList.remove('hidden');
+            
+            // Start redirect countdown
+            startRedirectCountdown();
+        }
+
+        function startRedirectCountdown() {
+            let countdown = 3;
+            const countdownEl = document.getElementById('redirectCountdown');
+            const progressEl = document.getElementById('redirectProgress');
+            
+            redirectTimer = setInterval(() => {
+                countdown--;
+                countdownEl.textContent = countdown;
+                progressEl.style.width = ((3 - countdown) / 3 * 100) + '%';
+                
+                if (countdown <= 0) {
+                    clearInterval(redirectTimer);
+                    redirectToLeaderboard();
+                }
+            }, 1000);
+        }
+
+        function redirectNow() {
+            if (redirectTimer) {
+                clearInterval(redirectTimer);
+            }
+            redirectToLeaderboard();
+        }
+
+        function redirectToLeaderboard() {
+            if (currentParticipant) {
+                window.location.href = `leadershipBoard.html?user=${encodeURIComponent(currentParticipant.username)}&welcome=true`;
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorDiv.classList.remove('hidden');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        function setLoading(loading) {
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const spinner = document.getElementById('loadingSpinner');
+            
+            if (loading) {
+                submitBtn.disabled = true;
+                submitText.classList.add('hidden');
+                spinner.classList.remove('hidden');
+            } else {
+                submitBtn.disabled = false;
+                submitText.classList.remove('hidden');
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function generateUserCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        console.log('🌟 One Dream Initiative Registration loaded');
+        console.log('🔧 Currently in DEMO MODE - set DEMO_MODE to false for production');
+    </script>
+            const errorDiv = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorDiv.classList.remove('hidden');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        function setLoading(loading) {
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const spinner = document.getElementById('loadingSpinner');
+            
+            if (loading) {
+                submitBtn.disabled = true;
+                submitText.textContent = 'Registering...';
+                spinner.classList.remove('hidden');
+            } else {
+                submitBtn.disabled = false;
+                submitText.textContent = 'Register for One Dream Initiative';
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function generateUserCode() {
+            // Generate a random 8-character alphanumeric code
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        function copyToClipboard(elementId, buttonId) {
+            const text = document.getElementById(elementId).textContent;
+            const button = document.getElementById(buttonId);
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                }, 2000);
+                
+                console.log('✅ Copied to clipboard:', text);
+            }).catch(err => {
+                console.error('❌ Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        function shareVotingLink() {
+            if (!currentParticipant) return;
+            
+            const voteCommand = `onedream vote support(${currentParticipant.username})`;
+            const shareText = `🌟 Vote for me in the One Dream Initiative! Use this command to support me: ${voteCommand}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'One Dream Initiative - Vote for Me!',
+                    text: shareText,
+                    url: ''
+                });
+            } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(shareText).then(() => {
+                    alert('Sharing text copied to clipboard!');
+                });
+            }
+        }
+
+        // Auto-redirect to leaderboard after successful registration
+        let redirectTimer = null;
+        let redirectCountdown = 10;
+        
+        function startRedirectCountdown() {
+            if (!currentParticipant) return;
+            
+            const countdownElement = document.createElement('div');
+            countdownElement.id = 'redirectCountdown';
+            countdownElement.className = 'mt-6 text-center bg-slate-700 bg-opacity-50 rounded-lg p-4';
+            countdownElement.innerHTML = `
+                <div class="text-yellow-400 font-medium mb-2">🎉 Welcome ${currentParticipant.name}!</div>
+                <div class="text-slate-300 text-sm">
+                    Redirecting to leaderboard in <span id="countdownNumber" class="font-bold text-yellow-400">${redirectCountdown}</span> seconds...
+                </div>
+                <button onclick="cancelRedirect()" class="mt-2 text-slate-400 hover:text-white text-sm underline">
+                    Cancel redirect
+                </button>
+            `;
+            
+            document.getElementById('successSection').appendChild(countdownElement);
+            
+            redirectTimer = setInterval(() => {
+                redirectCountdown--;
+                const countdownNumber = document.getElementById('countdownNumber');
+                if (countdownNumber) {
+                    countdownNumber.textContent = redirectCountdown;
+                }
+                
+                if (redirectCountdown <= 0) {
+                    clearInterval(redirectTimer);
+                    window.location.href = `leadershipBoard.html?welcome=${encodeURIComponent(currentParticipant.name)}`;
+                }
+            }, 1000);
+        }
+        
+        function cancelRedirect() {
+            if (redirectTimer) {
+                clearInterval(redirectTimer);
+                redirectTimer = null;
+            }
+            const countdownElement = document.getElementById('redirectCountdown');
+            if (countdownElement) {
+                countdownElement.remove();
+            }
+        }
+        
+        console.log('🌟 One Dream Initiative Registration loaded');
+        console.log('� Using secure configuration from environment variables');
     </script>
 </body>
 </html>

@@ -473,7 +473,7 @@
             <div class="nav-links">
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#prizes" class="nav-link">Prizes</a>
-                <a href="#vote" class="nav-button">Vote Now</a>
+                <a href="vote.html" class="nav-button">Vote Now</a>
             </div>
         </div>
     </nav>
@@ -486,7 +486,7 @@
             <p class="hero-description">
             In partnership with FlyMadd Creative, we’re building a movement to make your dreams go viral — and rewarding. 🌟 Lean into your social vibe: share a video of yourself expressing your dreams, include your unique registration link, post it on your socials, rally your community to vote, and rise together as we chase our shared vision of success.
             </p>
-            <a href="register.html" class="cta-button">Start Your Journey</a>
+            <a href="registration.html" class="cta-button">Start Your Journey</a>
         </div>
     </section>
 
@@ -622,7 +622,7 @@
                 Join thousands of participants already sharing their dreams with the world.
             </p>
             <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-                <a href="register.html" style="background: var(--primary-color); color: white; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; transition: all 0.3s ease;">
+                <a href="registration.html" style="background: var(--primary-color); color: white; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; transition: all 0.3s ease;">
                     Join the Initiative
                 </a>
                 <a href="leadershipBoard.html" style="border: 2px solid var(--primary-color); color: var(--primary-color); padding: 13px 30px; text-decoration: none; border-radius: 50px; font-weight: 600; transition: all 0.3s ease;">
@@ -1131,22 +1131,38 @@
     <!-- React App Components -->
     <script type="text/babel">
         // Enhanced Supabase initialization with browser compatibility
-        const supabaseUrl = 'https://pjtuisyvpvoswmcgxsfs.supabase.co';
-        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY';
+        // 🔐 Load configuration securely from API endpoint
+        let supabase = null;
         
-        // Global variables for React components
-        let currentUser = null;
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                if (!response.ok) throw new Error('Failed to load config');
+                
+                const config = await response.json();
+                return config;
+            } catch (error) {
+                console.warn('⚠️ Failed to load secure config:', error);
+                return null;
+            }
+        }
         
-        // Cross-browser Supabase initialization
-        let supabase;
-        try {
-            if (window.supabase && window.supabase.createClient) {
-                supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
-                    auth: {
-                        autoRefreshToken: true,
-                        persistSession: true,
-                        detectSessionInUrl: false
-                    },
+        // Initialize Supabase securely
+        async function initializeSupabase() {
+            const config = await loadConfig();
+            if (!config) {
+                console.error('❌ Cannot initialize Supabase - configuration not available');
+                return false;
+            }
+            
+            try {
+                if (window.supabase && window.supabase.createClient) {
+                    supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+                        auth: {
+                            autoRefreshToken: true,
+                            persistSession: true,
+                            detectSessionInUrl: false
+                        },
                     db: {
                         schema: 'public'
                     },
@@ -1157,6 +1173,7 @@
                     }
                 });
                 console.log('✅ Supabase initialized successfully');
+                return true;
             } else {
                 throw new Error('Supabase library not loaded');
             }
@@ -1172,6 +1189,10 @@
                 functions: {
                     invoke: () => Promise.resolve({ data: null, error: 'Functions not available' })
                 }
+    }
+
+    // Global variables for React components
+    let currentUser = null;
             };
         }
         
@@ -2381,11 +2402,14 @@
 
         // Start rendering when DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('DOMContentLoaded', async () => {
+                await initializeSupabase();
                 setTimeout(attemptRender, 500);
             });
         } else {
-            setTimeout(attemptRender, 500);
+            initializeSupabase().then(() => {
+                setTimeout(attemptRender, 500);
+            });
         }
 
         // Also try after full page load

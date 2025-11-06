@@ -195,10 +195,25 @@
                     throw new Error('Supabase library not loaded');
                 }
 
-                const supabaseUrl = 'https://pjtuisyvpvoswmcgxsfs.supabase.co';
-                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY';
+                // 🔐 Load configuration securely
+                async function loadConfig() {
+                    try {
+                        const response = await fetch('/api/config');
+                        if (!response.ok) throw new Error('Failed to load config');
+                        return await response.json();
+                    } catch (error) {
+                        console.warn('⚠️ Failed to load secure config');
+                        return null;
+                    }
+                }
                 
-                const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+                const config = await loadConfig();
+                if (!config) {
+                    resultDiv.innerHTML = '<div class="error">❌ Cannot load secure configuration</div>';
+                    return;
+                }
+                
+                const client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
                 resultDiv.innerHTML = '<div class="warning">⏳ Testing Supabase connection...</div>';
                 
                 // Test connection by trying to fetch from global_stats
