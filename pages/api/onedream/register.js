@@ -5,12 +5,56 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { generateReferralToken, checkRateLimit } from '../../../lib/onedreamHelpers';
+import crypto from 'crypto';
 
 // Initialize Supabase client with service role key for admin operations
 const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || ''
 );
+
+// Helpers
+function normalizeEmail(email) {
+  return (email || '').trim().toLowerCase();
+}
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+function cleanName(name) {
+  return (name || '').trim().replace(/\s+/g, ' ');
+}
+function generateReferralCode(name) {
+  const clean = (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const prefix = clean.substring(0, 6) || 'user';
+  const suffix = Math.random().toString(36).substring(2, 8);
+  return `${prefix}${suffix}`;
+}
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16);
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
+      if (err) return reject(err);
+      // Store as scrypt$<salt hex>$<hash hex>
+      resolve(`scrypt$${salt.toString('hex')}$${derivedKey.toString('hex')}`);
+    });
+  });
+}
+async function ensureUniqueReferral(code, maxAttempts = 5) {
+  let attempt = 0;
+  let current = code;
+  while (attempt < maxAttempts) {
+    const { data, error } = await supabaseAdmin
+      .from('onedream_users')
+      .select('id')
+      .eq('referral_code', current)
+      .limit(1);
+    if (error) throw error;
+    if (!data || data.length === 0) return current;
+    current = generateReferralCode(current);
+    attempt++;
+  }
+  return current;
+}
 
 export default async function handler(req, res) {
   // Only allow POST requests
