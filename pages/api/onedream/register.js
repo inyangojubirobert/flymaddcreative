@@ -3,8 +3,6 @@
 
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { generateReferralToken, checkRateLimit } from '../../../lib/onedreamHelpers';
 import crypto from 'crypto';
 
 // Initialize Supabase client with service role key for admin operations
@@ -12,6 +10,47 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || ''
 );
+
+// Simple in-memory rate limiter (module scope)
+const rateLimitStore = new Map();
+function checkRateLimit(key, maxAttempts, windowMs) {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key) || { count: 0, start: now };
+  if (now - entry.start > windowMs) {
+    entry.count = 0;
+    entry.start = now;
+  }
+  entry.count += 1;
+  rateLimitStore.set(key, entry);
+  return entry.count <= maxAttempts;
+}
+
+// Generate a short referral token
+function generateReferralToken(seed) {
+  return crypto
+    .createHash('sha256')
+    .update(`${seed}:${crypto.randomBytes(16).toString('hex')}`)
+    .digest('hex')
+    .substring(0, 24);
+}
+
+// Ensure referral token uniqueness
+async function ensureUniqueReferralToken(token, maxAttempts = 5) {
+  let attempt = 0;
+  let current = token;
+  while (attempt < maxAttempts) {
+    const { data, error } = await supabaseAdmin
+      .from('onedream_users')
+      .select('id')
+      .eq('referral_token', current)
+      .limit(1);
+    if (error) throw error;
+    if (!data || data.length === 0) return current;
+    current = generateReferralToken(current);
+    attempt++;
+  }
+  return current;
+}
 
 // Helpers
 function normalizeEmail(email) {
@@ -95,17 +134,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin
+    // Check if user already exists (avoid .single() not-found error)
+    const { data: existingList, error: existingErr } = await supabaseAdmin
       .from('onedream_users')
       .select('id')
       .eq('email', email.toLowerCase())
-      .single();
+      .limit(1);
 
-    if (existingUser) {
-      return res.status(400).json({ 
-        error: 'An account with this email already exists' 
-      });
+    if (existingErr) {
+      console.error('Supabase error (check existing):', existingErr);
+      return res.status(500).json({ error: 'Internal error checking existing user' });
+    }
+    if (existingList && existingList.length > 0) {
+      return res.status(400).json({ error: 'An account with this email already exists' });
     }
 
     // Hash password
@@ -114,17 +155,18 @@ export default async function handler(req, res) {
 
     // Create user record
     const userId = crypto.randomUUID();
-    const referralToken = generateReferralToken(userId);
-    
+    const baseToken = generateReferralToken(userId);
+    const referralToken = await ensureUniqueReferralToken(baseToken);
+
     const { data: newUser, error: createError } = await supabaseAdmin
       .from('onedream_users')
       .insert({
         id: userId,
         name: name.trim(),
         email: email.toLowerCase().trim(),
-        password_hash: hashedPassword, // Note: Add this column to your schema
+        password_hash: hashedPassword,
         bio: bio?.trim() || null,
-        referral_token: referralToken
+        referral_token: referralToken,
       })
       .select('id, name, email, referral_token, created_at')
       .single();
