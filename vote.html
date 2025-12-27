@@ -176,6 +176,7 @@
             cursor: not-allowed;
         }
     </style>
+    <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
 </head>
 
 <body class="text-white">
@@ -450,32 +451,24 @@
         // Load configuration from secure endpoint
         async function loadConfig() {
             try {
-                // Since we don't have an API server, skip the config loading and use demo mode
-                console.log('🎭 No API server available, using demo mode');
+                const meta = document.querySelector('meta[name="supabase-config"]');
+                const url = meta?.getAttribute('data-url');
+                const anon = meta?.getAttribute('data-anon');
+
+                if (url && anon && window.supabase?.createClient) {
+                    supabase = window.supabase.createClient(url, anon, {
+                        auth: { persistSession: true, autoRefreshToken: true }
+                    });
+                    DEMO_MODE = false;
+                    console.log('✅ Supabase initialized from meta config');
+                    return;
+                }
+
+                // Fallback: keep demo mode
+                console.log('🎭 No config found, using demo mode');
                 DEMO_MODE = true;
-                return;
-                
-                // Original code kept for reference when API is available:
-                // const response = await fetch('/api/config');
-                // if (!response.ok) throw new Error('Failed to load config');
-                // 
-                // const config = await response.json();
-                // 
-                // // Initialize Supabase with loaded config
-                // if (window.supabase && window.supabase.createClient) {
-                //     supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
-                //         auth: {
-                //             persistSession: true,
-                //             autoRefreshToken: true,
-                //         }
-                //     });
-                //     DEMO_MODE = false;
-                //     console.log('✅ Supabase initialized with secure config');
-                // } else {
-                //     throw new Error('Supabase library not loaded');
-                // }
             } catch (error) {
-                console.warn('⚠️ Failed to load secure config, using demo mode:', error);
+                console.warn('⚠️ Failed to initialize Supabase, using demo mode:', error);
                 DEMO_MODE = true;
             }
         }
@@ -598,29 +591,14 @@
                 throw error;
             }
 
-            // Get rank (simplified - in production you'd use a view or function)
             const { data: rankData } = await supabase
                 .from('participants')
                 .select('id')
                 .gt('total_votes', participant.total_votes);
-            
+
             participant.rank = (rankData?.length || 0) + 1;
             currentParticipant = participant;
         }
-            try {
-                if (DEMO_MODE) {
-                    await simulateParticipantLoad(username);
-                } else {
-                    await loadParticipantFromSupabase(username);
-                }
-                
-                showParticipant();
-                
-            } catch (error) {
-                console.error('Failed to load participant:', error);
-                showError(`Failed to load participant: ${error.message}`);
-            }
-        
 
         async function loadParticipant(username) {
             try {

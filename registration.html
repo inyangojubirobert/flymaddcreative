@@ -85,6 +85,9 @@
             80%, 100% { content: '...'; }
         }
     </style>
+
+    <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
+
 </head>
 <body class="text-white">
     
@@ -275,6 +278,20 @@
         // Load configuration from secure endpoint
         async function loadConfig() {
             try {
+                const meta = document.querySelector('meta[name="supabase-config"]');
+                const url = meta?.getAttribute('data-url');
+                const anon = meta?.getAttribute('data-anon');
+
+                if (url && anon && window.supabase?.createClient) {
+                    supabase = window.supabase.createClient(url, anon, {
+                        auth: { persistSession: true, autoRefreshToken: true }
+                    });
+                    DEMO_MODE = false;
+                    console.log('✅ Supabase initialized from meta config');
+                    return;
+                }
+
+                // Fallback to previous behavior
                 const response = await fetch('/api/config');
                 if (!response.ok) throw new Error('Failed to load config');
                 
@@ -294,7 +311,7 @@
                     throw new Error('Supabase library not loaded');
                 }
             } catch (error) {
-                console.warn('⚠️ Failed to load secure config, using demo mode:', error);
+                console.warn('⚠️ Failed to initialize Supabase, using demo mode:', error);
                 DEMO_MODE = true;
             }
         }
