@@ -89,15 +89,15 @@ export async function getUserStats(participantId) {
  */
 export async function createParticipant(participantData) {
   try {
-    // Generate unique referral code
-    const referralCode = generateReferralCode(participantData.name);
-    
+    // Respect provided referral_code; generate if missing
+    const payload = { ...participantData };
+    if (!payload.referral_code) {
+      payload.referral_code = generateReferralCode(payload.name || '');
+    }
+
     const { data, error } = await supabase
       .from('participants')
-      .insert({
-        ...participantData,
-        referral_code: referralCode
-      })
+      .insert(payload)
       .select()
       .single();
 
@@ -148,6 +148,45 @@ export async function getParticipantByRefCode(refCode) {
   }
 }
 
+/**
+ * Find participant by email (to prevent duplicate registrations)
+ */
+export async function getParticipantByEmail(email) {
+  try {
+    const { data, error } = await supabase
+      .from('participants')
+      .select('*')
+      .eq('email', email)
+      .limit(1);
+
+    if (error) throw error;
+    return { success: true, data: data?.[0] || null };
+  } catch (error) {
+    console.error('Error finding participant by email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Find participant by username (for vote.html lookups)
+ */
+export async function getParticipantByUsername(username) {
+  try {
+    const clean = typeof username === 'string' ? username.trim() : '';
+    const { data, error } = await supabase
+      .from('participants')
+      .select('*')
+      .eq('username', clean)
+      .limit(1);
+
+    if (error) throw error;
+    return { success: true, data: data?.[0] || null };
+  } catch (error) {
+    console.error('Error finding participant by username:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // ===================================
 // VOTES API
 // ===================================
@@ -190,6 +229,28 @@ export async function checkRecentVote(ipAddress, referralCode, hoursAgo = 24) {
     return { success: true, hasVoted: data && data.length > 0 };
   } catch (error) {
     console.error('Error checking recent vote:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Check if IP has voted recently for a participant (by participant_id)
+ */
+export async function checkRecentVoteForParticipant(participantId, ipAddress, hoursAgo = 24) {
+  try {
+    const timeThreshold = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+    const { data, error } = await supabase
+      .from('votes')
+      .select('id')
+      .eq('participant_id', participantId)
+      .eq('ip_address', ipAddress)
+      .gte('created_at', timeThreshold)
+      .limit(1);
+
+    if (error) throw error;
+    return { success: true, hasVoted: Array.isArray(data) && data.length > 0 };
+  } catch (error) {
+    console.error('Error checking recent vote for participant:', error);
     return { success: false, error: error.message };
   }
 }
@@ -438,6 +499,102 @@ export function timeAgo(date) {
   }
 
   return 'Just now';
+}
+
+/**
+ * Extracts participant fields from FormElement, FormData, or plain object.
+ */
+function extractParticipantData(input) {
+  let obj = {};
+
+  // HTMLFormElement => FormData
+  if (typeof window !== 'undefined' && input && input.tagName === 'FORM') {
+    const fd = new FormData(input);
+    obj = Object.fromEntries(fd.entries());
+  }
+  // FormData
+  else if (typeof FormData !== 'undefined' && input instanceof FormData) {
+    obj = Object.fromEntries(input.entries());
+  }
+  // Plain object
+  else if (input && typeof input === 'object') {
+    obj = { ...input };
+  }
+
+  // Normalize fields (whitelist common participant fields)
+  const cleaned = {
+    name: normalizeString(obj.name),
+    email: (obj.email || '').toLowerCase().trim(),
+    country: normalizeString(obj.country),
+    avatar_url: typeof obj.avatar_url === 'string' ? obj.avatar_url.trim() : undefined
+  };
+
+  // Remove undefined/empty optional fields
+  Object.keys(cleaned).forEach((k) => {
+    if (cleaned[k] === undefined || cleaned[k] === '') delete cleaned[k];
+  });
+
+  return cleaned;
+}
+
+/**
+ * Basic participant data validation.
+ */
+function validateParticipantData(data) {
+  const errors = {};
+
+  if (!data.name || data.name.length < 2) {
+    errors.name = 'Name is required and must be at least 2 characters.';
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!data.email || !emailRegex.test(data.email)) {
+    errors.email = 'A valid email is required.';
+  }
+
+  return { valid: Object.keys(errors).length === 0, errors };
+}
+
+/**
+ * Normalize strings: trim and collapse spaces.
+ */
+function normalizeString(value) {
+  if (typeof value !== 'string') return undefined;
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+/**
+ * Register a participant from HTML FormElement, FormData, or plain object.
+ * Minimal fields expected: name, email. Optional: country, avatar_url.
+ */
+export async function registerParticipant(input, { referralCode = null } = {}) {
+  try {
+    const participantData = extractParticipantData(input);
+
+    // Basic validation
+    const { valid, errors } = validateParticipantData(participantData);
+    if (!valid) {
+      return { success: false, error: 'Validation failed', details: errors };
+    }
+
+    // Prevent duplicate registration by email
+    const existing = await getParticipantByEmail(participantData.email);
+    if (existing.success && existing.data) {
+      return { success: false, error: 'A participant with this email already exists.' };
+    }
+
+    // Attach referral_code if passed explicitly
+    const payload = { ...participantData };
+    if (referralCode) {
+      payload.referral_code = referralCode;
+    }
+
+    // Create participant
+    return await createParticipant(payload);
+  } catch (error) {
+    console.error('Error registering participant:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 // Export default client for direct use
