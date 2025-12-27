@@ -291,25 +291,9 @@
                     return;
                 }
 
-                // Fallback to previous behavior
-                const response = await fetch('/api/config');
-                if (!response.ok) throw new Error('Failed to load config');
-                
-                const config = await response.json();
-                
-                // Initialize Supabase with loaded config
-                if (window.supabase && window.supabase.createClient) {
-                    supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
-                        auth: {
-                            persistSession: true,
-                            autoRefreshToken: true,
-                        }
-                    });
-                    DEMO_MODE = false;
-                    console.log('✅ Supabase initialized with secure config');
-                } else {
-                    throw new Error('Supabase library not loaded');
-                }
+                // Fallback (keeps DEMO_MODE true)
+                console.warn('⚠️ Supabase config meta not found, staying in demo mode');
+                DEMO_MODE = true;
             } catch (error) {
                 console.warn('⚠️ Failed to initialize Supabase, using demo mode:', error);
                 DEMO_MODE = true;
