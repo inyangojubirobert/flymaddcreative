@@ -286,15 +286,16 @@
 
     <script>
         // ========================================
-        // 🔧 VERSION: 2024-01-28-v3 (jsDelivr CDN)
+        // 🔧 VERSION: 2024-01-28-v4 (Fixed variable conflict)
         // ========================================
-        console.log('📌 Registration.html Version: 2024-01-28-v3');
+        console.log('📌 Registration.html Version: 2024-01-28-v4');
         
         // ========================================
         // 🔧 SUPABASE CONFIGURATION
         // ========================================
         
-        let supabase = null;
+        // Use different variable name to avoid conflict with global window.supabase
+        let supabaseClient = null;
         
         // Initialize Supabase from meta config with storage fallback
         function initSupabase() {
@@ -315,7 +316,7 @@
 
             // Try with storage first, fallback to no storage if blocked
             try {
-                supabase = window.supabase.createClient(url, anon, {
+                supabaseClient = window.supabase.createClient(url, anon, {
                     auth: { 
                         persistSession: true, 
                         autoRefreshToken: true,
@@ -325,7 +326,7 @@
                 console.log('✅ Supabase client created with storage');
             } catch (err) {
                 console.warn('⚠️ Storage blocked, creating client without persistence');
-                supabase = window.supabase.createClient(url, anon, {
+                supabaseClient = window.supabase.createClient(url, anon, {
                     auth: { 
                         persistSession: false,
                         autoRefreshToken: false,
@@ -372,7 +373,7 @@
         async function testConnection() {
             console.log('🔍 Testing database connection...');
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('participants')
                     .select('id, username')
                     .limit(3);
@@ -443,17 +444,17 @@
         }
 
         async function registerWithSupabase(formData) {
-            if (!supabase) {
+            if (!supabaseClient) {
                 console.error('❌ Supabase client is null!');
                 throw new Error('Supabase client not initialized');
             }
 
-            console.log('🔗 Supabase client exists:', !!supabase);
+            console.log('🔗 Supabase client exists:', !!supabaseClient);
 
             try {
                 console.log('🔍 Step 1: Checking if email exists...');
                 
-                const { data: existingEmail, error: emailErr } = await supabase
+                const { data: existingEmail, error: emailErr } = await supabaseClient
                     .from('participants')
                     .select('id')
                     .eq('email', formData.email)
@@ -472,7 +473,7 @@
 
                 console.log('🔍 Step 2: Checking if username exists...');
 
-                const { data: existingUsername, error: usernameErr } = await supabase
+                const { data: existingUsername, error: usernameErr } = await supabaseClient
                     .from('participants')
                     .select('id')
                     .eq('username', formData.username)
@@ -499,7 +500,7 @@
                 
                 console.log('📤 Insert payload:', insertPayload);
 
-                const { data: participant, error: insertErr } = await supabase
+                const { data: participant, error: insertErr } = await supabaseClient
                     .from('participants')
                     .insert(insertPayload)
                     .select('id, name, email, username, user_code, total_votes, current_stage, created_at')
@@ -522,7 +523,7 @@
 
                 console.log('🔍 Step 4: Fetching referral link...');
 
-                const { data: referralLink, error: linkErr } = await supabase
+                const { data: referralLink, error: linkErr } = await supabaseClient
                     .from('referral_links')
                     .select('user_vote_link')
                     .eq('participant_id', participant.id)
