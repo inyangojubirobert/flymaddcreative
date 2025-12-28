@@ -291,6 +291,7 @@
                 auth: { persistSession: true, autoRefreshToken: true }
             });
             console.log('✅ Supabase initialized successfully');
+            console.log('📍 URL:', url);
         }
         
         // ========================================
@@ -304,6 +305,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             try {
                 initSupabase();
+                testConnection();
             } catch (error) {
                 console.error('❌ Failed to initialize Supabase:', error);
                 showError('System configuration error. Please contact support.');
@@ -324,6 +326,27 @@
             });
         });
 
+        // Test database connection
+        async function testConnection() {
+            try {
+                const { data, error } = await supabase
+                    .from('participants')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    console.error('❌ Database connection test failed:', error);
+                    console.error('Error code:', error.code);
+                    console.error('Error message:', error.message);
+                    console.error('Error details:', error.details);
+                } else {
+                    console.log('✅ Database connection successful');
+                }
+            } catch (e) {
+                console.error('❌ Connection test exception:', e);
+            }
+        }
+
         async function handleRegistration(e) {
             e.preventDefault();
             
@@ -332,6 +355,8 @@
                 email: document.getElementById('email').value.trim().toLowerCase(),
                 username: document.getElementById('username').value.trim().toLowerCase()
             };
+
+            console.log('📝 Attempting registration with:', formData);
             
             // Validation
             if (!formData.name || !formData.email || !formData.username) {
@@ -367,7 +392,19 @@
             }
         }
 
+        // Generate user code client-side as fallback
+        function generateUserCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 8; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
         async function registerWithSupabase(formData) {
+            console.log('🔍 Step 1: Checking if email exists...');
+            
             // Check if email already exists
             const { data: existingEmail, error: emailErr } = await supabase
                 .from('participants')
@@ -376,12 +413,17 @@
                 .limit(1);
 
             if (emailErr) {
-                console.error('Email check error:', emailErr);
-                throw new Error('Error checking email availability');
+                console.error('❌ Email check error:', emailErr);
+                throw new Error(`Database error: ${emailErr.message}. Please check RLS policies.`);
             }
+            
+            console.log('📧 Email check result:', existingEmail);
+            
             if (existingEmail && existingEmail.length > 0) {
                 throw new Error('An account with this email already exists.');
             }
+
+            console.log('🔍 Step 2: Checking if username exists...');
 
             // Check if username already exists
             const { data: existingUsername, error: usernameErr } = await supabase
@@ -391,32 +433,48 @@
                 .limit(1);
 
             if (usernameErr) {
-                console.error('Username check error:', usernameErr);
-                throw new Error('Error checking username availability');
+                console.error('❌ Username check error:', usernameErr);
+                throw new Error(`Database error: ${usernameErr.message}. Please check RLS policies.`);
             }
+            
+            console.log('👤 Username check result:', existingUsername);
+            
             if (existingUsername && existingUsername.length > 0) {
                 throw new Error('This username is already taken. Please choose another.');
             }
 
-            // Insert participant - triggers will auto-generate user_code
-            // Triggers: trigger_assign_user_code, trigger_auto_generate_user_data
+            console.log('🔍 Step 3: Inserting participant...');
+
+            // Generate user_code client-side in case trigger doesn't exist
+            const userCode = generateUserCode();
+
+            // Insert participant with user_code (in case trigger doesn't work)
+            const insertPayload = {
+                name: formData.name,
+                email: formData.email,
+                username: formData.username,
+                user_code: userCode,
+                total_votes: 0,
+                total_amount: 0,
+                current_stage: 'Bronze'
+            };
+            
+            console.log('📤 Insert payload:', insertPayload);
+
             const { data: participant, error: insertErr } = await supabase
                 .from('participants')
-                .insert({
-                    name: formData.name,
-                    email: formData.email,
-                    username: formData.username
-                    // user_code is auto-generated by trigger_assign_user_code
-                    // total_votes defaults to 0
-                    // current_stage defaults to 'Bronze'
-                })
+                .insert(insertPayload)
                 .select('id, name, email, username, user_code, total_votes, current_stage, created_at')
                 .single();
 
             if (insertErr) {
-                console.error('Insert error:', insertErr);
+                console.error('❌ Insert error:', insertErr);
+                console.error('Error code:', insertErr.code);
+                console.error('Error message:', insertErr.message);
+                console.error('Error details:', insertErr.details);
+                console.error('Error hint:', insertErr.hint);
+                
                 if (insertErr.code === '23505') {
-                    // Unique constraint violation
                     if (insertErr.message.includes('email')) {
                         throw new Error('An account with this email already exists.');
                     }
@@ -427,11 +485,22 @@
                         throw new Error('Registration conflict. Please try again.');
                     }
                 }
-                throw new Error('Failed to create account. Please try again.');
+                
+                if (insertErr.code === '42501') {
+                    throw new Error('Permission denied. RLS policy may be blocking inserts. Please contact admin.');
+                }
+                
+                throw new Error(`Failed to create account: ${insertErr.message}`);
             }
 
-            // Referral link is auto-created by trigger_create_referral_link on participants insert
-            // Fetch the generated referral link
+            console.log('✅ Participant created:', participant);
+
+            // Try to fetch or create referral link
+            console.log('🔍 Step 4: Fetching referral link...');
+            
+            let voteLink = `${window.location.origin}/vote.html?user=${participant.username}`;
+            
+            // Check if referral link was auto-created by trigger
             const { data: referralLink, error: linkErr } = await supabase
                 .from('referral_links')
                 .select('id, user_vote_link, username')
@@ -439,36 +508,55 @@
                 .single();
 
             if (linkErr) {
-                console.warn('Could not fetch referral link:', linkErr);
-                // Don't fail registration, link might be created async
+                console.warn('⚠️ Could not fetch referral link (may need manual creation):', linkErr);
+                
+                // Try to create referral link manually
+                console.log('🔍 Step 4b: Creating referral link manually...');
+                
+                const { data: newLink, error: createLinkErr } = await supabase
+                    .from('referral_links')
+                    .insert({
+                        participant_id: participant.id,
+                        username: participant.username,
+                        user_vote_link: voteLink,
+                        is_active: true
+                    })
+                    .select('id, user_vote_link')
+                    .single();
+                
+                if (createLinkErr) {
+                    console.warn('⚠️ Could not create referral link:', createLinkErr);
+                    // Continue anyway, we have a fallback vote link
+                } else {
+                    console.log('✅ Referral link created:', newLink);
+                    voteLink = newLink.user_vote_link || voteLink;
+                }
+            } else {
+                console.log('✅ Referral link found:', referralLink);
+                voteLink = referralLink.user_vote_link || voteLink;
             }
 
             currentParticipant = {
                 ...participant,
-                voteLink: referralLink?.user_vote_link || `${window.location.origin}/vote.html?user=${participant.username}`
+                voteLink
             };
 
-            console.log('✅ Registration successful:', currentParticipant);
+            console.log('🎉 Registration complete:', currentParticipant);
         }
 
         function showSuccessModal() {
             if (!currentParticipant) return;
             
-            // Hide registration form and show success section
             document.getElementById('registrationSection').classList.add('hidden');
             document.getElementById('successSection').classList.remove('hidden');
             
-            // Populate user details
             document.getElementById('displayName').textContent = currentParticipant.name;
             document.getElementById('displayEmail').textContent = currentParticipant.email;
             document.getElementById('displayUsername').textContent = currentParticipant.username;
-            document.getElementById('displayUserCode').textContent = currentParticipant.user_code || 'Generating...';
-            document.getElementById('displayShareCode').textContent = currentParticipant.user_code || 'Generating...';
-            
-            // Display the voting link (from DB or fallback)
+            document.getElementById('displayUserCode').textContent = currentParticipant.user_code || 'N/A';
+            document.getElementById('displayShareCode').textContent = currentParticipant.user_code || 'N/A';
             document.getElementById('displayVoteLink').textContent = currentParticipant.voteLink;
             
-            // Start redirect countdown
             startRedirectCountdown();
         }
 
@@ -520,10 +608,9 @@
             document.getElementById('errorText').textContent = message;
             errorDiv.classList.remove('hidden');
             
-            // Auto-hide after 5 seconds
             setTimeout(() => {
                 errorDiv.classList.add('hidden');
-            }, 5000);
+            }, 8000);
         }
 
         function setLoading(loading) {
@@ -553,8 +640,6 @@
                 setTimeout(() => {
                     button.innerHTML = originalHTML;
                 }, 2000);
-                
-                console.log('✅ Copied to clipboard:', text);
             }).catch(err => {
                 console.error('❌ Failed to copy:', err);
                 alert('Failed to copy to clipboard');
