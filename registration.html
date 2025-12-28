@@ -268,36 +268,29 @@
 
     <script>
         // ========================================
-        // 🔧 SECURE CONFIGURATION
+        // 🔧 SUPABASE CONFIGURATION (NO DEMO MODE)
         // ========================================
         
-        // 🔐 Load configuration securely from API endpoint
         let supabase = null;
-        let DEMO_MODE = true; // Start in demo mode until config loads
         
-        // Load configuration from secure endpoint
-        async function loadConfig() {
-            try {
-                const meta = document.querySelector('meta[name="supabase-config"]');
-                const url = meta?.getAttribute('data-url');
-                const anon = meta?.getAttribute('data-anon');
+        // Initialize Supabase from meta config
+        function initSupabase() {
+            const meta = document.querySelector('meta[name="supabase-config"]');
+            const url = meta?.getAttribute('data-url');
+            const anon = meta?.getAttribute('data-anon');
 
-                if (url && anon && window.supabase?.createClient) {
-                    supabase = window.supabase.createClient(url, anon, {
-                        auth: { persistSession: true, autoRefreshToken: true }
-                    });
-                    DEMO_MODE = false;
-                    console.log('✅ Supabase initialized from meta config');
-                    return;
-                }
-
-                // Fallback (keeps DEMO_MODE true)
-                console.warn('⚠️ Supabase config meta not found, staying in demo mode');
-                DEMO_MODE = true;
-            } catch (error) {
-                console.warn('⚠️ Failed to initialize Supabase, using demo mode:', error);
-                DEMO_MODE = true;
+            if (!url || !anon) {
+                throw new Error('Supabase configuration not found in meta tags');
             }
+
+            if (!window.supabase?.createClient) {
+                throw new Error('Supabase JS library not loaded');
+            }
+
+            supabase = window.supabase.createClient(url, anon, {
+                auth: { persistSession: true, autoRefreshToken: true }
+            });
+            console.log('✅ Supabase initialized successfully');
         }
         
         // ========================================
@@ -308,11 +301,15 @@
         let redirectTimer = null;
         let redirectCountdown = 10;
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            // Load secure configuration first
-            await loadConfig();
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                initSupabase();
+            } catch (error) {
+                console.error('❌ Failed to initialize Supabase:', error);
+                showError('System configuration error. Please contact support.');
+                return;
+            }
             
-            // Initialize form handler
             document.getElementById('registrationForm').addEventListener('submit', handleRegistration);
             
             // Add input animations
@@ -332,8 +329,8 @@
             
             const formData = {
                 name: document.getElementById('name').value.trim(),
-                email: document.getElementById('email').value.trim(),
-                username: document.getElementById('username').value.trim()
+                email: document.getElementById('email').value.trim().toLowerCase(),
+                username: document.getElementById('username').value.trim().toLowerCase()
             };
             
             // Validation
@@ -351,19 +348,17 @@
                 showError('Username must be at least 3 characters long.');
                 return;
             }
+
+            if (!/^[a-z0-9_]+$/.test(formData.username)) {
+                showError('Username can only contain lowercase letters, numbers, and underscores.');
+                return;
+            }
             
-            // Show loading state
             setLoading(true);
             
             try {
-                if (DEMO_MODE) {
-                    await simulateRegistration(formData);
-                } else {
-                    await registerWithSupabase(formData);
-                }
-                
+                await registerWithSupabase(formData);
                 showSuccessModal();
-                
             } catch (error) {
                 console.error('Registration error:', error);
                 showError(error.message || 'Registration failed. Please try again.');
@@ -372,41 +367,88 @@
             }
         }
 
-        async function simulateRegistration(formData) {
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            currentParticipant = {
-                id: Math.floor(Math.random() * 10000),
-                ...formData,
-                user_code: generateUserCode(),
-                created_at: new Date().toISOString()
-            };
-            
-            console.log('🎉 Demo registration successful:', currentParticipant);
-        }
-
         async function registerWithSupabase(formData) {
-            // Real Supabase integration
-            const { data: participant, error } = await supabase
+            // Check if email already exists
+            const { data: existingEmail, error: emailErr } = await supabase
                 .from('participants')
-                .insert([formData])
-                .select()
+                .select('id')
+                .eq('email', formData.email)
+                .limit(1);
+
+            if (emailErr) {
+                console.error('Email check error:', emailErr);
+                throw new Error('Error checking email availability');
+            }
+            if (existingEmail && existingEmail.length > 0) {
+                throw new Error('An account with this email already exists.');
+            }
+
+            // Check if username already exists
+            const { data: existingUsername, error: usernameErr } = await supabase
+                .from('participants')
+                .select('id')
+                .eq('username', formData.username)
+                .limit(1);
+
+            if (usernameErr) {
+                console.error('Username check error:', usernameErr);
+                throw new Error('Error checking username availability');
+            }
+            if (existingUsername && existingUsername.length > 0) {
+                throw new Error('This username is already taken. Please choose another.');
+            }
+
+            // Insert participant - triggers will auto-generate user_code
+            // Triggers: trigger_assign_user_code, trigger_auto_generate_user_data
+            const { data: participant, error: insertErr } = await supabase
+                .from('participants')
+                .insert({
+                    name: formData.name,
+                    email: formData.email,
+                    username: formData.username
+                    // user_code is auto-generated by trigger_assign_user_code
+                    // total_votes defaults to 0
+                    // current_stage defaults to 'Bronze'
+                })
+                .select('id, name, email, username, user_code, total_votes, current_stage, created_at')
                 .single();
 
-            if (error) throw error;
+            if (insertErr) {
+                console.error('Insert error:', insertErr);
+                if (insertErr.code === '23505') {
+                    // Unique constraint violation
+                    if (insertErr.message.includes('email')) {
+                        throw new Error('An account with this email already exists.');
+                    }
+                    if (insertErr.message.includes('username')) {
+                        throw new Error('This username is already taken.');
+                    }
+                    if (insertErr.message.includes('user_code')) {
+                        throw new Error('Registration conflict. Please try again.');
+                    }
+                }
+                throw new Error('Failed to create account. Please try again.');
+            }
 
-            // Generate vote link for this participant
-            const voteLink = `https://www.flymaddcreative.online/vote.html?user=${participant.username}`;
+            // Referral link is auto-created by trigger_create_referral_link on participants insert
+            // Fetch the generated referral link
+            const { data: referralLink, error: linkErr } = await supabase
+                .from('referral_links')
+                .select('id, user_vote_link, username')
+                .eq('participant_id', participant.id)
+                .single();
 
-            // Create referral link entry with the vote link
-            await supabase.from('referral_links').insert([{
-                participant_id: participant.id,
-                link_url: voteLink,
-                link_type: 'vote'
-            }]);
+            if (linkErr) {
+                console.warn('Could not fetch referral link:', linkErr);
+                // Don't fail registration, link might be created async
+            }
 
-            currentParticipant = participant;
+            currentParticipant = {
+                ...participant,
+                voteLink: referralLink?.user_vote_link || `${window.location.origin}/vote.html?user=${participant.username}`
+            };
+
+            console.log('✅ Registration successful:', currentParticipant);
         }
 
         function showSuccessModal() {
@@ -420,12 +462,11 @@
             document.getElementById('displayName').textContent = currentParticipant.name;
             document.getElementById('displayEmail').textContent = currentParticipant.email;
             document.getElementById('displayUsername').textContent = currentParticipant.username;
-            document.getElementById('displayUserCode').textContent = currentParticipant.user_code || generateUserCode();
-            document.getElementById('displayShareCode').textContent = currentParticipant.user_code || generateUserCode();
+            document.getElementById('displayUserCode').textContent = currentParticipant.user_code || 'Generating...';
+            document.getElementById('displayShareCode').textContent = currentParticipant.user_code || 'Generating...';
             
-            // Generate and display the voting link
-            const voteLink = `vote.html?user=${currentParticipant.username}`;
-            document.getElementById('displayVoteLink').textContent = voteLink;
+            // Display the voting link (from DB or fallback)
+            document.getElementById('displayVoteLink').textContent = currentParticipant.voteLink;
             
             // Start redirect countdown
             startRedirectCountdown();
@@ -492,23 +533,13 @@
             
             if (loading) {
                 submitBtn.disabled = true;
-                submitText.textContent = 'Registering...';
+                submitText.classList.add('hidden');
                 spinner.classList.remove('hidden');
             } else {
                 submitBtn.disabled = false;
-                submitText.textContent = 'Register for One Dream Initiative';
+                submitText.classList.remove('hidden');
                 spinner.classList.add('hidden');
             }
-        }
-
-        function generateUserCode() {
-            // Generate a random 8-character alphanumeric code
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < 8; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
         }
 
         function copyToClipboard(elementId, buttonId) {
@@ -516,7 +547,6 @@
             const button = document.getElementById(buttonId);
             
             navigator.clipboard.writeText(text).then(() => {
-                // Visual feedback
                 const originalHTML = button.innerHTML;
                 button.innerHTML = '<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
                 
@@ -534,7 +564,7 @@
         function shareVotingLink() {
             if (!currentParticipant) return;
             
-            const voteLink = `${window.location.origin}/vote.html?user=${currentParticipant.username}`;
+            const voteLink = currentParticipant.voteLink;
             const shareText = `🌟 Vote for me in the One Dream Initiative! Visit this link to support me: ${voteLink}`;
             
             if (navigator.share) {
@@ -544,47 +574,10 @@
                     url: voteLink
                 });
             } else {
-                // Fallback: copy to clipboard
                 navigator.clipboard.writeText(shareText).then(() => {
                     alert('Sharing text copied to clipboard!');
                 });
             }
-        }
-
-        function showError(message) {
-            const errorDiv = document.getElementById('errorMessage');
-            document.getElementById('errorText').textContent = message;
-            errorDiv.classList.remove('hidden');
-            
-            // Auto-hide after 5 seconds
-            setTimeout(() => {
-                errorDiv.classList.add('hidden');
-            }, 5000);
-        }
-
-        function setLoading(loading) {
-            const submitBtn = document.getElementById('submitBtn');
-            const submitText = document.getElementById('submitText');
-            const spinner = document.getElementById('loadingSpinner');
-            
-            if (loading) {
-                submitBtn.disabled = true;
-                submitText.classList.add('hidden');
-                spinner.classList.remove('hidden');
-            } else {
-                submitBtn.disabled = false;
-                submitText.classList.remove('hidden');
-                spinner.classList.add('hidden');
-            }
-        }
-
-        function generateUserCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < 8; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
         }
 
         function isValidEmail(email) {
@@ -593,7 +586,7 @@
         }
 
         console.log('🌟 One Dream Initiative Registration loaded');
-        console.log('🔧 Currently in DEMO MODE - set DEMO_MODE to false for production');
+        console.log('🔗 Connected to Supabase - Production Mode');
     </script>
 </body>
 </html>
