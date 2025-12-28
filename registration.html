@@ -7,8 +7,13 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>One Dream Initiative Registration - FlyMadd Creative</title>
-    <script src="https://cdn.tailwindcss.com?v=3.4.0"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    
+    <!-- Replace CDN with compiled CSS -->
+    <link href="./dist/output.css" rel="stylesheet">
+    
+    <!-- Use jsDelivr instead of unpkg to avoid Edge Tracking Prevention -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -281,17 +286,17 @@
 
     <script>
         // ========================================
-        // 🔧 VERSION: 2024-01-28-v2 (Debug Mode)
+        // 🔧 VERSION: 2024-01-28-v3 (jsDelivr CDN)
         // ========================================
-        console.log('📌 Registration.html Version: 2024-01-28-v2');
+        console.log('📌 Registration.html Version: 2024-01-28-v3');
         
         // ========================================
-        // 🔧 SUPABASE CONFIGURATION (NO DEMO MODE)
+        // 🔧 SUPABASE CONFIGURATION
         // ========================================
         
         let supabase = null;
         
-        // Initialize Supabase from meta config
+        // Initialize Supabase from meta config with storage fallback
         function initSupabase() {
             const meta = document.querySelector('meta[name="supabase-config"]');
             const url = meta?.getAttribute('data-url');
@@ -308,10 +313,27 @@
                 throw new Error('Supabase JS library not loaded. Check CDN script tag.');
             }
 
-            supabase = window.supabase.createClient(url, anon, {
-                auth: { persistSession: true, autoRefreshToken: true }
-            });
-            console.log('✅ Supabase client created successfully');
+            // Try with storage first, fallback to no storage if blocked
+            try {
+                supabase = window.supabase.createClient(url, anon, {
+                    auth: { 
+                        persistSession: true, 
+                        autoRefreshToken: true,
+                        detectSessionInUrl: false
+                    }
+                });
+                console.log('✅ Supabase client created with storage');
+            } catch (err) {
+                console.warn('⚠️ Storage blocked, creating client without persistence');
+                supabase = window.supabase.createClient(url, anon, {
+                    auth: { 
+                        persistSession: false,
+                        autoRefreshToken: false,
+                        detectSessionInUrl: false
+                    }
+                });
+                console.log('✅ Supabase client created without storage');
+            }
         }
         
         // ========================================
