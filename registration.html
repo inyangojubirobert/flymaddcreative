@@ -401,16 +401,6 @@
             }
         }
 
-        // Generate user code client-side
-        function generateUserCode() {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let result = '';
-            for (let i = 0; i < 8; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
-        }
-
         async function registerWithSupabase(formData) {
             if (!supabase) {
                 throw new Error('Supabase client not initialized');
@@ -429,8 +419,6 @@
                 throw new Error(`Database error: ${emailErr.message}`);
             }
             
-            console.log('📧 Email check result:', existingEmail);
-            
             if (existingEmail && existingEmail.length > 0) {
                 throw new Error('An account with this email already exists.');
             }
@@ -448,23 +436,17 @@
                 throw new Error(`Database error: ${usernameErr.message}`);
             }
             
-            console.log('👤 Username check result:', existingUsername);
-            
             if (existingUsername && existingUsername.length > 0) {
                 throw new Error('This username is already taken.');
             }
 
             console.log('🔍 Step 3: Inserting participant...');
 
-            const userCode = generateUserCode();
+            // Only send required fields - triggers handle user_code, defaults, and referral_link
             const insertPayload = {
                 name: formData.name,
                 email: formData.email,
-                username: formData.username,
-                user_code: userCode,
-                total_votes: 0,
-                total_amount: 0,
-                current_stage: 'Bronze'
+                username: formData.username
             };
             
             console.log('📤 Insert payload:', insertPayload);
@@ -477,6 +459,10 @@
 
             if (insertErr) {
                 console.error('❌ Insert error:', insertErr);
+                console.error('  Code:', insertErr.code);
+                console.error('  Message:', insertErr.message);
+                console.error('  Details:', insertErr.details);
+                console.error('  Hint:', insertErr.hint);
                 
                 if (insertErr.code === '23505') {
                     if (insertErr.message.includes('email')) {
@@ -485,18 +471,11 @@
                     if (insertErr.message.includes('username')) {
                         throw new Error('This username is already taken.');
                     }
-                    if (insertErr.message.includes('user_code')) {
-                        throw new Error('Registration conflict. Please try again.');
-                    }
                     throw new Error('Duplicate entry. Please try different values.');
                 }
                 
                 if (insertErr.code === '42501') {
-                    throw new Error('Permission denied. Please contact admin to enable RLS INSERT policy.');
-                }
-
-                if (insertErr.code === 'PGRST301') {
-                    throw new Error('Database connection failed. Please try again.');
+                    throw new Error('Permission denied. RLS INSERT policy needs to be enabled.');
                 }
                 
                 throw new Error(`Failed to create account: ${insertErr.message}`);
@@ -504,28 +483,25 @@
 
             console.log('✅ Participant created:', participant);
 
-            // Create vote link
-            let voteLink = `${window.location.origin}/vote.html?user=${participant.username}`;
-            
-            console.log('🔍 Step 4: Creating referral link...');
+            // Wait a moment for the trigger to create referral_link
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            const { data: newLink, error: createLinkErr } = await supabase
-                .from('referral_links')
-                .insert({
-                    participant_id: participant.id,
-                    username: participant.username,
-                    user_vote_link: voteLink,
-                    is_active: true
-                })
-                .select('id, user_vote_link')
-                .single();
+            // Fetch the referral link created by trigger
+            console.log('🔍 Step 4: Fetching referral link...');
             
-            if (createLinkErr) {
-                console.warn('⚠️ Could not create referral link:', createLinkErr);
-                // Don't fail - participant was created
-            } else {
-                console.log('✅ Referral link created:', newLink);
-                voteLink = newLink.user_vote_link || voteLink;
+            let voteLink = `${window.location.origin}/vote.html?user=${participant.username}`;
+
+            const { data: referralLink, error: linkErr } = await supabase
+                .from('referral_links')
+                .select('user_vote_link')
+                .eq('participant_id', participant.id)
+                .single();
+
+            if (linkErr) {
+                console.warn('⚠️ Could not fetch referral link:', linkErr);
+            } else if (referralLink?.user_vote_link) {
+                console.log('✅ Referral link found:', referralLink);
+                voteLink = referralLink.user_vote_link;
             }
 
             currentParticipant = {
