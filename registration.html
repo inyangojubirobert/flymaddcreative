@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store">
+    <meta http-equiv="Pragma" content="no-cache">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>One Dream Initiative Registration - FlyMadd Creative</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com?v=3.4.0"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,6 +18,9 @@
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
             min-height: 100vh;
+            -webkit-text-size-adjust: 100%;
+            -moz-text-size-adjust: 100%;
+            text-size-adjust: 100%;
         }
         
         .gradient-text {
@@ -26,6 +32,7 @@
         
         .registration-card {
             background: rgba(255, 255, 255, 0.08);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
@@ -70,6 +77,7 @@
         
         .success-modal {
             background: rgba(0, 0, 0, 0.7);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
         }
         
@@ -92,7 +100,7 @@
 <body class="text-white">
     
     <!-- Navigation -->
-    <nav class="bg-black bg-opacity-30 backdrop-blur-md border-b border-white border-opacity-10 sticky top-0 z-50">
+    <nav class="bg-black bg-opacity-30 border-b border-white border-opacity-10 sticky top-0 z-50" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center space-x-4">
@@ -119,10 +127,11 @@
                 <p class="text-xl text-slate-300">Register to participate in the community voting and compete for top positions!</p>
             </div>
 
-            <form id="registrationForm" class="space-y-6">
+            <form id="registrationForm" class="space-y-6" autocomplete="on">
                 <div>
                     <label for="name" class="block text-sm font-medium text-slate-300 mb-2">Full Name *</label>
                     <input type="text" id="name" name="name" required
+                           autocomplete="name"
                            class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
                            placeholder="Enter your full name">
                 </div>
@@ -130,6 +139,7 @@
                 <div>
                     <label for="email" class="block text-sm font-medium text-slate-300 mb-2">Email Address *</label>
                     <input type="email" id="email" name="email" required
+                           autocomplete="email"
                            class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
                            placeholder="Enter your email address">
                 </div>
@@ -137,6 +147,7 @@
                 <div>
                     <label for="username" class="block text-sm font-medium text-slate-300 mb-2">Username *</label>
                     <input type="text" id="username" name="username" required
+                           autocomplete="username"
                            class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
                            placeholder="Choose a unique username">
                     <p class="text-sm text-slate-400 mt-1">This will be used in your voting link</p>
@@ -191,7 +202,9 @@
                         <div class="flex items-center space-x-2">
                             <span class="font-mono bg-slate-700 px-2 py-1 rounded text-yellow-400" id="displayUserCode">-</span>
                             <button onclick="copyToClipboard('displayUserCode', 'copyCodeBtn')" id="copyCodeBtn" 
-                                    class="copy-button p-1 hover:bg-slate-700 rounded transition-colors">
+                                    class="copy-button p-1 hover:bg-slate-700 rounded transition-colors"
+                                    title="Copy user code"
+                                    aria-label="Copy user code to clipboard">
                                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                 </svg>
@@ -228,7 +241,9 @@
                     <div class="flex items-center justify-between">
                         <code class="text-sm text-white font-mono break-all" id="displayVoteLink">onedream vote support(username)</code>
                         <button onclick="copyToClipboard('displayVoteLink', 'copyLinkBtn')" id="copyLinkBtn"
-                                class="copy-button ml-3 p-2 bg-black bg-opacity-30 hover:bg-opacity-50 rounded transition-colors">
+                                class="copy-button ml-3 p-2 bg-black bg-opacity-30 hover:bg-opacity-50 rounded transition-colors"
+                                title="Copy voting link"
+                                aria-label="Copy voting link to clipboard">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                             </svg>
@@ -265,6 +280,11 @@
     </div>
 
     <script>
+        // ========================================
+        // 🔧 VERSION: 2024-01-28-v2 (Debug Mode)
+        // ========================================
+        console.log('📌 Registration.html Version: 2024-01-28-v2');
+        
         // ========================================
         // 🔧 SUPABASE CONFIGURATION (NO DEMO MODE)
         // ========================================
@@ -332,24 +352,23 @@
             try {
                 const { data, error } = await supabase
                     .from('participants')
-                    .select('id')
-                    .limit(1);
+                    .select('id, username')
+                    .limit(3);
                 
                 if (error) {
                     console.error('❌ Database connection test failed:');
                     console.error('  Code:', error.code);
                     console.error('  Message:', error.message);
-                    console.error('  Details:', error.details);
-                    console.error('  Hint:', error.hint);
-                    
-                    if (error.code === '42501' || error.message.includes('permission')) {
-                        showError('Database permission error. RLS policies need to be configured.');
-                    }
+                    showError('Database connection failed: ' + error.message);
                 } else {
-                    console.log('✅ Database connection successful. Found rows:', data?.length || 0);
+                    console.log('✅ Database connected! Participants found:', data?.length || 0);
+                    if (data?.length > 0) {
+                        console.log('📋 Sample users:', data.map(d => d.username));
+                    }
                 }
             } catch (e) {
                 console.error('❌ Connection test exception:', e);
+                showError('Connection error: ' + e.message);
             }
         }
 
@@ -403,113 +422,107 @@
 
         async function registerWithSupabase(formData) {
             if (!supabase) {
+                console.error('❌ Supabase client is null!');
                 throw new Error('Supabase client not initialized');
             }
 
-            console.log('🔍 Step 1: Checking if email exists...');
-            
-            const { data: existingEmail, error: emailErr } = await supabase
-                .from('participants')
-                .select('id')
-                .eq('email', formData.email)
-                .limit(1);
+            console.log('🔗 Supabase client exists:', !!supabase);
 
-            if (emailErr) {
-                console.error('❌ Email check error:', emailErr);
-                throw new Error(`Database error: ${emailErr.message}`);
-            }
-            
-            if (existingEmail && existingEmail.length > 0) {
-                throw new Error('An account with this email already exists.');
-            }
-
-            console.log('🔍 Step 2: Checking if username exists...');
-
-            const { data: existingUsername, error: usernameErr } = await supabase
-                .from('participants')
-                .select('id')
-                .eq('username', formData.username)
-                .limit(1);
-
-            if (usernameErr) {
-                console.error('❌ Username check error:', usernameErr);
-                throw new Error(`Database error: ${usernameErr.message}`);
-            }
-            
-            if (existingUsername && existingUsername.length > 0) {
-                throw new Error('This username is already taken.');
-            }
-
-            console.log('🔍 Step 3: Inserting participant...');
-
-            // Only send required fields - triggers handle user_code, defaults, and referral_link
-            const insertPayload = {
-                name: formData.name,
-                email: formData.email,
-                username: formData.username
-            };
-            
-            console.log('📤 Insert payload:', insertPayload);
-
-            const { data: participant, error: insertErr } = await supabase
-                .from('participants')
-                .insert(insertPayload)
-                .select('id, name, email, username, user_code, total_votes, current_stage, created_at')
-                .single();
-
-            if (insertErr) {
-                console.error('❌ Insert error:', insertErr);
-                console.error('  Code:', insertErr.code);
-                console.error('  Message:', insertErr.message);
-                console.error('  Details:', insertErr.details);
-                console.error('  Hint:', insertErr.hint);
+            try {
+                console.log('🔍 Step 1: Checking if email exists...');
                 
-                if (insertErr.code === '23505') {
-                    if (insertErr.message.includes('email')) {
-                        throw new Error('An account with this email already exists.');
-                    }
-                    if (insertErr.message.includes('username')) {
-                        throw new Error('This username is already taken.');
-                    }
-                    throw new Error('Duplicate entry. Please try different values.');
+                const { data: existingEmail, error: emailErr } = await supabase
+                    .from('participants')
+                    .select('id')
+                    .eq('email', formData.email)
+                    .limit(1);
+
+                console.log('📧 Email check response:', { existingEmail, emailErr });
+
+                if (emailErr) {
+                    console.error('❌ Email check error:', emailErr);
+                    throw new Error(`Database error: ${emailErr.message}`);
                 }
                 
-                if (insertErr.code === '42501') {
-                    throw new Error('Permission denied. RLS INSERT policy needs to be enabled.');
+                if (existingEmail && existingEmail.length > 0) {
+                    throw new Error('An account with this email already exists.');
+                }
+
+                console.log('🔍 Step 2: Checking if username exists...');
+
+                const { data: existingUsername, error: usernameErr } = await supabase
+                    .from('participants')
+                    .select('id')
+                    .eq('username', formData.username)
+                    .limit(1);
+
+                console.log('👤 Username check response:', { existingUsername, usernameErr });
+
+                if (usernameErr) {
+                    console.error('❌ Username check error:', usernameErr);
+                    throw new Error(`Database error: ${usernameErr.message}`);
                 }
                 
-                throw new Error(`Failed to create account: ${insertErr.message}`);
+                if (existingUsername && existingUsername.length > 0) {
+                    throw new Error('This username is already taken.');
+                }
+
+                console.log('🔍 Step 3: Inserting participant...');
+
+                const insertPayload = {
+                    name: formData.name,
+                    email: formData.email,
+                    username: formData.username
+                };
+                
+                console.log('📤 Insert payload:', insertPayload);
+
+                const { data: participant, error: insertErr } = await supabase
+                    .from('participants')
+                    .insert(insertPayload)
+                    .select('id, name, email, username, user_code, total_votes, current_stage, created_at')
+                    .single();
+
+                console.log('📥 Insert response:', { participant, insertErr });
+
+                if (insertErr) {
+                    console.error('❌ Insert error:', insertErr);
+                    throw new Error(`Failed to create account: ${insertErr.message}`);
+                }
+
+                console.log('✅ Participant created:', participant);
+
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Use the live domain for vote link
+                const liveDomain = 'https://www.flymaddcreative.online';
+                let voteLink = `${liveDomain}/vote.html?user=${participant.username}`;
+
+                console.log('🔍 Step 4: Fetching referral link...');
+
+                const { data: referralLink, error: linkErr } = await supabase
+                    .from('referral_links')
+                    .select('user_vote_link')
+                    .eq('participant_id', participant.id)
+                    .single();
+
+                console.log('🔗 Referral link response:', { referralLink, linkErr });
+
+                if (!linkErr && referralLink?.user_vote_link) {
+                    voteLink = referralLink.user_vote_link;
+                }
+
+                currentParticipant = {
+                    ...participant,
+                    voteLink
+                };
+
+                console.log('🎉 Registration complete:', currentParticipant);
+                
+            } catch (err) {
+                console.error('❌ registerWithSupabase caught error:', err);
+                throw err;
             }
-
-            console.log('✅ Participant created:', participant);
-
-            // Wait a moment for the trigger to create referral_link
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Fetch the referral link created by trigger
-            console.log('🔍 Step 4: Fetching referral link...');
-            
-            let voteLink = `${window.location.origin}/vote.html?user=${participant.username}`;
-
-            const { data: referralLink, error: linkErr } = await supabase
-                .from('referral_links')
-                .select('user_vote_link')
-                .eq('participant_id', participant.id)
-                .single();
-
-            if (linkErr) {
-                console.warn('⚠️ Could not fetch referral link:', linkErr);
-            } else if (referralLink?.user_vote_link) {
-                console.log('✅ Referral link found:', referralLink);
-                voteLink = referralLink.user_vote_link;
-            }
-
-            currentParticipant = {
-                ...participant,
-                voteLink
-            };
-
-            console.log('🎉 Registration complete:', currentParticipant);
         }
 
         function showSuccessModal() {
