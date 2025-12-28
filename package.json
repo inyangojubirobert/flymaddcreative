@@ -13,7 +13,9 @@
     "react:build": "next build",
     "test:db": "node scripts/test-db.mjs",
     "cleanup:test": "node scripts/cleanup-test-data.mjs",
-    "predev": "node scripts/test-db.mjs"
+    "predev": "node scripts/test-db.mjs",
+    "build:css": "tailwindcss -i ./src/styles/input.css -o ./dist/output.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./dist/output.css --watch"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
