@@ -10,7 +10,10 @@
     "tailwind:watch": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --watch",
     "tailwind:build": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --minify",
     "react:dev": "next dev",
-    "react:build": "next build"
+    "react:build": "next build",
+    "test:db": "node scripts/test-db.mjs",
+    "cleanup:test": "node scripts/cleanup-test-data.mjs",
+    "predev": "node scripts/test-db.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
