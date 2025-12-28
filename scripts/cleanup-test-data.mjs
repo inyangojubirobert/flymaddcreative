@@ -30,32 +30,53 @@ loadEnv();
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 
-async function supabaseDelete(table, filters) {
-  const response = await fetch(`${supabaseUrl}/rest/v1/${table}${filters}`, {
-    method: 'DELETE',
+async function supabaseQuery(table, method, filters = '') {
+  const url = `${supabaseUrl}/rest/v1/${table}${filters}`;
+  const response = await fetch(url, {
+    method,
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json'
     }
   });
-  return response.ok;
+  const text = await response.text();
+  return { ok: response.ok, data: text ? JSON.parse(text) : null };
 }
 
 async function cleanup() {
   console.log('\n🧹 CLEANING UP TEST DATA');
   console.log('━'.repeat(40));
 
-  // Delete test referral_links first (foreign key)
-  console.log('Deleting test referral_links...');
-  await supabaseDelete('referral_links', '?username=like.npmtest_%');
-  await supabaseDelete('referral_links', '?username=like.test_%');
+  // First, find all test participants
+  console.log('\n1️⃣  Finding test participants...');
+  const { data: testParticipants } = await supabaseQuery(
+    'participants', 
+    'GET', 
+    '?select=id,username&or=(username.like.npmtest_*,username.like.test_*)'
+  );
 
-  // Delete test participants
-  console.log('Deleting test participants...');
-  await supabaseDelete('participants', '?username=like.npmtest_%');
-  await supabaseDelete('participants', '?username=like.test_%');
+  if (!testParticipants || testParticipants.length === 0) {
+    console.log('   ✅ No test data found');
+    return;
+  }
 
-  console.log('✅ Cleanup complete!\n');
+  console.log(`   Found ${testParticipants.length} test participants:`);
+  testParticipants.forEach(p => console.log(`   - ${p.username} (${p.id})`));
+
+  // Delete each one by ID
+  console.log('\n2️⃣  Deleting test data...');
+  
+  for (const participant of testParticipants) {
+    // Delete referral_link first
+    await supabaseQuery('referral_links', 'DELETE', `?participant_id=eq.${participant.id}`);
+    // Delete participant
+    await supabaseQuery('participants', 'DELETE', `?id=eq.${participant.id}`);
+    console.log(`   ✅ Deleted: ${participant.username}`);
+  }
+
+  console.log('\n' + '━'.repeat(40));
+  console.log('🏁 Cleanup complete!\n');
 }
 
 cleanup().catch(console.error);
