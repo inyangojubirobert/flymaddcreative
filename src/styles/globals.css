@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global styles */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
 /* Custom CSS for One Dream Initiative */
 
 /* Google Fonts */
