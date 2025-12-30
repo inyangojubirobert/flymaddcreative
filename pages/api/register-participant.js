@@ -1,40 +1,52 @@
-import { registerParticipant, getParticipantByEmail, getParticipantByUsername } from '../../src/backend/supabase';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { createParticipant, getParticipantByEmail, getParticipantByUsername, getReferralLink } from '../../src/backend/supabase.js';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'onedream_secret_2024';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  try {
-    const { name, email, username } = req.body;
-
-    // Validate
-    if (!name || !email || !username) {
-      return res.status(400).json({ error: 'Name, email, and username are required' });
-    }
-
-    // Check email
-    const emailCheck = await getParticipantByEmail(email);
-    if (emailCheck.success && emailCheck.data) {
-      return res.status(409).json({ error: 'Email already registered' });
-    }
-
-    // Check username  
-    const usernameCheck = await getParticipantByUsername(username);
-    if (usernameCheck.success && usernameCheck.data) {
-      return res.status(409).json({ error: 'Username already taken' });
-    }
-
-    // Register
-    const result = await registerParticipant({ name, email, username });
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
-    if (result.success) {
-      return res.status(201).json(result);
-    } else {
-      return res.status(400).json({ error: result.error });
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    
+    const { name, email, username, password } = req.body;
+    
+    if (!name?.trim() || !email?.trim() || !username?.trim() || !password) {
+        return res.status(400).json({ error: 'All fields required' });
     }
-  } catch (error) {
-    console.error('Registration API error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
+    
+    try {
+        const normalizedEmail = email.trim().toLowerCase();
+        const normalizedUsername = username.trim().toLowerCase();
+        
+        // Check duplicates
+        const existingEmail = await getParticipantByEmail(normalizedEmail);
+        if (existingEmail) return res.status(400).json({ error: 'Email already registered' });
+        
+        const existingUsername = await getParticipantByUsername(normalizedUsername);
+        if (existingUsername) return res.status(400).json({ error: 'Username taken' });
+        
+        // Hash & create
+        const hash = await bcrypt.hash(password, 12);
+        const participant = await createParticipant(name, normalizedEmail, normalizedUsername, hash);
+        
+        // Get referral link
+        await new Promise(r => setTimeout(r, 300));
+        const voteLink = await getReferralLink(participant.id) 
+            || `https://www.flymaddcreative.online/vote.html?user=${normalizedUsername}`;
+        
+        // JWT
+        const token = jwt.sign({ userId: participant.id, email: participant.email }, JWT_SECRET, { expiresIn: '7d' });
+        
+        res.status(201).json({
+            success: true,
+            participant: { ...participant, token, voteLink }
+        });
+    } catch (err) {
+        console.error('Register error:', err);
+        res.status(500).json({ error: 'Registration failed' });
+    }
 }

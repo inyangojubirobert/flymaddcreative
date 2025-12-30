@@ -5,16 +5,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build:css && next build",
     "start": "next start",
     "lint": "next lint",
-    "tailwind:watch": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --watch",
-    "tailwind:build": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --minify",
-    "test:db": "node scripts/test-db.mjs",
-    "cleanup:test": "node scripts/cleanup-test-data.mjs",
-    "predev": "node scripts/test-db.mjs",
-    "build:css": "tailwindcss -i ./src/styles/input.css -o ./dist/output.css --minify",
-    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./dist/output.css --watch"
+    "build:css": "tailwindcss -i ./src/styles/input.css -o ./public/dist/output.css --minify",
+    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./public/dist/output.css --watch"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
@@ -24,7 +19,8 @@
     "jsonwebtoken": "^9.0.2",
     "next": "^14.0.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "stripe": "^14.25.0"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.6",
@@ -35,31 +31,6 @@
     "postcss": "^8.4.32",
     "tailwindcss": "^3.4.0"
   },
-  "keywords": [
-    "design",
-    "creative",
-    "website",
-    "static",
-    "html",
-    "css",
-    "javascript",
-    "one-dream-initiative",
-    "voting",
-    "leaderboard",
-    "referral",
-    "gamification",
-    "react",
-    "tailwindcss",
-    "supabase"
-  ],
   "author": "FlyMadd Creative",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/inyangojubirobert/flymaddcreative.git"
-  },
-  "bugs": {
-    "url": "https://github.com/inyangojubirobert/flymaddcreative/issues"
-  },
-  "homepage": "https://flymaddcreative.vercel.app"
+  "license": "MIT"
 }
