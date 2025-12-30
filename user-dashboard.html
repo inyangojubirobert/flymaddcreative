@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard - One Dream Initiative</title>
+    
+    <link href="./dist/output.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="./js/supabase-config.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #FFD700, #FFA500, #FF6B35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .dashboard-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stage-badge {
+            background: linear-gradient(135deg, #CD7F32, #B8860B);
+        }
+        .stage-badge.silver { background: linear-gradient(135deg, #C0C0C0, #A8A8A8); }
+        .stage-badge.gold { background: linear-gradient(135deg, #FFD700, #FFA500); }
+        .stage-badge.platinum { background: linear-gradient(135deg, #E5E4E2, #BCC6CC); }
+        .stage-badge.diamond { background: linear-gradient(135deg, #B9F2FF, #89CFF0); }
+        
+        .copy-success {
+            animation: copyPulse 0.3s ease-out;
+        }
+        
+        @keyframes copyPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .welcome-banner {
+            background: linear-gradient(135deg, #10B981, #059669);
+            animation: slideDown 0.5s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="text-white">
+    
+    <!-- Navigation -->
+    <nav class="bg-black bg-opacity-30 border-b border-white border-opacity-10 sticky top-0 z-50" style="backdrop-filter: blur(12px);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="Onedream.html" class="text-xl font-bold gradient-text">🌟 One Dream Initiative</a>
+                <div class="flex items-center space-x-4">
+                    <a href="leadershipBoard.html" class="text-slate-300 hover:text-white transition-colors">Leaderboard</a>
+                    <a href="search.html" class="text-slate-300 hover:text-white transition-colors">Search</a>
+                    <button onclick="logout()" class="text-red-400 hover:text-red-300 transition-colors text-sm">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Welcome Banner (shown after registration) -->
+    <div id="welcomeBanner" class="hidden welcome-banner text-white py-4">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between">
+            <div class="flex items-center">
+                <span class="text-2xl mr-3">🎉</span>
+                <div>
+                    <p class="font-bold">Welcome to One Dream Initiative!</p>
+                    <p class="text-sm text-green-100">Your registration was successful. Start sharing your link to get votes!</p>
+                </div>
+            </div>
+            <button onclick="dismissWelcome()" class="text-green-100 hover:text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="max-w-4xl mx-auto px-4 py-16 text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+        <p class="text-slate-400">Loading your dashboard...</p>
+    </div>
+
+    <!-- Not Found State -->
+    <div id="notFoundState" class="hidden max-w-4xl mx-auto px-4 py-16 text-center">
+        <div class="text-6xl mb-4">🔍</div>
+        <h1 class="text-2xl font-bold mb-4">User Not Found</h1>
+        <p class="text-slate-400 mb-6">We couldn't find your profile. Please register first.</p>
+        <a href="registration.html" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg">
+            Register Now
+        </a>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboardContent" class="hidden max-w-4xl mx-auto px-4 py-8">
+        
+        <!-- Profile Header -->
+        <div class="dashboard-card rounded-2xl p-8 mb-8">
+            <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+                <!-- Avatar -->
+                <div class="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-4xl font-bold text-black">
+                    <span id="avatarInitial">U</span>
+                </div>
+                
+                <!-- User Info -->
+                <div class="flex-1 text-center md:text-left">
+                    <h1 class="text-3xl font-bold mb-1" id="userName">Loading...</h1>
+                    <p class="text-slate-400 mb-2">@<span id="userUsername">username</span></p>
+                    <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                        <span id="stageBadge" class="stage-badge px-3 py-1 rounded-full text-sm font-medium text-black">
+                            Bronze
+                        </span>
+                        <span class="bg-slate-700 px-3 py-1 rounded-full text-sm text-slate-300">
+                            Joined <span id="joinDate">-</span>
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-yellow-400" id="totalVotes">0</div>
+                    <div class="text-sm text-slate-400">Total Votes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="stat-card rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-green-400" id="statVotes">0</div>
+                <div class="text-xs text-slate-400">Votes</div>
+            </div>
+            <div class="stat-card rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-blue-400" id="statAmount">$0</div>
+                <div class="text-xs text-slate-400">Value</div>
+            </div>
+            <div class="stat-card rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-purple-400" id="statRank">#-</div>
+                <div class="text-xs text-slate-400">Rank</div>
+            </div>
+            <div class="stat-card rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-orange-400" id="statStage">Bronze</div>
+                <div class="text-xs text-slate-400">Stage</div>
+            </div>
+        </div>
+
+        <!-- User Code Section -->
+        <div class="dashboard-card rounded-2xl p-6 mb-8 bg-gradient-to-r from-purple-900/50 to-blue-900/50">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <span class="mr-2">🎯</span> Your Unique Code
+            </h2>
+            <div class="bg-black/30 rounded-xl p-6 text-center mb-4">
+                <div class="text-sm text-slate-400 mb-2">Share this code for easy voting:</div>
+                <div class="text-4xl font-mono font-bold text-yellow-300 tracking-widest mb-2" id="userCode">
+                    ABC123XY
+                </div>
+                <div class="text-sm text-slate-400">People can search and vote for you using this code</div>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="copyUserCode()" id="copyCodeBtn" 
+                        class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    <span>Copy Code</span>
+                </button>
+                <a href="search.html" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <span>Try Search</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Vote Link Section -->
+        <div class="dashboard-card rounded-2xl p-6 mb-8 bg-gradient-to-r from-yellow-900/50 to-orange-900/50">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <span class="mr-2">🔗</span> Your Voting Link
+            </h2>
+            <div class="bg-black/30 rounded-xl p-4 mb-4">
+                <code class="text-sm text-yellow-300 break-all block" id="voteLink">
+                    https://www.flymaddcreative.online/vote.html?user=username
+                </code>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="copyVoteLink()" id="copyLinkBtn"
+                        class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-black font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    <span>Copy Link</span>
+                </button>
+                <button onclick="shareVoteLink()" 
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                    </svg>
+                    <span>Share</span>
+                </button>
+            </div>
+            <p class="text-sm text-slate-400 mt-4">
+                Share this link on social media, WhatsApp, or anywhere to get votes!
+            </p>
+        </div>
+
+        <!-- How to Get Votes Section -->
+        <div class="dashboard-card rounded-2xl p-6 mb-8">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <span class="mr-2">📈</span> How to Get More Votes
+            </h2>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="bg-slate-800/50 rounded-xl p-4">
+                    <div class="text-2xl mb-2">📱</div>
+                    <h3 class="font-medium mb-1">Share on WhatsApp</h3>
+                    <p class="text-sm text-slate-400">Send your link to friends and family groups</p>
+                </div>
+                <div class="bg-slate-800/50 rounded-xl p-4">
+                    <div class="text-2xl mb-2">📣</div>
+                    <h3 class="font-medium mb-1">Post on Social Media</h3>
+                    <p class="text-sm text-slate-400">Share on Facebook, Instagram, Twitter</p>
+                </div>
+                <div class="bg-slate-800/50 rounded-xl p-4">
+                    <div class="text-2xl mb-2">🎯</div>
+                    <h3 class="font-medium mb-1">Share Your Code</h3>
+                    <p class="text-sm text-slate-400">Easy to remember and type</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="flex flex-col sm:flex-row gap-4">
+            <a href="leadershipBoard.html" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-4 px-6 rounded-xl transition-colors text-center">
+                🏆 View Leaderboard
+            </a>
+            <a href="vote.html" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-4 px-6 rounded-xl transition-colors text-center">
+                ✅ Vote for Others
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // 🔧 VERSION: User Dashboard v1
+        // ========================================
+        console.log('📌 User Dashboard v1');
+
+        let currentUser = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Get user identifier from URL or localStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('user') || urlParams.get('username');
+            const userCode = urlParams.get('code');
+            const isNewUser = urlParams.get('welcome') === 'true';
+            
+            // Check localStorage for saved user
+            const savedUser = localStorage.getItem('onedream_user');
+            
+            if (!window.SupabaseAPI) {
+                showError('System error: API not loaded');
+                return;
+            }
+
+            try {
+                if (username) {
+                    currentUser = await window.SupabaseAPI.getParticipantByUsername(username);
+                } else if (userCode) {
+                    currentUser = await window.SupabaseAPI.getParticipantByUserCode(userCode);
+                } else if (savedUser) {
+                    const saved = JSON.parse(savedUser);
+                    currentUser = await window.SupabaseAPI.getParticipantByUsername(saved.username);
+                }
+
+                if (currentUser) {
+                    // Save to localStorage
+                    localStorage.setItem('onedream_user', JSON.stringify({
+                        username: currentUser.username,
+                        user_code: currentUser.user_code
+                    }));
+                    
+                    displayDashboard(currentUser);
+                    
+                    if (isNewUser) {
+                        showWelcomeBanner();
+                    }
+                    
+                    // Fetch rank
+                    await fetchUserRank();
+                } else {
+                    showNotFound();
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showNotFound();
+            }
+        });
+
+        function displayDashboard(user) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.remove('hidden');
+            
+            // Profile header
+            document.getElementById('avatarInitial').textContent = user.name?.charAt(0)?.toUpperCase() || 'U';
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userUsername').textContent = user.username;
+            document.getElementById('userCode').textContent = user.user_code || 'N/A';
+            
+            // Stats
+            document.getElementById('totalVotes').textContent = (user.total_votes || 0).toLocaleString();
+            document.getElementById('statVotes').textContent = (user.total_votes || 0).toLocaleString();
+            document.getElementById('statAmount').textContent = '$' + ((user.total_amount || 0) * 2).toLocaleString();
+            document.getElementById('statStage').textContent = user.current_stage || 'Bronze';
+            
+            // Stage badge
+            const stageBadge = document.getElementById('stageBadge');
+            stageBadge.textContent = user.current_stage || 'Bronze';
+            stageBadge.className = 'stage-badge px-3 py-1 rounded-full text-sm font-medium text-black';
+            if (user.current_stage === 'Silver') stageBadge.classList.add('silver');
+            if (user.current_stage === 'Gold') stageBadge.classList.add('gold');
+            if (user.current_stage === 'Platinum') stageBadge.classList.add('platinum');
+            if (user.current_stage === 'Diamond') stageBadge.classList.add('diamond');
+            
+            // Join date
+            if (user.created_at) {
+                const date = new Date(user.created_at);
+                document.getElementById('joinDate').textContent = date.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                });
+            }
+            
+            // Vote link
+            const voteLink = `https://www.flymaddcreative.online/vote.html?user=${user.username}`;
+            document.getElementById('voteLink').textContent = voteLink;
+        }
+
+        async function fetchUserRank() {
+            try {
+                const leaderboard = await window.SupabaseAPI.getLeaderboard(100);
+                const rank = leaderboard.findIndex(p => p.username === currentUser.username) + 1;
+                document.getElementById('statRank').textContent = rank > 0 ? `#${rank}` : '#-';
+            } catch (err) {
+                console.error('Error fetching rank:', err);
+            }
+        }
+
+        function showNotFound() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('notFoundState').classList.remove('hidden');
+        }
+
+        function showWelcomeBanner() {
+            document.getElementById('welcomeBanner').classList.remove('hidden');
+        }
+
+        function dismissWelcome() {
+            document.getElementById('welcomeBanner').classList.add('hidden');
+        }
+
+        function copyUserCode() {
+            const code = document.getElementById('userCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.getElementById('copyCodeBtn');
+                btn.innerHTML = '<svg class="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Copied!</span>';
+                btn.classList.add('copy-success');
+                setTimeout(() => {
+                    btn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg><span>Copy Code</span>';
+                }, 2000);
+            });
+        }
+
+        function copyVoteLink() {
+            const link = document.getElementById('voteLink').textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                const btn = document.getElementById('copyLinkBtn');
+                btn.innerHTML = '<svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Copied!</span>';
+                setTimeout(() => {
+                    btn.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg><span>Copy Link</span>';
+                }, 2000);
+            });
+        }
+
+        function shareVoteLink() {
+            const link = document.getElementById('voteLink').textContent;
+            const text = `🌟 Vote for me in the One Dream Initiative! ${link}`;
+            
+            if (navigator.share) {
+                navigator.share({ title: 'One Dream Initiative', text, url: link });
+            } else {
+                navigator.clipboard.writeText(text).then(() => alert('Link copied!'));
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('onedream_user');
+            window.location.href = 'registration.html';
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').innerHTML = `
+                <div class="text-red-400 text-6xl mb-4">⚠️</div>
+                <h1 class="text-xl font-bold mb-2">Error</h1>
+                <p class="text-slate-400">${message}</p>
+            `;
+        }
+    </script>
+</body>
+</html>

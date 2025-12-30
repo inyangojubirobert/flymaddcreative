@@ -1,17 +1,17 @@
-// API route for user registration
-// Creates onedream_users entry and generates referral token
+// API route for user registration - aligned with participants table
 
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 
-// Initialize Supabase client with service role key for admin operations
+// Initialize Supabase client with service role key
 const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_URL || 'https://pjtuisyvpvoswmcgxsfs.supabase.co',
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || ''
 );
 
-// Simple in-memory rate limiter (module scope)
+// Simple in-memory rate limiter
 const rateLimitStore = new Map();
 function checkRateLimit(key, maxAttempts, windowMs) {
   const now = Date.now();
@@ -25,212 +25,152 @@ function checkRateLimit(key, maxAttempts, windowMs) {
   return entry.count <= maxAttempts;
 }
 
-// Generate a short referral token
-function generateReferralToken(seed) {
-  return crypto
-    .createHash('sha256')
-    .update(`${seed}:${crypto.randomBytes(16).toString('hex')}`)
-    .digest('hex')
-    .substring(0, 24);
+// Generate a unique referral token
+async function generateReferralToken() {
+  const token = crypto.randomBytes(16).toString('hex');
+  const { data, error } = await supabaseAdmin
+    .from('participants')
+    .select('id')
+    .eq('referral_token', token)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw new Error('Error checking referral token uniqueness: ' + error.message);
+  }
+
+  return data ? generateReferralToken() : token;
 }
 
-// Ensure referral token uniqueness
-async function ensureUniqueReferralToken(token, maxAttempts = 5) {
-  let attempt = 0;
-  let current = token;
-  while (attempt < maxAttempts) {
-    const { data, error } = await supabaseAdmin
-      .from('onedream_users')
-      .select('id')
-      .eq('referral_token', current)
-      .limit(1);
-    if (error) throw error;
-    if (!data || data.length === 0) return current;
-    current = generateReferralToken(current);
-    attempt++;
+// Ensure the referral token is unique for the user
+async function ensureUniqueReferralToken(userId, token) {
+  const { data, error } = await supabaseAdmin
+    .from('participants')
+    .select('id')
+    .eq('referral_token', token)
+    .neq('id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw new Error('Error ensuring unique referral token: ' + error.message);
   }
-  return current;
+
+  return data ? generateReferralToken() : token;
 }
 
-// Helpers
-function normalizeEmail(email) {
-  return (email || '').trim().toLowerCase();
-}
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-function cleanName(name) {
-  return (name || '').trim().replace(/\s+/g, ' ');
-}
-function generateReferralCode(name) {
-  const clean = (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const prefix = clean.substring(0, 6) || 'user';
-  const suffix = Math.random().toString(36).substring(2, 8);
-  return `${prefix}${suffix}`;
-}
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16);
-  return new Promise((resolve, reject) => {
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) return reject(err);
-      // Store as scrypt$<salt hex>$<hash hex>
-      resolve(`scrypt$${salt.toString('hex')}$${derivedKey.toString('hex')}`);
-    });
-  });
-}
-async function ensureUniqueReferral(code, maxAttempts = 5) {
-  let attempt = 0;
-  let current = code;
-  while (attempt < maxAttempts) {
-    const { data, error } = await supabaseAdmin
-      .from('onedream_users')
-      .select('id')
-      .eq('referral_code', current)
-      .limit(1);
-    if (error) throw error;
-    if (!data || data.length === 0) return current;
-    current = generateReferralCode(current);
-    attempt++;
-  }
-  return current;
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export default async function handler(req, res) {
-  // Only allow POST requests
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Rate limiting - max 5 registration attempts per IP per hour
-  const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+  // Rate limiting - max 5 per IP per hour
+  const clientIP = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
   if (!checkRateLimit(`register_${clientIP}`, 5, 60 * 60 * 1000)) {
-    return res.status(429).json({ 
-      error: 'Too many registration attempts. Please try again later.' 
-    });
+    return res.status(429).json({ error: 'Too many attempts. Try again later.' });
   }
 
-  const { name, email, password, bio } = req.body;
+  const { name, email, username } = req.body;
 
   // Validate required fields
-  if (!name || !email || !password) {
-    return res.status(400).json({ 
-      error: 'Name, email, and password are required' 
-    });
+  if (!name || !email || !username) {
+    return res.status(400).json({ error: 'Name, email, and username are required' });
   }
 
   // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ 
-      error: 'Please provide a valid email address' 
-    });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address' });
   }
 
-  // Validate password length
-  if (password.length < 6) {
-    return res.status(400).json({ 
-      error: 'Password must be at least 6 characters long' 
-    });
+  // Validate username format
+  const normalizedUsername = username.trim().toLowerCase();
+  if (!/^[a-z0-9_]+$/.test(normalizedUsername) || normalizedUsername.length < 3) {
+    return res.status(400).json({ error: 'Username must be at least 3 characters (letters, numbers, underscores)' });
   }
 
   try {
-    // Check if user already exists (avoid .single() not-found error)
-    const { data: existingList, error: existingErr } = await supabaseAdmin
-      .from('onedream_users')
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Check existing email
+    const { data: existingEmail } = await supabaseAdmin
+      .from('participants')
       .select('id')
-      .eq('email', email.toLowerCase())
+      .eq('email', normalizedEmail)
       .limit(1);
 
-    if (existingErr) {
-      console.error('Supabase error (check existing):', existingErr);
-      return res.status(500).json({ error: 'Internal error checking existing user' });
-    }
-    if (existingList && existingList.length > 0) {
-      return res.status(400).json({ error: 'An account with this email already exists' });
+    if (existingEmail?.length > 0) {
+      return res.status(400).json({ error: 'An account with this email already exists.' });
     }
 
-    // Hash password
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    // Check existing username
+    const { data: existingUsername } = await supabaseAdmin
+      .from('participants')
+      .select('id')
+      .eq('username', normalizedUsername)
+      .limit(1);
 
-    // Create user record
-    const userId = crypto.randomUUID();
-    const baseToken = generateReferralToken(userId);
-    const referralToken = await ensureUniqueReferralToken(baseToken);
+    if (existingUsername?.length > 0) {
+      return res.status(400).json({ error: 'This username is already taken.' });
+    }
 
-    const { data: newUser, error: createError } = await supabaseAdmin
-      .from('onedream_users')
+    // Insert participant (triggers will generate user_code and referral_link)
+    const { data: participant, error: insertErr } = await supabaseAdmin
+      .from('participants')
       .insert({
-        id: userId,
         name: name.trim(),
-        email: email.toLowerCase().trim(),
-        password_hash: hashedPassword,
-        bio: bio?.trim() || null,
-        referral_token: referralToken,
+        email: normalizedEmail,
+        username: normalizedUsername
       })
-      .select('id, name, email, referral_token, created_at')
+      .select('id, name, email, username, user_code, total_votes, current_stage, created_at')
       .single();
 
-    if (createError) {
-      console.error('User creation error:', createError);
-      return res.status(500).json({ 
-        error: 'Failed to create account. Please try again.' 
-      });
+    if (insertErr) {
+      console.error('Insert error:', insertErr);
+      return res.status(500).json({ error: 'Failed to create account: ' + insertErr.message });
     }
 
-    // Generate JWT token for session
+    // Wait for trigger to create referral link
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Get referral link
+    const { data: referralLink } = await supabaseAdmin
+      .from('referral_links')
+      .select('user_vote_link')
+      .eq('participant_id', participant.id)
+      .single();
+
+    // Generate JWT token
     const token = jwt.sign(
       { 
-        userId: newUser.id, 
-        email: newUser.email,
+        userId: participant.id, 
+        email: normalizedEmail,
         type: 'onedream' 
       },
-      process.env.JWT_SECRET || 'fallback_secret_for_dev',
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    // Return success response (don't include password hash)
     res.status(201).json({
       success: true,
-      message: 'Account created successfully',
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        referralToken: newUser.referral_token,
-        createdAt: newUser.created_at
+      message: 'Registration successful!',
+      participant: {
+        ...participant,
+        voteLink: referralLink?.user_vote_link || `https://www.flymaddcreative.online/vote.html?user=${normalizedUsername}`
       },
       token
     });
 
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error. Please try again later.' 
-    });
+    res.status(500).json({ error: 'Internal server error. Please try again.' });
   }
-}
-
-// Helper function to validate environment variables
-export function validateEnvVars() {
-  const requiredVars = ['SUPABASE_URL'];
-  const missing = requiredVars.filter(varName => !process.env[varName]);
-  
-  if (missing.length > 0) {
-    console.warn(`Warning: Missing environment variables: ${missing.join(', ')}`);
-    console.warn('Using fallback configuration for development.');
-  }
-}
-
-// Mock user creation for development when Supabase is not configured
-async function createMockUser(userData) {
-  // In development, you could store users in a local JSON file or in-memory store
-  // This is just a placeholder for when Supabase is not available
-  console.log('Mock user creation:', userData);
-  
-  return {
-    id: crypto.randomUUID(),
-    ...userData,
-    created_at: new Date().toISOString()
-  };
 }
