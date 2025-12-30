@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - One Dream Initiative</title>
+    
+    <link href="./dist/output.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="./js/supabase-config.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #FFD700, #FFA500, #FF6B35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+<body class="text-white">
+    
+    <nav class="bg-black bg-opacity-30 border-b border-white border-opacity-10 sticky top-0 z-50" style="backdrop-filter: blur(12px);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="Onedream.html" class="text-xl font-bold gradient-text">🌟 One Dream Initiative</a>
+                <div class="flex items-center space-x-4">
+                    <a href="leadershipBoard.html" class="text-slate-300 hover:text-white">Leaderboard</a>
+                    <a href="registration.html" class="text-yellow-400 hover:text-yellow-300">Register</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-md mx-auto px-4 py-16">
+        <div class="login-card rounded-2xl p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold mb-2">
+                    🔐 <span class="gradient-text">Welcome Back</span>
+                </h1>
+                <p class="text-slate-400">Login to access your dashboard</p>
+            </div>
+
+            <form id="loginForm" class="space-y-6">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
+                    <input type="email" id="email" name="email" required
+                           autocomplete="email"
+                           class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                           placeholder="Enter your email">
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-slate-300 mb-2">Password</label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required
+                               autocomplete="current-password"
+                               class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent pr-12"
+                               placeholder="Enter your password">
+                        <button type="button" onclick="togglePassword()" 
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn"
+                        class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center">
+                    <span id="submitText">Login</span>
+                    <svg id="loadingSpinner" class="hidden animate-spin ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                </button>
+            </form>
+
+            <div id="errorMessage" class="hidden mt-4 p-3 bg-red-600/20 border border-red-500 rounded-lg text-red-300 text-sm"></div>
+
+            <div class="mt-6 text-center">
+                <p class="text-slate-400 text-sm">
+                    Don't have an account? 
+                    <a href="registration.html" class="text-yellow-400 hover:text-yellow-300">Register here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('📌 Login Page v1');
+
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!window.SupabaseAPI) {
+                showError('System error: API not loaded');
+                return;
+            }
+            
+            const user = await window.SupabaseAPI.getCurrentUser();
+            if (user) {
+                window.location.href = `user-dashboard.html?user=${user.username}`;
+            }
+            
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+        });
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                showError('Please enter email and password.');
+                return;
+            }
+            
+            setLoading(true);
+            
+            try {
+                const user = await window.SupabaseAPI.loginParticipant(email, password);
+                
+                // Save to localStorage
+                localStorage.setItem('onedream_token', user.token);
+                localStorage.setItem('onedream_user', JSON.stringify({
+                    id: user.id,
+                    username: user.username,
+                    user_code: user.user_code,
+                    name: user.name,
+                    email: user.email
+                }));
+                
+                // Redirect to dashboard
+                window.location.href = `user-dashboard.html?user=${user.username}`;
+                
+            } catch (error) {
+                showError(error.message || 'Login failed.');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        function togglePassword() {
+            const field = document.getElementById('password');
+            field.type = field.type === 'password' ? 'text' : 'password';
+        }
+
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = message;
+            el.classList.remove('hidden');
+        }
+
+        function setLoading(loading) {
+            document.getElementById('submitBtn').disabled = loading;
+            document.getElementById('submitText').textContent = loading ? 'Logging in...' : 'Login';
+            document.getElementById('loadingSpinner').classList.toggle('hidden', !loading);
+        }
+    </script>
+</body>
+</html>
