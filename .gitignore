@@ -71,3 +71,4 @@ temp/
 # 🎯 Project specific
 supabase/functions/_shared/
 .supabase/
+.env*.local
