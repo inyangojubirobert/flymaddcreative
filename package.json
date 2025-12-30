@@ -4,13 +4,12 @@
   "description": "FlyMadd Creative - Professional Design Services with One Dream Initiative",
   "private": true,
   "scripts": {
-    "dev": "python -m http.server 8000",
-    "start": "python -m http.server 8000",
-    "serve": "python -m http.server 8000",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
     "tailwind:watch": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --watch",
     "tailwind:build": "tailwindcss -i ./src/styles/globals.css -o ./dist/styles.css --minify",
-    "react:dev": "next dev",
-    "react:build": "next build",
     "test:db": "node scripts/test-db.mjs",
     "cleanup:test": "node scripts/cleanup-test-data.mjs",
     "predev": "node scripts/test-db.mjs",
@@ -19,8 +18,10 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
-    "@supabase/supabase-js": "^2.38.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "bcryptjs": "^2.4.3",
     "framer-motion": "^10.16.4",
+    "jsonwebtoken": "^9.0.2",
     "next": "^14.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -31,8 +32,8 @@
     "autoprefixer": "^10.4.16",
     "eslint": "^8.50.0",
     "eslint-config-next": "^14.0.0",
-    "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5"
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0"
   },
   "keywords": [
     "design",
