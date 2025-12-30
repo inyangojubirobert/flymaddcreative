@@ -4,7 +4,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
-  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
   "public": true,
   "trailingSlash": false,
   "cleanUrls": true
