@@ -5,11 +5,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run build:css && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "build:css": "tailwindcss -i ./src/styles/input.css -o ./public/dist/output.css --minify",
-    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./public/dist/output.css --watch"
+    "watch:css": "tailwindcss -i ./src/styles/input.css -o ./public/dist/output.css --watch",
+    "test:db": "node scripts/test-db.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
