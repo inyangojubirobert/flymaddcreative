@@ -161,6 +161,42 @@
                     <p class="text-sm text-slate-400 mt-1">This will be used in your voting link</p>
                 </div>
 
+                <div>
+                    <label for="password" class="block text-sm font-medium text-slate-300 mb-2">Password *</label>
+                    <div class="relative">
+                        <input type="password" id="password" name="password" required
+                               autocomplete="new-password"
+                               minlength="6"
+                               class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors pr-12"
+                               placeholder="Create a password (min 6 characters)">
+                        <button type="button" onclick="togglePassword('password')" 
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                            <svg id="passwordEyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="confirmPassword" class="block text-sm font-medium text-slate-300 mb-2">Confirm Password *</label>
+                    <div class="relative">
+                        <input type="password" id="confirmPassword" name="confirmPassword" required
+                               autocomplete="new-password"
+                               minlength="6"
+                               class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors pr-12"
+                               placeholder="Confirm your password">
+                        <button type="button" onclick="togglePassword('confirmPassword')" 
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="pt-4">
                     <button type="submit" id="submitBtn"
                             class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
@@ -176,7 +212,7 @@
             <div class="mt-6 text-center">
                 <p class="text-slate-400 text-sm">
                     Already registered? 
-                    <a href="leadershipBoard.html" class="text-yellow-400 hover:text-yellow-300">View Leaderboard</a>
+                    <a href="login.html" class="text-yellow-400 hover:text-yellow-300">Login here</a>
                 </p>
             </div>
         </div>
@@ -289,9 +325,9 @@
 
     <script>
         // ========================================
-        // 🔧 VERSION: 2024-01-28-v7 (Redirects to dashboard)
+        // 🔧 VERSION: 2024-01-28-v8 (With Password)
         // ========================================
-        console.log('📌 Registration.html Version: 2024-01-28-v7');
+        console.log('📌 Registration.html Version: 2024-01-28-v8');
         
         // ========================================
         // 📝 APPLICATION CODE (uses window.SupabaseAPI from supabase-config.js)
@@ -339,13 +375,15 @@
             const formData = {
                 name: document.getElementById('name').value.trim(),
                 email: document.getElementById('email').value.trim().toLowerCase(),
-                username: document.getElementById('username').value.trim().toLowerCase()
+                username: document.getElementById('username').value.trim().toLowerCase(),
+                password: document.getElementById('password').value,
+                confirmPassword: document.getElementById('confirmPassword').value
             };
 
-            console.log('📝 Form data:', formData);
+            console.log('📝 Form data:', { ...formData, password: '***', confirmPassword: '***' });
             
             // Validation
-            if (!formData.name || !formData.email || !formData.username) {
+            if (!formData.name || !formData.email || !formData.username || !formData.password) {
                 showError('Please fill in all required fields.');
                 return;
             }
@@ -365,23 +403,40 @@
                 return;
             }
             
+            if (formData.password.length < 6) {
+                showError('Password must be at least 6 characters long.');
+                return;
+            }
+            
+            if (formData.password !== formData.confirmPassword) {
+                showError('Passwords do not match.');
+                return;
+            }
+            
             console.log('✅ Validation passed, starting registration...');
             setLoading(true);
             
             try {
-                // Use the shared API function
+                // Use the shared API function with password
                 currentParticipant = await window.SupabaseAPI.registerParticipant(
                     formData.name,
                     formData.email,
-                    formData.username
+                    formData.username,
+                    formData.password
                 );
                 
                 console.log('✅ Registration complete:', currentParticipant);
                 
-                // Save user to localStorage
+                // Save auth token to localStorage
+                if (currentParticipant.token) {
+                    localStorage.setItem('onedream_token', currentParticipant.token);
+                }
                 localStorage.setItem('onedream_user', JSON.stringify({
+                    id: currentParticipant.id,
                     username: currentParticipant.username,
-                    user_code: currentParticipant.user_code
+                    user_code: currentParticipant.user_code,
+                    name: currentParticipant.name,
+                    email: currentParticipant.email
                 }));
                 
                 // Redirect to dashboard with welcome flag
@@ -458,6 +513,11 @@
 
         function isValidEmail(email) {
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function togglePassword(fieldId) {
+            const field = document.getElementById(fieldId);
+            field.type = field.type === 'password' ? 'text' : 'password';
         }
 
         console.log('🌟 One Dream Registration script loaded');
