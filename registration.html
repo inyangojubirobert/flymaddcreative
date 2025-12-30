@@ -289,76 +289,29 @@
 
     <script>
         // ========================================
-        // 🔧 VERSION: 2024-01-28-v5-supabaseClient
+        // 🔧 VERSION: 2024-01-28-v7 (Redirects to dashboard)
         // ========================================
-        console.log('📌 Registration.html Version: 2024-01-28-v5-supabaseClient');
-        console.log('📌 Using variable: supabaseClient (not supabase)');
+        console.log('📌 Registration.html Version: 2024-01-28-v7');
         
         // ========================================
-        // 🔧 SUPABASE CONFIGURATION
-        // ========================================
-        
-        // Use different variable name to avoid conflict with global window.supabase
-        let supabaseClient = null;
-        
-        // Initialize Supabase from meta config with storage fallback
-        function initSupabase() {
-            const meta = document.querySelector('meta[name="supabase-config"]');
-            const url = meta?.getAttribute('data-url');
-            const anon = meta?.getAttribute('data-anon');
-
-            console.log('🔧 Supabase URL:', url);
-            console.log('🔧 Supabase Key exists:', !!anon);
-
-            if (!url || !anon) {
-                throw new Error('Supabase configuration not found in meta tags');
-            }
-
-            if (!window.supabase?.createClient) {
-                throw new Error('Supabase JS library not loaded. Check CDN script tag.');
-            }
-
-            // Try with storage first, fallback to no storage if blocked
-            try {
-                supabaseClient = window.supabase.createClient(url, anon, {
-                    auth: { 
-                        persistSession: true, 
-                        autoRefreshToken: true,
-                        detectSessionInUrl: false
-                    }
-                });
-                console.log('✅ Supabase client created with storage');
-            } catch (err) {
-                console.warn('⚠️ Storage blocked, creating client without persistence');
-                supabaseClient = window.supabase.createClient(url, anon, {
-                    auth: { 
-                        persistSession: false,
-                        autoRefreshToken: false,
-                        detectSessionInUrl: false
-                    }
-                });
-                console.log('✅ Supabase client created without storage');
-            }
-        }
-        
-        // ========================================
-        // 📝 APPLICATION CODE
+        // 📝 APPLICATION CODE (uses window.SupabaseAPI from supabase-config.js)
         // ========================================
         
         let currentParticipant = null;
         let redirectTimer = null;
         let redirectCountdown = 10;
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             console.log('📄 DOM loaded, initializing...');
             
-            try {
-                initSupabase();
-            } catch (error) {
-                console.error('❌ Failed to initialize Supabase:', error);
-                showError('System configuration error: ' + error.message);
+            // Check if SupabaseAPI is loaded from supabase-config.js
+            if (!window.SupabaseAPI) {
+                console.error('❌ SupabaseAPI not loaded. Check supabase-config.js');
+                showError('System configuration error: API not loaded');
                 return;
             }
+            
+            console.log('✅ SupabaseAPI loaded');
             
             const form = document.getElementById('registrationForm');
             if (!form) {
@@ -369,35 +322,15 @@
             form.addEventListener('submit', handleRegistration);
             console.log('✅ Form submit handler attached');
             
-            // Test connection immediately
-            testConnection();
-        });
-
-        // Test database connection
-        async function testConnection() {
-            console.log('🔍 Testing database connection...');
-            try {
-                const { data, error } = await supabaseClient
-                    .from('participants')
-                    .select('id, username')
-                    .limit(3);
-                
-                if (error) {
-                    console.error('❌ Database connection test failed:');
-                    console.error('  Code:', error.code);
-                    console.error('  Message:', error.message);
-                    showError('Database connection failed: ' + error.message);
-                } else {
-                    console.log('✅ Database connected! Participants found:', data?.length || 0);
-                    if (data?.length > 0) {
-                        console.log('📋 Sample users:', data.map(d => d.username));
-                    }
-                }
-            } catch (e) {
-                console.error('❌ Connection test exception:', e);
-                showError('Connection error: ' + e.message);
+            // Test connection
+            const result = await window.SupabaseAPI.testConnection();
+            if (result.success) {
+                console.log('✅ Database connected! Participants found:', result.data?.length || 0);
+            } else {
+                console.error('❌ Database connection failed:', result.error);
+                showError('Database connection failed: ' + result.error?.message);
             }
-        }
+        });
 
         async function handleRegistration(e) {
             e.preventDefault();
@@ -436,184 +369,29 @@
             setLoading(true);
             
             try {
-                await registerWithSupabase(formData);
-                console.log('✅ Registration complete, showing success modal');
-                showSuccessModal();
+                // Use the shared API function
+                currentParticipant = await window.SupabaseAPI.registerParticipant(
+                    formData.name,
+                    formData.email,
+                    formData.username
+                );
+                
+                console.log('✅ Registration complete:', currentParticipant);
+                
+                // Save user to localStorage
+                localStorage.setItem('onedream_user', JSON.stringify({
+                    username: currentParticipant.username,
+                    user_code: currentParticipant.user_code
+                }));
+                
+                // Redirect to dashboard with welcome flag
+                window.location.href = `user-dashboard.html?user=${currentParticipant.username}&welcome=true`;
+                
             } catch (error) {
                 console.error('❌ Registration error:', error);
                 showError(error.message || 'Registration failed. Please try again.');
             } finally {
                 setLoading(false);
-            }
-        }
-
-        async function registerWithSupabase(formData) {
-            if (!supabaseClient) {
-                console.error('❌ Supabase client is null!');
-                throw new Error('Supabase client not initialized');
-            }
-
-            console.log('🔗 Supabase client exists:', !!supabaseClient);
-
-            try {
-                console.log('🔍 Step 1: Checking if email exists...');
-                
-                const { data: existingEmail, error: emailErr } = await supabaseClient
-                    .from('participants')
-                    .select('id')
-                    .eq('email', formData.email)
-                    .limit(1);
-
-                console.log('📧 Email check response:', { existingEmail, emailErr });
-
-                if (emailErr) {
-                    console.error('❌ Email check error:', emailErr);
-                    throw new Error(`Database error: ${emailErr.message}`);
-                }
-                
-                if (existingEmail && existingEmail.length > 0) {
-                    throw new Error('An account with this email already exists.');
-                }
-
-                console.log('🔍 Step 2: Checking if username exists...');
-
-                const { data: existingUsername, error: usernameErr } = await supabaseClient
-                    .from('participants')
-                    .select('id')
-                    .eq('username', formData.username)
-                    .limit(1);
-
-                console.log('👤 Username check response:', { existingUsername, usernameErr });
-
-                if (usernameErr) {
-                    console.error('❌ Username check error:', usernameErr);
-                    throw new Error(`Database error: ${usernameErr.message}`);
-                }
-                
-                if (existingUsername && existingUsername.length > 0) {
-                    throw new Error('This username is already taken.');
-                }
-
-                console.log('🔍 Step 3: Inserting participant...');
-
-                const insertPayload = {
-                    name: formData.name,
-                    email: formData.email,
-                    username: formData.username
-                };
-                
-                console.log('📤 Insert payload:', insertPayload);
-
-                const { data: participant, error: insertErr } = await supabaseClient
-                    .from('participants')
-                    .insert(insertPayload)
-                    .select('id, name, email, username, user_code, total_votes, current_stage, created_at')
-                    .single();
-
-                console.log('📥 Insert response:', { participant, insertErr });
-
-                if (insertErr) {
-                    console.error('❌ Insert error:', insertErr);
-                    throw new Error(`Failed to create account: ${insertErr.message}`);
-                }
-
-                console.log('✅ Participant created:', participant);
-
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Use the live domain for vote link
-                const liveDomain = 'https://www.flymaddcreative.online';
-                let voteLink = `${liveDomain}/vote.html?user=${participant.username}`;
-
-                console.log('🔍 Step 4: Fetching referral link...');
-
-                const { data: referralLink, error: linkErr } = await supabaseClient
-                    .from('referral_links')
-                    .select('user_vote_link')
-                    .eq('participant_id', participant.id)
-                    .single();
-
-                console.log('🔗 Referral link response:', { referralLink, linkErr });
-
-                if (!linkErr && referralLink?.user_vote_link) {
-                    voteLink = referralLink.user_vote_link;
-                }
-
-                currentParticipant = {
-                    ...participant,
-                    voteLink
-                };
-
-                console.log('🎉 Registration complete:', currentParticipant);
-                
-            } catch (err) {
-                console.error('❌ registerWithSupabase caught error:', err);
-                throw err;
-            }
-        }
-
-        function showSuccessModal() {
-            if (!currentParticipant) {
-                console.error('❌ No participant data for success modal');
-                return;
-            }
-            
-            document.getElementById('registrationSection').classList.add('hidden');
-            document.getElementById('successSection').classList.remove('hidden');
-            
-            document.getElementById('displayName').textContent = currentParticipant.name;
-            document.getElementById('displayEmail').textContent = currentParticipant.email;
-            document.getElementById('displayUsername').textContent = currentParticipant.username;
-            document.getElementById('displayUserCode').textContent = currentParticipant.user_code || 'N/A';
-            document.getElementById('displayShareCode').textContent = currentParticipant.user_code || 'N/A';
-            document.getElementById('displayVoteLink').textContent = currentParticipant.voteLink;
-            
-            startRedirectCountdown();
-        }
-
-        function startRedirectCountdown() {
-            if (!currentParticipant) return;
-            
-            const existingCountdown = document.getElementById('redirectCountdown');
-            if (existingCountdown) existingCountdown.remove();
-            
-            const countdownElement = document.createElement('div');
-            countdownElement.id = 'redirectCountdown';
-            countdownElement.className = 'mt-6 text-center bg-slate-700 bg-opacity-50 rounded-lg p-4';
-            countdownElement.innerHTML = `
-                <div class="text-yellow-400 font-medium mb-2">🎉 Welcome ${currentParticipant.name}!</div>
-                <div class="text-slate-300 text-sm">
-                    Redirecting to leaderboard in <span id="countdownNumber" class="font-bold text-yellow-400">${redirectCountdown}</span> seconds...
-                </div>
-                <button onclick="cancelRedirect()" class="mt-2 text-slate-400 hover:text-white text-sm underline">
-                    Cancel redirect
-                </button>
-            `;
-            
-            document.getElementById('successSection').appendChild(countdownElement);
-            
-            redirectTimer = setInterval(() => {
-                redirectCountdown--;
-                const countdownNumber = document.getElementById('countdownNumber');
-                if (countdownNumber) {
-                    countdownNumber.textContent = redirectCountdown;
-                }
-                
-                if (redirectCountdown <= 0) {
-                    clearInterval(redirectTimer);
-                    window.location.href = `leadershipBoard.html?welcome=${encodeURIComponent(currentParticipant.name)}`;
-                }
-            }, 1000);
-        }
-        
-        function cancelRedirect() {
-            if (redirectTimer) {
-                clearInterval(redirectTimer);
-                redirectTimer = null;
-            }
-            const countdownElement = document.getElementById('redirectCountdown');
-            if (countdownElement) {
-                countdownElement.remove();
             }
         }
 
