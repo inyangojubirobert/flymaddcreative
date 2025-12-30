@@ -5,6 +5,7 @@
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { getParticipantWithPassword, getReferralLink } from '../../../src/backend/supabase.js';
 
 const supabaseAdmin = createClient(
     process.env.SUPABASE_URL || 'https://pjtuisyvpvoswmcgxsfs.supabase.co',
@@ -14,7 +15,12 @@ const supabaseAdmin = createClient(
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export default async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
     // Only allow POST requests
+    if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -30,29 +36,20 @@ export default async function handler(req, res) {
 
     try {
         // Find user by email
-        const { data: users, error: findError } = await supabaseAdmin
-            .from('onedream_users')
-            .select('id, name, email, password_hash, referral_token, bio, created_at')
-            .eq('email', email.toLowerCase().trim())
-            .limit(1);
-
-        if (findError) {
-            console.error('Database error:', findError);
-            return res.status(500).json({ error: 'Database error' });
+        const user = await getParticipantWithPassword(email);
+        if (!user || !user.password_hash) {
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
-
-        if (!users || users.length === 0) {
-            return res.status(401).json({ error: 'Invalid email or password' });
-        }
-
-        const user = users[0];
-
+        
         // Verify password
-        const passwordValid = await bcrypt.compare(password, user.password_hash);
-        if (!passwordValid) {
-            return res.status(401).json({ error: 'Invalid email or password' });
+        const valid = await bcrypt.compare(password, user.password_hash);
+        if (!valid) {
+            return res.status(401).json({ error: 'Invalid credentials' });
         }
-
+        
+        const voteLink = await getReferralLink(user.id)
+            || `https://www.flymaddcreative.online/vote.html?user=${user.username}`;
+        
         // Generate JWT token
         const token = jwt.sign(
             { 
@@ -64,18 +61,13 @@ export default async function handler(req, res) {
             { expiresIn: '7d' }
         );
 
+        // Remove password_hash from response
+        const { password_hash, ...safeUser } = user;
+        
         // Return user data (without password hash)
         res.status(200).json({
             success: true,
-            user: {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-                referralToken: user.referral_token,
-                bio: user.bio,
-                createdAt: user.created_at
-            },
-            token
+            user: { ...safeUser, token, voteLink }
         });
 
     } catch (error) {
