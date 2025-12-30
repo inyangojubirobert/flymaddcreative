@@ -6,6 +6,12 @@ import VoteCard, { VoteStatsGrid } from '../../components/onedream/VoteCard';
 import ProgressBar, { UserRankBar } from '../../components/onedream/ProgressBar';
 import ShareButton, { QuickShareBar } from '../../components/onedream/ShareButton';
 import { getGlobalStats, getTopWinners } from '../../lib/onedreamHelpers';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Protected Dashboard for One Dream Initiative participants
