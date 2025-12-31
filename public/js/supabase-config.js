@@ -208,6 +208,40 @@ function getAuthHeader() {
 }
 
 // ========================================
+// SUPABASE DIRECT API (Frontend)
+// ========================================
+
+/**
+ * Get all participants directly from Supabase (public anon key)
+ * @param {number} limit
+ * @returns {Promise<Array>}
+ */
+async function getParticipantsFromSupabase(limit = 50) {
+    try {
+        // Read config from meta tag
+        const meta = document.querySelector('meta[name="supabase-config"]');
+        const url = meta?.getAttribute('data-url');
+        const anon = meta?.getAttribute('data-anon');
+        if (!url || !anon || !window.supabase?.createClient) {
+            throw new Error('Supabase config not found');
+        }
+        const supabase = window.supabase.createClient(url, anon);
+
+        const { data, error } = await supabase
+            .from('participants')
+            .select('id, name, username, user_code, total_votes, current_stage, created_at')
+            .order('total_votes', { ascending: false })
+            .limit(limit);
+
+        if (error) throw error;
+        return data || [];
+    } catch (err) {
+        console.error('Supabase direct fetch error:', err);
+        return [];
+    }
+}
+
+// ========================================
 // EXPORT FOR GLOBAL ACCESS
 // ========================================
 window.SupabaseAPI = {
@@ -224,6 +258,7 @@ window.SupabaseAPI = {
     getParticipantByUserCode,
     getLeaderboard,
     searchParticipants,
+    getParticipantsFromSupabase,
     
     // Utils
     testConnection
