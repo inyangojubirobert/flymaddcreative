@@ -164,4 +164,18 @@ export async function searchParticipants(query) {
   return data || [];
 }
 
+/**
+ * Get participant with password (for internal use)
+ */
+export async function getParticipantWithPassword(email) {
+  const { data, error } = await supabase
+    .from('participants')
+    .select('id, name, email, username, user_code, password_hash, total_votes, current_stage, created_at')
+    .eq('email', email.toLowerCase().trim())
+    .single();
+
+  if (error) throw error;
+  return data || null;
+}
+
 export default supabase;
