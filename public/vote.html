@@ -395,6 +395,7 @@
         </div>
     </div>
 
+    <!-- Move your main script here, just before </body> -->
     <script>
         // ========================================
         // 🔧 SECURE CONFIGURATION
@@ -402,7 +403,7 @@
         
         // 🔐 Load configuration securely from API endpoint
         let supabase = null;
-        let DEMO_MODE = true; // Start in demo mode until config loads
+        let DEMO_MODE = false; // Disable demo mode for production
         let currentParticipant = null;
         let selectedVoteAmount = 1;
         let selectedCost = 2.00;
@@ -830,25 +831,40 @@
 
         async function processStripePayment(paymentData) {
             // Initialize Stripe
-            const stripe = Stripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_...');
+            // Make sure you have set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in your environment
+            const publishableKey = window.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 
+                (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY : null) ||
+                'pk_test_...'; // fallback for dev
 
-            // Confirm payment
-            const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
-                clientSecret: paymentData.client_secret,
-                confirmParams: {
-                    return_url: window.location.href,
-                },
-                redirect: 'if_required'
-            });
-
-            if (stripeError) {
-                return { success: false, error: `Stripe payment failed: ${stripeError.message}` };
+            if (!publishableKey || publishableKey === 'pk_test_...') {
+                alert('Stripe publishable key is not set. Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.');
+                return { success: false, error: 'Stripe key missing' };
             }
 
-            if (paymentIntent.status === 'succeeded') {
-                return { success: true, payment_intent_id: paymentData.payment_intent_id };
-            } else {
-                return { success: false, error: 'Payment was not completed' };
+            const stripe = Stripe(publishableKey);
+
+            // Confirm payment
+            try {
+                const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+                    clientSecret: paymentData.client_secret,
+                    confirmParams: {
+                        return_url: window.location.href,
+                    },
+                    redirect: 'if_required'
+                });
+
+                if (stripeError) {
+                    return { success: false, error: `Stripe payment failed: ${stripeError.message}` };
+                }
+
+                if (paymentIntent && paymentIntent.status === 'succeeded') {
+                    return { success: true, payment_intent_id: paymentData.payment_intent_id };
+                } else {
+                    return { success: false, error: 'Payment was not completed' };
+                }
+            } catch (err) {
+                console.error('Stripe JS error:', err);
+                return { success: false, error: 'Stripe JS error: ' + err.message };
             }
         }
 
