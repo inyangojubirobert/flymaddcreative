@@ -416,6 +416,7 @@
                 const anon = meta?.getAttribute('data-anon');
 
                 if (url && anon && window.supabase?.createClient) {
+                    // FIX: Remove 'const' here
                     supabase = window.supabase.createClient(url, anon, {
                         auth: { persistSession: true, autoRefreshToken: true }
                     });
