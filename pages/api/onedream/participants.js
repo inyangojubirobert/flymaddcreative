@@ -7,6 +7,7 @@ export default async function handler(req, res) {
 
   const limit = parseInt(req.query.limit, 10) || 50;
 
+  // Only fetch participants, no voter/user filtering needed
   const { data, error } = await supabase
     .from('participants')
     .select('id, name, username, user_code, total_votes, total_amount, current_stage, achievement_badges, created_at, updated_at')
