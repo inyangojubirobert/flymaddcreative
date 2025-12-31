@@ -8,517 +8,156 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>One Dream Initiative Registration - FlyMadd Creative</title>
     
-    <!-- Replace CDN with compiled CSS -->
+    <!-- Tailwind CSS -->
     <link href="./dist/output.css" rel="stylesheet">
     
-    <!-- Use jsDelivr instead of unpkg to avoid Edge Tracking Prevention -->
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="/js/supabase-config.js"></script>
     
+    <!-- bcryptjs for password hashing -->
+    <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+    
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
             min-height: 100vh;
-            -webkit-text-size-adjust: 100%;
-            -moz-text-size-adjust: 100%;
             text-size-adjust: 100%;
         }
-        
         .gradient-text {
             background: linear-gradient(135deg, #FFD700, #FFA500, #FF6B35);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        
         .registration-card {
             background: rgba(255, 255, 255, 0.08);
-            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
-        
-        .input-glow:focus {
-            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.3), 0 0 20px rgba(255, 215, 0, 0.2);
-        }
-        
-        .pulse-glow {
-            animation: pulseGlow 2s infinite;
-        }
-        
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
-            50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.3); }
-        }
-        
-        .float-animation {
-            animation: float 6s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        .slide-up {
-            animation: slideUp 0.6s ease-out;
-        }
-        
-        @keyframes slideUp {
-            from { 
-                opacity: 0; 
-                transform: translateY(30px) scale(0.95); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1); 
-            }
-        }
-        
-        .success-modal {
-            background: rgba(0, 0, 0, 0.7);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-        }
-        
-        .loading-dots::after {
-            content: '';
-            animation: dots 1.5s steps(4, end) infinite;
-        }
-        
-        @keyframes dots {
-            0%, 20% { content: ''; }
-            40% { content: '.'; }
-            60% { content: '..'; }
-            80%, 100% { content: '...'; }
-        }
     </style>
-
-    <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
-
 </head>
 <body class="text-white">
-    
-    <!-- Navigation -->
-    <nav class="bg-black bg-opacity-30 border-b border-white border-opacity-10 sticky top-0 z-50" style="-webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-4">
-                    <a href="Onedream.html" class="text-xl font-bold gradient-text">🌟 One Dream Initiative</a>
-                </div>
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="Onedream.html" class="text-slate-300 hover:text-white transition-colors">Home</a>
-                    <a href="leadershipBoard.html" class="text-slate-300 hover:text-white transition-colors">Leaderboard</a>
-                    <a href="#" class="text-white font-medium">Register</a>
-                </div>
-            </div>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <!-- Registration Form -->
-        <div id="registrationSection" class="registration-card rounded-2xl p-8 mb-8">
+    <!-- Registration Form -->
+    <div class="max-w-2xl mx-auto px-4 py-8">
+        <div class="registration-card rounded-2xl p-8">
             <div class="text-center mb-8">
                 <h1 class="text-4xl font-bold mb-4">
                     📝 <span class="gradient-text">Join One Dream Initiative</span>
                 </h1>
-                <p class="text-xl text-slate-300">Register to participate in the community voting and compete for top positions!</p>
+                <p class="text-xl text-slate-300">Register to participate in the community voting!</p>
             </div>
 
             <form id="registrationForm" class="space-y-6" autocomplete="on">
                 <div>
                     <label for="name" class="block text-sm font-medium text-slate-300 mb-2">Full Name *</label>
-                    <input type="text" id="name" name="name" required
-                           autocomplete="name"
-                           class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
-                           placeholder="Enter your full name">
+                    <input type="text" id="name" name="name" required class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Enter your full name">
                 </div>
 
                 <div>
                     <label for="email" class="block text-sm font-medium text-slate-300 mb-2">Email Address *</label>
-                    <input type="email" id="email" name="email" required
-                           autocomplete="email"
-                           class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
-                           placeholder="Enter your email address">
+                    <input type="email" id="email" name="email" required class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Enter your email address">
                 </div>
 
                 <div>
                     <label for="username" class="block text-sm font-medium text-slate-300 mb-2">Username *</label>
-                    <input type="text" id="username" name="username" required
-                           autocomplete="username"
-                           class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
-                           placeholder="Choose a unique username">
+                    <input type="text" id="username" name="username" required class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Choose a unique username">
                     <p class="text-sm text-slate-400 mt-1">This will be used in your voting link</p>
                 </div>
 
                 <div>
                     <label for="password" class="block text-sm font-medium text-slate-300 mb-2">Password *</label>
-                    <div class="relative">
-                        <input type="password" id="password" name="password" required
-                               autocomplete="new-password"
-                               minlength="6"
-                               class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors pr-12"
-                               placeholder="Create a password (min 6 characters)">
-                        <button type="button" onclick="togglePassword('password')" 
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
-                            <svg id="passwordEyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                            </svg>
-                        </button>
-                    </div>
+                    <input type="password" id="password" name="password" required minlength="6" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Create a password (min 6 characters)">
                 </div>
 
                 <div>
                     <label for="confirmPassword" class="block text-sm font-medium text-slate-300 mb-2">Confirm Password *</label>
-                    <div class="relative">
-                        <input type="password" id="confirmPassword" name="confirmPassword" required
-                               autocomplete="new-password"
-                               minlength="6"
-                               class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors pr-12"
-                               placeholder="Confirm your password">
-                        <button type="button" onclick="togglePassword('confirmPassword')" 
-                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                            </svg>
-                        </button>
-                    </div>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="6" class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Confirm your password">
                 </div>
 
-                <div class="pt-4">
-                    <button type="submit" id="submitBtn"
-                            class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
-                        <span id="submitText">Register for One Dream Initiative</span>
-                        <svg id="loadingSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-black" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
+                <div>
+                    <button type="submit" id="submitBtn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition-colors">
+                        Register
                     </button>
                 </div>
             </form>
 
-            <div class="mt-6 text-center">
-                <p class="text-slate-400 text-sm">
-                    Already registered? 
-                    <a href="login.html" class="text-yellow-400 hover:text-yellow-300">Login here</a>
-                </p>
-            </div>
-        </div>
-
-        <!-- Success Section (Hidden by default) -->
-        <div id="successSection" class="hidden registration-card rounded-2xl p-8">
-            <div class="text-center mb-8">
-                <div class="text-6xl mb-4">🎉</div>
-                <h2 class="text-3xl font-bold gradient-text mb-4">Registration Successful!</h2>
-                <p class="text-xl text-slate-300 mb-6">Welcome to the One Dream Initiative community!</p>
-            </div>
-
-            <!-- User Details -->
-            <div class="bg-slate-800 bg-opacity-50 rounded-lg p-6 mb-6">
-                <h3 class="text-xl font-bold mb-4 text-yellow-400">🎯 Your Participant Details</h3>
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center">
-                        <span class="text-slate-400">Name:</span>
-                        <span class="font-medium" id="displayName">-</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-slate-400">Email:</span>
-                        <span class="font-medium" id="displayEmail">-</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-slate-400">Username:</span>
-                        <span class="font-medium" id="displayUsername">-</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-slate-400">User Code:</span>
-                        <div class="flex items-center space-x-2">
-                            <span class="font-mono bg-slate-700 px-2 py-1 rounded text-yellow-400" id="displayUserCode">-</span>
-                            <button onclick="copyToClipboard('displayUserCode', 'copyCodeBtn')" id="copyCodeBtn" 
-                                    class="copy-button p-1 hover:bg-slate-700 rounded transition-colors"
-                                    title="Copy user code"
-                                    aria-label="Copy user code to clipboard">
-                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- User Code Sharing -->
-            <div class="bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg p-6 mb-6">
-                <h3 class="text-xl font-bold mb-4 text-white">🎯 Easy Voting with Your Code</h3>
-                <div class="bg-black bg-opacity-20 rounded-lg p-4 mb-4">
-                    <div class="text-center">
-                        <div class="text-sm text-white/80 mb-2">Share this code for easy voting:</div>
-                        <div class="text-3xl font-mono font-bold text-yellow-300 tracking-widest" id="displayShareCode">ABC123XY</div>
-                        <div class="text-sm text-white/80 mt-2">People can search for you using this code</div>
-                    </div>
-                </div>
-                <div class="text-center">
-                    <a href="search.html" class="inline-block bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg transition-colors text-sm">
-                        🔍 Try the Search Page
-                    </a>
-                </div>
-                <p class="text-white text-sm mt-3">
-                    <strong>Tell your friends to visit the search page and enter your code!</strong> It's easier than sharing long links.
-                </p>
-            </div>
-
-            <!-- Voting Link -->
-            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-6 mb-6">
-                <h3 class="text-xl font-bold mb-4 text-black">🔗 Your One Dream Voting Link</h3>
-                <div class="bg-black bg-opacity-20 rounded-lg p-4">
-                    <div class="flex items-center justify-between">
-                        <code class="text-sm text-white font-mono break-all" id="displayVoteLink">onedream vote support(username)</code>
-                        <button onclick="copyToClipboard('displayVoteLink', 'copyLinkBtn')" id="copyLinkBtn"
-                                class="copy-button ml-3 p-2 bg-black bg-opacity-30 hover:bg-opacity-50 rounded transition-colors"
-                                title="Copy voting link"
-                                aria-label="Copy voting link to clipboard">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-                <p class="text-black text-sm mt-3">
-                    <strong>Share this One Dream support command with others to get votes!</strong> People can type this command to vote for you and help you climb the leaderboard.
-                </p>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex flex-col sm:flex-row gap-4">
-                <button onclick="window.location.href='leadershipBoard.html'" 
-                        class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-                    🏆 View Leaderboard
-                </button>
-                <button onclick="shareVotingLink()" 
-                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-                    📱 Share Your Link
-                </button>
-            </div>
-        </div>
-
-        <!-- Error Message -->
-        <div id="errorMessage" class="hidden bg-red-600 bg-opacity-20 border border-red-500 rounded-lg p-4 mb-6">
-            <div class="flex items-center">
-                <svg class="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                </svg>
-                <span id="errorText" class="text-red-300"></span>
-            </div>
+            <div id="errorMessage" class="hidden mt-4 text-red-400 text-sm"></div>
         </div>
     </div>
 
     <script>
-        // ========================================
-        // 🔧 VERSION: 2024-01-28-v8 (With Password)
-        // ========================================
-        console.log('📌 Registration.html Version: 2024-01-28-v8');
-        
-        // ========================================
-        // 📝 APPLICATION CODE (uses window.SupabaseAPI from supabase-config.js)
-        // ========================================
-        
-        let currentParticipant = null;
-        let redirectTimer = null;
-        let redirectCountdown = 10;
+        // Initialize Supabase
+        const SUPABASE_URL = 'https://pjtuisyvpvoswmcgxsfs.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY';
+        const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('📄 DOM loaded, initializing...');
-            
-            // Check if SupabaseAPI is loaded from supabase-config.js
-            if (!window.SupabaseAPI) {
-                console.error('❌ SupabaseAPI not loaded. Check supabase-config.js');
-                showError('System configuration error: API not loaded');
-                return;
-            }
-            
-            console.log('✅ SupabaseAPI loaded');
-            
-            const form = document.getElementById('registrationForm');
-            if (!form) {
-                console.error('❌ Registration form not found!');
-                return;
-            }
-            
-            form.addEventListener('submit', handleRegistration);
-            console.log('✅ Form submit handler attached');
-            
-            // Test connection
-            const result = await window.SupabaseAPI.testConnection();
-            if (result.success) {
-                console.log('✅ Database connected! Participants found:', result.data?.length || 0);
-            } else {
-                console.error('❌ Database connection failed:', result.error);
-                showError('Database connection failed: ' + result.error?.message);
-            }
-        });
+        const form = document.getElementById('registrationForm');
+        const errorDiv = document.getElementById('errorMessage');
 
-        async function handleRegistration(e) {
-            e.preventDefault();
-            console.log('📝 Form submitted!');
-            
-            const formData = {
-                name: document.getElementById('name').value.trim(),
-                email: document.getElementById('email').value.trim().toLowerCase(),
-                username: document.getElementById('username').value.trim().toLowerCase(),
-                password: document.getElementById('password').value,
-                confirmPassword: document.getElementById('confirmPassword').value
-            };
-
-            console.log('📝 Form data:', { ...formData, password: '***', confirmPassword: '***' });
-            
-            // Validation
-            if (!formData.name || !formData.email || !formData.username || !formData.password) {
-                showError('Please fill in all required fields.');
-                return;
-            }
-            
-            if (!isValidEmail(formData.email)) {
-                showError('Please enter a valid email address.');
-                return;
-            }
-            
-            if (formData.username.length < 3) {
-                showError('Username must be at least 3 characters long.');
-                return;
-            }
-
-            if (!/^[a-z0-9_]+$/.test(formData.username)) {
-                showError('Username can only contain lowercase letters, numbers, and underscores.');
-                return;
-            }
-            
-            if (formData.password.length < 6) {
-                showError('Password must be at least 6 characters long.');
-                return;
-            }
-            
-            if (formData.password !== formData.confirmPassword) {
-                showError('Passwords do not match.');
-                return;
-            }
-            
-            console.log('✅ Validation passed, starting registration...');
-            setLoading(true);
-            
-            try {
-                // Use the shared API function with password
-                currentParticipant = await window.SupabaseAPI.registerParticipant(
-                    formData.name,
-                    formData.email,
-                    formData.username,
-                    formData.password
-                );
-                
-                console.log('✅ Registration complete:', currentParticipant);
-                
-                // Save auth token to localStorage
-                if (currentParticipant.token) {
-                    localStorage.setItem('onedream_token', currentParticipant.token);
-                }
-                localStorage.setItem('onedream_user', JSON.stringify({
-                    id: currentParticipant.id,
-                    username: currentParticipant.username,
-                    user_code: currentParticipant.user_code,
-                    name: currentParticipant.name,
-                    email: currentParticipant.email
-                }));
-                
-                // Redirect to dashboard with welcome flag
-                window.location.href = `user-dashboard.html?user=${currentParticipant.username}&welcome=true`;
-                
-            } catch (error) {
-                console.error('❌ Registration error:', error);
-                showError(error.message || 'Registration failed. Please try again.');
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        function showError(message) {
-            console.error('🚨 Showing error:', message);
-            const errorDiv = document.getElementById('errorMessage');
-            document.getElementById('errorText').textContent = message;
+        function showError(msg) {
+            errorDiv.textContent = msg;
             errorDiv.classList.remove('hidden');
-            
-            // Scroll to error
-            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            setTimeout(() => {
-                errorDiv.classList.add('hidden');
-            }, 10000);
-        }
-
-        function setLoading(loading) {
-            const submitBtn = document.getElementById('submitBtn');
-            const submitText = document.getElementById('submitText');
-            const spinner = document.getElementById('loadingSpinner');
-            
-            console.log('⏳ Loading state:', loading);
-            
-            if (loading) {
-                submitBtn.disabled = true;
-                submitText.textContent = 'Registering...';
-                spinner.classList.remove('hidden');
-            } else {
-                submitBtn.disabled = false;
-                submitText.textContent = 'Register for One Dream Initiative';
-                spinner.classList.add('hidden');
-            }
-        }
-
-        function copyToClipboard(elementId, buttonId) {
-            const text = document.getElementById(elementId).textContent;
-            const button = document.getElementById(buttonId);
-            
-            navigator.clipboard.writeText(text).then(() => {
-                const originalHTML = button.innerHTML;
-                button.innerHTML = '<svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-                
-                setTimeout(() => {
-                    button.innerHTML = originalHTML;
-                }, 2000);
-            }).catch(err => {
-                console.error('❌ Failed to copy:', err);
-            });
-        }
-
-        function shareVotingLink() {
-            if (!currentParticipant) return;
-            
-            const voteLink = currentParticipant.voteLink;
-            const shareText = `🌟 Vote for me in the One Dream Initiative! ${voteLink}`;
-            
-            if (navigator.share) {
-                navigator.share({ title: 'One Dream Initiative', text: shareText, url: voteLink });
-            } else {
-                navigator.clipboard.writeText(shareText).then(() => alert('Link copied!'));
-            }
+            setTimeout(() => errorDiv.classList.add('hidden'), 8000);
         }
 
         function isValidEmail(email) {
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         }
 
-        function togglePassword(fieldId) {
-            const field = document.getElementById(fieldId);
-            field.type = field.type === 'password' ? 'text' : 'password';
-        }
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        console.log('🌟 One Dream Registration script loaded');
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            const username = document.getElementById('username').value.trim().toLowerCase();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!name || !email || !username || !password) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            if (!isValidEmail(email)) {
+                showError('Invalid email address');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('Passwords do not match');
+                return;
+            }
+
+            // Hash password in browser using bcryptjs
+            const saltRounds = 10;
+            const passwordHash = dcodeIO.bcrypt.hashSync(password, saltRounds);
+
+            try {
+                // Insert into Supabase
+                const { data, error } = await supabase
+                    .from('participants')
+                    .insert({ name, email, username, password_hash: passwordHash })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                alert(`Registration successful! Your user code: ${data.user_code}`);
+                window.location.href = `user-dashboard.html?user=${data.username}&welcome=true`;
+
+            } catch (err) {
+                console.error(err);
+                showError(err.message || 'Registration failed');
+            }
+        });
     </script>
 </body>
 </html>
