@@ -65,7 +65,7 @@ export async function getParticipantByUserCode(userCode) {
  * Create participant with password
  */
 export async function createParticipant(name, email, username, passwordHash) {
-    const { data, error } = await supabase
+    const { data, error: insertErr } = await supabase
         .from('participants')
         .insert({
             name: name.trim(),
@@ -75,8 +75,12 @@ export async function createParticipant(name, email, username, passwordHash) {
         })
         .select('id, name, email, username, user_code, total_votes, current_stage, created_at')
         .single();
-    
-    if (error) throw error;
+
+    if (insertErr) {
+        // Log the full error for debugging
+        console.error('SUPABASE INSERT ERROR:', insertErr);
+        throw insertErr;
+    }
     return data;
 }
 
@@ -89,8 +93,12 @@ export async function getReferralLink(participantId) {
         .select('user_vote_link')
         .eq('participant_id', participantId)
         .single();
-    
-    if (error && error.code !== 'PGRST116') throw error;
+
+    if (error) {
+        // Log the full error for debugging
+        console.error('SUPABASE REFERRAL LINK ERROR:', error);
+        throw error;
+    }
     return data?.user_vote_link || null;
 }
 

@@ -4,7 +4,12 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm install",
-  "public": true,
   "trailingSlash": false,
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/websiteapp", "destination": "/websiteapp.html" },
+    { "source": "/Onedream", "destination": "/websiteapp.html" }
+  ],
+  "headers": []
 }

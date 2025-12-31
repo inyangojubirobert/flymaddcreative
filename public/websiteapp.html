@@ -121,8 +121,18 @@
         });
       });
 
-      // Load default tab
-      loadPage('vision.html');
+      // Load default tab or One Dream tab if /Onedream
+      const isOneDream = window.location.pathname.toLowerCase() === '/onedream';
+      if (isOneDream) {
+        const oneDreamBtn = Array.from(buttons).find(b => b.getAttribute('data-page').toLowerCase() === 'onedream.html');
+        if (oneDreamBtn) {
+          oneDreamBtn.click();
+        } else {
+          loadPage('vision.html');
+        }
+      } else {
+        loadPage('vision.html');
+      }
     }
 
     window.addEventListener('DOMContentLoaded', initTabs);
