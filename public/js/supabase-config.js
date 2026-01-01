@@ -249,7 +249,7 @@ window.initSupabaseFromMeta = function() {
     const meta = document.querySelector('meta[name="supabase-config"]');
     const url = meta?.getAttribute('data-url');
     const anon = meta?.getAttribute('data-anon');
-    // Fix: Check window.supabase.createClient exists and is a function (for UMD v2+)
+    // Fix: Wait for the Supabase UMD to be loaded (window.supabase may be null if script not loaded yet)
     if (
         url &&
         anon &&
@@ -274,6 +274,10 @@ window.initSupabaseFromMeta = function() {
         });
         console.log('✅ Supabase initialized from meta config:', url);
         return true;
+    }
+    // If window.supabase is null, the CDN script did not load or loaded after this script.
+    if (window.supabase === null) {
+        console.error('❌ Supabase UMD script not loaded or loaded after supabase-config.js. Make sure the CDN <script> is before this file in your HTML.');
     }
     // Add extra debug info for troubleshooting
     console.log('❌ Supabase config not found or invalid:', {
