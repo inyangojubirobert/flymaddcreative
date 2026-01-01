@@ -133,8 +133,18 @@
             setLoading(true);
             
             try {
-                const user = await window.SupabaseAPI.loginParticipant(email, password);
-                
+                // Use POST for login (fixes 405 error)
+                const response = await fetch('/api/onedream/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Login failed.');
+                }
+                const user = await response.json();
+
                 // Save to localStorage
                 localStorage.setItem('onedream_token', user.token);
                 localStorage.setItem('onedream_user', JSON.stringify({
