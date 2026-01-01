@@ -241,8 +241,10 @@ async function getParticipantsFromSupabase(limit = 50) {
     }
 }
 
-// Supabase client initialization
-let supabase = null;
+// Only declare supabase ONCE globally
+var supabase = null;
+
+// Attach helpers to window for use in other scripts
 window.initSupabaseFromMeta = function() {
     const meta = document.querySelector('meta[name="supabase-config"]');
     const url = meta?.getAttribute('data-url');
@@ -256,9 +258,8 @@ window.initSupabaseFromMeta = function() {
     }
     console.log('❌ Supabase config not found or invalid:', { url, anon });
     return false;
-}
+};
 
-// Participant fetch helpers
 window.fetchParticipantByUsername = async function(username) {
     if (!supabase) throw new Error('Supabase not initialized');
     const { data, error } = await supabase
@@ -268,7 +269,7 @@ window.fetchParticipantByUsername = async function(username) {
         .single();
     if (error) throw error;
     return data;
-}
+};
 
 window.fetchParticipantByUserCode = async function(userCode) {
     if (!supabase) throw new Error('Supabase not initialized');
@@ -279,7 +280,7 @@ window.fetchParticipantByUserCode = async function(userCode) {
         .single();
     if (error) throw error;
     return data;
-}
+};
 
 // ========================================
 // EXPORT FOR GLOBAL ACCESS
