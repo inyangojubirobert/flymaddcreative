@@ -1,12 +1,10 @@
-import { initSupabaseFromMeta, fetchParticipantByUsername, fetchParticipantByUserCode } from './supabase-config.js';
-
 let currentParticipant = null;
 let selectedVoteAmount = 1;
 let selectedCost = 2.00;
 let selectedPaymentMethod = 'stripe';
 
 document.addEventListener('DOMContentLoaded', async function() {
-    if (!initSupabaseFromMeta()) {
+    if (!window.initSupabaseFromMeta()) {
         showError('Supabase client not initialized. Check your configuration.');
         return;
     }
@@ -22,9 +20,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     try {
         if (userCode) {
-            currentParticipant = await fetchParticipantByUserCode(userCode);
+            currentParticipant = await window.fetchParticipantByUserCode(userCode);
         } else {
-            currentParticipant = await fetchParticipantByUsername(username);
+            currentParticipant = await window.fetchParticipantByUsername(username);
         }
         showParticipant();
     } catch (error) {
