@@ -75,3 +75,42 @@ export default async function handler(req, res) {
         res.status(500).json({ error: 'Internal server error' });
     }
 }
+
+// API endpoint: /api/onedream/login
+// Handles POST login requests
+
+import { verifyParticipantPassword } from '../../../src/backend/supabase.js';
+
+export default async function handler(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    try {
+        // Verify user and password
+        const user = await verifyParticipantPassword(email, password);
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid email or password.' });
+        }
+
+        // Generate a simple token (for demo; use JWT in production)
+        const token = Buffer.from(`${user.id}:${Date.now()}`).toString('base64');
+
+        // Return user info and token
+        return res.status(200).json({
+            token,
+            id: user.id,
+            username: user.username,
+            user_code: user.user_code,
+            name: user.name,
+            email: user.email
+        });
+    } catch (err) {
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}
