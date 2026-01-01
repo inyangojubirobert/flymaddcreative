@@ -1,295 +1,209 @@
 // ========================================
 // ONE DREAM API CLIENT
-// Calls backend API instead of direct Supabase
+// Backend-first architecture (Supabase is READ-ONLY on frontend)
 // ========================================
 
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5001/api/onedream'
-    : '/api/onedream';
+const API_BASE_URL =
+    window.location.hostname === 'localhost'
+        ? 'http://localhost:5001/api/onedream'
+        : '/api/onedream';
 
 // ========================================
-// AUTH FUNCTIONS
+// AUTH FUNCTIONS (Participants ONLY)
 // ========================================
 
-/**
- * Register a new participant
- */
 async function registerParticipant(name, email, username, password) {
-    console.log('🔍 registerParticipant called:', { name, email, username, password: '***' });
-    
     const response = await fetch(`${API_BASE_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, username, password })
     });
-    
+
     const data = await response.json();
-    
-    if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-    }
-    
-    console.log('✅ Registration successful:', data);
+    if (!response.ok) throw new Error(data.error || 'Registration failed');
     return data.participant;
 }
 
-/**
- * Login with email and password
- */
 async function loginParticipant(email, password) {
-    console.log('🔍 loginParticipant called:', { email, password: '***' });
-    
     const response = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
     });
-    
+
     const data = await response.json();
-    
-    if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-    }
-    
-    console.log('✅ Login successful');
+    if (!response.ok) throw new Error(data.error || 'Login failed');
     return data.user;
 }
 
-/**
- * Verify session token
- */
 async function verifyToken() {
     const token = localStorage.getItem('onedream_token');
     if (!token) return null;
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/verify`, {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                Authorization: `Bearer ${token}`
             }
         });
-        
+
         if (!response.ok) {
             localStorage.removeItem('onedream_token');
             localStorage.removeItem('onedream_user');
             return null;
         }
-        
+
         return await response.json();
     } catch {
         return null;
     }
 }
 
-/**
- * Get current logged-in user
- */
 async function getCurrentUser() {
     const token = localStorage.getItem('onedream_token');
-    if (!token) return null;
-    
     const savedUser = localStorage.getItem('onedream_user');
-    if (!savedUser) return null;
-    
+    if (!token || !savedUser) return null;
+
     try {
-        const user = JSON.parse(savedUser);
-        // Optionally verify token is still valid
         const verified = await verifyToken();
         if (!verified) return null;
-        
-        // Fetch fresh user data
-        return await getParticipantByUsername(user.username);
+        return JSON.parse(savedUser);
     } catch {
         return null;
     }
 }
 
-/**
- * Logout
- */
 function logout() {
     localStorage.removeItem('onedream_token');
     localStorage.removeItem('onedream_user');
 }
 
 // ========================================
-// PARTICIPANT FUNCTIONS
+// PARTICIPANTS (Public / Read-only)
 // ========================================
 
-/**
- * Get participant by username
- */
 async function getParticipantByUsername(username) {
     try {
-        const response = await fetch(`${API_BASE_URL}/participants/${username}`);
-        
-        if (!response.ok) return null;
-        
-        const data = await response.json();
-        return data.participant;
+        const res = await fetch(`${API_BASE_URL}/participants/${username}`);
+        if (!res.ok) return null;
+        return (await res.json()).participant;
     } catch {
         return null;
     }
 }
 
-/**
- * Get participant by user_code
- */
-async function getParticipantByUserCode(userCode) {
+async function getParticipantByUserCode(code) {
     try {
-        const response = await fetch(`${API_BASE_URL}/participants/code/${userCode}`);
-        
-        if (!response.ok) return null;
-        
-        const data = await response.json();
-        return data.participant;
+        const res = await fetch(`${API_BASE_URL}/participants/code/${code}`);
+        if (!res.ok) return null;
+        return (await res.json()).participant;
     } catch {
         return null;
     }
 }
 
-/**
- * Get leaderboard
- */
 async function getLeaderboard(limit = 50) {
     try {
-        const response = await fetch(`${API_BASE_URL}/leaderboard?limit=${limit}`);
-        
-        if (!response.ok) throw new Error('Failed to fetch leaderboard');
-        
-        const data = await response.json();
-        return data.participants || [];
-    } catch (err) {
-        console.error('Leaderboard error:', err);
+        const res = await fetch(`${API_BASE_URL}/leaderboard?limit=${limit}`);
+        if (!res.ok) throw new Error();
+        return (await res.json()).participants || [];
+    } catch {
         return [];
     }
 }
 
-/**
- * Search participants
- */
 async function searchParticipants(query) {
     if (!query?.trim()) return [];
-    
     try {
-        const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
-        
-        if (!response.ok) throw new Error('Search failed');
-        
-        const data = await response.json();
-        return data.participants || [];
-    } catch (err) {
-        console.error('Search error:', err);
+        const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error();
+        return (await res.json()).participants || [];
+    } catch {
         return [];
     }
 }
 
-/**
- * Test API connection
- */
 async function testConnection() {
     try {
-        const response = await fetch(`${API_BASE_URL}/health`);
-        const data = await response.json();
-        return { success: response.ok, data, error: null };
+        const res = await fetch(`${API_BASE_URL}/health`);
+        return { success: res.ok, data: await res.json() };
     } catch (err) {
-        return { success: false, data: null, error: err };
+        return { success: false, error: err };
     }
 }
 
-/**
- * Get auth header for authenticated requests
- */
 function getAuthHeader() {
     const token = localStorage.getItem('onedream_token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 // ========================================
-// SUPABASE DIRECT API (Frontend)
+// SUPABASE (READ-ONLY, PUBLIC DATA)
 // ========================================
+
+let supabase = null;
 
 /**
- * Get all participants directly from Supabase (public anon key)
- * @param {number} limit
- * @returns {Promise<Array>}
+ * Wait until Supabase CDN is available (prevents race conditions)
  */
-async function getParticipantsFromSupabase(limit = 50) {
-    try {
-        // Read config from meta tag
-        const meta = document.querySelector('meta[name="supabase-config"]');
-        const url = meta?.getAttribute('data-url');
-        const anon = meta?.getAttribute('data-anon');
-        if (!url || !anon || !window.supabase?.createClient) {
-            throw new Error('Supabase config not found');
-        }
-        const supabase = window.supabase.createClient(url, anon);
-
-        const { data, error } = await supabase
-            .from('participants')
-            .select('id, name, username, user_code, total_votes, current_stage, created_at')
-            .order('total_votes', { ascending: false })
-            .limit(limit);
-
-        if (error) throw error;
-        return data || [];
-    } catch (err) {
-        console.error('Supabase direct fetch error:', err);
-        return [];
-    }
+function waitForSupabase(timeout = 3000) {
+    return new Promise((resolve, reject) => {
+        const start = Date.now();
+        const timer = setInterval(() => {
+            if (window.supabase?.createClient || typeof window.supabase === 'function') {
+                clearInterval(timer);
+                resolve(true);
+            }
+            if (Date.now() - start > timeout) {
+                clearInterval(timer);
+                reject(new Error('Supabase CDN not loaded'));
+            }
+        }, 50);
+    });
 }
 
-// Only declare supabase ONCE globally
-var supabase = null;
+/**
+ * Initialize Supabase safely (v2 + v1)
+ */
+window.initSupabaseFromMeta = async function () {
+    if (supabase) return true;
 
-// Attach helpers to window for use in other scripts
-window.initSupabaseFromMeta = function() {
     const meta = document.querySelector('meta[name="supabase-config"]');
     const url = meta?.getAttribute('data-url');
     const anon = meta?.getAttribute('data-anon');
-    // Fix: Wait for the Supabase UMD to be loaded (window.supabase may be null if script not loaded yet)
-    if (
-        url &&
-        anon &&
-        typeof window.supabase === 'object' &&
-        window.supabase !== null &&
-        typeof window.supabase.createClient === 'function'
-    ) {
-        supabase = window.supabase.createClient(url, anon, {
-            auth: { persistSession: true, autoRefreshToken: true }
-        });
-        console.log('✅ Supabase initialized from meta config (createClient):', url);
-        return true;
+
+    if (!url || !anon) {
+        console.warn('⚠️ Supabase meta config missing');
+        return false;
     }
-    // If using v1 UMD, window.supabase is a function (very rare now)
-    if (
-        url &&
-        anon &&
-        typeof window.supabase === 'function'
-    ) {
-        supabase = window.supabase(url, anon, {
-            auth: { persistSession: true, autoRefreshToken: true }
-        });
-        console.log('✅ Supabase initialized from meta config:', url);
-        return true;
+
+    try {
+        await waitForSupabase();
+
+        // v2 (current)
+        if (window.supabase?.createClient) {
+            supabase = window.supabase.createClient(url, anon);
+            console.log('✅ Supabase v2 initialized');
+            return true;
+        }
+
+        // v1 (legacy)
+        if (typeof window.supabase === 'function') {
+            supabase = window.supabase(url, anon);
+            console.log('⚠️ Supabase v1 initialized');
+            return true;
+        }
+
+        return false;
+    } catch (err) {
+        console.warn('⚠️ Supabase init skipped:', err.message);
+        return false;
     }
-    // If window.supabase is null, the CDN script did not load or loaded after this script.
-    if (window.supabase === null) {
-        console.error('❌ Supabase UMD script not loaded or loaded after supabase-config.js. Make sure the CDN <script> is before this file in your HTML.');
-    }
-    // Add extra debug info for troubleshooting
-    console.log('❌ Supabase config not found or invalid:', {
-        url,
-        anon,
-        supabaseType: typeof window.supabase,
-        supabaseObj: window.supabase
-    });
-    return false;
 };
 
-window.fetchParticipantByUsername = async function(username) {
+window.fetchParticipantByUsername = async function (username) {
     if (!supabase) throw new Error('Supabase not initialized');
     const { data, error } = await supabase
         .from('participants')
@@ -300,37 +214,32 @@ window.fetchParticipantByUsername = async function(username) {
     return data;
 };
 
-window.fetchParticipantByUserCode = async function(userCode) {
+window.fetchParticipantByUserCode = async function (code) {
     if (!supabase) throw new Error('Supabase not initialized');
     const { data, error } = await supabase
         .from('participants')
         .select('id, name, username, email, user_code, total_votes, created_at')
-        .eq('user_code', userCode)
+        .eq('user_code', code)
         .single();
     if (error) throw error;
     return data;
 };
 
 // ========================================
-// EXPORT FOR GLOBAL ACCESS
+// EXPORT GLOBAL API
 // ========================================
+
 window.SupabaseAPI = {
-    // Auth
     registerParticipant,
     loginParticipant,
     verifyToken,
     getCurrentUser,
     logout,
     getAuthHeader,
-    
-    // Participants
     getParticipantByUsername,
     getParticipantByUserCode,
     getLeaderboard,
     searchParticipants,
-    getParticipantsFromSupabase,
-    
-    // Utils
     testConnection
 };
 
