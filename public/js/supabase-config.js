@@ -249,24 +249,39 @@ window.initSupabaseFromMeta = function() {
     const meta = document.querySelector('meta[name="supabase-config"]');
     const url = meta?.getAttribute('data-url');
     const anon = meta?.getAttribute('data-anon');
-    // Fix: Prevent reading 'createClient' of null
-    // Check window.supabase exists before accessing .createClient
-    if (url && anon && typeof window.supabase === 'object' && window.supabase !== null && typeof window.supabase.createClient === 'function') {
+    // Fix: Check window.supabase.createClient exists and is a function (for UMD v2+)
+    if (
+        url &&
+        anon &&
+        typeof window.supabase === 'object' &&
+        window.supabase !== null &&
+        typeof window.supabase.createClient === 'function'
+    ) {
         supabase = window.supabase.createClient(url, anon, {
             auth: { persistSession: true, autoRefreshToken: true }
         });
         console.log('✅ Supabase initialized from meta config (createClient):', url);
         return true;
     }
-    // If using v1 UMD, window.supabase is a function
-    if (url && anon && typeof window.supabase === 'function') {
+    // If using v1 UMD, window.supabase is a function (very rare now)
+    if (
+        url &&
+        anon &&
+        typeof window.supabase === 'function'
+    ) {
         supabase = window.supabase(url, anon, {
             auth: { persistSession: true, autoRefreshToken: true }
         });
         console.log('✅ Supabase initialized from meta config:', url);
         return true;
     }
-    console.log('❌ Supabase config not found or invalid:', { url, anon, supabaseType: typeof window.supabase });
+    // Add extra debug info for troubleshooting
+    console.log('❌ Supabase config not found or invalid:', {
+        url,
+        anon,
+        supabaseType: typeof window.supabase,
+        supabaseObj: window.supabase
+    });
     return false;
 };
 
