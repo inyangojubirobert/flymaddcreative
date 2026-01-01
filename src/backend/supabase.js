@@ -12,12 +12,12 @@ import bcrypt from 'bcryptjs';
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-if (!supabaseKey) {
-  console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not set, using anon key');
+if (!supabaseUrl) {
+  throw new Error('SUPABASE_URL is required. Check your .env.local and restart your build.');
 }
-
-console.log('SUPABASE_URL:', process.env.SUPABASE_URL);
-console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY);
+if (!supabaseKey) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required. Check your .env.local and restart your build.');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
