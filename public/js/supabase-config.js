@@ -389,20 +389,13 @@
     // ========================================
 
     window.initSupabaseFromMeta = function () {
-        // Add fallback to .env public variables if meta tag is missing
-        let url, anon;
+        // Always try to read from meta tag (required for your setup)
         const meta = document.querySelector('meta[name="supabase-config"]');
-        if (meta) {
-            url = meta.getAttribute('data-url');
-            anon = meta.getAttribute('data-anon');
-        } else {
-            // Try to get from window/global env (for dev or fallback)
-            url = window.NEXT_PUBLIC_SUPABASE_URL || (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
-            anon = window.NEXT_PUBLIC_SUPABASE_ANON_KEY || (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY : undefined);
-        }
+        const url = meta?.getAttribute('data-url');
+        const anon = meta?.getAttribute('data-anon');
 
         if (!url || !anon) {
-            console.error('❌ Supabase meta config missing and no fallback found');
+            console.error('❌ Supabase meta config missing. Make sure your <meta name="supabase-config" ...> tag is present in the <head> of your HTML.');
             return false;
         }
 
