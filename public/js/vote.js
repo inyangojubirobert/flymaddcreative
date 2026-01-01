@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     const userCode = urlParams.get('code') || urlParams.get('user_code');
 
     if (!username && !userCode) {
-        showError('No participant specified in URL. Please provide either username or user code.');
+        showError('To partake in voting, please search for the participant using their username or user code or you click through their unique voting link.');
         return;
     }
 
