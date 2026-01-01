@@ -1,7 +1,7 @@
 // API endpoint: /api/onedream/participants/code/[code]
 // Returns participant info by user_code
 
-import { supabase } from '../../../../../../src/backend/supabase.js';
+import { supabase } from '../../../../../src/backend/supabase.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
