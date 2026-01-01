@@ -9,12 +9,15 @@ import bcrypt from 'bcryptjs';
 // --------------------
 // Supabase Configuration
 // --------------------
-const supabaseUrl = process.env.SUPABASE_URL || 'https://pjtuisyvpvoswmcgxsfs.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!supabaseKey) {
   console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not set, using anon key');
 }
+
+console.log('SUPABASE_URL:', process.env.SUPABASE_URL);
+console.log('SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -177,5 +180,10 @@ export async function getParticipantWithPassword(email) {
   if (error) throw error;
   return data || null;
 }
+
+// Make sure you export createParticipant if you want to use it in register-participant.js
+// If you meant registerParticipant, export it as createParticipant for compatibility:
+
+export { registerParticipant as createParticipant };
 
 export default supabase;
