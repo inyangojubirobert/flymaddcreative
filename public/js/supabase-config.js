@@ -243,7 +243,7 @@ async function getParticipantsFromSupabase(limit = 50) {
 
 // Supabase client initialization
 let supabase = null;
-export function initSupabaseFromMeta() {
+window.initSupabaseFromMeta = function() {
     const meta = document.querySelector('meta[name="supabase-config"]');
     const url = meta?.getAttribute('data-url');
     const anon = meta?.getAttribute('data-anon');
@@ -259,7 +259,7 @@ export function initSupabaseFromMeta() {
 }
 
 // Participant fetch helpers
-export async function fetchParticipantByUsername(username) {
+window.fetchParticipantByUsername = async function(username) {
     if (!supabase) throw new Error('Supabase not initialized');
     const { data, error } = await supabase
         .from('participants')
@@ -270,7 +270,7 @@ export async function fetchParticipantByUsername(username) {
     return data;
 }
 
-export async function fetchParticipantByUserCode(userCode) {
+window.fetchParticipantByUserCode = async function(userCode) {
     if (!supabase) throw new Error('Supabase not initialized');
     const { data, error } = await supabase
         .from('participants')
