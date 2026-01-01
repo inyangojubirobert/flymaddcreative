@@ -12,12 +12,6 @@
     <!-- Tailwind CSS (built) -->
     <link rel="stylesheet" href="/dist/output.css">
 
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-
-    <!-- Stripe.js -->
-    <script src="https://js.stripe.com/v3/"></script>
-
     <!-- Enhanced CSS Styles -->
     <style>
         body {
@@ -394,7 +388,8 @@
             </div>
         </div>
     </div>
-    <!-- External JS references for logic -->
+    <!-- Place these scripts at the END of <body> in this exact order: -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="/js/supabase-config.js"></script>
     <script src="/js/vote.js"></script>
 </body>
