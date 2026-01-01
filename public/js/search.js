@@ -2,15 +2,11 @@
 
 // Search logic for Find Participant page
 let foundParticipant = null;
-let DEMO_MODE = false;
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // Ensure Supabase is initialized
-    if (window.initSupabaseFromMeta && window.initSupabaseFromMeta()) {
-        DEMO_MODE = false;
-    } else {
-        console.warn('⚠️ Supabase not initialized, using demo mode');
-        DEMO_MODE = true;
+    // Optionally initialize Supabase if needed for other features
+    if (window.initSupabaseFromMeta) {
+        window.initSupabaseFromMeta();
     }
 
     document.getElementById('searchForm').addEventListener('submit', handleSearch);
@@ -51,11 +47,7 @@ async function handleSearch(event, providedCode = null) {
     spinner.classList.remove('hidden');
 
     try {
-        if (DEMO_MODE) {
-            await simulateSearch(userCode);
-        } else {
-            await searchParticipantByCode(userCode);
-        }
+        await searchParticipantByCode(userCode);
     } catch (error) {
         console.error('Search failed:', error);
         showError(`Search failed: ${error.message}`);
@@ -66,25 +58,7 @@ async function handleSearch(event, providedCode = null) {
     }
 }
 
-async function simulateSearch(userCode) {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    const demoParticipants = {
-        'ABC123XY': { id: 1, name: 'John Demo User', username: 'johndemo', email: 'john@example.com', user_code: 'ABC123XY', total_votes: 245, rank: 15 },
-        'DEF456ZW': { id: 2, name: 'Sarah Demo User', username: 'sarahdemo', email: 'sarah@example.com', user_code: 'DEF456ZW', total_votes: 189, rank: 23 },
-        'GHI789UV': { id: 3, name: 'Mike Demo User', username: 'mikedemo', email: 'mike@example.com', user_code: 'GHI789UV', total_votes: 567, rank: 8 }
-    };
-    const participant = demoParticipants[userCode];
-    if (participant) {
-        foundParticipant = participant;
-        showParticipantFound();
-        console.log('🎭 Demo participant found:', participant);
-    } else {
-        showError(`No participant found with code "${userCode}". Try ABC123XY, DEF456ZW, or GHI789UV for demo.`);
-    }
-}
-
 async function searchParticipantByCode(userCode) {
-    // Use backend API for search
     try {
         const response = await fetch(`/api/onedream/participants/code/${userCode}`);
         if (!response.ok) throw new Error('Participant not found');
