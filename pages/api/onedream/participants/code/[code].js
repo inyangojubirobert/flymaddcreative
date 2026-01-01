@@ -1,7 +1,7 @@
 // API endpoint: /api/onedream/participants/code/[code]
 // Returns participant info by user_code
 
-import { supabase } from '../../../../../src/backend/supabase.js';
+import { getParticipantByUserCode } from '../../../../../src/backend/supabase.js';
 
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -14,25 +14,21 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { data, error } = await supabase
-            .from('participants')
-            .select('id, name, username, email, user_code, total_votes, created_at')
-            .eq('user_code', code.toUpperCase())
-            .single();
+        const data = await getParticipantByUserCode(code);
 
-        if (error || !data) {
+        if (!data) {
             return res.status(404).json({ error: 'Participant not found' });
         }
 
-        // Optionally, add rank
-        const { count } = await supabase
-            .from('participants')
-            .select('id', { count: 'exact', head: true })
-            .gt('total_votes', data.total_votes);
-
+        // Return participant (rank can be computed separately if needed)
         const participant = {
-            ...data,
-            rank: (count || 0) + 1
+            id: data.id,
+            name: data.name,
+            username: data.username,
+            email: data.email,
+            user_code: data.user_code,
+            total_votes: data.total_votes,
+            created_at: data.created_at
         };
 
         return res.status(200).json({ participant });

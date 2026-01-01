@@ -7,19 +7,26 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 
 // --------------------
-// Supabase Configuration
+// Supabase Configuration (Lazy Initialization)
 // --------------------
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+let _supabase = null;
 
-if (!supabaseUrl) {
-  throw new Error('SUPABASE_URL is required. Check your .env.local and restart your build.');
-}
-if (!supabaseKey) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is required. Check your .env.local and restart your build.');
+function getSupabaseClient() {
+  if (!_supabase) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
+    }
+    
+    _supabase = createClient(supabaseUrl, supabaseKey);
+  }
+  return _supabase;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Helper to get the client in each function
+const getDb = getSupabaseClient;
 
 // --------------------
 // PARTICIPANTS API
@@ -29,7 +36,8 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
  * Get participant by email
  */
 export async function getParticipantByEmail(email) {
-  const { data, error } = await supabase
+  const db = getDb();
+  const { data, error } = await db
     .from('participants')
     .select('*')
     .eq('email', email.toLowerCase().trim())
@@ -43,7 +51,8 @@ export async function getParticipantByEmail(email) {
  * Get participant by username
  */
 export async function getParticipantByUsername(username) {
-  const { data, error } = await supabase
+  const db = getDb();
+  const { data, error } = await db
     .from('participants')
     .select('*')
     .eq('username', username.toLowerCase().trim())
@@ -57,7 +66,8 @@ export async function getParticipantByUsername(username) {
  * Get participant by user_code
  */
 export async function getParticipantByUserCode(userCode) {
-  const { data, error } = await supabase
+  const db = getDb();
+  const { data, error } = await db
     .from('participants')
     .select('*')
     .eq('user_code', userCode.toUpperCase().trim())
@@ -71,6 +81,7 @@ export async function getParticipantByUserCode(userCode) {
  * Register participant (hashes password before saving)
  */
 export async function registerParticipant(name, email, username, password) {
+  const db = getDb();
   // Check if email or username already exists
   const existingEmail = await getParticipantByEmail(email);
   if (existingEmail) throw new Error('Email already registered');
@@ -82,7 +93,7 @@ export async function registerParticipant(name, email, username, password) {
   const passwordHash = bcrypt.hashSync(password, 10);
 
   // Insert participant
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('participants')
     .insert({
       name: name.trim(),
@@ -105,7 +116,8 @@ export async function registerParticipant(name, email, username, password) {
  * Verify participant password
  */
 export async function verifyParticipantPassword(email, password) {
-  const participant = await supabase
+  const db = getDb();
+  const participant = await db
     .from('participants')
     .select('id, name, email, username, user_code, password_hash, total_votes, current_stage, created_at')
     .eq('email', email.toLowerCase().trim())
@@ -125,7 +137,8 @@ export async function verifyParticipantPassword(email, password) {
  * Get referral link for participant
  */
 export async function getReferralLink(participantId) {
-  const { data, error } = await supabase
+  const db = getDb();
+  const { data, error } = await db
     .from('referral_links')
     .select('user_vote_link')
     .eq('participant_id', participantId)
@@ -139,7 +152,8 @@ export async function getReferralLink(participantId) {
  * Get leaderboard
  */
 export async function getLeaderboard(limit = 50) {
-  const { data, error } = await supabase
+  const db = getDb();
+  const { data, error } = await db
     .from('participants')
     .select('id, name, username, user_code, total_votes, total_amount, current_stage, created_at')
     .order('total_votes', { ascending: false })
@@ -153,10 +167,11 @@ export async function getLeaderboard(limit = 50) {
  * Search participants
  */
 export async function searchParticipants(query) {
+  const db = getDb();
   const searchTerm = query.trim();
   if (!searchTerm) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('participants')
     .select('id, name, username, user_code, total_votes, current_stage')
     .or(`username.ilike.%${searchTerm}%,user_code.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%`)
@@ -171,7 +186,8 @@ export async function searchParticipants(query) {
  * Get participant with password (for internal use)
  */
 export async function getParticipantWithPassword(email) {
-  const { data, error } = await supabase
+  const db = getDb();
+  const { data, error } = await db
     .from('participants')
     .select('id, name, email, username, user_code, password_hash, total_votes, current_stage, created_at')
     .eq('email', email.toLowerCase().trim())
