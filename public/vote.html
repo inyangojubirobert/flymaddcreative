@@ -400,7 +400,6 @@
         // 🔧 SECURE CONFIGURATION
         // ========================================
         
-        // Declare supabase at the top
         let supabase = null;
         let currentParticipant = null;
         let selectedVoteAmount = 1;
@@ -418,10 +417,10 @@
                     supabase = window.supabase.createClient(url, anon, {
                         auth: { persistSession: true, autoRefreshToken: true }
                     });
-                    console.log('✅ Supabase initialized from meta config:', url);
+                    console.log('✅ Supabase initialized from meta config');
                     return;
                 }
-                console.log('❌ Supabase config not found or invalid:', { url, anon });
+                console.log('❌ Supabase config not found');
             } catch (error) {
                 console.warn('⚠️ Failed to initialize Supabase:', error);
             }
@@ -433,9 +432,6 @@
 
         document.addEventListener('DOMContentLoaded', async function() {
             await loadConfig();
-
-            // Debug: Log supabase client and config
-            console.log('Supabase client:', supabase);
 
             const urlParams = new URLSearchParams(window.location.search);
             const username = urlParams.get('user') || urlParams.get('username');
@@ -726,7 +722,6 @@
 
         async function processStripePayment(paymentData) {
             // Initialize Stripe
-            // Make sure you have set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in your environment
             const publishableKey = window.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 
                 (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY : null) ||
                 'pk_test_...'; // fallback for dev
