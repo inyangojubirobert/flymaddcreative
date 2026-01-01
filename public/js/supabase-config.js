@@ -389,24 +389,27 @@
     // ========================================
 
     window.initSupabaseFromMeta = function () {
-        if (getSupabaseInstance()) {
-            console.log('ℹ️ Supabase already initialized');
-            return true;
+        // Add fallback to .env public variables if meta tag is missing
+        let url, anon;
+        const meta = document.querySelector('meta[name="supabase-config"]');
+        if (meta) {
+            url = meta.getAttribute('data-url');
+            anon = meta.getAttribute('data-anon');
+        } else {
+            // Try to get from window/global env (for dev or fallback)
+            url = window.NEXT_PUBLIC_SUPABASE_URL || (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_URL : undefined);
+            anon = window.NEXT_PUBLIC_SUPABASE_ANON_KEY || (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY : undefined);
         }
 
-        const meta = document.querySelector('meta[name="supabase-config"]');
-        const url = meta?.getAttribute('data-url');
-        const anon = meta?.getAttribute('data-anon');
-
         if (!url || !anon) {
-            console.error('❌ Supabase meta config missing');
+            console.error('❌ Supabase meta config missing and no fallback found');
             return false;
         }
 
         if (!window.supabase) {
             console.error(
                 '❌ Supabase UMD not loaded. Make sure this comes BEFORE supabase-config.js:\n' +
-                '<script src="https://unpkg.com/@supabase/supabase-js@2"></script>'
+                '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>'
             );
             return false;
         }
@@ -417,7 +420,7 @@
                     ? window.supabase.createClient(url, anon)
                     : window.supabase(url, anon);
 
-            setSupabaseInstance(client);
+            window.__onedreamSupabase = client;
             console.log('✅ Supabase initialized');
             return true;
         } catch (err) {
