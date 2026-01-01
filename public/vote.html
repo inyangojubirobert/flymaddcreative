@@ -394,7 +394,6 @@
             </div>
         </div>
     </div>
-
     <!-- Move your main script here, just before </body> -->
     <script>
         // ========================================
@@ -403,12 +402,11 @@
         
         // 🔐 Load configuration securely from API endpoint
         let supabase = null;
-        let DEMO_MODE = false; // Disable demo mode for production
         let currentParticipant = null;
         let selectedVoteAmount = 1;
         let selectedCost = 2.00;
-        let selectedPaymentMethod = 'stripe'; // Default payment method
-        
+        let selectedPaymentMethod = 'stripe';
+
         // Load configuration from secure endpoint
         async function loadConfig() {
             try {
@@ -417,21 +415,16 @@
                 const anon = meta?.getAttribute('data-anon');
 
                 if (url && anon && window.supabase?.createClient) {
-                    // FIX: Remove 'const' here
+                    // Only assign, do not redeclare:
                     supabase = window.supabase.createClient(url, anon, {
                         auth: { persistSession: true, autoRefreshToken: true }
                     });
-                    DEMO_MODE = false;
                     console.log('✅ Supabase initialized from meta config');
                     return;
                 }
-
-                // Fallback: keep demo mode
-                console.log('🎭 No config found, using demo mode');
-                DEMO_MODE = true;
+                console.log('❌ Supabase config not found');
             } catch (error) {
-                console.warn('⚠️ Failed to initialize Supabase, using demo mode:', error);
-                DEMO_MODE = true;
+                console.warn('⚠️ Failed to initialize Supabase:', error);
             }
         }
         
@@ -440,94 +433,34 @@
         // ========================================
 
         document.addEventListener('DOMContentLoaded', async function() {
-            // Load secure configuration first
             await loadConfig();
-            
-            // Get participant from URL - support multiple parameter formats
+
             const urlParams = new URLSearchParams(window.location.search);
             const username = urlParams.get('user') || urlParams.get('username');
             const userCode = urlParams.get('code') || urlParams.get('user_code');
-            
+
             if (!username && !userCode) {
                 showError('No participant specified in URL. Please provide either username or user code.');
                 return;
             }
-            
-            // Load participant data
+
             if (userCode) {
                 await loadParticipantByCode(userCode);
             } else {
                 await loadParticipant(username);
             }
-            
-            // Initialize vote amount selection
+
             initializeVoteSelection();
-            
-            // Initialize vote button
             document.getElementById('voteButton').addEventListener('click', handleVote);
         });
 
         async function loadParticipantByCode(userCode) {
             try {
-                if (DEMO_MODE) {
-                    await simulateParticipantLoadByCode(userCode);
-                } else {
-                    await loadParticipantFromSupabaseByCode(userCode);
-                }
-                
+                await loadParticipantFromSupabaseByCode(userCode);
                 showParticipant();
-                
             } catch (error) {
                 console.error('Failed to load participant by code:', error);
                 showError(`Failed to load participant: ${error.message}`);
-            }
-        }
-
-        async function simulateParticipantLoadByCode(userCode) {
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Demo participants by user code
-            const demoParticipants = {
-                'ABC123XY': {
-                    id: 1001,
-                    name: 'John Demo User',
-                    username: 'johndemo',
-                    email: 'john@example.com',
-                    user_code: 'ABC123XY',
-                    total_votes: 245,
-                    rank: 15,
-                    created_at: new Date().toISOString()
-                },
-                'DEF456ZW': {
-                    id: 1002,
-                    name: 'Sarah Demo User',
-                    username: 'sarahdemo',
-                    email: 'sarah@example.com',
-                    user_code: 'DEF456ZW',
-                    total_votes: 189,
-                    rank: 23,
-                    created_at: new Date().toISOString()
-                },
-                'GHI789UV': {
-                    id: 1003,
-                    name: 'Mike Demo User',
-                    username: 'mikedemo',
-                    email: 'mike@example.com',
-                    user_code: 'GHI789UV',
-                    total_votes: 567,
-                    rank: 8,
-                    created_at: new Date().toISOString()
-                }
-            };
-            
-            const participant = demoParticipants[userCode.toUpperCase()];
-            
-            if (participant) {
-                currentParticipant = participant;
-                console.log('🎭 Demo participant loaded by code:', currentParticipant);
-            } else {
-                throw new Error(`Participant not found with code: ${userCode}. Try ABC123XY, DEF456ZW, or GHI789UV`);
             }
         }
 
@@ -564,37 +497,12 @@
 
         async function loadParticipant(username) {
             try {
-                if (DEMO_MODE) {
-                    await simulateParticipantLoad(username);
-                } else {
-                    await loadParticipantFromSupabase(username);
-                }
-                
+                await loadParticipantFromSupabase(username);
                 showParticipant();
-                
             } catch (error) {
                 console.error('Failed to load participant:', error);
                 showError(`Failed to load participant: ${error.message}`);
             }
-        }
-
-        async function simulateParticipantLoad(username) {
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Generate mock participant data
-            currentParticipant = {
-                id: Math.floor(Math.random() * 10000),
-                name: username.charAt(0).toUpperCase() + username.slice(1) + ' Demo User',
-                username: username,
-                email: `${username}@example.com`,
-                user_code: generateUserCode(),
-                total_votes: Math.floor(Math.random() * 1000),
-                rank: Math.floor(Math.random() * 50) + 1,
-                created_at: new Date().toISOString()
-            };
-            
-            console.log('🎭 Demo participant loaded:', currentParticipant);
         }
 
         async function loadParticipantFromSupabase(username) {
@@ -619,12 +527,11 @@
                 throw error;
             }
 
-            // Get rank (simplified - in production you'd use a view or function)
             const { data: rankData } = await supabase
                 .from('participants')
                 .select('id')
                 .gt('total_votes', participant.total_votes);
-            
+
             participant.rank = (rankData?.length || 0) + 1;
             currentParticipant = participant;
         }
@@ -749,11 +656,7 @@
             spinner.classList.remove('hidden');
             
             try {
-                if (DEMO_MODE) {
-                    await simulatePaymentAndVote();
-                } else {
-                    await processPaymentAndVote();
-                }
+                await processPaymentAndVote();
                 
                 showSuccessModal();
                 
@@ -766,16 +669,6 @@
                 updateUI();
                 spinner.classList.add('hidden');
             }
-        }
-
-        async function simulatePaymentAndVote() {
-            // Simulate payment processing delay
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-            // Update local participant data
-            currentParticipant.total_votes += selectedVoteAmount;
-            
-            console.log(`🎭 Demo payment: $${selectedCost} for ${selectedVoteAmount} votes for ${currentParticipant.username}`);
         }
 
         async function processPaymentAndVote() {
