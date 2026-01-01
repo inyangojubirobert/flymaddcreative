@@ -241,6 +241,46 @@ async function getParticipantsFromSupabase(limit = 50) {
     }
 }
 
+// Supabase client initialization
+let supabase = null;
+export function initSupabaseFromMeta() {
+    const meta = document.querySelector('meta[name="supabase-config"]');
+    const url = meta?.getAttribute('data-url');
+    const anon = meta?.getAttribute('data-anon');
+    if (url && anon && window.supabase?.createClient) {
+        supabase = window.supabase.createClient(url, anon, {
+            auth: { persistSession: true, autoRefreshToken: true }
+        });
+        console.log('✅ Supabase initialized from meta config:', url);
+        return true;
+    }
+    console.log('❌ Supabase config not found or invalid:', { url, anon });
+    return false;
+}
+
+// Participant fetch helpers
+export async function fetchParticipantByUsername(username) {
+    if (!supabase) throw new Error('Supabase not initialized');
+    const { data, error } = await supabase
+        .from('participants')
+        .select('id, name, username, email, user_code, total_votes, created_at')
+        .eq('username', username)
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function fetchParticipantByUserCode(userCode) {
+    if (!supabase) throw new Error('Supabase not initialized');
+    const { data, error } = await supabase
+        .from('participants')
+        .select('id, name, username, email, user_code, total_votes, created_at')
+        .eq('user_code', userCode)
+        .single();
+    if (error) throw error;
+    return data;
+}
+
 // ========================================
 // EXPORT FOR GLOBAL ACCESS
 // ========================================
