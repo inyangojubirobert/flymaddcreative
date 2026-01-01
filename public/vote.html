@@ -400,8 +400,8 @@
         // 🔧 SECURE CONFIGURATION
         // ========================================
         
-        // 🔐 Load configuration securely from API endpoint
-        // let supabase = null; // Removed duplicate declaration if already declared elsewhere
+        // Declare supabase at the top
+        let supabase = null;
         let currentParticipant = null;
         let selectedVoteAmount = 1;
         let selectedCost = 2.00;
@@ -415,14 +415,13 @@
                 const anon = meta?.getAttribute('data-anon');
 
                 if (url && anon && window.supabase?.createClient) {
-                    // Only assign, do not redeclare:
                     supabase = window.supabase.createClient(url, anon, {
                         auth: { persistSession: true, autoRefreshToken: true }
                     });
-                    console.log('✅ Supabase initialized from meta config');
+                    console.log('✅ Supabase initialized from meta config:', url);
                     return;
                 }
-                console.log('❌ Supabase config not found');
+                console.log('❌ Supabase config not found or invalid:', { url, anon });
             } catch (error) {
                 console.warn('⚠️ Failed to initialize Supabase:', error);
             }
@@ -434,6 +433,9 @@
 
         document.addEventListener('DOMContentLoaded', async function() {
             await loadConfig();
+
+            // Debug: Log supabase client and config
+            console.log('Supabase client:', supabase);
 
             const urlParams = new URLSearchParams(window.location.search);
             const username = urlParams.get('user') || urlParams.get('username');
