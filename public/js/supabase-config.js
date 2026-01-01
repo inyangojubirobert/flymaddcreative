@@ -249,20 +249,21 @@ window.initSupabaseFromMeta = function() {
     const meta = document.querySelector('meta[name="supabase-config"]');
     const url = meta?.getAttribute('data-url');
     const anon = meta?.getAttribute('data-anon');
-    // Fix: Check that window.supabase exists and is a function (UMD CDN exposes as a function, not an object)
+    // Fix: Prevent reading 'createClient' of null
+    // Check window.supabase exists before accessing .createClient
+    if (url && anon && typeof window.supabase === 'object' && window.supabase !== null && typeof window.supabase.createClient === 'function') {
+        supabase = window.supabase.createClient(url, anon, {
+            auth: { persistSession: true, autoRefreshToken: true }
+        });
+        console.log('✅ Supabase initialized from meta config (createClient):', url);
+        return true;
+    }
+    // If using v1 UMD, window.supabase is a function
     if (url && anon && typeof window.supabase === 'function') {
         supabase = window.supabase(url, anon, {
             auth: { persistSession: true, autoRefreshToken: true }
         });
         console.log('✅ Supabase initialized from meta config:', url);
-        return true;
-    }
-    // If using v2 UMD, window.supabase.createClient is a function
-    if (url && anon && typeof window.supabase === 'object' && typeof window.supabase.createClient === 'function') {
-        supabase = window.supabase.createClient(url, anon, {
-            auth: { persistSession: true, autoRefreshToken: true }
-        });
-        console.log('✅ Supabase initialized from meta config (createClient):', url);
         return true;
     }
     console.log('❌ Supabase config not found or invalid:', { url, anon, supabaseType: typeof window.supabase });
