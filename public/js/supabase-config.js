@@ -249,7 +249,8 @@ window.initSupabaseFromMeta = function() {
     const meta = document.querySelector('meta[name="supabase-config"]');
     const url = meta?.getAttribute('data-url');
     const anon = meta?.getAttribute('data-anon');
-    if (url && anon && window.supabase?.createClient) {
+    // Fix: window.supabase is the global UMD, not window.supabase.createClient
+    if (url && anon && typeof window.supabase === 'object' && typeof window.supabase.createClient === 'function') {
         supabase = window.supabase.createClient(url, anon, {
             auth: { persistSession: true, autoRefreshToken: true }
         });
