@@ -36,7 +36,7 @@
     </script>
     <style>
         body {
-            background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #8b5cf6, #ec4899);
+            background: linear-gradient(-45deg, #831843, #be185d, #ec4899, #f472b6);
             background-size: 400% 400%;
             animation: gradient 15s ease infinite;
         }
@@ -59,7 +59,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center space-x-4">
-                    <a href="index.html" class="text-xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                    <a href="index.html" class="text-xl font-bold bg-gradient-to-r from-pink-300 via-pink-500 to-rose-500 bg-clip-text text-transparent">
                         FlyMadd Creative
                     </a>
                     <span class="text-white/60">|</span>
@@ -82,7 +82,7 @@
             
             <!-- Header -->
             <div class="text-center mb-8 animate-fade-in">
-                <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent mb-4">
+                <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-300 via-pink-500 to-rose-500 bg-clip-text text-transparent mb-4">
                     Find a Participant
                 </h1>
                 <p class="text-xl text-white/80">
@@ -105,7 +105,7 @@
                                    required
                                    maxlength="8"
                                    pattern="[A-Z0-9]{8}"
-                                   class="w-full bg-white/10 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xl font-mono tracking-widest uppercase"
+                                   class="w-full bg-white/10 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-pink-500 text-center text-xl font-mono tracking-widest uppercase"
                                    placeholder="ABC123XY"
                                    autocomplete="off">
                             <p class="text-sm text-white/60 mt-2">
@@ -115,7 +115,7 @@
                         
                         <button type="submit" 
                                 id="searchButton" 
-                                class="w-full py-4 px-8 rounded-xl text-white font-bold text-lg transition-all duration-300 disabled:opacity-50 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-pink-500/40">
+                                class="w-full py-4 px-8 rounded-xl text-white font-bold text-lg transition-all duration-300 disabled:opacity-50 bg-gradient-to-r from-pink-500 to-rose-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-pink-500/40">
                             <span id="searchButtonText">🔍 Find Participant</span>
                             <div id="searchSpinner" class="hidden inline-block ml-2 w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         </button>
@@ -150,7 +150,7 @@
                         <div class="bg-white/10 rounded-xl p-6 mb-6">
                             <div class="flex flex-col md:flex-row items-center gap-6">
                                 <!-- Avatar -->
-                                <div class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500">
+                                <div class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white bg-gradient-to-br from-pink-500 to-rose-600">
                                     <span id="foundParticipantInitials">?</span>
                                 </div>
                                 
@@ -182,7 +182,7 @@
                                 🔍 Search Again
                             </button>
                             <button id="voteForParticipant" 
-                                    class="px-8 py-3 rounded-lg font-bold transition-all bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-pink-500/40">
+                                    class="px-8 py-3 rounded-lg font-bold transition-all bg-gradient-to-r from-pink-500 to-rose-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-pink-500/40">
                                 🗳️ Vote for This Participant
                             </button>
                         </div>
