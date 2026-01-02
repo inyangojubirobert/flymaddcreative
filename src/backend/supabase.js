@@ -137,15 +137,24 @@ export async function verifyParticipantPassword(email, password) {
  * Get referral link for participant
  */
 export async function getReferralLink(participantId) {
-  const db = getDb();
-  const { data, error } = await db
-    .from('referral_links')
-    .select('user_vote_link')
-    .eq('participant_id', participantId)
-    .single();
+  try {
+    const db = getDb();
+    const { data, error } = await db
+      .from('referral_links')
+      .select('user_vote_link')
+      .eq('participant_id', participantId)
+      .single();
 
-  if (error) throw error;
-  return data?.user_vote_link || null;
+    if (error) {
+      // Table might not exist or no record found - return null instead of throwing
+      console.warn('getReferralLink warning:', error.message);
+      return null;
+    }
+    return data?.user_vote_link || null;
+  } catch (err) {
+    console.warn('getReferralLink error:', err.message);
+    return null;
+  }
 }
 
 /**
@@ -193,7 +202,8 @@ export async function getParticipantWithPassword(email) {
     .eq('email', email.toLowerCase().trim())
     .single();
 
-  if (error) throw error;
+  // PGRST116 = no rows returned, which is not an error for login
+  if (error && error.code !== 'PGRST116') throw error;
   return data || null;
 }
 
@@ -201,5 +211,3 @@ export async function getParticipantWithPassword(email) {
 // If you meant registerParticipant, export it as createParticipant for compatibility:
 
 export { registerParticipant as createParticipant };
-
-export default supabase;
