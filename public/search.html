@@ -9,8 +9,31 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon.png">
     
-    <!-- Tailwind CSS -->
-    <link rel="stylesheet" href="/dist/output.css">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'spin': 'spin 1s linear infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        }
+    </style>
 
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -19,13 +42,13 @@
     <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
 </head>
 
-<body class="text-white">
+<body class="text-white min-h-screen">
     <!-- Navigation -->
-    <nav class="glassmorphism border-b border-white/20">
+    <nav class="bg-white/10 backdrop-blur-md border-b border-white/20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center space-x-4">
-                    <a href="index.html" class="text-xl font-bold gradient-text">
+                    <a href="index.html" class="text-xl font-bold bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
                         FlyMadd Creative
                     </a>
                     <span class="text-white/60">|</span>
@@ -47,8 +70,8 @@
         <div class="max-w-2xl w-full">
             
             <!-- Header -->
-            <div class="text-center mb-8 fade-in">
-                <h1 class="text-4xl md:text-5xl font-bold gradient-text mb-4">
+            <div class="text-center mb-8 animate-fade-in">
+                <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 bg-clip-text text-transparent mb-4">
                     Find a Participant
                 </h1>
                 <p class="text-xl text-white/80">
@@ -57,7 +80,7 @@
             </div>
 
             <!-- Search Section -->
-            <div class="glassmorphism rounded-2xl p-8 mb-8 search-card">
+            <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300">
                 <div class="text-center">
                     <h3 class="text-2xl font-bold mb-4">🔍 Search by User Code</h3>
                     
@@ -71,7 +94,7 @@
                                    required
                                    maxlength="8"
                                    pattern="[A-Z0-9]{8}"
-                                   class="w-full bg-white/10 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-xl font-mono tracking-widest uppercase"
+                                   class="w-full bg-white/10 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-500 text-center text-xl font-mono tracking-widest uppercase"
                                    placeholder="ABC123XY"
                                    autocomplete="off">
                             <p class="text-sm text-white/60 mt-2">
@@ -81,9 +104,9 @@
                         
                         <button type="submit" 
                                 id="searchButton" 
-                                class="search-button w-full py-4 px-8 rounded-xl text-white font-bold text-lg transition-all duration-300 disabled:opacity-50">
+                                class="w-full py-4 px-8 rounded-xl text-white font-bold text-lg transition-all duration-300 disabled:opacity-50 bg-gradient-to-r from-purple-500 to-pink-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-purple-500/40">
                             <span id="searchButtonText">🔍 Find Participant</span>
-                            <div id="searchSpinner" class="loading-spinner hidden inline-block ml-2"></div>
+                            <div id="searchSpinner" class="hidden inline-block ml-2 w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         </button>
                     </form>
                     
@@ -107,7 +130,7 @@
             <!-- Search Results -->
             <div id="searchResults" class="hidden">
                 <!-- Participant Found -->
-                <div id="participantFound" class="glassmorphism rounded-2xl p-8 mb-8">
+                <div id="participantFound" class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
                     <div class="text-center">
                         <div class="text-6xl mb-4">🎉</div>
                         <h3 class="text-2xl font-bold mb-4">Participant Found!</h3>
@@ -116,7 +139,7 @@
                         <div class="bg-white/10 rounded-xl p-6 mb-6">
                             <div class="flex flex-col md:flex-row items-center gap-6">
                                 <!-- Avatar -->
-                                <div class="participant-avatar w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white">
+                                <div class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white bg-gradient-to-br from-purple-500 to-pink-600">
                                     <span id="foundParticipantInitials">?</span>
                                 </div>
                                 
@@ -148,7 +171,7 @@
                                 🔍 Search Again
                             </button>
                             <button id="voteForParticipant" 
-                                    class="search-button px-8 py-3 rounded-lg font-bold transition-all">
+                                    class="px-8 py-3 rounded-lg font-bold transition-all bg-gradient-to-r from-purple-500 to-pink-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-purple-500/40">
                                 🗳️ Vote for This Participant
                             </button>
                         </div>
@@ -157,7 +180,7 @@
             </div>
 
             <!-- Error State -->
-            <div id="errorState" class="hidden glassmorphism rounded-2xl p-8 mb-8">
+            <div id="errorState" class="hidden bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-8">
                 <div class="text-center">
                     <div class="text-red-400 text-6xl mb-4">⚠️</div>
                     <h3 class="text-2xl font-bold mb-4 text-red-300">Participant Not Found</h3>
@@ -178,7 +201,7 @@
             </div>
 
             <!-- How It Works -->
-            <div class="glassmorphism rounded-2xl p-8">
+            <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8">
                 <div class="text-center">
                     <h3 class="text-xl font-bold mb-4">❓ How It Works</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
