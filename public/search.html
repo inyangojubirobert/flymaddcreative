@@ -9,40 +9,35 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon.png">
     
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    animation: {
-                        'spin': 'spin 1s linear infinite',
-                        'fade-in': 'fadeIn 0.5s ease-out',
-                        'gradient': 'gradient 15s ease infinite'
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0', transform: 'translateY(10px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' }
-                        },
-                        gradient: {
-                            '0%, 100%': { backgroundPosition: '0% 50%' },
-                            '50%': { backgroundPosition: '100% 50%' }
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind CSS (compiled) -->
+    <link rel="stylesheet" href="/dist/output.css">
+    
+    <!-- Custom Styles -->
     <style>
         body {
-            background: linear-gradient(-45deg, #831843, #be185d, #ec4899, #f472b6);
+            background: linear-gradient(-45deg, #1e3a8a, #7c3aed, #c026d3, #ec4899);
             background-size: 400% 400%;
             animation: gradient 15s ease infinite;
         }
         @keyframes gradient {
             0%, 100% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #f9a8d4, #ec4899, #f43f5e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .gradient-btn {
+            background: linear-gradient(to right, #ec4899, #f43f5e);
+        }
+        .gradient-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(236, 72, 153, 0.4);
+        }
+        .gradient-avatar {
+            background: linear-gradient(135deg, #ec4899, #f43f5e);
         }
     </style>
 
@@ -59,7 +54,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center space-x-4">
-                    <a href="index.html" class="text-xl font-bold bg-gradient-to-r from-pink-300 via-pink-500 to-rose-500 bg-clip-text text-transparent">
+                    <a href="index.html" class="text-xl font-bold gradient-text">
                         FlyMadd Creative
                     </a>
                     <span class="text-white/60">|</span>
@@ -82,7 +77,7 @@
             
             <!-- Header -->
             <div class="text-center mb-8 animate-fade-in">
-                <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-pink-300 via-pink-500 to-rose-500 bg-clip-text text-transparent mb-4">
+                <h1 class="text-4xl md:text-5xl font-bold gradient-text mb-4">
                     Find a Participant
                 </h1>
                 <p class="text-xl text-white/80">
@@ -115,7 +110,7 @@
                         
                         <button type="submit" 
                                 id="searchButton" 
-                                class="w-full py-4 px-8 rounded-xl text-white font-bold text-lg transition-all duration-300 disabled:opacity-50 bg-gradient-to-r from-pink-500 to-rose-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-pink-500/40">
+                                class="w-full py-4 px-8 rounded-xl text-white font-bold text-lg transition-all duration-300 disabled:opacity-50 gradient-btn">
                             <span id="searchButtonText">🔍 Find Participant</span>
                             <div id="searchSpinner" class="hidden inline-block ml-2 w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         </button>
@@ -150,7 +145,7 @@
                         <div class="bg-white/10 rounded-xl p-6 mb-6">
                             <div class="flex flex-col md:flex-row items-center gap-6">
                                 <!-- Avatar -->
-                                <div class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white bg-gradient-to-br from-pink-500 to-rose-600">
+                                <div class="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white gradient-avatar">
                                     <span id="foundParticipantInitials">?</span>
                                 </div>
                                 
@@ -182,7 +177,7 @@
                                 🔍 Search Again
                             </button>
                             <button id="voteForParticipant" 
-                                    class="px-8 py-3 rounded-lg font-bold transition-all bg-gradient-to-r from-pink-500 to-rose-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-pink-500/40">
+                                    class="px-8 py-3 rounded-lg font-bold transition-all gradient-btn">
                                 🗳️ Vote for This Participant
                             </button>
                         </div>
