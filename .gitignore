@@ -72,3 +72,4 @@ temp/
 supabase/functions/_shared/
 .supabase/
 .env*.local
+".env.local" 
