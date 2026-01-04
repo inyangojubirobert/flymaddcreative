@@ -8,6 +8,7 @@
     <link href="./dist/output.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="./js/supabase-config.js"></script>
+    <script src="./js/progress-bar.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -151,23 +152,29 @@
         </div>
 
         <!-- Stats Grid -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-3 gap-4 mb-8">
             <div class="stat-card rounded-xl p-4 text-center">
                 <div class="text-2xl font-bold text-green-400" id="statVotes">0</div>
-                <div class="text-xs text-slate-400">Votes</div>
-            </div>
-            <div class="stat-card rounded-xl p-4 text-center">
-                <div class="text-2xl font-bold text-blue-400" id="statAmount">$0</div>
-                <div class="text-xs text-slate-400">Value</div>
+                <div class="text-xs text-slate-400">Total Votes</div>
             </div>
             <div class="stat-card rounded-xl p-4 text-center">
                 <div class="text-2xl font-bold text-purple-400" id="statRank">#-</div>
-                <div class="text-xs text-slate-400">Rank</div>
+                <div class="text-xs text-slate-400">Position</div>
             </div>
             <div class="stat-card rounded-xl p-4 text-center">
                 <div class="text-2xl font-bold text-orange-400" id="statStage">Bronze</div>
                 <div class="text-xs text-slate-400">Stage</div>
             </div>
+        </div>
+
+        <!-- User Stage Progress Bar -->
+        <div class="mb-8" id="userProgress">
+            <!-- Progress bar will be rendered here -->
+        </div>
+
+        <!-- Campaign Progress Bar -->
+        <div class="mb-8" id="campaignProgress">
+            <!-- Campaign progress bar will be rendered here -->
         </div>
 
         <!-- User Code Section -->
@@ -333,19 +340,31 @@
             document.getElementById('userCode').textContent = user.user_code || 'N/A';
             
             // Stats
-            document.getElementById('totalVotes').textContent = (user.total_votes || 0).toLocaleString();
-            document.getElementById('statVotes').textContent = (user.total_votes || 0).toLocaleString();
-            document.getElementById('statAmount').textContent = '$' + ((user.total_amount || 0) * 2).toLocaleString();
-            document.getElementById('statStage').textContent = user.current_stage || 'Bronze';
+            const votes = user.total_votes || 0;
+            document.getElementById('totalVotes').textContent = votes.toLocaleString();
+            document.getElementById('statVotes').textContent = votes.toLocaleString();
             
-            // Stage badge
-            const stageBadge = document.getElementById('stageBadge');
-            stageBadge.textContent = user.current_stage || 'Bronze';
-            stageBadge.className = 'stage-badge px-3 py-1 rounded-full text-sm font-medium text-black';
-            if (user.current_stage === 'Silver') stageBadge.classList.add('silver');
-            if (user.current_stage === 'Gold') stageBadge.classList.add('gold');
-            if (user.current_stage === 'Platinum') stageBadge.classList.add('platinum');
-            if (user.current_stage === 'Diamond') stageBadge.classList.add('diamond');
+            // Get user stage from progress bar system
+            if (window.OneDreamProgress) {
+                const stage = window.OneDreamProgress.getUserStage(votes);
+                document.getElementById('statStage').textContent = stage.name;
+                
+                // Stage badge
+                const stageBadge = document.getElementById('stageBadge');
+                stageBadge.textContent = stage.name;
+                stageBadge.className = 'stage-badge px-3 py-1 rounded-full text-sm font-medium text-black';
+                if (stage.name === 'Silver') stageBadge.classList.add('silver');
+                if (stage.name === 'Gold') stageBadge.classList.add('gold');
+                if (stage.name === 'Platinum') stageBadge.classList.add('platinum');
+                if (stage.name === 'Diamond') stageBadge.classList.add('diamond');
+                
+                // Render user progress bar
+                window.OneDreamProgress.renderUserProgress('userProgress', votes);
+            } else {
+                document.getElementById('statStage').textContent = user.current_stage || 'Bronze';
+                const stageBadge = document.getElementById('stageBadge');
+                stageBadge.textContent = user.current_stage || 'Bronze';
+            }
             
             // Join date
             if (user.created_at) {
@@ -364,9 +383,29 @@
 
         async function fetchUserRank() {
             try {
-                const leaderboard = await window.SupabaseAPI.getLeaderboard(100);
+                // Get full leaderboard sorted by votes (highest first)
+                const leaderboard = await window.SupabaseAPI.getLeaderboard(1000);
+                
+                // Sort by total_votes descending to ensure correct ranking
+                leaderboard.sort((a, b) => (b.total_votes || 0) - (a.total_votes || 0));
+                
+                // Find user's position (1-based)
                 const rank = leaderboard.findIndex(p => p.username === currentUser.username) + 1;
-                document.getElementById('statRank').textContent = rank > 0 ? `#${rank}` : '#-';
+                const totalParticipants = leaderboard.length;
+                
+                // Display rank with total participants
+                if (rank > 0) {
+                    document.getElementById('statRank').textContent = `#${rank}`;
+                    document.getElementById('statRank').title = `Position ${rank} of ${totalParticipants} participants`;
+                } else {
+                    document.getElementById('statRank').textContent = '#-';
+                }
+                
+                // Render campaign progress bar with total votes from all participants
+                if (window.OneDreamProgress && leaderboard.length > 0) {
+                    const totalVotes = leaderboard.reduce((sum, p) => sum + (p.total_votes || 0), 0);
+                    window.OneDreamProgress.renderCampaignProgress('campaignProgress', totalVotes);
+                }
             } catch (err) {
                 console.error('Error fetching rank:', err);
             }

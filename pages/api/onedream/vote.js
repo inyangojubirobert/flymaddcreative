@@ -19,6 +19,91 @@ const supabase = createClient(
 
 const VOTE_VALUE = 2; // $2 per vote
 
+// ========================================
+// MILESTONE ACHIEVEMENT CHECKER
+// Records new milestones when participant crosses threshold
+// ========================================
+async function checkAndRecordMilestones(db, participantId, oldVotes, newVotes) {
+  try {
+    // 1. Get all active milestones
+    const { data: milestones, error: fetchError } = await db
+      .from('milestones')
+      .select('id, name, vote_threshold, stage, badge_icon')
+      .eq('is_active', true)
+      .order('vote_threshold', { ascending: true });
+
+    if (fetchError || !milestones) {
+      console.error('Error fetching milestones:', fetchError);
+      return [];
+    }
+
+    // 2. Get milestones already achieved by this participant
+    const { data: achieved, error: achievedError } = await db
+      .from('participant_milestones')
+      .select('milestone_id')
+      .eq('participant_id', participantId);
+
+    const achievedIds = new Set((achieved || []).map(a => a.milestone_id));
+
+    // 3. Find newly achieved milestones (crossed threshold and not already recorded)
+    const newlyAchieved = milestones.filter(m => 
+      oldVotes < m.vote_threshold && 
+      newVotes >= m.vote_threshold && 
+      !achievedIds.has(m.id)
+    );
+
+    if (newlyAchieved.length === 0) {
+      return [];
+    }
+
+    // 4. Record new achievements in participant_milestones table
+    const achievements = newlyAchieved.map(m => ({
+      participant_id: participantId,
+      milestone_id: m.id,
+      votes_at_achievement: newVotes,
+      achieved_at: new Date().toISOString(),
+      notified: false
+    }));
+
+    const { error: insertError } = await db
+      .from('participant_milestones')
+      .insert(achievements);
+
+    if (insertError) {
+      console.error('Error recording milestone achievements:', insertError);
+      // Continue anyway - milestones can be recalculated
+    }
+
+    // 5. Update participant's current_stage if they reached a new user stage
+    const userStages = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
+    const newUserStages = newlyAchieved.filter(m => 
+      userStages.includes(m.stage?.toLowerCase())
+    );
+
+    if (newUserStages.length > 0) {
+      // Get the highest stage achieved
+      const highestStage = newUserStages[newUserStages.length - 1];
+      await db
+        .from('participants')
+        .update({ current_stage: highestStage.name })
+        .eq('id', participantId);
+    }
+
+    console.log(`🏆 Participant ${participantId} achieved:`, newlyAchieved.map(m => m.name));
+    
+    return newlyAchieved.map(m => ({
+      id: m.id,
+      name: m.name,
+      stage: m.stage,
+      icon: m.badge_icon
+    }));
+
+  } catch (error) {
+    console.error('Milestone check error:', error);
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -159,11 +244,14 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to record votes' });
     }
 
+    // Calculate new total votes
+    const newTotalVotes = participant.total_votes + vote_count;
+
     // ✅ Update total votes count in participants table
     const { error: updateError } = await supabase
       .from('participants')
       .update({ 
-        total_votes: participant.total_votes + vote_count,
+        total_votes: newTotalVotes,
         updated_at: new Date().toISOString()
       })
       .eq('id', participant_id);
@@ -172,6 +260,14 @@ export default async function handler(req, res) {
       console.error('Vote count update error:', updateError);
       // Votes were recorded but count update failed - log for manual fix
     }
+
+    // ✅ CHECK AND RECORD NEW MILESTONE ACHIEVEMENTS
+    const newMilestones = await checkAndRecordMilestones(
+      supabase, 
+      participant_id, 
+      participant.total_votes, 
+      newTotalVotes
+    );
 
     // ✅ Record analytics event
     await supabase
@@ -185,6 +281,7 @@ export default async function handler(req, res) {
           amount_paid: payment_amount,
           payment_method,
           voter_ip: voter_info?.ip,
+          milestones_achieved: newMilestones,
           timestamp: new Date().toISOString()
         }
       }]);
@@ -192,12 +289,12 @@ export default async function handler(req, res) {
     // ✅ Get updated participant data for response
     const { data: updatedParticipant } = await supabase
       .from('participants')
-      .select('total_votes, name, username')
+      .select('total_votes, name, username, current_stage')
       .eq('id', participant_id)
       .single();
 
     return res.status(200).json({ 
-      success: true, 
+      success: true,
       message: `${vote_count} votes recorded successfully`,
       participant: updatedParticipant,
       payment: {
@@ -206,7 +303,8 @@ export default async function handler(req, res) {
         votes_purchased: vote_count,
         vote_value: VOTE_VALUE
       },
-      votes_recorded: newVotes.length
+      votes_recorded: newVotes.length,
+      milestones_achieved: newMilestones.length > 0 ? newMilestones : null
     });
 
   } catch (err) {
