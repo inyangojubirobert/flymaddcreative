@@ -102,20 +102,27 @@
     </div>
 
     <script>
-        console.log('📌 Login Page v1');
+        console.log('📌 Login Page v2 - Fixed');
 
         // Check if already logged in
         document.addEventListener('DOMContentLoaded', async () => {
-            if (!window.SupabaseAPI) {
-                showError('System error: API not loaded');
-                return;
+            // Check localStorage for existing user
+            const savedUser = localStorage.getItem('onedream_user');
+            if (savedUser) {
+                try {
+                    const user = JSON.parse(savedUser);
+                    if (user.username) {
+                        console.log('User already logged in, redirecting...');
+                        window.location.href = `user-dashboard.html?user=${user.username}`;
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Error parsing saved user:', e);
+                    localStorage.removeItem('onedream_user');
+                }
             }
             
-            const user = await window.SupabaseAPI.getCurrentUser();
-            if (user) {
-                window.location.href = `user-dashboard.html?user=${user.username}`;
-            }
-            
+            // Attach form submit handler
             document.getElementById('loginForm').addEventListener('submit', handleLogin);
         });
 
@@ -125,28 +132,60 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             
+            // Validate inputs
             if (!email || !password) {
                 showError('Please enter email and password.');
                 return;
             }
             
+            if (!email.includes('@')) {
+                showError('Please enter a valid email address.');
+                return;
+            }
+            
             setLoading(true);
+            hideError();
             
             try {
-                // Use POST for login (fixes 405 error)
+                console.log('Attempting login for:', email);
+                
+                // Make API request
                 const response = await fetch('/api/onedream/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
+                
+                console.log('Login response status:', response.status);
+                
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Login failed.');
+                    throw new Error(errorData.error || `Login failed with status ${response.status}`);
                 }
-                const user = await response.json();
+                
+                const data = await response.json();
+                console.log('Login response data:', data);
+                
+                // Validate response structure
+                if (!data.success) {
+                    throw new Error(data.error || 'Login was not successful');
+                }
+                
+                if (!data.user) {
+                    throw new Error('Invalid response: user data missing');
+                }
+                
+                const user = data.user;
+                
+                // Validate user has required fields
+                if (!user.username) {
+                    throw new Error('Invalid response: username missing');
+                }
+
+                console.log('Login successful for user:', user.username);
 
                 // Save to localStorage
-                localStorage.setItem('onedream_token', user.token);
+                localStorage.setItem('onedream_token', user.token || '');
                 localStorage.setItem('onedream_user', JSON.stringify({
                     id: user.id,
                     username: user.username,
@@ -155,11 +194,13 @@
                     email: user.email
                 }));
                 
-                // Redirect to dashboard
+                // Redirect to dashboard with username
+                console.log('Redirecting to dashboard...');
                 window.location.href = `user-dashboard.html?user=${user.username}`;
                 
             } catch (error) {
-                showError(error.message || 'Login failed.');
+                console.error('Login error:', error);
+                showError(error.message || 'Login failed. Please try again.');
             } finally {
                 setLoading(false);
             }
@@ -176,10 +217,19 @@
             el.classList.remove('hidden');
         }
 
+        function hideError() {
+            const el = document.getElementById('errorMessage');
+            el.classList.add('hidden');
+        }
+
         function setLoading(loading) {
-            document.getElementById('submitBtn').disabled = loading;
-            document.getElementById('submitText').textContent = loading ? 'Logging in...' : 'Login';
-            document.getElementById('loadingSpinner').classList.toggle('hidden', !loading);
+            const btn = document.getElementById('submitBtn');
+            const text = document.getElementById('submitText');
+            const spinner = document.getElementById('loadingSpinner');
+            
+            btn.disabled = loading;
+            text.textContent = loading ? 'Logging in...' : 'Login';
+            spinner.classList.toggle('hidden', !loading);
         }
     </script>
 </body>
