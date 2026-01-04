@@ -4,244 +4,449 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>One Dream Initiative - Leadership Board</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-900 text-white min-h-screen">
     
-    <nav class="bg-black bg-opacity-30 backdrop-blur-md border-b border-white border-opacity-10 p-4">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <a href="Onedream.html" class="text-xl font-bold text-yellow-400">🌟 One Dream Initiative</a>
-            <button id="loginBtn" class="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg font-medium">Login</button>
+    <link href="./dist/output.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="./js/supabase-config.js"></script>
+    <script src="./js/progress-bar.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #FFD700, #FFA500, #FF6B35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .stage-bronze { background: linear-gradient(135deg, #CD7F32, #B8860B); }
+        .stage-silver { background: linear-gradient(135deg, #C0C0C0, #A8A8A8); }
+        .stage-gold { background: linear-gradient(135deg, #FFD700, #FFA500); }
+        .stage-platinum { background: linear-gradient(135deg, #E5E4E2, #BCC6CC); }
+        .stage-diamond { background: linear-gradient(135deg, #B9F2FF, #89CFF0); }
+        
+        .skeleton {
+            background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-white">
+    
+    <!-- Navigation -->
+    <nav class="bg-black bg-opacity-30 border-b border-white border-opacity-10 sticky top-0 z-50" style="backdrop-filter: blur(12px);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="Onedream.html" class="text-xl font-bold gradient-text">🌟 One Dream Initiative</a>
+                <div class="flex items-center space-x-4">
+                    <a href="search.html" class="text-slate-300 hover:text-white transition-colors">Search</a>
+                    <a href="login.html" id="loginBtn" class="bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded-lg font-medium transition-colors">Login</a>
+                </div>
+            </div>
         </div>
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 py-8">
-        <!-- Welcome Message for New Users (Hidden by default) -->
-        <div id="welcomeMessage" class="hidden mb-8 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl p-6 text-black">
+        
+        <!-- Welcome Message for New Users -->
+        <div id="welcomeMessage" class="hidden mb-8 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl p-6 text-black fade-in">
             <div class="text-center">
                 <h2 class="text-2xl font-bold mb-2">🎉 Welcome to One Dream Initiative!</h2>
                 <p class="text-lg mb-4">Hi <span id="welcomeName" class="font-bold"></span>! Your registration was successful.</p>
-                <p class="text-sm">You can now see your position on the leaderboard below. Start sharing your voting command to climb higher!</p>
+                <p class="text-sm">You can now see your position on the leaderboard below. Start sharing your voting link to climb higher!</p>
                 <button onclick="hideWelcomeMessage()" class="mt-3 bg-black bg-opacity-20 hover:bg-opacity-30 text-black px-4 py-2 rounded-lg transition-colors">
                     Got it! ✓
                 </button>
             </div>
         </div>
         
+        <!-- Page Header -->
         <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold mb-4">🏆 Leadership Board</h1>
+            <h1 class="text-4xl font-bold mb-4">🏆 <span class="gradient-text">Leadership Board</span></h1>
             <p class="text-xl text-slate-300">One Dream Initiative - Community Rankings</p>
         </div>
 
-        <div class="bg-slate-800 rounded-2xl p-6 mb-8">
-            <h3 class="text-2xl font-bold mb-4">Community Progress</h3>
-            <div class="mb-4">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-lg">Progress to Goal</span>
-                    <span class="text-2xl font-bold text-yellow-400">24%</span>
-                </div>
-                <div class="w-full bg-slate-700 rounded-full h-4">
-                    <div class="bg-gradient-to-r from-yellow-400 to-orange-500 h-4 rounded-full" style="width: 24%"></div>
-                </div>
+        <!-- Campaign Progress Section -->
+        <div class="card rounded-2xl p-6 mb-8">
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                🌟 Community Progress
+                <span class="text-sm font-normal text-slate-400">Goal: 1,000,000 votes</span>
+            </h3>
+            
+            <!-- Progress Bar Container -->
+            <div id="campaignProgress" class="mb-6">
+                <!-- Will be rendered by progress-bar.js -->
+                <div class="skeleton h-24 rounded-xl"></div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <div class="text-center">
-                    <div class="text-3xl font-bold text-yellow-400">1,247</div>
-                    <div class="text-slate-400">Total Participants</div>
+            
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-3xl font-bold text-yellow-400" id="statTotalParticipants">
+                        <span class="skeleton inline-block w-16 h-8 rounded"></span>
+                    </div>
+                    <div class="text-slate-400 text-sm">Total Participants</div>
                 </div>
-                <div class="text-center">
-                    <div class="text-3xl font-bold text-yellow-400">29,928</div>
-                    <div class="text-slate-400">Total Votes</div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-3xl font-bold text-green-400" id="statTotalVotes">
+                        <span class="skeleton inline-block w-20 h-8 rounded"></span>
+                    </div>
+                    <div class="text-slate-400 text-sm">Total Votes</div>
                 </div>
-                <div class="text-center">
-                    <div class="text-3xl font-bold text-yellow-400">+18%</div>
-                    <div class="text-slate-400">Weekly Growth</div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-3xl font-bold text-blue-400" id="statVotesToGoal">
+                        <span class="skeleton inline-block w-24 h-8 rounded"></span>
+                    </div>
+                    <div class="text-slate-400 text-sm">Votes to Goal</div>
+                </div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-3xl font-bold text-purple-400" id="statProgressPercent">
+                        <span class="skeleton inline-block w-16 h-8 rounded"></span>
+                    </div>
+                    <div class="text-slate-400 text-sm">Progress</div>
                 </div>
             </div>
         </div>
 
-        <div id="performanceSection" class="hidden bg-slate-800 rounded-2xl p-6 mb-8">
+        <!-- User Performance Section (shown when logged in) -->
+        <div id="performanceSection" class="hidden card rounded-2xl p-6 mb-8">
             <h3 class="text-2xl font-bold mb-4 text-yellow-400">🎯 Your Performance</h3>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-yellow-400" id="userRank">#12</div>
-                    <div class="text-slate-400">Your Rank</div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-2xl font-bold text-yellow-400" id="userRank">#-</div>
+                    <div class="text-slate-400 text-sm">Your Position</div>
                 </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-blue-400" id="userVotes">1,456</div>
-                    <div class="text-slate-400">Your Votes</div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-2xl font-bold text-blue-400" id="userVotes">0</div>
+                    <div class="text-slate-400 text-sm">Your Votes</div>
                 </div>
-                <div class="text-center">
-                    <div class="text-2xl font-bold text-green-400" id="userGrowth">+23%</div>
-                    <div class="text-slate-400">Weekly Growth</div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-2xl font-bold text-green-400" id="userCode">-</div>
+                    <div class="text-slate-400 text-sm">Your Code</div>
                 </div>
-                <div class="text-center">
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
                     <div class="text-2xl font-bold text-purple-400" id="userStage">Bronze</div>
-                    <div class="text-slate-400">Current Stage</div>
+                    <div class="text-slate-400 text-sm">Current Stage</div>
                 </div>
+            </div>
+            <div class="mt-4 text-center">
+                <a href="#" id="viewDashboardLink" class="text-yellow-400 hover:text-yellow-300 text-sm">
+                    View your full dashboard →
+                </a>
             </div>
         </div>
 
-        <div class="bg-slate-800 rounded-2xl overflow-hidden">
-            <div class="bg-slate-700 px-6 py-4">
+        <!-- Leaderboard Table -->
+        <div class="card rounded-2xl overflow-hidden">
+            <div class="bg-slate-800/50 px-6 py-4 border-b border-slate-700">
                 <h2 class="text-2xl font-bold text-yellow-400">🏆 Top Performers</h2>
                 <p class="text-slate-400">Leading the One Dream Initiative</p>
             </div>
             
-            <div class="overflow-x-auto">
+            <!-- Loading State -->
+            <div id="loadingState" class="p-8 text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+                <p class="text-slate-400">Loading leaderboard...</p>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden p-8 text-center">
+                <div class="text-6xl mb-4">🏁</div>
+                <h3 class="text-xl font-bold mb-2">No Participants Yet</h3>
+                <p class="text-slate-400 mb-4">Be the first to join the One Dream Initiative!</p>
+                <a href="registration.html" class="inline-block bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition-colors">
+                    Register Now
+                </a>
+            </div>
+            
+            <!-- Leaderboard Data -->
+            <div id="leaderboardContainer" class="hidden overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
-                        <tr class="bg-slate-700 text-blue-300 uppercase text-sm">
+                        <tr class="bg-slate-800/50 text-blue-300 uppercase text-sm">
                             <th class="px-6 py-4">Rank</th>
                             <th class="px-6 py-4">Participant</th>
                             <th class="px-6 py-4">Votes</th>
                             <th class="px-6 py-4">Stage</th>
-                            <th class="px-6 py-4">Growth</th>
+                            <th class="px-6 py-4">Code</th>
                         </tr>
                     </thead>
                     <tbody id="leaderboardTable">
-                        <tr class="bg-slate-800 border-b border-slate-700">
-                            <td class="px-6 py-4"><span class="font-bold text-yellow-400 text-xl">🥇 1</span></td>
-                            <td class="px-6 py-4">
-                                <div class="font-semibold">Alex Morgan</div>
-                                <div class="text-sm text-slate-400">@alexmorgan2025</div>
-                            </td>
-                            <td class="px-6 py-4"><span class="font-bold text-lg text-blue-400">2,450</span></td>
-                            <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500 text-black">Gold</span></td>
-                            <td class="px-6 py-4"><span class="text-green-400">+15%</span></td>
-                        </tr>
-                        <tr class="bg-slate-800 border-b border-slate-700">
-                            <td class="px-6 py-4"><span class="font-bold text-gray-300 text-xl">🥈 2</span></td>
-                            <td class="px-6 py-4">
-                                <div class="font-semibold">Samantha Lee</div>
-                                <div class="text-sm text-slate-400">@samanthalee</div>
-                            </td>
-                            <td class="px-6 py-4"><span class="font-bold text-lg text-blue-400">2,305</span></td>
-                            <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-yellow-500 text-black">Gold</span></td>
-                            <td class="px-6 py-4"><span class="text-green-400">+12%</span></td>
-                        </tr>
-                        <tr class="bg-slate-800 border-b border-slate-700">
-                            <td class="px-6 py-4"><span class="font-bold text-orange-300 text-xl">🥉 3</span></td>
-                            <td class="px-6 py-4">
-                                <div class="font-semibold">David Johnson</div>
-                                <div class="text-sm text-slate-400">@davidj</div>
-                            </td>
-                            <td class="px-6 py-4"><span class="font-bold text-lg text-blue-400">2,180</span></td>
-                            <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-gray-400 text-black">Silver</span></td>
-                            <td class="px-6 py-4"><span class="text-green-400">+18%</span></td>
-                        </tr>
+                        <!-- Will be populated by JavaScript -->
                     </tbody>
                 </table>
             </div>
         </div>
 
+        <!-- Footer -->
         <div class="mt-8 text-center">
-            <div class="bg-slate-800 rounded-2xl p-6">
+            <div class="card rounded-2xl p-6">
                 <p class="text-slate-400 text-sm mb-2">
                     <span class="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
                     Live data • Real-time updates
                 </p>
-                <p class="text-slate-400 text-sm">Updated every 5 minutes • Powered by FlyMadd Creative ⚡</p>
+                <p class="text-slate-400 text-sm">Powered by FlyMadd Creative ⚡</p>
             </div>
-        </div>
-    </div>
-
-    <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-800 rounded-2xl p-8 max-w-md w-full">
-            <h3 class="text-2xl font-bold mb-6 text-yellow-400 text-center">🔐 Participant Login</h3>
-            <form id="loginForm">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Email or Username</label>
-                    <input type="text" id="loginId" required class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                </div>
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Password</label>
-                    <input type="password" id="loginPass" required class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white">
-                </div>
-                <div class="flex gap-3">
-                    <button type="submit" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-medium py-3 rounded-lg">Login</button>
-                    <button type="button" id="cancelBtn" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-medium py-3 rounded-lg">Cancel</button>
-                </div>
-            </form>
-            <div class="mt-4 text-center">
-                <p class="text-slate-400 text-sm">Not a participant? <a href="registration.html" class="text-yellow-400">Register here</a></p>
-            </div>
-            <div id="loginMsg" class="mt-4 p-3 rounded-lg hidden"></div>
         </div>
     </div>
 
     <script>
-        const mockUsers = [
-            { email: "demo@example.com", username: "demo", name: "Demo User", rank: 12, votes: 1456, growth: 23, stage: "Bronze" },
-            { email: "alex@example.com", username: "alexmorgan2025", name: "Alex Morgan", rank: 1, votes: 2450, growth: 15, stage: "Gold" }
-        ];
+        // ========================================
+        // 🏆 LEADERSHIP BOARD - LIVE DATA
+        // ========================================
+        console.log('📌 Leadership Board v2 - Live Data');
 
+        const GOAL_VOTES = 1000000;
         let currentUser = null;
+        let leaderboardData = [];
 
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('loginBtn').addEventListener('click', () => {
-                document.getElementById('loginModal').classList.remove('hidden');
-            });
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Check for logged in user
+            checkLoggedInUser();
             
-            document.getElementById('cancelBtn').addEventListener('click', () => {
-                document.getElementById('loginModal').classList.add('hidden');
-            });
+            // Check for welcome message
+            checkForWelcomeMessage();
             
-            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            // Load leaderboard data
+            await loadLeaderboard();
+            
+            // Load campaign stats
+            await loadCampaignStats();
         });
 
-        function handleLogin(e) {
-            e.preventDefault();
-            
-            const id = document.getElementById('loginId').value.trim();
-            const pass = document.getElementById('loginPass').value;
-            
-            const user = mockUsers.find(u => 
-                u.email.toLowerCase() === id.toLowerCase() || 
-                u.username.toLowerCase() === id.toLowerCase()
-            );
-            
-            if (user && pass === 'demo123') {
-                currentUser = user;
-                showMessage('✅ Login successful! Welcome ' + user.name, 'success');
+        // ========================================
+        // LOAD LEADERBOARD FROM API
+        // ========================================
+        async function loadLeaderboard() {
+            try {
+                if (!window.SupabaseAPI) {
+                    console.error('SupabaseAPI not loaded');
+                    showEmptyState();
+                    return;
+                }
+
+                // Fetch leaderboard data
+                leaderboardData = await window.SupabaseAPI.getLeaderboard(50);
                 
-                setTimeout(() => {
-                    document.getElementById('loginModal').classList.add('hidden');
-                    updateUI();
-                }, 1500);
-            } else {
-                showMessage('❌ Invalid credentials. Try "demo" / "demo123"', 'error');
+                if (!leaderboardData || leaderboardData.length === 0) {
+                    showEmptyState();
+                    return;
+                }
+
+                // Sort by total_votes descending
+                leaderboardData.sort((a, b) => (b.total_votes || 0) - (a.total_votes || 0));
+                
+                // Render the table
+                renderLeaderboard(leaderboardData);
+                
+                // Update user performance if logged in
+                if (currentUser) {
+                    updateUserPerformance();
+                }
+
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                showEmptyState();
             }
         }
 
-        function showMessage(msg, type) {
-            const el = document.getElementById('loginMsg');
-            el.textContent = msg;
-            el.className = 'mt-4 p-3 rounded-lg ' + (type === 'success' ? 'bg-green-600' : 'bg-red-600') + ' text-white';
-            el.classList.remove('hidden');
+        // ========================================
+        // RENDER LEADERBOARD TABLE
+        // ========================================
+        function renderLeaderboard(participants) {
+            const tbody = document.getElementById('leaderboardTable');
+            tbody.innerHTML = '';
+
+            participants.forEach((participant, index) => {
+                const rank = index + 1;
+                const votes = participant.total_votes || 0;
+                const stage = getStage(votes);
+                
+                const row = document.createElement('tr');
+                row.className = 'border-b border-slate-700 hover:bg-slate-800/50 transition-colors';
+                
+                // Highlight current user
+                if (currentUser && participant.username === currentUser.username) {
+                    row.className += ' bg-yellow-500/10';
+                }
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4">
+                        <span class="font-bold text-xl ${getRankClass(rank)}">${getRankIcon(rank)} ${rank}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="font-semibold">${escapeHtml(participant.name)}</div>
+                        <div class="text-sm text-slate-400">@${escapeHtml(participant.username)}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-bold text-lg text-blue-400">${votes.toLocaleString()}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium text-black ${getStageClass(stage.name)}">
+                            ${stage.icon} ${stage.name}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-mono text-sm text-slate-300">${participant.user_code || '-'}</span>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+
+            // Show the table
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('leaderboardContainer').classList.remove('hidden');
         }
 
-        function updateUI() {
-            if (currentUser) {
-                document.getElementById('loginBtn').textContent = '👋 ' + currentUser.name.split(' ')[0];
-                document.getElementById('loginBtn').onclick = logout;
-                
-                document.getElementById('performanceSection').classList.remove('hidden');
-                document.getElementById('userRank').textContent = '#' + currentUser.rank;
-                document.getElementById('userVotes').textContent = currentUser.votes.toLocaleString();
-                document.getElementById('userGrowth').textContent = '+' + currentUser.growth + '%';
-                document.getElementById('userStage').textContent = currentUser.stage;
+        // ========================================
+        // LOAD CAMPAIGN STATS
+        // ========================================
+        async function loadCampaignStats() {
+            try {
+                // Calculate total votes from leaderboard data
+                const totalVotes = leaderboardData.reduce((sum, p) => sum + (p.total_votes || 0), 0);
+                const totalParticipants = leaderboardData.length;
+                const votesToGoal = Math.max(0, GOAL_VOTES - totalVotes);
+                const progressPercent = ((totalVotes / GOAL_VOTES) * 100).toFixed(2);
+
+                // Update stats display
+                document.getElementById('statTotalParticipants').textContent = totalParticipants.toLocaleString();
+                document.getElementById('statTotalVotes').textContent = totalVotes.toLocaleString();
+                document.getElementById('statVotesToGoal').textContent = votesToGoal.toLocaleString();
+                document.getElementById('statProgressPercent').textContent = progressPercent + '%';
+
+                // Render campaign progress bar
+                if (window.OneDreamProgress) {
+                    window.OneDreamProgress.renderCampaignProgress('campaignProgress', totalVotes);
+                }
+
+            } catch (error) {
+                console.error('Error loading campaign stats:', error);
             }
         }
 
-        function logout() {
-            currentUser = null;
-            document.getElementById('loginBtn').textContent = 'Login';
-            document.getElementById('loginBtn').onclick = () => document.getElementById('loginModal').classList.remove('hidden');
-            document.getElementById('performanceSection').classList.add('hidden');
+        // ========================================
+        // USER PERFORMANCE
+        // ========================================
+        function checkLoggedInUser() {
+            const savedUser = localStorage.getItem('onedream_user');
+            if (savedUser) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    
+                    // Update login button
+                    const loginBtn = document.getElementById('loginBtn');
+                    loginBtn.textContent = '👋 ' + (currentUser.name?.split(' ')[0] || 'User');
+                    loginBtn.href = `user-dashboard.html?user=${currentUser.username}`;
+                    
+                    // Show performance section
+                    document.getElementById('performanceSection').classList.remove('hidden');
+                    document.getElementById('viewDashboardLink').href = `user-dashboard.html?user=${currentUser.username}`;
+                    
+                } catch (e) {
+                    console.error('Error parsing saved user:', e);
+                    currentUser = null;
+                }
+            }
         }
 
-        // Welcome message functionality for new registrations
+        function updateUserPerformance() {
+            if (!currentUser || !leaderboardData.length) return;
+
+            // Find user in leaderboard
+            const userIndex = leaderboardData.findIndex(p => p.username === currentUser.username);
+            
+            if (userIndex !== -1) {
+                const userData = leaderboardData[userIndex];
+                const votes = userData.total_votes || 0;
+                const stage = getStage(votes);
+                
+                document.getElementById('userRank').textContent = `#${userIndex + 1}`;
+                document.getElementById('userVotes').textContent = votes.toLocaleString();
+                document.getElementById('userCode').textContent = userData.user_code || '-';
+                document.getElementById('userStage').textContent = stage.name;
+            }
+        }
+
+        // ========================================
+        // HELPER FUNCTIONS
+        // ========================================
+        function getStage(votes) {
+            if (votes >= 5000) return { name: 'Diamond', icon: '👑', class: 'stage-diamond' };
+            if (votes >= 980) return { name: 'Platinum', icon: '💎', class: 'stage-platinum' };
+            if (votes >= 500) return { name: 'Gold', icon: '🥇', class: 'stage-gold' };
+            if (votes >= 100) return { name: 'Silver', icon: '🥈', class: 'stage-silver' };
+            return { name: 'Bronze', icon: '🥉', class: 'stage-bronze' };
+        }
+
+        function getStageClass(stageName) {
+            const classes = {
+                'Bronze': 'stage-bronze',
+                'Silver': 'stage-silver',
+                'Gold': 'stage-gold',
+                'Platinum': 'stage-platinum',
+                'Diamond': 'stage-diamond'
+            };
+            return classes[stageName] || 'stage-bronze';
+        }
+
+        function getRankIcon(rank) {
+            if (rank === 1) return '🥇';
+            if (rank === 2) return '🥈';
+            if (rank === 3) return '🥉';
+            return '';
+        }
+
+        function getRankClass(rank) {
+            if (rank === 1) return 'text-yellow-400';
+            if (rank === 2) return 'text-gray-300';
+            if (rank === 3) return 'text-orange-400';
+            return 'text-slate-400';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showEmptyState() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('leaderboardContainer').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+        }
+
+        // ========================================
+        // WELCOME MESSAGE
+        // ========================================
         function checkForWelcomeMessage() {
             const urlParams = new URLSearchParams(window.location.search);
             const welcomeName = urlParams.get('welcome');
@@ -253,54 +458,28 @@
                 if (welcomeMessage && welcomeNameSpan) {
                     welcomeNameSpan.textContent = decodeURIComponent(welcomeName);
                     welcomeMessage.classList.remove('hidden');
-                    welcomeMessage.classList.add('fade-in');
                     
                     // Auto-hide after 8 seconds
-                    setTimeout(() => {
-                        hideWelcomeMessage();
-                    }, 8000);
+                    setTimeout(hideWelcomeMessage, 8000);
                 }
                 
                 // Clean up URL
-                const newUrl = window.location.pathname;
-                window.history.replaceState({}, document.title, newUrl);
+                window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
         
         function hideWelcomeMessage() {
             const welcomeMessage = document.getElementById('welcomeMessage');
             if (welcomeMessage) {
-                welcomeMessage.style.animation = 'fadeOut 0.5s ease-out';
-                setTimeout(() => {
-                    welcomeMessage.classList.add('hidden');
-                    welcomeMessage.style.animation = '';
-                }, 500);
+                welcomeMessage.style.opacity = '0';
+                welcomeMessage.style.transform = 'translateY(-20px)';
+                welcomeMessage.style.transition = 'all 0.5s ease-out';
+                setTimeout(() => welcomeMessage.classList.add('hidden'), 500);
             }
         }
-        
-        // Add fade-in and fade-out animations
-        const style = document.createElement('style');
-        style.textContent = `
-            .fade-in {
-                animation: fadeIn 0.5s ease-in;
-            }
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(-20px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            @keyframes fadeOut {
-                from { opacity: 1; transform: translateY(0); }
-                to { opacity: 0; transform: translateY(-20px); }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        // Check for welcome message on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(checkForWelcomeMessage, 500); // Small delay to ensure page is ready
-        });
 
-        console.log('🏆 Leadership Board loaded - Demo login: "demo" / "demo123"');
+        // Make hideWelcomeMessage available globally
+        window.hideWelcomeMessage = hideWelcomeMessage;
     </script>
 </body>
 </html>
