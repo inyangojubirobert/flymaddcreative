@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Login API</title>
+</head>
+<body>
+    <h1>Test Login API</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testLogin() {
+            const email = prompt('Enter email:');
+            const password = prompt('Enter password:');
+            
+            try {
+                const response = await fetch('/api/onedream/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+                console.log('Full response:', data);
+            } catch (error) {
+                document.getElementById('result').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
