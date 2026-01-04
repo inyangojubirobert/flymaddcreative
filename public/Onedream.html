@@ -38,6 +38,10 @@
     <!-- Paystack Inline -->
     <script src="https://js.paystack.co/v1/inline.js"></script>
 
+    <!-- Supabase Config & Progress Bar -->
+    <script src="./js/supabase-config.js"></script>
+    <script src="./js/progress-bar.js"></script>
+
     <!-- Library Loading Check Script -->
     <script>
         console.log('🚀 Starting One Dream Initiative...');
@@ -494,37 +498,46 @@
     <section class="progress-section">
         <div class="container">
             <h2 class="section-title">Community Dream Progress</h2>
-            <div class="progress-bar-container" style="max-width: 500px; margin: 20px auto; text-align: center;">
-                <img src="https://res.cloudinary.com/dljcj00ht/image/upload/v1762303910/bar_szey2u.png" 
-                     alt="Progress Bar - 24% Complete" 
-                     id="progress-bar-image"
-                     style="width: 100%; height: auto; max-width: 500px; border-radius: 10px;" />
+            <p style="color: #666; margin-bottom: 20px;">Goal: 1,000,000 total votes from all participants</p>
+            
+            <!-- Campaign Progress Bar Container -->
+            <div id="campaignProgressBar" style="max-width: 600px; margin: 20px auto;">
+                <!-- Will be rendered by progress-bar.js -->
+                <div style="background: #e0e0e0; height: 24px; border-radius: 12px; overflow: hidden; position: relative;">
+                    <div id="progressFill" style="background: linear-gradient(90deg, #FFD700, #FFA500); height: 100%; width: 0%; transition: width 1s ease; border-radius: 12px;"></div>
+                </div>
             </div>
-            <p id="progress-text" style="font-size: 1.1rem; margin: 20px 0; color: #FFD700;">
-                <strong id="progress-percentage">24% Complete</strong> • <span id="progress-message">The community is pushing forward! Keep sharing your dream.</span>
+            
+            <p id="progress-text" style="font-size: 1.1rem; margin: 20px 0; color: var(--primary-color);">
+                <strong id="progress-percentage">Loading...</strong> • <span id="progress-message">Fetching live data from database...</span>
             </p>
             
-            <!-- Status indicator inspired by your demo -->
-            <div style="margin: 10px 0; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 0.9rem;">
-                <span style="color: #94a3b8;">Status:</span> 
-                <span id="data-status" style="color: #7dd3fc; font-weight: 500;">Mock active - showing 24% until live data reaches threshold</span>
+            <!-- Live Status indicator -->
+            <div style="margin: 10px 0; padding: 8px 12px; background: rgba(0,74,173,0.05); border-radius: 6px; font-size: 0.9rem;">
+                <span style="color: #666;">Status:</span> 
+                <span id="data-status" style="color: var(--primary-color); font-weight: 500;">🔄 Loading live data...</span>
             </div>
             
-            <div class="stats-grid">
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
                 <div class="stat-card">
                     <div class="stat-number" id="stage-emoji">🥉</div>
                     <div id="stage-name">Bronze Stage</div>
-                    <small id="stage-description">Building momentum together</small>
+                    <small id="stage-description">Building momentum</small>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="total-participants">1,247</div>
-                    <div>Dream Builders</div>
-                    <small>Growing our community</small>
+                    <div class="stat-number" id="total-participants">--</div>
+                    <div>Participants</div>
+                    <small>Dream Builders</small>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" id="next-milestone">25%</div>
-                    <div>Next Milestone</div>
-                    <small id="next-stage">Silver Stage awaits!</small>
+                    <div class="stat-number" id="total-votes">--</div>
+                    <div>Total Votes</div>
+                    <small>Community support</small>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="votes-to-goal">--</div>
+                    <div>Votes to Goal</div>
+                    <small id="next-stage">Keep pushing!</small>
                 </div>
             </div>
         </div>
@@ -600,11 +613,11 @@
                     </div>
                     <div style="text-align: center;">
                         <h3 style="color: #FFD700; margin-bottom: 15px;">Current Round Status</h3>
-                        <div style="font-size: 2.5rem; font-weight: 700; color: #FFD700; margin-bottom: 10px;">🥉 Bronze Stage</div>
-                        <div style="font-size: 1.8rem; font-weight: 600; color: #FFD700; margin-bottom: 15px;">24.8% Progress</div>
+                        <div id="threshold-stage" style="font-size: 2.5rem; font-weight: 700; color: #FFD700; margin-bottom: 10px;">🥉 Bronze Stage</div>
+                        <div id="threshold-progress" style="font-size: 1.8rem; font-weight: 600; color: #FFD700; margin-bottom: 15px;">Loading...</div>
                         <p style="font-size: 1rem; color: #FFD700; line-height: 1.5;">
-                            The community is building momentum!<br>
-                            <strong>Silver Stage unlocks at 25% milestone</strong>
+                            <span id="threshold-message">Loading community progress...</span><br>
+                            <strong id="threshold-next">Next milestone loading...</strong>
                         </p>
                     </div>
                 </div>
