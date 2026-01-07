@@ -1,7 +1,7 @@
 let currentParticipant = null;
 let selectedVoteAmount = 1;
 let selectedCost = 2.00;
-let selectedPaymentMethod = 'stripe';
+let selectedPaymentMethod = 'flutterwave';
 
 document.addEventListener('DOMContentLoaded', async function() {
     if (!window.initSupabaseFromMeta()) {
@@ -194,8 +194,8 @@ async function processPaymentAndVote() {
         // Step 2: Process payment based on selected method
         let paymentResult;
         switch (selectedPaymentMethod) {
-            case 'stripe':
-                paymentResult = await processStripePayment(paymentData);
+            case 'flutterwave':
+                paymentResult = await processFlutterwavePayment(paymentData);
                 break;
             case 'paystack':
                 paymentResult = await processPaystackPayment(paymentData);
@@ -220,67 +220,148 @@ async function processPaymentAndVote() {
     }
 }
 
-async function processStripePayment(paymentData) {
-    // Initialize Stripe
-    // Make sure you have set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY in your environment
-    const publishableKey = window.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 
-        (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY : null) ||
-        'pk_test_...'; // fallback for dev
-
-    if (!publishableKey || publishableKey === 'pk_test_...') {
-        alert('Stripe publishable key is not set. Please set NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.');
-        return { success: false, error: 'Stripe key missing' };
-    }
-
-    const stripe = Stripe(publishableKey);
-
-    // Confirm payment
-    try {
-        const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
-            clientSecret: paymentData.client_secret,
-            confirmParams: {
-                return_url: window.location.href,
-            },
-            redirect: 'if_required'
+async function processFlutterwavePayment(paymentData) {
+    // Redirect to Flutterwave payment page
+    if (paymentData.payment_link) {
+        window.location.href = paymentData.payment_link;
+        // Return pending status since user is being redirected
+        return { success: false, error: 'Redirecting to Flutterwave...' };
+    } else if (window.FlutterwaveCheckout) {
+        // Use Flutterwave Inline if available
+        return new Promise((resolve) => {
+            FlutterwaveCheckout({
+                public_key: window.FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-XXXXX',
+                tx_ref: paymentData.tx_ref,
+                amount: selectedCost,
+                currency: 'USD',
+                payment_options: 'card,banktransfer,ussd',
+                customer: {
+                    email: 'voter@onedream.com',
+                    name: 'One Dream Voter'
+                },
+                customizations: {
+                    title: 'One Dream Initiative',
+                    description: `Vote for ${currentParticipant.name}`,
+                    logo: window.location.origin + '/logo.png'
+                },
+                callback: function(response) {
+                    console.log('Flutterwave payment successful:', response);
+                    if (response.status === 'successful') {
+                        verifyFlutterwaveTransaction(response.tx_ref).then(verified => {
+                            if (verified) {
+                                resolve({ success: true, payment_intent_id: response.tx_ref });
+                            } else {
+                                resolve({ success: false, error: 'Payment verification failed' });
+                            }
+                        });
+                    } else {
+                        resolve({ success: false, error: 'Payment failed' });
+                    }
+                },
+                onclose: function() {
+                    console.log('Flutterwave popup closed');
+                    resolve({ success: false, error: 'Payment cancelled by user' });
+                }
+            });
         });
+    } else {
+        return { success: false, error: 'Flutterwave not available' };
+    }
+}
 
-        if (stripeError) {
-            return { success: false, error: `Stripe payment failed: ${stripeError.message}` };
-        }
-
-        if (paymentIntent && paymentIntent.status === 'succeeded') {
-            return { success: true, payment_intent_id: paymentData.payment_intent_id };
-        } else {
-            return { success: false, error: 'Payment was not completed' };
-        }
-    } catch (err) {
-        console.error('Stripe JS error:', err);
-        return { success: false, error: 'Stripe JS error: ' + err.message };
+async function verifyFlutterwaveTransaction(txRef) {
+    try {
+        const response = await fetch('/api/onedream/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                payment_intent_id: txRef,
+                payment_method: 'flutterwave'
+            })
+        });
+        
+        const data = await response.json();
+        return data.verified === true;
+    } catch (error) {
+        console.error('Flutterwave verification error:', error);
+        return false;
     }
 }
 
 async function processPaystackPayment(paymentData) {
-    // Redirect to PayStack checkout
-    if (paymentData.authorization_url) {
-        // Open PayStack in new window
-        const paymentWindow = window.open(
-            paymentData.authorization_url, 
-            'PayStack Payment', 
-            'width=600,height=700,scrollbars=yes,resizable=yes'
-        );
+    // Check if Paystack Inline is available
+    if (!window.PaystackPop) {
+        console.error('Paystack Inline JS not loaded');
+        // Fallback to redirect method
+        if (paymentData.authorization_url) {
+            window.location.href = paymentData.authorization_url;
+            return { success: false, error: 'Redirecting to Paystack...' };
+        }
+        return { success: false, error: 'Paystack not available' };
+    }
 
-        // Wait for payment completion (you'd implement proper verification)
-        return new Promise((resolve) => {
-            const checkClosed = setInterval(() => {
-                if (paymentWindow.closed) {
-                    clearInterval(checkClosed);
-                    // In production, verify payment status with PayStack webhook
-                    resolve({ success: true, payment_intent_id: paymentData.payment_intent_id });
-                }
-            }, 1000);
+    return new Promise((resolve) => {
+        const handler = PaystackPop.setup({
+            key: window.PAYSTACK_PUBLIC_KEY || 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxx', // Set your public key
+            email: 'voter@onedream.com', // Default email for anonymous payments
+            amount: selectedCost * 100, // Amount in kobo
+            currency: 'USD',
+            ref: paymentData.reference,
+            metadata: {
+                participant_id: currentParticipant.id,
+                participant_name: currentParticipant.name,
+                vote_count: selectedVoteAmount,
+                custom_fields: [
+                    {
+                        display_name: "Participant",
+                        variable_name: "participant_name",
+                        value: currentParticipant.name
+                    },
+                    {
+                        display_name: "Votes",
+                        variable_name: "vote_count",
+                        value: selectedVoteAmount.toString()
+                    }
+                ]
+            },
+            onClose: function() {
+                console.log('Paystack popup closed');
+                resolve({ success: false, error: 'Payment cancelled by user' });
+            },
+            callback: function(response) {
+                console.log('Paystack payment successful:', response);
+                // Verify the payment on the server
+                verifyPaystackTransaction(response.reference).then(verified => {
+                    if (verified) {
+                        resolve({ success: true, payment_intent_id: response.reference });
+                    } else {
+                        resolve({ success: false, error: 'Payment verification failed' });
+                    }
+                });
+            }
         });
-    } else {
-        return { success: false, error: 'PayStack payment initialization failed' };
+
+        handler.openIframe();
+    });
+}
+
+async function verifyPaystackTransaction(reference) {
+    try {
+        const response = await fetch('/api/onedream/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                payment_intent_id: reference,
+                payment_method: 'paystack',
+                reference: reference
+            })
+        });
+        
+        const data = await response.json();
+        return data.verified === true;
+    } catch (error) {
+        console.error('Paystack verification error:', error);
+        return false;
     }
 }
 

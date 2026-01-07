@@ -1,14 +1,8 @@
 // Multi-payment processing API for One Dream Initiative votes
-// Supports Stripe, PayStack, and Crypto payments
+// Supports Flutterwave, PayStack, and Crypto payments
 // $2 per vote, multiple votes allowed
 
 import { createClient } from '@supabase/supabase-js';
-import Stripe from 'stripe';
-
-// Initialize payment providers
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
-});
 
 // Initialize Supabase
 const supabase = createClient(
@@ -27,7 +21,7 @@ export default async function handler(req, res) {
     const { 
       participant_id, 
       vote_count = 1, 
-      payment_method = 'stripe' // 'stripe', 'paystack', 'crypto'
+      payment_method = 'flutterwave' // 'flutterwave', 'paystack', 'crypto'
     } = req.body;
 
     if (!participant_id || vote_count <= 0) {
@@ -36,9 +30,9 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!['stripe', 'paystack', 'crypto'].includes(payment_method)) {
+    if (!['flutterwave', 'paystack', 'crypto'].includes(payment_method)) {
       return res.status(400).json({ 
-        error: 'Invalid payment method. Supported: stripe, paystack, crypto' 
+        error: 'Invalid payment method. Supported: flutterwave, paystack, crypto' 
       });
     }
 
@@ -59,8 +53,8 @@ export default async function handler(req, res) {
     let paymentData = {};
 
     switch (payment_method) {
-      case 'stripe':
-        paymentData = await createStripePayment(amount, vote_count, participant);
+      case 'flutterwave':
+        paymentData = await createFlutterwavePayment(amount, vote_count, participant);
         break;
       case 'paystack':
         paymentData = await createPaystackPayment(amount, vote_count, participant);
@@ -93,30 +87,61 @@ export default async function handler(req, res) {
   }
 }
 
-// ✅ Stripe Payment Intent
-async function createStripePayment(amount, voteCount, participant) {
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: amount * 100, // Stripe uses cents
-    currency: 'usd',
-    automatic_payment_methods: {
-      enabled: true,
+// ✅ Flutterwave Payment Intent
+async function createFlutterwavePayment(amount, voteCount, participant) {
+  const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
+  
+  if (!flutterwaveSecretKey) {
+    throw new Error('Flutterwave not configured - missing FLUTTERWAVE_SECRET_KEY');
+  }
+
+  const txRef = `ODI_FLW_${Date.now()}_${participant.username}`;
+  
+  const response = await fetch('https://api.flutterwave.com/v3/payments', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${flutterwaveSecretKey}`,
+      'Content-Type': 'application/json',
     },
-    metadata: {
-      participant_id: participant.id.toString(),
-      participant_name: participant.name,
-      participant_username: participant.username,
-      vote_count: voteCount.toString(),
-      vote_value: VOTE_VALUE.toString(),
-      type: 'onedream_votes'
-    },
-    description: `${voteCount} vote${voteCount > 1 ? 's' : ''} for ${participant.name} - One Dream Initiative`
+    body: JSON.stringify({
+      tx_ref: txRef,
+      amount: amount,
+      currency: 'USD',
+      redirect_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/vote.html?user=${participant.username}&payment_success=true`,
+      payment_options: 'card,banktransfer,ussd',
+      customer: {
+        email: 'support@flymaddcreative.online',
+        name: 'One Dream Voter'
+      },
+      customizations: {
+        title: 'One Dream Initiative',
+        description: `${voteCount} vote${voteCount > 1 ? 's' : ''} for ${participant.name}`,
+        logo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/logo.png`
+      },
+      meta: {
+        participant_id: participant.id,
+        participant_name: participant.name,
+        participant_username: participant.username,
+        vote_count: voteCount,
+        vote_value: VOTE_VALUE,
+        type: 'onedream_votes'
+      }
+    })
   });
 
+  if (!response.ok) {
+    throw new Error('Flutterwave payment initialization failed');
+  }
+
+  const data = await response.json();
+
   return {
-    client_secret: paymentIntent.client_secret,
-    payment_intent_id: paymentIntent.id,
+    payment_link: data.data.link,
+    tx_ref: txRef,
+    payment_intent_id: txRef,
     provider_data: {
-      stripe_payment_intent_id: paymentIntent.id
+      flutterwave_tx_ref: txRef,
+      flutterwave_link: data.data.link
     }
   };
 }

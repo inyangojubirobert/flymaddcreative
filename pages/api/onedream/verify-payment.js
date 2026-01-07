@@ -1,14 +1,8 @@
 // Payment verification API for One Dream Initiative
-// Handles verification for Stripe, PayStack, and Crypto payments
+// Handles verification for Flutterwave, PayStack, and Crypto payments
 // Used to confirm payment status before recording votes
 
 import { createClient } from '@supabase/supabase-js';
-import Stripe from 'stripe';
-
-// Initialize payment providers
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
-});
 
 // Initialize Supabase
 const supabase = createClient(
@@ -37,8 +31,8 @@ export default async function handler(req, res) {
     let verificationResult = {};
 
     switch (payment_method) {
-      case 'stripe':
-        verificationResult = await verifyStripePayment(payment_intent_id);
+      case 'flutterwave':
+        verificationResult = await verifyFlutterwavePayment(payment_intent_id);
         break;
       case 'paystack':
         verificationResult = await verifyPaystackPayment(reference || payment_intent_id);
@@ -61,30 +55,49 @@ export default async function handler(req, res) {
   }
 }
 
-// ✅ Verify Stripe Payment
-async function verifyStripePayment(paymentIntentId) {
+// ✅ Verify Flutterwave Payment
+async function verifyFlutterwavePayment(txRef) {
   try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
+    
+    if (!flutterwaveSecretKey) {
+      throw new Error('Flutterwave not configured - missing FLUTTERWAVE_SECRET_KEY');
+    }
 
-    if (paymentIntent.status === 'succeeded') {
+    const response = await fetch(`https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${txRef}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${flutterwaveSecretKey}`,
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Flutterwave verification request failed');
+    }
+
+    const data = await response.json();
+
+    if (data.status === 'success' && data.data.status === 'successful') {
       return {
         verified: true,
         status: 'succeeded',
-        amount: paymentIntent.amount / 100, // Convert from cents
-        currency: paymentIntent.currency,
-        metadata: paymentIntent.metadata,
-        provider: 'stripe'
+        amount: data.data.amount,
+        currency: data.data.currency,
+        metadata: data.data.meta,
+        provider: 'flutterwave',
+        tx_ref: data.data.tx_ref
       };
     } else {
       return {
         verified: false,
-        status: paymentIntent.status,
-        provider: 'stripe'
+        status: data.data?.status || 'failed',
+        provider: 'flutterwave'
       };
     }
 
   } catch (error) {
-    throw new Error(`Stripe verification failed: ${error.message}`);
+    throw new Error(`Flutterwave verification failed: ${error.message}`);
   }
 }
 
