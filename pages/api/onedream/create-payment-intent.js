@@ -154,6 +154,9 @@ async function createPaystackPayment(amount, voteCount, participant) {
     throw new Error('PayStack not configured - missing PAYSTACK_SECRET_KEY');
   }
 
+  // Generate truly unique reference with timestamp + random string
+  const uniqueRef = `ODI_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+
   const response = await fetch('https://api.paystack.co/transaction/initialize', {
     method: 'POST',
     headers: {
@@ -164,7 +167,7 @@ async function createPaystackPayment(amount, voteCount, participant) {
       email: 'support@flymaddcreative.online', // Default email for anonymous payments
       amount: amount * 100 * 1600, // PayStack uses kobo - Convert USD to NGN (approx rate: 1 USD = 1600 NGN)
       currency: 'NGN',
-      reference: `ODI_${Date.now()}_${participant.username}`,
+      reference: uniqueRef,
       metadata: {
         participant_id: participant.id,
         participant_name: participant.name,
