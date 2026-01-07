@@ -128,8 +128,8 @@ async function verifyPaystackPayment(reference) {
       return {
         verified: true,
         status: 'succeeded',
-        amount: data.data.amount / 100, // Convert from kobo
-        currency: data.data.currency,
+        amount: data.data.amount / 100 / 1600, // Convert from kobo to NGN to USD
+        currency: 'USD', // Return as USD for consistency
         metadata: data.data.metadata,
         provider: 'paystack',
         reference: data.data.reference

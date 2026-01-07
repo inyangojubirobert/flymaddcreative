@@ -162,8 +162,8 @@ async function createPaystackPayment(amount, voteCount, participant) {
     },
     body: JSON.stringify({
       email: 'support@flymaddcreative.online', // Default email for anonymous payments
-      amount: amount * 100, // PayStack uses kobo (cents)
-      currency: 'USD',
+      amount: amount * 100 * 1600, // PayStack uses kobo - Convert USD to NGN (approx rate: 1 USD = 1600 NGN)
+      currency: 'NGN',
       reference: `ODI_${Date.now()}_${participant.username}`,
       metadata: {
         participant_id: participant.id,
@@ -178,7 +178,9 @@ async function createPaystackPayment(amount, voteCount, participant) {
   });
 
   if (!response.ok) {
-    throw new Error('PayStack payment initialization failed');
+    const errorData = await response.json().catch(() => ({}));
+    console.error('PayStack API Error:', errorData);
+    throw new Error(errorData.message || 'PayStack payment initialization failed');
   }
 
   const data = await response.json();

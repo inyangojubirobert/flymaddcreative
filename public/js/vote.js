@@ -304,8 +304,8 @@ async function processPaystackPayment(paymentData) {
         const handler = PaystackPop.setup({
             key: window.PAYSTACK_PUBLIC_KEY || 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxx', // Set your public key
             email: 'voter@onedream.com', // Default email for anonymous payments
-            amount: selectedCost * 100, // Amount in kobo
-            currency: 'USD',
+            amount: selectedCost * 100 * 1600, // Amount in kobo, converted from USD to NGN
+            currency: 'NGN',
             ref: paymentData.reference,
             metadata: {
                 participant_id: currentParticipant.id,
