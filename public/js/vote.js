@@ -301,12 +301,15 @@ async function processPaystackPayment(paymentData) {
     }
 
     return new Promise((resolve) => {
+        // Generate a unique reference on the client side to ensure uniqueness
+        const uniqueRef = `${paymentData.reference}_${Math.random().toString(36).substring(2, 9)}`;
+        
         const handler = PaystackPop.setup({
             key: window.PAYSTACK_PUBLIC_KEY || 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxx', // Set your public key
             email: 'voter@onedream.com', // Default email for anonymous payments
             amount: selectedCost * 100 * 1600, // Amount in kobo, converted from USD to NGN
             currency: 'NGN',
-            ref: paymentData.reference,
+            ref: uniqueRef,
             metadata: {
                 participant_id: currentParticipant.id,
                 participant_name: currentParticipant.name,
