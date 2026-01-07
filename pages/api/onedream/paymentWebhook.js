@@ -224,19 +224,6 @@ async function processPaystackWebhook(eventData) {
 
   return null;
 }
-      userId: paymentIntent.metadata.userId,
-      amount: paymentIntent.amount / 100, // Convert cents to dollars
-      paymentId: paymentIntent.id,
-      metadata: {
-        provider: 'stripe',
-        currency: paymentIntent.currency,
-        customerEmail: paymentIntent.charges?.data[0]?.billing_details?.email
-      }
-    };
-  }
-
-  return null; // Ignore other event types
-}
 
 // Process Coinbase Commerce webhook events
 async function processCoinbaseWebhook(eventData) {
