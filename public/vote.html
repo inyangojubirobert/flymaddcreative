@@ -310,8 +310,8 @@
                                 <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
                                         data-method="crypto" id="cryptoBtn">
                                     <div class="text-3xl mb-2">₿</div>
-                                    <div class="font-bold">Cryptocurrency</div>
-                                    <div class="text-sm text-white/70">BTC/ETH/USDT</div>
+                                    <div class="font-bold">Crypto USDT</div>
+                                    <div class="text-sm text-white/70">BSC/TRC-20</div>
                                 </button>
                             </div>
                         </div>
@@ -392,10 +392,19 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="https://js.paystack.co/v1/inline.js"></script>
     <script src="https://checkout.flutterwave.com/v3.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/dist/index.umd.js"></script>
     <script>
         // Payment Gateway Public Keys
         window.PAYSTACK_PUBLIC_KEY = 'PAYSTACK_PUBLIC_KEY_REMOVED';
         window.FLUTTERWAVE_PUBLIC_KEY = 'FLUTTERWAVE_PUBLIC_KEY_REMOVED';
+        window.WALLETCONNECT_PROJECT_ID = 'WALLETCONNECT_PROJECT_ID_REMOVED';
+        
+        // Crypto Wallets
+        window.CRYPTO_WALLET_ADDRESS_BSC = 'BSC_WALLET_ADDRESS_REMOVED'; // BSC BEP-20
+        window.CRYPTO_WALLET_ADDRESS_TRON = 'TRON_WALLET_ADDRESS_REMOVED'; // Tron TRC-20
+        window.CRYPTO_NETWORK = 'bsc';
+        window.CRYPTO_CHAIN_ID = 56;
     </script>
     <script src="/js/supabase-config.js"></script>
     <script src="/js/vote.js"></script>

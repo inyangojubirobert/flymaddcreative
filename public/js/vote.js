@@ -209,7 +209,15 @@ async function processPaymentAndVote() {
 
         // Step 3: If payment successful, record votes
         if (paymentResult.success) {
-            await recordVotesAfterPayment(paymentResult.payment_intent_id);
+            // For crypto payments, verify on-chain before crediting votes
+            if (selectedPaymentMethod === 'crypto' && paymentResult.txHash) {
+                await verifyAndRecordCryptoPayment(
+                    paymentResult.txHash,
+                    paymentResult.network || 'bsc'
+                );
+            } else {
+                await recordVotesAfterPayment(paymentResult.payment_intent_id);
+            }
         } else {
             throw new Error(paymentResult.error || 'Payment was not completed');
         }
@@ -369,13 +377,200 @@ async function verifyPaystackTransaction(reference) {
 }
 
 async function processCryptoPayment(paymentData) {
-    // Show crypto payment modal
-    const confirmed = showCryptoPaymentModal(paymentData);
+    // Ask user to choose network
+    const network = await showNetworkSelectionModal();
     
-    if (confirmed) {
-        return { success: true, payment_intent_id: paymentData.payment_intent_id };
-    } else {
-        return { success: false, error: 'Crypto payment was cancelled' };
+    if (!network) {
+        return { success: false, error: 'Payment cancelled by user' };
+    }
+    
+    if (network === 'bsc') {
+        return await processBSCPayment();
+    } else if (network === 'tron') {
+        return await processTronPayment();
+    }
+}
+
+async function showNetworkSelectionModal() {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
+        modal.innerHTML = `
+            <div class="glassmorphism rounded-2xl p-8 max-w-md w-full">
+                <h3 class="text-2xl font-bold mb-4 text-center">Choose Network</h3>
+                <p class="text-sm text-white/70 mb-6 text-center">Select your preferred USDT network</p>
+                <div class="space-y-4">
+                    <button onclick="selectNetwork('bsc')" 
+                            class="w-full bg-yellow-600 hover:bg-yellow-700 p-4 rounded-lg transition-colors">
+                        <div class="text-2xl mb-2">🟡</div>
+                        <div class="font-bold">BSC (BEP-20)</div>
+                        <div class="text-sm text-white/80">Binance Smart Chain</div>
+                        <div class="text-xs text-white/60 mt-1">Low fees • Fast</div>
+                    </button>
+                    <button onclick="selectNetwork('tron')" 
+                            class="w-full bg-red-600 hover:bg-red-700 p-4 rounded-lg transition-colors">
+                        <div class="text-2xl mb-2">🔴</div>
+                        <div class="font-bold">TRON (TRC-20)</div>
+                        <div class="text-sm text-white/80">Tron Network</div>
+                        <div class="text-xs text-white/60 mt-1">Very low fees • Fast</div>
+                    </button>
+                    <button onclick="selectNetwork(null)" 
+                            class="w-full bg-gray-600 hover:bg-gray-700 p-3 rounded-lg transition-colors text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        window.selectNetwork = function(network) {
+            modal.remove();
+            delete window.selectNetwork;
+            resolve(network);
+        };
+    });
+}
+
+async function processBSCPayment() {
+    try {
+        // Initialize WalletConnect provider
+        const EthereumProvider = window.WalletConnectEthereumProvider?.default || window.WalletConnectEthereumProvider;
+        
+        if (!EthereumProvider) {
+            alert('WalletConnect not loaded. Please refresh the page.');
+            return { success: false, error: 'WalletConnect library not available' };
+        }
+
+        const provider = await EthereumProvider.init({
+            projectId: window.WALLETCONNECT_PROJECT_ID,
+            chains: [56], // BSC network
+            showQrModal: true,
+            qrModalOptions: {
+                themeMode: 'dark'
+            },
+            metadata: {
+                name: 'One Dream Initiative',
+                description: 'Vote with Crypto - BSC USDT',
+                url: window.location.origin,
+                icons: [window.location.origin + '/logo.png']
+            }
+        });
+
+        // Connect wallet
+        await provider.connect();
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        
+        if (!accounts || accounts.length === 0) {
+            return { success: false, error: 'No wallet connected' };
+        }
+
+        const walletAddress = accounts[0];
+        console.log('Connected wallet:', walletAddress);
+
+        // Calculate amount in USDT (18 decimals on BSC)
+        const amountUSD = selectedCost;
+        const amountInWei = ethers.parseUnits(amountUSD.toString(), 18);
+
+        // USDT contract on BSC (BEP-20)
+        const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
+        const recipientAddress = window.CRYPTO_WALLET_ADDRESS_BSC;
+
+        // Prepare USDT transfer transaction
+        const usdtInterface = new ethers.Interface([
+            'function transfer(address to, uint256 amount) returns (bool)'
+        ]);
+
+        const data = usdtInterface.encodeFunctionData('transfer', [
+            recipientAddress,
+            amountInWei
+        ]);
+
+        const txParams = {
+            from: walletAddress,
+            to: usdtAddress,
+            data: data,
+            value: '0x0'
+        };
+
+        // Send transaction
+        const txHash = await provider.request({
+            method: 'eth_sendTransaction',
+            params: [txParams]
+        });
+
+        console.log('Transaction hash:', txHash);
+
+        // Disconnect wallet
+        await provider.disconnect();
+
+        return { 
+            success: true, 
+            payment_intent_id: txHash,
+            txHash: txHash,
+            explorer: `https://bscscan.com/tx/${txHash}`
+        };
+
+    } catch (error) {
+        console.error('BSC payment error:', error);
+        
+        if (error.message.includes('User rejected')) {
+            return { success: false, error: 'Payment cancelled by user' };
+        }
+        
+        return { success: false, error: error.message || 'BSC payment failed' };
+    }
+}
+
+async function processTronPayment() {
+    try {
+        // Check if TronLink is installed
+        if (!window.tronWeb || !window.tronWeb.ready) {
+            alert('Please install TronLink wallet extension to pay with USDT TRC-20');
+            window.open('https://www.tronlink.org/', '_blank');
+            return { success: false, error: 'TronLink wallet not found' };
+        }
+
+        const tronWeb = window.tronWeb;
+        const userAddress = tronWeb.defaultAddress.base58;
+        
+        if (!userAddress) {
+            return { success: false, error: 'Please unlock TronLink wallet' };
+        }
+
+        console.log('TronLink connected:', userAddress);
+
+        // USDT TRC-20 contract address
+        const usdtContract = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+        const recipientAddress = window.CRYPTO_WALLET_ADDRESS_TRON;
+        const amountUSD = selectedCost;
+        
+        // USDT TRC-20 has 6 decimals
+        const amount = Math.floor(amountUSD * 1000000);
+
+        // Get contract instance
+        const contract = await tronWeb.contract().at(usdtContract);
+        
+        // Send USDT
+        const txResult = await contract.transfer(recipientAddress, amount).send();
+        
+        console.log('Tron transaction:', txResult);
+
+        return {
+            success: true,
+            payment_intent_id: txResult,
+            txHash: txResult,
+            explorer: `https://tronscan.org/#/transaction/${txResult}`
+        };
+
+    } catch (error) {
+        console.error('Tron payment error:', error);
+        
+        if (error.message && error.message.includes('Confirmation declined')) {
+            return { success: false, error: 'Payment cancelled by user' };
+        }
+        
+        return { success: false, error: error.message || 'Tron payment failed' };
     }
 }
 
@@ -502,6 +697,41 @@ function closeSuccessModal() {
     buttons[0].classList.add('border-blue-500', 'bg-blue-500/30');
     
     updateUI();
+}
+
+// ✅ Verify crypto payment on-chain and credit votes
+async function verifyAndRecordCryptoPayment(txHash, network) {
+    try {
+        const response = await fetch('/api/onedream/verify-usdt-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tx_hash: txHash,
+                network: network,
+                participant_id: currentParticipant.id,
+                expected_amount: selectedCost
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.pending) {
+            // Transaction pending confirmation
+            alert(`Payment received! Waiting for ${data.required - data.confirmations} more confirmation(s). Your votes will be credited shortly.`);
+            return;
+        }
+
+        if (!data.success) {
+            throw new Error(data.error || 'Payment verification failed');
+        }
+
+        console.log('✅ Crypto payment verified and votes credited:', data);
+
+    } catch (error) {
+        console.error('Crypto verification error:', error);
+        // Don't fail the whole flow - reconciliation script will handle it
+        alert('Payment sent! Verification pending. Your votes will be credited within a few minutes.');
+    }
 }
 
 // Sharing functions
