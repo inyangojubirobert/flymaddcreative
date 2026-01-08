@@ -113,6 +113,8 @@
         .payment-method-btn {
             transition: all 0.3s ease;
             cursor: pointer;
+            min-width: 140px;
+            flex-shrink: 0;
         }
         
         .payment-method-btn:hover {
@@ -129,6 +131,30 @@
         .payment-method-btn.disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+        
+        /* Scrollable payment tabs for mobile */
+        .payment-tabs-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .payment-tabs-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .payment-tabs-scroll {
+                margin: 0 -1rem;
+                padding: 0 1rem;
+            }
+            .payment-tabs-scroll > div {
+                display: flex;
+                gap: 1rem;
+                width: max-content;
+            }
         }
     </style>
     <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
@@ -319,26 +345,30 @@
                         <!-- Payment Method Selection -->
                         <div class="mb-6">
                             <label class="block text-sm font-medium mb-4 text-center">Choose Payment Method</label>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent active"
-                                        data-method="flutterwave" id="flutterwaveBtn">
-                                    <div class="text-3xl mb-2">💳</div>
-                                    <div class="font-bold">Card Payment</div>
-                                    <div class="text-sm text-white/70">Flutterwave</div>
-                                </button>
-                                <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
-                                        data-method="paystack" id="paystackBtn">
-                                    <div class="text-3xl mb-2">🏦</div>
-                                    <div class="font-bold">Paystack (NGN)</div>
-                                    <div class="text-sm text-white/70">Cards & Bank Transfer</div>
-                                </button>
-                                <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
-                                        data-method="crypto" id="cryptoBtn">
-                                    <div class="text-3xl mb-2">₿</div>
-                                    <div class="font-bold">Crypto USDT</div>
-                                    <div class="text-sm text-white/70">BSC/TRC-20</div>
-                                </button>
+                            <div class="payment-tabs-scroll">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent active"
+                                            data-method="flutterwave" id="flutterwaveBtn">
+                                        <div class="text-3xl mb-2">💳</div>
+                                        <div class="font-bold">Card Payment</div>
+                                        <div class="text-sm text-white/70">Flutterwave</div>
+                                    </button>
+                                    <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
+                                            data-method="paystack" id="paystackBtn">
+                                        <div class="text-3xl mb-2">🏦</div>
+                                        <div class="font-bold">Paystack (NGN)</div>
+                                        <div class="text-sm text-white/70">Cards & Bank Transfer</div>
+                                    </button>
+                                    <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
+                                            data-method="crypto" id="cryptoBtn">
+                                        <div class="text-3xl mb-2">₿</div>
+                                        <div class="font-bold">Crypto USDT</div>
+                                        <div class="text-sm text-white/70">BSC/TRC-20</div>
+                                    </button>
+                                </div>
                             </div>
+                            <!-- Scroll indicator for mobile -->
+                            <p class="text-xs text-white/50 text-center mt-2 md:hidden">← Swipe to see all payment options →</p>
                         </div>
                         
                         <!-- Vote Button -->
