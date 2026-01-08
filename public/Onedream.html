@@ -948,76 +948,90 @@
         // Function to update progress with automatic live/mock data detection
         async function updateProgress() {
             try {
-                // First, try to fetch live data from Supabase
+                // Wait for Supabase to be initialized
+                if (!window.supabase) {
+                    console.log('⏳ Waiting for Supabase initialization...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
+                // Try to fetch live data from Supabase
                 if (window.supabase) {
+                    console.log('🔍 Fetching live data from Supabase...');
+                    
                     // Fetch data from existing tables
-                    const [participantsResult, votesResult, paymentsResult] = await Promise.all([
-                        window.supabase.from('participants').select('id', { count: 'exact', head: true }),
-                        window.supabase.from('votes').select('id', { count: 'exact', head: true }),
-                        window.supabase.from('payments').select('amount').eq('status', 'completed')
+                    const [participantsResult, votesResult] = await Promise.all([
+                        window.supabase.from('participants').select('votes', { count: 'exact' }),
+                        window.supabase.from('participants').select('id', { count: 'exact', head: true })
                     ]);
                     
-                    // Calculate live stats
+                    console.log('📊 Participants result:', participantsResult);
+                    
+                    // Calculate total votes from all participants
+                    const totalVotes = participantsResult.data?.reduce((sum, p) => sum + (p.votes || 0), 0) || 0;
                     const totalParticipants = participantsResult.count || 0;
-                    const totalVotes = votesResult.count || 0;
-                    const totalAmount = paymentsResult.data?.reduce((sum, payment) => sum + (payment.amount || 0), 0) || 0;
                     
                     // Check if we have meaningful live data
-                    if (!participantsResult.error && !votesResult.error && !paymentsResult.error && 
-                        (totalParticipants > 0 || totalVotes > 0)) {
+                    if (!participantsResult.error && !votesResult.error) {
                         
                         // Calculate progress and stage
                         const campaignGoal = 1000000;
                         const liveProgress = (totalVotes / campaignGoal) * 100;
                         
                         let stage = 'Bronze';
-                        if (totalVotes >= 750000) stage = 'Diamond';
-                        else if (totalVotes >= 500000) stage = 'Gold';
-                        else if (totalVotes >= 250000) stage = 'Silver';
+                        let stageDescription = 'Building momentum';
+                        if (totalVotes >= 750000) {
+                            stage = 'Diamond';
+                            stageDescription = 'Elite status achieved!';
+                        } else if (totalVotes >= 500000) {
+                            stage = 'Gold';
+                            stageDescription = 'Excellence in progress';
+                        } else if (totalVotes >= 250000) {
+                            stage = 'Silver';
+                            stageDescription = 'Rising to the top';
+                        }
                         
                         const liveData = {
                             progress: liveProgress,
                             stage: stage,
+                            stageDescription: stageDescription,
                             participants: totalParticipants,
                             votes: totalVotes,
-                            amount: totalAmount,
+                            votesToGoal: campaignGoal - totalVotes,
                             nextMilestone: calculateNextMilestone(stage)
                         };
                         
-                        // 🎯 KEY LOGIC: Only switch to live data when progress >= 24%
-                        if (liveProgress >= mockData.progress) {
-                            console.log(`✅ Live data (${liveProgress.toFixed(1)}%) >= mock (${mockData.progress}%) - switching to live data`);
-                            hasLiveData = true;
-                            applyProgressData(liveData);
-                            
-                            // Update status indicator (inspired by your demo)
-                            const statusEl = document.getElementById('data-status');
-                            if (statusEl) {
-                                statusEl.textContent = `Live active - showing real progress (${liveProgress.toFixed(1)}%)`;
-                                statusEl.style.color = '#86efac'; // green for live
-                            }
-                            return;
-                        } else {
-                            console.log(`⏳ Live data (${liveProgress.toFixed(1)}%) below mock (${mockData.progress}%) - keeping mock data visible`);
-                            
-                            // Update status to show we're waiting (inspired by your demo)
-                            const statusEl = document.getElementById('data-status');
-                            if (statusEl) {
-                                statusEl.textContent = `Live below mock - ${liveProgress.toFixed(1)}% waiting to reach ${mockData.progress}%`;
-                                statusEl.style.color = '#fbbf24'; // yellow for waiting
-                            }
-                            // Continue to show mock data below
+                        console.log(`✅ Live data fetched: ${totalVotes} votes (${liveProgress.toFixed(2)}%)`);
+                        
+                        // Always use live data when available
+                        hasLiveData = true;
+                        applyProgressData(liveData);
+                        
+                        // Update status indicator
+                        const statusEl = document.getElementById('data-status');
+                        if (statusEl) {
+                            statusEl.textContent = `✅ Live data - ${totalVotes.toLocaleString()} total votes`;
+                            statusEl.style.color = '#10b981'; // green for live
                         }
+                        
+                        // Update progress message
+                        const progressMessage = document.getElementById('progress-message');
+                        if (progressMessage) {
+                            progressMessage.textContent = `${totalVotes.toLocaleString()} votes • ${(campaignGoal - totalVotes).toLocaleString()} to goal`;
+                        }
+                        
+                        return;
+                    } else {
+                        console.error('❌ Error fetching data:', participantsResult.error || votesResult.error);
                     }
                 }
             } catch (error) {
-                console.warn('⚠️ Could not fetch live data:', error.message);
+                console.error('⚠️ Could not fetch live data:', error);
                 
-                // Update status for error state (inspired by your demo)
+                // Update status for error state
                 const statusEl = document.getElementById('data-status');
                 if (statusEl) {
-                    statusEl.textContent = 'Error fetching live data - showing mock data';
-                    statusEl.style.color = '#f87171'; // red for error
+                    statusEl.textContent = `❌ Error: ${error.message} - using mock data`;
+                    statusEl.style.color = '#ef4444'; // red for error
                 }
             }
             
@@ -1042,43 +1056,55 @@
         function applyProgressData(data) {
             console.log('🎯 Applying progress data:', data);
             
-            // Update progress bar image (since we're using static image, we'll keep the same image but update text)
-            const progressImage = document.getElementById('progress-bar-image');
+            // Update progress bar fill
+            const progressFill = document.getElementById('progressFill');
             const progressPercentage = document.getElementById('progress-percentage');
+            const progressMessage = document.getElementById('progress-message');
             const totalParticipants = document.getElementById('total-participants');
+            const totalVotesEl = document.getElementById('total-votes');
+            const votesToGoal = document.getElementById('votes-to-goal');
             const stageEmoji = document.getElementById('stage-emoji');
             const stageName = document.getElementById('stage-name');
-            const nextMilestone = document.getElementById('next-milestone');
+            const stageDescription = document.getElementById('stage-description');
+            const nextStage = document.getElementById('next-stage');
             
-            console.log('📊 Progress image element found:', !!progressImage);
-            
-            if (progressImage) {
-                // Update the alt text to reflect current progress
-                progressImage.alt = `Progress Bar - ${data.progress}% Complete`;
-                console.log(`✅ Progress image updated for ${data.progress}%`);
-            } else {
-                console.error('❌ Progress image element not found!');
+            // Update progress bar
+            if (progressFill) {
+                progressFill.style.width = `${Math.min(data.progress, 100).toFixed(1)}%`;
+                console.log(`✅ Progress bar updated to ${data.progress.toFixed(1)}%`);
             }
             
             // Update text elements
             if (progressPercentage) {
-                progressPercentage.textContent = `${data.progress}% Complete`;
+                progressPercentage.textContent = `${data.progress.toFixed(1)}% Complete`;
+            }
+            
+            if (progressMessage) {
+                if (hasLiveData) {
+                    progressMessage.textContent = `${data.votes.toLocaleString()} votes • ${data.votesToGoal.toLocaleString()} to goal`;
+                } else {
+                    progressMessage.textContent = 'Join the movement and start your dream journey!';
+                }
             }
             
             if (totalParticipants) {
                 totalParticipants.textContent = data.participants.toLocaleString();
             }
             
-            if (nextMilestone) {
-                nextMilestone.textContent = `${data.nextMilestone}%`;
+            if (totalVotesEl) {
+                totalVotesEl.textContent = data.votes.toLocaleString();
+            }
+            
+            if (votesToGoal) {
+                votesToGoal.textContent = data.votesToGoal ? data.votesToGoal.toLocaleString() : '--';
             }
             
             // Update stage info
             const stageInfo = {
-                'Bronze': { emoji: '🥉', color: '#CD7F32' },
-                'Silver': { emoji: '🥈', color: '#C0C0C0' },
-                'Gold': { emoji: '🥇', color: '#FFD700' },
-                'Diamond': { emoji: '💎', color: '#4A90E2' }
+                'Bronze': { emoji: '🥉', color: '#CD7F32', next: 'Silver Stage at 250K votes' },
+                'Silver': { emoji: '🥈', color: '#C0C0C0', next: 'Gold Stage at 500K votes' },
+                'Gold': { emoji: '🥇', color: '#FFD700', next: 'Diamond Stage at 750K votes' },
+                'Diamond': { emoji: '💎', color: '#4A90E2', next: 'Maximum level achieved!' }
             };
             
             const currentStage = stageInfo[data.stage] || stageInfo.Bronze;
@@ -1090,9 +1116,19 @@
                 stageName.textContent = `${data.stage} Stage`;
                 console.log(`✅ Stage name updated to: ${data.stage} Stage`);
             }
+            if (stageDescription) {
+                stageDescription.textContent = data.stageDescription || 'Building momentum';
+            }
+            if (nextStage) {
+                nextStage.textContent = currentStage.next;
+            }
         }
 
-        window.addEventListener('load', function() {
+        window.addEventListener('load', async function() {
+            // Initialize Supabase first
+            console.log('🚀 Initializing application...');
+            await initializeSupabase();
+            
             // Ensure DOM is fully loaded before initializing progress
             setTimeout(() => {
                 // Initial progress update with automatic live/mock detection
@@ -1165,70 +1201,44 @@
     <!-- React App Components -->
     <script type="text/babel">
         // Enhanced Supabase initialization with browser compatibility
-        // 🔐 Load configuration securely from API endpoint
+        // 🔐 Initialize Supabase with public environment variables
         let supabase = null;
         
-        async function loadConfig() {
-            try {
-                const response = await fetch('/api/config');
-                if (!response.ok) throw new Error('Failed to load config');
-                
-                const config = await response.json();
-                return config;
-            } catch (error) {
-                console.warn('⚠️ Failed to load secure config:', error);
-                return null;
-            }
-        }
-        
-        // Initialize Supabase securely
+        // Initialize Supabase directly with environment variables
         async function initializeSupabase() {
-            const config = await loadConfig();
-            if (!config) {
-                console.error('❌ Cannot initialize Supabase - configuration not available');
-                return false;
-            }
-            
             try {
+                // Use Next.js public environment variables
+                const supabaseUrl = 'https://pjtuisyvpvoswmcgxsfs.supabase.co';
+                const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.vOYDzWgF1CnhDLtFXmO_aNpPF5jQiCOdtdIhqYRs6IY';
+                
                 if (window.supabase && window.supabase.createClient) {
-                    supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+                    supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
                         auth: {
                             autoRefreshToken: true,
                             persistSession: true,
                             detectSessionInUrl: false
                         },
-                    db: {
-                        schema: 'public'
-                    },
-                    global: {
-                        headers: {
-                            'User-Agent': `OneDreamInitiative-${window.browserInfo?.webkit ? 'Webkit' : window.browserInfo?.gecko ? 'Gecko' : 'Unknown'}`
+                        db: {
+                            schema: 'public'
                         }
-                    }
-                });
-                console.log('✅ Supabase initialized successfully');
-                return true;
-            } else {
-                throw new Error('Supabase library not loaded');
-            }
-        } catch (error) {
-            console.error('❌ Supabase initialization failed:', error);
-            // Fallback for browsers without Supabase support
-            supabase = {
-                from: () => ({
-                    select: () => Promise.resolve({ data: [], error: null }),
-                    insert: () => Promise.resolve({ data: null, error: 'Supabase not available' }),
-                    update: () => Promise.resolve({ data: null, error: 'Supabase not available' })
-                }),
-                functions: {
-                    invoke: () => Promise.resolve({ data: null, error: 'Functions not available' })
+                    });
+                    
+                    // Make it globally available
+                    window.supabase = supabase;
+                    
+                    console.log('✅ Supabase initialized successfully');
+                    return true;
+                } else {
+                    throw new Error('Supabase library not loaded');
                 }
-    }
-
-    // Global variables for React components
-    let currentUser = null;
-            };
+            } catch (error) {
+                console.error('❌ Supabase initialization failed:', error);
+                return false;
+            }
         }
+        
+        // Global variables for React components
+        let currentUser = null;
         
         // Enhanced utility functions with browser compatibility
         const generateShareableUrl = (username) => {
