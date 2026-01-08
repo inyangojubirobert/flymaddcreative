@@ -434,15 +434,14 @@ async function showNetworkSelectionModal() {
 
 async function processBSCPayment() {
     try {
-        // Initialize WalletConnect provider
-        const EthereumProvider = window.WalletConnectEthereumProvider?.default || window.WalletConnectEthereumProvider;
-        
-        if (!EthereumProvider) {
+        // Check if WalletConnect is available
+        if (typeof window.WalletConnectEthereumProvider === 'undefined') {
             alert('WalletConnect not loaded. Please refresh the page.');
             return { success: false, error: 'WalletConnect library not available' };
         }
 
-        const provider = await EthereumProvider.init({
+        // Initialize WalletConnect provider
+        const provider = await window.WalletConnectEthereumProvider.default.init({
             projectId: window.WALLETCONNECT_PROJECT_ID,
             chains: [56], // BSC network
             showQrModal: true,
