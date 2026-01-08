@@ -143,13 +143,22 @@
             font-weight: 700;
             color: var(--primary-color);
             text-decoration: none;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .nav-links {
             display: flex;
             gap: 12px;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
+        }
+
+        .nav-links::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Edge */
         }
 
         .nav-link {
@@ -430,7 +439,16 @@
             .hero-title { font-size: 2rem; }
             .hero-vision { font-size: 1rem; }
             .hero-description { font-size: 0.9rem; }
-            .nav-links { display: none; }
+            .nav-links { 
+                display: flex;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding: 8px 0;
+            }
+            .nav-link, .nav-button {
+                flex-shrink: 0;
+                white-space: nowrap;
+            }
             .steps-grid { grid-template-columns: 1fr; gap: 20px; }
             .prizes-grid { grid-template-columns: 1fr; gap: 16px; }
             .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }

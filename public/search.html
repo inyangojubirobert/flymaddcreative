@@ -53,23 +53,42 @@
     <nav class="bg-white/10 backdrop-blur-md border-b border-white/20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-4">
-                    <a href="index.html" class="text-xl font-bold gradient-text">
+                <div class="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+                    <a href="index.html" class="text-lg sm:text-xl font-bold gradient-text">
                         FlyMadd Creative
                     </a>
-                    <span class="text-white/60">|</span>
-                    <span class="text-white font-medium">One Dream Initiative</span>
+                    <span class="text-white/60 hidden sm:inline">|</span>
+                    <span class="text-white font-medium text-sm sm:text-base hidden sm:inline">One Dream Initiative</span>
                 </div>
-                <div class="flex items-center space-x-6">
-                    <a href="Onedream.html" class="text-white/80 hover:text-white transition-colors">Dashboard</a>
-                    <a href="leadershipBoard.html" class="text-white/80 hover:text-white transition-colors">Leaderboard</a>
-                    <a href="registration.html" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
+                <button id="mobile-menu-btn" class="md:hidden text-white p-2" aria-label="Menu">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="Onedream.html" class="text-white/80 hover:text-white transition-colors whitespace-nowrap">Dashboard</a>
+                    <a href="leadershipBoard.html" class="text-white/80 hover:text-white transition-colors whitespace-nowrap">Leaderboard</a>
+                    <a href="registration.html" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
+                        Join Initiative
+                    </a>
+                </div>
+            </div>
+            <div id="mobile-menu" class="md:hidden hidden pb-4">
+                <div class="flex flex-col space-y-3">
+                    <a href="Onedream.html" class="text-white/80 hover:text-white transition-colors py-2">Dashboard</a>
+                    <a href="leadershipBoard.html" class="text-white/80 hover:text-white transition-colors py-2">Leaderboard</a>
+                    <a href="registration.html" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors text-center">
                         Join Initiative
                     </a>
                 </div>
             </div>
         </div>
     </nav>
+    <script>
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+    </script>
 
     <!-- Main Content -->
     <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
