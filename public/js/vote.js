@@ -434,89 +434,295 @@ async function showNetworkSelectionModal() {
 
 async function processBSCPayment() {
     try {
-        // Check for MetaMask or any Web3 wallet
-        if (!window.ethereum) {
-            alert('Please install MetaMask or Trust Wallet to pay with BSC USDT');
-            window.open('https://metamask.io/download/', '_blank');
-            return { success: false, error: 'No Web3 wallet found' };
+        // Detect if user is on mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Check if already connected via browser wallet (desktop or mobile browser with injected wallet)
+        if (window.ethereum && !isMobile) {
+            console.log('Using browser wallet (MetaMask/injected)');
+            return await processBSCWithBrowserWallet();
         }
-
-        const provider = new ethers.BrowserProvider(window.ethereum);
-
-        // Request account access
-        const accounts = await provider.send('eth_requestAccounts', []);
-        const walletAddress = accounts[0];
-
-        // Check if on BSC network
-        const network = await provider.getNetwork();
-        if (network.chainId !== 56n) {
-            try {
-                // Try to switch to BSC
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: '0x38' }], // BSC mainnet
-                });
-            } catch (switchError) {
-                // Network not added, add BSC network
-                if (switchError.code === 4902) {
-                    await window.ethereum.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [{
-                            chainId: '0x38',
-                            chainName: 'BNB Smart Chain',
-                            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-                            rpcUrls: ['https://bsc-dataseed.binance.org/'],
-                            blockExplorerUrls: ['https://bscscan.com/']
-                        }]
-                    });
-                } else {
-                    throw switchError;
-                }
-            }
+        
+        // Mobile: Use WalletConnect with deep linking
+        if (isMobile) {
+            console.log('Mobile detected - using WalletConnect with deep links');
+            return await processBSCWithWalletConnect();
         }
-
-        console.log('Connected wallet:', walletAddress);
-
-        // Calculate amount in USDT (18 decimals on BSC)
-        const amountUSD = selectedCost;
-        const amountInWei = ethers.parseUnits(amountUSD.toString(), 18);
-
-        // USDT contract on BSC (BEP-20)
-        const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
-        const recipientAddress = window.CRYPTO_WALLET_ADDRESS_BSC;
-
-        // Create contract instance
-        const signer = await provider.getSigner();
-        const usdtContract = new ethers.Contract(
-            usdtAddress,
-            ['function transfer(address to, uint256 amount) returns (bool)'],
-            signer
+        
+        // Desktop without wallet: Prompt to install or use WalletConnect
+        const choice = confirm(
+            'No wallet detected!\n\n' +
+            'Click OK to use WalletConnect (scan QR with mobile wallet)\n' +
+            'Click Cancel to install MetaMask browser extension'
         );
-
-        // Send transaction
-        const tx = await usdtContract.transfer(recipientAddress, amountInWei);
-        console.log('Transaction sent:', tx.hash);
-
-        // Wait for 1 confirmation
-        await tx.wait(1);
-        console.log('Transaction confirmed:', tx.hash);
-
-        return { 
-            success: true, 
-            payment_intent_id: tx.hash,
-            txHash: tx.hash,
-            explorer: `https://bscscan.com/tx/${tx.hash}`
-        };
-
+        
+        if (choice) {
+            return await processBSCWithWalletConnect();
+        } else {
+            window.open('https://metamask.io/download/', '_blank');
+            return { success: false, error: 'Please install MetaMask and try again' };
+        }
+        
     } catch (error) {
         console.error('BSC payment error:', error);
-        
-        if (error.code === 4001 || error.message.includes('User rejected')) {
-            return { success: false, error: 'Payment cancelled by user' };
-        }
-        
         return { success: false, error: error.message || 'BSC payment failed' };
     }
+}
+
+// Browser wallet flow (MetaMask extension, etc.)
+async function processBSCWithBrowserWallet() {
+    const provider = new ethers.BrowserProvider(window.ethereum);
+
+    // Request account access
+    const accounts = await provider.send('eth_requestAccounts', []);
+    const walletAddress = accounts[0];
+
+    // Check if on BSC network
+    const network = await provider.getNetwork();
+    if (network.chainId !== 56n) {
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x38' }],
+            });
+        } catch (switchError) {
+            if (switchError.code === 4902) {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: '0x38',
+                        chainName: 'BNB Smart Chain',
+                        nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                        rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                        blockExplorerUrls: ['https://bscscan.com/']
+                    }]
+                });
+            } else {
+                throw switchError;
+            }
+        }
+    }
+
+    console.log('Connected wallet:', walletAddress);
+
+    // Calculate amount in USDT (18 decimals on BSC)
+    const amountUSD = selectedCost;
+    const amountInWei = ethers.parseUnits(amountUSD.toString(), 18);
+
+    // USDT contract on BSC (BEP-20)
+    const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
+    const recipientAddress = window.CRYPTO_WALLET_ADDRESS_BSC;
+
+    // Create contract instance
+    const signer = await provider.getSigner();
+    const usdtContract = new ethers.Contract(
+        usdtAddress,
+        ['function transfer(address to, uint256 amount) returns (bool)'],
+        signer
+    );
+
+    // Send transaction
+    const tx = await usdtContract.transfer(recipientAddress, amountInWei);
+    console.log('Transaction sent:', tx.hash);
+
+    // Wait for 1 confirmation
+    await tx.wait(1);
+    console.log('Transaction confirmed:', tx.hash);
+
+    return { 
+        success: true, 
+        payment_intent_id: tx.hash,
+        txHash: tx.hash,
+        explorer: `https://bscscan.com/tx/${tx.hash}`
+    };
+}
+
+// WalletConnect flow with mobile deep linking
+async function processBSCWithWalletConnect() {
+    try {
+        // Create Web3Modal for wallet selection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // For mobile: Direct deep link to Trust Wallet or MetaMask
+        if (isMobile) {
+            // Show wallet selection modal
+            const walletChoice = await showMobileWalletSelector();
+            
+            if (!walletChoice) {
+                return { success: false, error: 'Wallet selection cancelled' };
+            }
+            
+            // Build deep link URL for the transaction
+            const amountUSD = selectedCost;
+            const recipientAddress = window.CRYPTO_WALLET_ADDRESS_BSC;
+            const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
+            
+            // Encode transfer function call
+            const transferData = ethers.Interface.from([
+                'function transfer(address to, uint256 amount) returns (bool)'
+            ]).encodeFunctionData('transfer', [
+                recipientAddress,
+                ethers.parseUnits(amountUSD.toString(), 18)
+            ]);
+            
+            // Build deep link based on selected wallet
+            let deepLink;
+            if (walletChoice === 'trust') {
+                // Trust Wallet deep link
+                deepLink = `trust://send?` +
+                    `asset=c56_t${usdtAddress}&` +
+                    `address=${recipientAddress}&` +
+                    `amount=${amountUSD}`;
+            } else if (walletChoice === 'metamask') {
+                // MetaMask deep link
+                deepLink = `https://metamask.app.link/send/${usdtAddress}@56/transfer?` +
+                    `address=${recipientAddress}&` +
+                    `uint256=${ethers.parseUnits(amountUSD.toString(), 18).toString()}`;
+            } else {
+                // Generic WalletConnect fallback
+                return await processBSCWithGenericWalletConnect();
+            }
+            
+            // Open deep link
+            window.location.href = deepLink;
+            
+            // Show instructions
+            alert(
+                '📱 Opening your wallet app...\n\n' +
+                '1. Approve the transaction in your wallet\n' +
+                '2. Return to this page after confirming\n' +
+                '3. Your votes will be credited automatically'
+            );
+            
+            return { 
+                success: true, 
+                payment_intent_id: 'pending_mobile',
+                message: 'Transaction opened in wallet app'
+            };
+        } else {
+            // Desktop: Use WalletConnect QR code
+            return await processBSCWithGenericWalletConnect();
+        }
+        
+    } catch (error) {
+        console.error('WalletConnect error:', error);
+        
+        if (error.code === 4001 || error.message.includes('User rejected')) {
+            return { success: false, error: 'Connection cancelled by user' };
+        }
+        
+        return { success: false, error: error.message || 'WalletConnect failed' };
+    }
+}
+
+// Generic WalletConnect (QR code for desktop)
+async function processBSCWithGenericWalletConnect() {
+    alert(
+        '🔗 WalletConnect Setup Required\n\n' +
+        'For the best experience:\n' +
+        '• Desktop: Use MetaMask browser extension\n' +
+        '• Mobile: Use the app deep links\n\n' +
+        'Advanced WalletConnect QR feature coming soon!'
+    );
+    
+    return { success: false, error: 'Please use MetaMask extension or mobile app' };
+}
+
+// Mobile wallet selector modal
+async function showMobileWalletSelector() {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        `;
+        
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 20px; padding: 30px; max-width: 400px; width: 100%;">
+                <h3 style="margin: 0 0 20px 0; color: #1a1a1a; font-size: 24px;">Select Your Wallet</h3>
+                <p style="margin: 0 0 20px 0; color: #666;">Choose your wallet app to complete the payment</p>
+                
+                <button id="trustWalletBtn" style="
+                    width: 100%;
+                    padding: 20px;
+                    margin-bottom: 15px;
+                    background: linear-gradient(135deg, #3375BB, #3388DD);
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 18px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                ">
+                    <span style="font-size: 24px;">🛡️</span>
+                    Trust Wallet
+                </button>
+                
+                <button id="metamaskBtn" style="
+                    width: 100%;
+                    padding: 20px;
+                    margin-bottom: 15px;
+                    background: linear-gradient(135deg, #F6851B, #E2761B);
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 18px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                ">
+                    <span style="font-size: 24px;">🦊</span>
+                    MetaMask
+                </button>
+                
+                <button id="cancelBtn" style="
+                    width: 100%;
+                    padding: 15px;
+                    background: #f0f0f0;
+                    color: #666;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 16px;
+                    cursor: pointer;
+                ">
+                    Cancel
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        document.getElementById('trustWalletBtn').onclick = () => {
+            document.body.removeChild(modal);
+            resolve('trust');
+        };
+        
+        document.getElementById('metamaskBtn').onclick = () => {
+            document.body.removeChild(modal);
+            resolve('metamask');
+        };
+        
+        document.getElementById('cancelBtn').onclick = () => {
+            document.body.removeChild(modal);
+            resolve(null);
+        };
+    });
 }
 
 async function processTronPayment() {
