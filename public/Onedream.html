@@ -520,7 +520,6 @@
             
             <!-- Campaign Progress Bar Container -->
             <div id="campaignProgressBar" style="max-width: 600px; margin: 20px auto;">
-                <!-- Will be rendered by progress-bar.js -->
                 <div style="background: #e0e0e0; height: 24px; border-radius: 12px; overflow: hidden; position: relative;">
                     <div id="progressFill" style="background: linear-gradient(90deg, #FFD700, #FFA500); height: 100%; width: 0%; transition: width 1s ease; border-radius: 12px;"></div>
                 </div>
@@ -536,28 +535,43 @@
                 <span id="data-status" style="color: var(--primary-color); font-weight: 500;">🔄 Loading live data...</span>
             </div>
             
-            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="stat-card">
+            <!-- Horizontal scrollable stats grid for real data -->
+            <div class="stats-grid" style="display: flex; overflow-x: auto; gap: 20px; margin-top: 30px; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: #004AAD #e0e0e0;">
+                <div class="stat-card" style="min-width: 160px;">
                     <div class="stat-number" id="stage-emoji">🥉</div>
                     <div id="stage-name">Bronze Stage</div>
                     <small id="stage-description">Building momentum</small>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="min-width: 160px;">
                     <div class="stat-number" id="total-participants">--</div>
                     <div>Participants</div>
                     <small>Dream Builders</small>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="min-width: 160px;">
                     <div class="stat-number" id="total-votes">--</div>
                     <div>Total Votes</div>
                     <small>Community support</small>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" style="min-width: 160px;">
                     <div class="stat-number" id="votes-to-goal">--</div>
                     <div>Votes to Goal</div>
                     <small id="next-stage">Keep pushing!</small>
                 </div>
             </div>
+            <style>
+                /* Custom scrollbar for horizontal stats grid */
+                .progress-section .stats-grid::-webkit-scrollbar {
+                    height: 8px;
+                }
+                .progress-section .stats-grid::-webkit-scrollbar-thumb {
+                    background: #004AAD;
+                    border-radius: 4px;
+                }
+                .progress-section .stats-grid::-webkit-scrollbar-track {
+                    background: #e0e0e0;
+                    border-radius: 4px;
+                }
+            </style>
         </div>
     </section>
 
