@@ -437,28 +437,186 @@ async function processBSCPayment() {
         // Detect if user is on mobile
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
-        // Check if browser wallet is available and preferred
-        if (window.ethereum && !isMobile) {
-            // Desktop with browser extension - ask user preference
-            const useExtension = confirm(
-                '🦊 MetaMask Detected!\n\n' +
-                'Click OK to use MetaMask extension\n' +
-                'Click Cancel to use WalletConnect (for mobile wallets)'
-            );
-            
-            if (useExtension) {
-                console.log('Using browser wallet (MetaMask/injected)');
-                return await processBSCWithBrowserWallet();
+        // Desktop: check for browser extension
+        if (!isMobile) {
+            if (window.ethereum) {
+                const useExtension = confirm(
+                    '🦊 MetaMask Detected!\n\n' +
+                    'Click OK to use MetaMask extension\n' +
+                    'Click Cancel to use WalletConnect (for mobile wallets)'
+                );
+                
+                if (useExtension) {
+                    console.log('Using browser wallet (MetaMask/injected)');
+                    return await processBSCWithBrowserWallet();
+                }
             }
+            
+            // Desktop without extension - use WalletConnect QR
+            console.log('Using WalletConnect QR for desktop');
+            return await processBSCWithWalletConnect();
         }
         
-        // Use WalletConnect (works for both desktop QR and mobile deep links)
-        console.log('Using WalletConnect for BSC payment');
-        return await processBSCWithWalletConnect();
+        // Mobile: check for installed wallets first
+        const installedWallets = detectInstalledMobileWallets();
+        
+        if (installedWallets.length > 0) {
+            // Show wallet selection modal for installed apps
+            const selectedWallet = await showInstalledWalletSelector(installedWallets);
+            
+            if (!selectedWallet) {
+                return { success: false, error: 'Payment cancelled by user' };
+            }
+            
+            // Use deep link to open specific wallet app
+            return await processBSCWithMobileWallet(selectedWallet);
+        } else {
+            // No wallets detected - show WalletConnect with install prompts
+            return await processBSCWithWalletConnect();
+        }
         
     } catch (error) {
         console.error('BSC payment error:', error);
         return { success: false, error: error.message || 'BSC payment failed' };
+    }
+}
+
+// Detect which mobile wallets are installed
+function detectInstalledMobileWallets() {
+    const wallets = [];
+    
+    // Check for injected providers (in-app browsers)
+    if (window.ethereum) {
+        if (window.ethereum.isMetaMask) {
+            wallets.push({ name: 'MetaMask', id: 'metamask', icon: '🦊' });
+        }
+        if (window.ethereum.isTrust) {
+            wallets.push({ name: 'Trust Wallet', id: 'trust', icon: '🛡️' });
+        }
+        if (window.ethereum.isCoinbaseWallet) {
+            wallets.push({ name: 'Coinbase Wallet', id: 'coinbase', icon: '💙' });
+        }
+        // Generic Web3 wallet detected
+        if (wallets.length === 0) {
+            wallets.push({ name: 'Web3 Wallet', id: 'generic', icon: '💼' });
+        }
+    }
+    
+    // Mobile deep link detection (check if apps are installed)
+    // These are heuristics - not 100% accurate but helpful
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    if (userAgent.includes('trust')) {
+        if (!wallets.find(w => w.id === 'trust')) {
+            wallets.push({ name: 'Trust Wallet', id: 'trust', icon: '🛡️' });
+        }
+    }
+    
+    if (userAgent.includes('metamask')) {
+        if (!wallets.find(w => w.id === 'metamask')) {
+            wallets.push({ name: 'MetaMask', id: 'metamask', icon: '🦊' });
+        }
+    }
+    
+    return wallets;
+}
+
+// Show modal to select from installed wallets
+async function showInstalledWalletSelector(wallets) {
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
+        
+        const walletButtons = wallets.map(wallet => `
+            <button onclick="selectInstalledWallet('${wallet.id}')" 
+                    class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 p-4 rounded-lg transition-all transform hover:scale-105">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">${wallet.icon}</span>
+                    <div class="text-left">
+                        <div class="font-bold text-lg">${wallet.name}</div>
+                        <div class="text-xs text-white/80">Installed on this device</div>
+                    </div>
+                </div>
+            </button>
+        `).join('');
+        
+        modal.innerHTML = `
+            <div class="glassmorphism rounded-2xl p-6 max-w-md w-full">
+                <h3 class="text-2xl font-bold mb-2 text-center">Select Wallet</h3>
+                <p class="text-sm text-white/70 mb-6 text-center">Choose your wallet to complete payment</p>
+                <div class="space-y-3 mb-4">
+                    ${walletButtons}
+                </div>
+                <button onclick="selectInstalledWallet('other')" 
+                        class="w-full bg-gray-700 hover:bg-gray-600 p-3 rounded-lg transition-colors text-sm">
+                    Use WalletConnect (Other Wallets)
+                </button>
+                <button onclick="selectInstalledWallet(null)" 
+                        class="w-full mt-2 bg-transparent hover:bg-white/10 p-2 rounded-lg transition-colors text-sm text-white/70">
+                    Cancel
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        window.selectInstalledWallet = function(walletId) {
+            modal.remove();
+            delete window.selectInstalledWallet;
+            resolve(walletId === 'other' ? 'walletconnect' : walletId);
+        };
+    });
+}
+
+// Process payment using specific mobile wallet
+async function processBSCWithMobileWallet(walletId) {
+    // If user selected WalletConnect or no specific wallet
+    if (walletId === 'walletconnect') {
+        return await processBSCWithWalletConnect();
+    }
+    
+    // If wallet is already injected (in-app browser)
+    if (window.ethereum) {
+        console.log(`Using injected wallet: ${walletId}`);
+        return await processBSCWithBrowserWallet();
+    }
+    
+    // Generate deep link to open wallet app
+    const deepLink = generateWalletDeepLink(walletId);
+    
+    alert(
+        `Opening ${walletId === 'metamask' ? 'MetaMask' : walletId === 'trust' ? 'Trust Wallet' : 'your wallet'}...\n\n` +
+        'If the app doesn\'t open automatically, please:\n' +
+        '1. Open your wallet app manually\n' +
+        '2. Look for the connection request\n' +
+        '3. Approve and complete the payment'
+    );
+    
+    // Open wallet app via deep link
+    window.location.href = deepLink;
+    
+    // Fall back to WalletConnect after short delay
+    setTimeout(async () => {
+        return await processBSCWithWalletConnect();
+    }, 3000);
+    
+    return { success: false, error: 'Redirecting to wallet app...' };
+}
+
+// Generate deep link for specific wallet
+function generateWalletDeepLink(walletId) {
+    const currentUrl = window.location.href;
+    const wcUri = ''; // WalletConnect URI would go here
+    
+    switch (walletId) {
+        case 'metamask':
+            return `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
+        case 'trust':
+            return `https://link.trustwallet.com/open_url?url=${encodeURIComponent(currentUrl)}`;
+        case 'coinbase':
+            return `https://go.cb-w.com/dapp?url=${encodeURIComponent(currentUrl)}`;
+        default:
+            return currentUrl;
     }
 }
 
