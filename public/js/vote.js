@@ -434,37 +434,47 @@ async function showNetworkSelectionModal() {
 
 async function processBSCPayment() {
     try {
-        // Check if WalletConnect is available
-        if (typeof window.WalletConnectEthereumProvider === 'undefined') {
-            alert('WalletConnect not loaded. Please refresh the page.');
-            return { success: false, error: 'WalletConnect library not available' };
+        // Check for MetaMask or any Web3 wallet
+        if (!window.ethereum) {
+            alert('Please install MetaMask or Trust Wallet to pay with BSC USDT');
+            window.open('https://metamask.io/download/', '_blank');
+            return { success: false, error: 'No Web3 wallet found' };
         }
 
-        // Initialize WalletConnect provider
-        const provider = await window.WalletConnectEthereumProvider.default.init({
-            projectId: window.WALLETCONNECT_PROJECT_ID,
-            chains: [56], // BSC network
-            showQrModal: true,
-            qrModalOptions: {
-                themeMode: 'dark'
-            },
-            metadata: {
-                name: 'One Dream Initiative',
-                description: 'Vote with Crypto - BSC USDT',
-                url: window.location.origin,
-                icons: [window.location.origin + '/logo.png']
-            }
-        });
+        const provider = new ethers.BrowserProvider(window.ethereum);
 
-        // Connect wallet
-        await provider.connect();
-        const accounts = await provider.request({ method: 'eth_accounts' });
-        
-        if (!accounts || accounts.length === 0) {
-            return { success: false, error: 'No wallet connected' };
-        }
-
+        // Request account access
+        const accounts = await provider.send('eth_requestAccounts', []);
         const walletAddress = accounts[0];
+
+        // Check if on BSC network
+        const network = await provider.getNetwork();
+        if (network.chainId !== 56n) {
+            try {
+                // Try to switch to BSC
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x38' }], // BSC mainnet
+                });
+            } catch (switchError) {
+                // Network not added, add BSC network
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0x38',
+                            chainName: 'BNB Smart Chain',
+                            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                            rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                            blockExplorerUrls: ['https://bscscan.com/']
+                        }]
+                    });
+                } else {
+                    throw switchError;
+                }
+            }
+        }
+
         console.log('Connected wallet:', walletAddress);
 
         // Calculate amount in USDT (18 decimals on BSC)
@@ -475,45 +485,33 @@ async function processBSCPayment() {
         const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
         const recipientAddress = window.CRYPTO_WALLET_ADDRESS_BSC;
 
-        // Prepare USDT transfer transaction
-        const usdtInterface = new ethers.Interface([
-            'function transfer(address to, uint256 amount) returns (bool)'
-        ]);
-
-        const data = usdtInterface.encodeFunctionData('transfer', [
-            recipientAddress,
-            amountInWei
-        ]);
-
-        const txParams = {
-            from: walletAddress,
-            to: usdtAddress,
-            data: data,
-            value: '0x0'
-        };
+        // Create contract instance
+        const signer = await provider.getSigner();
+        const usdtContract = new ethers.Contract(
+            usdtAddress,
+            ['function transfer(address to, uint256 amount) returns (bool)'],
+            signer
+        );
 
         // Send transaction
-        const txHash = await provider.request({
-            method: 'eth_sendTransaction',
-            params: [txParams]
-        });
+        const tx = await usdtContract.transfer(recipientAddress, amountInWei);
+        console.log('Transaction sent:', tx.hash);
 
-        console.log('Transaction hash:', txHash);
-
-        // Disconnect wallet
-        await provider.disconnect();
+        // Wait for 1 confirmation
+        await tx.wait(1);
+        console.log('Transaction confirmed:', tx.hash);
 
         return { 
             success: true, 
-            payment_intent_id: txHash,
-            txHash: txHash,
-            explorer: `https://bscscan.com/tx/${txHash}`
+            payment_intent_id: tx.hash,
+            txHash: tx.hash,
+            explorer: `https://bscscan.com/tx/${tx.hash}`
         };
 
     } catch (error) {
         console.error('BSC payment error:', error);
         
-        if (error.message.includes('User rejected')) {
+        if (error.code === 4001 || error.message.includes('User rejected')) {
             return { success: false, error: 'Payment cancelled by user' };
         }
         
