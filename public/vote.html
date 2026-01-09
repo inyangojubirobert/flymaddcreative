@@ -17,8 +17,11 @@
         body {
             background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #8b5cf6, #ec4899);
             background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
             min-height: 100vh;
+        }
+        
+        body.loaded {
+            animation: gradient 15s ease infinite;
         }
         
         .glassmorphism {
@@ -203,6 +206,12 @@
         }
     </style>
     <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
+    <script>
+        // Start animation after page loads
+        window.addEventListener('load', () => {
+            document.body.classList.add('loaded');
+        });
+    </script>
 </head>
 <body class="text-white">
     <!-- Navigation -->
@@ -488,15 +497,7 @@
             </div>
         </div>
     </div>
-    <!-- Place these scripts at the END of <body> in this exact order: -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="https://js.paystack.co/v1/inline.js"></script>
-    <script src="https://checkout.flutterwave.com/v3.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js"></script>
-    <script type="module">
-        import { EthereumProvider } from "https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm";
-        window.EthereumProvider = EthereumProvider;
-    </script>
+    <!-- Scripts optimized for faster loading -->
     <script>
         // Payment Gateway Public Keys
         window.PAYSTACK_PUBLIC_KEY = 'PAYSTACK_PUBLIC_KEY_REMOVED';
@@ -504,12 +505,55 @@
         window.WALLETCONNECT_PROJECT_ID = 'WALLETCONNECT_PROJECT_ID_REMOVED';
         
         // Crypto Wallets
-        window.CRYPTO_WALLET_ADDRESS_BSC = 'BSC_WALLET_ADDRESS_REMOVED'; // BSC BEP-20
-        window.CRYPTO_WALLET_ADDRESS_TRON = 'TRON_WALLET_ADDRESS_REMOVED'; // Tron TRC-20
+        window.CRYPTO_WALLET_ADDRESS_BSC = 'BSC_WALLET_ADDRESS_REMOVED';
+        window.CRYPTO_WALLET_ADDRESS_TRON = 'TRON_WALLET_ADDRESS_REMOVED';
         window.CRYPTO_NETWORK = 'bsc';
         window.CRYPTO_CHAIN_ID = 56;
     </script>
-    <script src="/js/supabase-config.js"></script>
-    <script src="/js/vote.js"></script>
+    
+    <!-- Core scripts loaded asynchronously -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script defer src="/js/supabase-config.js"></script>
+    <script defer src="/js/vote.js"></script>
+    
+    <!-- Payment scripts loaded on demand -->
+    <script>
+        // Lazy load payment scripts only when needed
+        window.loadPaymentScripts = function() {
+            if (window.paymentsLoaded) return Promise.resolve();
+            
+            return Promise.all([
+                loadScript('https://js.paystack.co/v1/inline.js'),
+                loadScript('https://checkout.flutterwave.com/v3.js')
+            ]).then(() => {
+                window.paymentsLoaded = true;
+            });
+        };
+        
+        // Lazy load crypto scripts only when crypto payment selected
+        window.loadCryptoScripts = function() {
+            if (window.cryptoLoaded) return Promise.resolve();
+            
+            return Promise.all([
+                loadScript('https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js'),
+                import("https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm")
+                    .then(module => {
+                        window.EthereumProvider = module.EthereumProvider;
+                    })
+            ]).then(() => {
+                window.cryptoLoaded = true;
+            });
+        };
+        
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.body.appendChild(script);
+            });
+        }
+    </script>
 </body>
 </html>

@@ -3,6 +3,19 @@
 // ========================================
 
 async function processCryptoPayment(paymentData) {
+    // Load crypto scripts if not already loaded
+    if (typeof window.loadCryptoScripts === 'function') {
+        const loadingModal = showPaymentModal('Loading crypto payment system...', 'loading');
+        try {
+            await window.loadCryptoScripts();
+            loadingModal?.remove();
+        } catch (error) {
+            loadingModal?.remove();
+            alert('Failed to load crypto payment system. Please refresh and try again.');
+            return { success: false, error: 'Script loading failed' };
+        }
+    }
+    
     // Show network selection modal
     const network = await showNetworkSelectionModal();
     
