@@ -10,13 +10,23 @@ export default function handler(req, res) {
   }
 
   try {
-    // Only serve public configuration
+    // Only serve public configuration (PUBLIC keys only, never private keys)
     const config = {
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-      // Never expose service role key or other secrets
       siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:8000',
       environment: process.env.NODE_ENV || 'development',
+      
+      // Payment gateway PUBLIC keys (safe to expose to frontend)
+      paystackPublicKey: process.env.PAYSTACK_PUBLIC_KEY,
+      flutterwavePublicKey: process.env.FLUTTERWAVE_PUBLIC_KEY,
+      walletconnectProjectId: process.env.WALLETCONNECT_PROJECT_ID,
+      
+      // Crypto wallet addresses (public addresses, safe to expose)
+      cryptoWalletBSC: process.env.CRYPTO_WALLET_ADDRESS_BSC,
+      cryptoWalletTRON: process.env.CRYPTO_WALLET_ADDRESS_TRON,
+      cryptoNetwork: 'bsc',
+      cryptoChainId: 56
     };
 
     // Validate required fields

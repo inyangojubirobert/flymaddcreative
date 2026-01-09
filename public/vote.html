@@ -499,16 +499,29 @@
     </div>
     <!-- Scripts optimized for faster loading -->
     <script>
-        // Payment Gateway Public Keys
-        window.PAYSTACK_PUBLIC_KEY = 'PAYSTACK_PUBLIC_KEY_REMOVED';
-        window.FLUTTERWAVE_PUBLIC_KEY = 'FLUTTERWAVE_PUBLIC_KEY_REMOVED';
-        window.WALLETCONNECT_PROJECT_ID = 'WALLETCONNECT_PROJECT_ID_REMOVED';
-        
-        // Crypto Wallets
-        window.CRYPTO_WALLET_ADDRESS_BSC = 'BSC_WALLET_ADDRESS_REMOVED';
-        window.CRYPTO_WALLET_ADDRESS_TRON = 'TRON_WALLET_ADDRESS_REMOVED';
-        window.CRYPTO_NETWORK = 'bsc';
-        window.CRYPTO_CHAIN_ID = 56;
+        // Load configuration from secure API endpoint
+        (async function() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                
+                // Set global config variables
+                window.PAYSTACK_PUBLIC_KEY = config.paystackPublicKey;
+                window.FLUTTERWAVE_PUBLIC_KEY = config.flutterwavePublicKey;
+                window.WALLETCONNECT_PROJECT_ID = config.walletconnectProjectId;
+                window.CRYPTO_WALLET_ADDRESS_BSC = config.cryptoWalletBSC;
+                window.CRYPTO_WALLET_ADDRESS_TRON = config.cryptoWalletTRON;
+                window.CRYPTO_NETWORK = config.cryptoNetwork;
+                window.CRYPTO_CHAIN_ID = config.cryptoChainId;
+                
+                // Signal that config is loaded
+                window.configLoaded = true;
+                window.dispatchEvent(new Event('configReady'));
+            } catch (error) {
+                console.error('Failed to load configuration:', error);
+                alert('Failed to load payment configuration. Please refresh the page.');
+            }
+        })();
     </script>
     
     <!-- Core scripts loaded asynchronously -->
