@@ -12,6 +12,9 @@ supabase/.env
 **/secrets.json
 **/*-key.json
 **/*-secret.json
+.git-credentials-remove.txt
+.git-replacements.txt
+cleanup-git-history.ps1
 
 # 📁 Dependencies
 node_modules/
