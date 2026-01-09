@@ -1,693 +1,227 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vote - One Dream Initiative | FlyMadd Creative</title>
-    <meta name="description" content="Support your favorite participant in the One Dream Initiative. Cast your vote and help make dreams come true.">
+<script>
+/* =========================================================
+   ONE DREAM INITIATIVE – SECURE WEB3 PAYMENT SCRIPT
+   Supports:
+   - BSC USDT (Injected wallets + WalletConnect QR)
+   - TRON USDT (TronLink / tronWeb)
+   No secrets exposed. Backend-driven payments.
+   ========================================================= */
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dljcj00ht/image/upload/v1751137778/90639762_2872585919484791_7377249381973491712_n_swlodr.jpg">
+console.log('🚀 Secure Web3 Script Loaded');
 
-    <!-- Tailwind CSS (built) -->
-    <link rel="stylesheet" href="/dist/output.css">
+/* ---------------- GLOBAL STATE ---------------- */
 
-    <!-- Enhanced CSS Styles -->
-    <style>
-        body {
-            background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #8b5cf6, #ec4899);
-            background-size: 400% 400%;
-            min-height: 100vh;
-        }
-        
-        body.loaded {
-            animation: gradient 15s ease infinite;
-        }
-        
-        .glassmorphism {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-        
-        .gradient-text {
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: gradient 3s ease infinite;
-        }
-        
-        .vote-card {
-            transition: all 0.3s ease;
-            transform-style: preserve-3d;
-        }
-        
-        .vote-card:hover {
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-        }
-        
-        .participant-avatar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            animation: float 4s ease-in-out infinite;
-        }
-        
-        .vote-button {
-            background: linear-gradient(45deg, #3b82f6, #8b5cf6);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .vote-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
-        }
-        
-        .vote-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s;
-        }
-        
-        .vote-button:hover::before {
-            left: 100%;
-        }
-        
-        .progress-bar {
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
-            background-size: 200% 100%;
-            animation: gradient 2s ease infinite;
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.6s ease-out;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .hidden { display: none; }
-        
-        .loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 3px solid #ffffff;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        @keyframes scale-in {
-            from { 
-                opacity: 0; 
-                transform: scale(0.9) translateY(20px); 
-            }
-            to { 
-                opacity: 1; 
-                transform: scale(1) translateY(0); 
-            }
-        }
-        
-        @keyframes slide-in {
-            from { 
-                opacity: 0; 
-                transform: translateX(100%); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateX(0); 
-            }
-        }
-        
-        @keyframes fade-in {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .animate-scale-in {
-            animation: scale-in 0.3s ease-out;
-        }
-        
-        .animate-slide-in {
-            animation: slide-in 0.3s ease-out;
-        }
-        
-        .animate-fade-in {
-            animation: fade-in 0.5s ease-out;
-        }
+window.Web3State = {
+  provider: null,
+  signer: null,
+  address: null,
+  chainId: null,
+  network: null, // 'bsc' | 'tron'
+  wcProvider: null,
+  config: null
+};
 
-        .payment-method-btn {
-            transition: all 0.3s ease;
-            cursor: pointer;
-            min-width: 140px;
-            flex-shrink: 0;
-        }
-        
-        .payment-method-btn:hover {
-            border-color: rgba(59, 130, 246, 0.5);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-        }
-        
-        .payment-method-btn.active {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.3);
-        }
-        
-        .payment-method-btn.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        /* Scrollable payment tabs for mobile */
-        .payment-tabs-scroll {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-        
-        .payment-tabs-scroll::-webkit-scrollbar {
-            display: none;
-        }
-        
-        @media (max-width: 768px) {
-            .payment-tabs-scroll {
-                margin: 0 -1rem;
-                padding: 0 1rem;
-            }
-            .payment-tabs-scroll > div {
-                display: flex;
-                gap: 1rem;
-                width: max-content;
-            }
-        }
-    </style>
-    <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
-    <script>
-        // Start animation after page loads
-        window.addEventListener('load', () => {
-            document.body.classList.add('loaded');
-        });
-    </script>
-</head>
-<body class="text-white">
-    <!-- Navigation -->
-    <nav class="glassmorphism border-b border-white/20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-                    <a href="index.html" class="text-lg sm:text-xl font-bold gradient-text">
-                        FlyMadd Creative
-                    </a>
-                    <span class="text-white/60 hidden sm:inline">|</span>
-                    <span class="text-white font-medium text-sm sm:text-base hidden sm:inline">One Dream Initiative</span>
-                </div>
-                <!-- Mobile Menu Button -->
-                <button id="mobile-menu-btn" class="md:hidden text-white p-2" aria-label="Menu">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                    </svg>
-                </button>
-                <!-- Desktop Menu -->
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="Onedream.html" class="text-white/80 hover:text-white transition-colors whitespace-nowrap">Dashboard</a>
-                    <a href="search.html" class="text-white/80 hover:text-white transition-colors whitespace-nowrap">Find Participant</a>
-                    <a href="leadershipBoard.html" class="text-white/80 hover:text-white transition-colors whitespace-nowrap">Leaderboard</a>
-                    <a href="registration.html" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
-                        Join Initiative
-                    </a>
-                </div>
-            </div>
-            <!-- Mobile Menu (Hidden by default) -->
-            <div id="mobile-menu" class="md:hidden hidden pb-4 overflow-x-auto">
-                <div class="flex flex-col space-y-3">
-                    <a href="Onedream.html" class="text-white/80 hover:text-white transition-colors py-2">Dashboard</a>
-                    <a href="search.html" class="text-white/80 hover:text-white transition-colors py-2">Find Participant</a>
-                    <a href="leadershipBoard.html" class="text-white/80 hover:text-white transition-colors py-2">Leaderboard</a>
-                    <a href="registration.html" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors text-center">
-                        Join Initiative
-                    </a>
-                </div>
-            </div>
-        </div>
-    </nav>
-    <script>
-        // Mobile menu toggle
-        document.getElementById('mobile-menu-btn')?.addEventListener('click', function() {
-            const menu = document.getElementById('mobile-menu');
-            menu.classList.toggle('hidden');
-        });
-    </script>
+/* ---------------- UTILITIES ---------------- */
 
-    <!-- Main Content -->
-    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-2xl w-full">
-            
-            <!-- Loading State -->
-            <div id="loadingState" class="text-center mb-8">
-                <div class="glassmorphism rounded-2xl p-8 fade-in">
-                    <div class="loading-spinner mx-auto mb-4"></div>
-                    <h2 class="text-2xl font-bold mb-2">Loading Participant...</h2>
-                    <p class="text-white/80">Please wait while we fetch the details</p>
-                </div>
-            </div>
+async function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) return resolve();
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(s);
+  });
+}
 
-            <!-- Error State -->
-            <div id="errorState" class="hidden text-center mb-8">
-                <div class="glassmorphism rounded-2xl p-8 fade-in border-red-500/30">
-                    <div class="text-yellow-400 text-6xl mb-4">👋</div>
-                    <h2 class="text-2xl font-bold mb-2 text-red-300">Welcome To The One Dream Initiative</h2>
-                    <p class="text-white/80 mb-6" id="errorMessage">
-                        We couldn't find the participant you're looking for.
-                    </p>
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                        <a href="search.html" 
-                           class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors">
-                            🔍 Find Participant
-                        </a>
-                        <a href="leadershipBoard.html" 
-                           class="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg transition-colors">
-                            📊 View Leaderboard
-                        </a>
-                        <a href="registration.html" 
-                           class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors">
-                            ➕ Join Initiative
-                        </a>
-                    </div>
-                </div>
-            </div>
+async function loadConfig() {
+  if (window.Web3State.config) return window.Web3State.config;
+  const res = await fetch('/api/onedream/get-payment-config');
+  if (!res.ok) throw new Error('Failed to load payment config');
+  window.Web3State.config = await res.json();
+  return window.Web3State.config;
+}
 
-            <!-- Participant Card -->
-            <div id="participantCard" class="hidden">
-                <!-- Header -->
-                <div class="text-center mb-8 fade-in">
-                    <h1 class="text-4xl md:text-5xl font-bold gradient-text mb-4">
-                        Cast Your Vote
-                    </h1>
-                    <p class="text-xl text-white/80">
-                        Support this participant's dream in the One Dream Initiative
-                    </p>
-                </div>
+/* ---------------- BSC – INJECTED WALLET ---------------- */
 
-                <!-- Participant Details -->
-                <div class="glassmorphism rounded-2xl p-8 mb-8 vote-card">
-                    <div class="flex flex-col md:flex-row items-center gap-8">
-                        <!-- Avatar -->
-                        <div class="participant-avatar w-32 h-32 rounded-full flex items-center justify-center text-4xl font-bold text-white">
-                            <span id="participantInitials">?</span>
-                        </div>
-                        
-                        <!-- Details -->
-                        <div class="flex-1 text-center md:text-left">
-                            <h2 class="text-3xl font-bold mb-2" id="participantName">Loading...</h2>
-                            <p class="text-xl text-blue-300 mb-2">@<span id="participantUsername">username</span></p>
-                            <p class="text-white/80 mb-4" id="participantEmail">email@example.com</p>
-                            
-                            <!-- Stats -->
-                            <div class="grid grid-cols-2 gap-4 mb-4">
-                                <div class="bg-white/10 rounded-lg p-3 text-center">
-                                    <div class="text-2xl font-bold" id="currentVotes">0</div>
-                                    <div class="text-sm text-white/70">Current Votes</div>
-                                </div>
-                                <div class="bg-white/10 rounded-lg p-3 text-center">
-                                    <div class="text-2xl font-bold" id="participantRank">#1</div>
-                                    <div class="text-sm text-white/70">Leaderboard Rank</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Progress Bar -->
-                            <div class="mb-4">
-                                <div class="flex justify-between text-sm mb-2">
-                                    <span>Progress to Goal</span>
-                                    <span id="progressPercentage">0%</span>
-                                </div>
-                                <div class="w-full bg-white/20 rounded-full h-3">
-                                    <div class="progress-bar h-3 rounded-full transition-all duration-1000" 
-                                         id="progressBar" style="width: 0%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+async function connectBSCInjected() {
+  await loadScriptOnce('https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js');
 
-                <!-- Voting Section -->
-                <div class="glassmorphism rounded-2xl p-8 mb-8">
-                    <div class="text-center">
-                        <h3 class="text-2xl font-bold mb-4">Support This Dream</h3>
-                        <p class="text-white/80 mb-6">
-                            Each vote costs $2 and brings this participant closer to their goal of 1 million votes.
-                        </p>
-                        
-                        <!-- Vote Amount Selection -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                            <button class="vote-amount-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
-                                    data-amount="1" data-cost="2">
-                                <div class="text-xl font-bold">1 Vote</div>
-                                <div class="text-sm text-white/70">$2.00</div>
-                            </button>
-                            <button class="vote-amount-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
-                                    data-amount="5" data-cost="10">
-                                <div class="text-xl font-bold">5 Votes</div>
-                                <div class="text-sm text-white/70">$10.00</div>
-                            </button>
-                            <button class="vote-amount-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
-                                    data-amount="10" data-cost="20">
-                                <div class="text-xl font-bold">10 Votes</div>
-                                <div class="text-sm text-white/70">$20.00</div>
-                            </button>
-                            <button class="vote-amount-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
-                                    data-amount="25" data-cost="50">
-                                <div class="text-xl font-bold">25 Votes</div>
-                                <div class="text-sm text-white/70">$50.00</div>
-                            </button>
-                        </div>
-                        
-                        <!-- Custom Amount -->
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium mb-2">Custom Vote Amount</label>
-                            <input type="number" id="customVoteAmount" min="1" max="1000" 
-                                   class="w-full bg-white/10 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                   placeholder="Enter number of votes">
-                            <p class="text-sm text-white/60 mt-2">
-                                Total cost: $<span id="totalCost">2.00</span>
-                            </p>
-                        </div>
+  if (!window.ethereum) {
+    throw new Error('No BSC-compatible wallet detected');
+  }
 
-                        <!-- Payment Method Selection -->
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium mb-4 text-center">Choose Payment Method</label>
-                            <div class="payment-tabs-scroll">
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent active"
-                                            data-method="flutterwave" id="flutterwaveBtn">
-                                        <div class="text-3xl mb-2">💳</div>
-                                        <div class="font-bold">Card Payment</div>
-                                        <div class="text-sm text-white/70">Flutterwave</div>
-                                    </button>
-                                    <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
-                                            data-method="paystack" id="paystackBtn">
-                                        <div class="text-3xl mb-2">🏦</div>
-                                        <div class="font-bold">Paystack (NGN)</div>
-                                        <div class="text-sm text-white/70">Cards & Bank Transfer</div>
-                                    </button>
-                                    <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
-                                            data-method="crypto" id="cryptoBtn">
-                                        <div class="text-3xl mb-2">₿</div>
-                                        <div class="font-bold">Crypto USDT</div>
-                                        <div class="text-sm text-white/70">BSC/TRC-20</div>
-                                    </button>
-                                </div>
-                            </div>
-                            <!-- Scroll indicator for mobile -->
-                            <p class="text-xs text-white/50 text-center mt-2 md:hidden">← Swipe to see all payment options →</p>
-                        </div>
-                        
-                        <!-- Vote Button -->
-                        <button id="voteButton" class="vote-button w-full py-4 px-8 rounded-xl text-white font-bold text-lg transition-all duration-300 disabled:opacity-50">
-                            <span id="voteButtonText">Purchase Votes - $2.00</span>
-                            <div id="voteButtonSpinner" class="loading-spinner hidden inline-block ml-2"></div>
-                        </button>
-                        
-                        <!-- Payment Methods -->
-                        <div class="mt-6 text-center">
-                            <p class="text-sm text-white/60 mb-3">Secure payment powered by</p>
-                            <div class="flex justify-center items-center space-x-6">
-                                <span class="text-lg font-bold text-orange-500">Flutterwave</span>
-                                <span class="text-white/40">•</span>
-                                <span class="text-lg font-bold text-green-400">PayStack</span>
-                                <span class="text-white/40">•</span>
-                                <span class="text-lg font-bold text-orange-400">Crypto</span>
-                            </div>
-                            <p class="text-xs text-white/50 mt-2">
-                                Choose your preferred payment method above
-                            </p>
-                        </div>
-                    </div>
-                </div>
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send('eth_requestAccounts', []);
 
-                <!-- Share Section -->
-                <div class="glassmorphism rounded-2xl p-8">
-                    <div class="text-center">
-                        <h3 class="text-xl font-bold mb-4">Share & Support</h3>
-                        <p class="text-white/80 mb-6">
-                            Help spread the word about this participant's journey
-                        </p>
-                        
-                        <div class="flex justify-center space-x-4">
-                            <button onclick="shareOnTwitter()" 
-                                    class="bg-blue-500 hover:bg-blue-600 p-3 rounded-lg transition-colors">
-                                🐦 Twitter
-                            </button>
-                            <button onclick="shareOnFacebook()" 
-                                    class="bg-blue-700 hover:bg-blue-800 p-3 rounded-lg transition-colors">
-                                📘 Facebook
-                            </button>
-                            <button onclick="copyVoteLink()" 
-                                    class="bg-gray-600 hover:bg-gray-700 p-3 rounded-lg transition-colors">
-                                🔗 Copy Link
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  const network = await provider.getNetwork();
+  if (Number(network.chainId) !== 56) {
+    throw new Error('Please switch your wallet to Binance Smart Chain (BSC)');
+  }
 
-    <!-- Success Modal -->
-    <div id="successModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="glassmorphism rounded-2xl p-8 max-w-md w-full text-center">
-            <div class="text-6xl mb-4">🎉</div>
-            <h3 class="text-2xl font-bold mb-4">Payment Successful!</h3>
-            <p class="text-white/80 mb-6">
-                Thank you for supporting <span id="successParticipantName">this participant</span>!
-                Your payment for <span id="successVoteCount">1</span> vote(s) has been processed successfully.
-            </p>
-            <div class="flex flex-col sm:flex-row gap-4">
-                <button onclick="closeSuccessModal()" 
-                        class="bg-white/20 hover:bg-white/30 px-6 py-3 rounded-lg transition-colors">
-                    Purchase More Votes
-                </button>
-                <a href="leadershipBoard.html" 
-                   class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors">
-                    View Leaderboard
-                </a>
-            </div>
-        </div>
-    </div>
-    <!-- Scripts optimized for faster loading -->
-    <script>
-        // Load configuration from secure API endpoint
-        (async function() {
-            try {
-                const response = await fetch('/api/config');
-                const config = await response.json();
-                
-                // Set global config variables (PUBLIC keys only)
-                window.PAYSTACK_PUBLIC_KEY = config.paystack?.publicKey;
-                window.FLUTTERWAVE_PUBLIC_KEY = config.flutterwave?.publicKey;
-                window.WALLETCONNECT_PROJECT_ID = config.walletconnect?.projectId;
-                window.CRYPTO_NETWORKS = config.crypto?.networks || ['bsc', 'tron'];
-                window.CRYPTO_CHAIN_ID = config.crypto?.chainId || 56;
-                
-                // Wallet addresses will be fetched from backend when needed
-                // Never expose wallet addresses in frontend code
-                
-                // Signal that config is loaded
-                window.configLoaded = true;
-                window.dispatchEvent(new Event('configReady'));
-            } catch (error) {
-                console.error('Failed to load configuration:', error);
-                alert('Failed to load payment configuration. Please refresh the page.');
-            }
-        })();
-    </script>
-    
-    <!-- Core scripts loaded asynchronously -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script defer src="/js/supabase-config.js"></script>
-    <script defer src="/js/vote.js"></script>
-    
-    <!-- Payment scripts loaded on demand -->
-    <script>
-        // Lazy load payment scripts only when needed
-        window.loadPaymentScripts = function() {
-            if (window.paymentsLoaded) return Promise.resolve();
-            
-            return Promise.all([
-                loadScript('https://js.paystack.co/v1/inline.js'),
-                loadScript('https://checkout.flutterwave.com/v3.js')
-            ]).then(() => {
-                window.paymentsLoaded = true;
-            });
-        };
-        
-        // Lazy load crypto scripts only when crypto payment selected
-        window.loadCryptoScripts = function() {
-            if (window.cryptoLoaded) return Promise.resolve();
-            
-            return Promise.all([
-                loadScript('https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js'),
-                import("https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm")
-                    .then(module => {
-                        window.EthereumProvider = module.EthereumProvider;
-                    })
-            ]).then(() => {
-                window.cryptoLoaded = true;
-            });
-        };
-        
-        function loadScript(src) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = src;
-                script.onload = resolve;
-                script.onerror = reject;
-                document.body.appendChild(script);
-            });
-        }
-    </script>
-</body>
-</html> -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <!-- ... all your head content ... -->
-</head>
-<body class="text-white">
-    <!-- ... all your HTML content ... -->
+  const signer = await provider.getSigner();
+  const address = await signer.getAddress();
 
-    <!-- ========================================
-         ✅ SECURE SCRIPTS (NO EXPOSED KEYS)
-         ======================================== -->
-    
-    <script>
-        console.log('🚀 Loading Vote Page (Secure)...');
-        
-        // ❌ DON'T DO THIS - REMOVED ALL HARDCODED KEYS
-        // These will be fetched from backend API
-        window.paymentConfig = null;
-        
-        // Fetch configuration from backend
-        window.loadPaymentConfig = async function() {
-            if (window.paymentConfig) return window.paymentConfig;
-            
-            try {
-                const response = await fetch('/api/onedream/get-payment-config');
-                if (!response.ok) throw new Error('Failed to load config');
-                
-                window.paymentConfig = await response.json();
-                console.log('✅ Payment config loaded securely');
-                return window.paymentConfig;
-            } catch (error) {
-                console.error('❌ Failed to load payment config:', error);
-                throw error;
-            }
-        };
-        
-        // Script loader utility
-        window.loadScript = function(src) {
-            return new Promise((resolve, reject) => {
-                const existing = document.querySelector(`script[src="${src}"]`);
-                if (existing) {
-                    resolve();
-                    return;
-                }
-                
-                const script = document.createElement('script');
-                script.src = src;
-                script.onload = () => {
-                    console.log('✅ Loaded:', src.split('/').pop());
-                    resolve();
-                };
-                script.onerror = () => {
-                    console.error('❌ Failed to load:', src);
-                    reject(new Error(`Failed to load ${src}`));
-                };
-                document.head.appendChild(script);
-            });
-        };
-        
-        // Payment scripts loader
-        window.loadPaymentScripts = async function() {
-            if (window.paymentsLoaded) return Promise.resolve();
-            
-            console.log('📦 Loading payment scripts...');
-            
-            // Load config first
-            await window.loadPaymentConfig();
-            
-            return Promise.all([
-                window.loadScript('https://js.paystack.co/v1/inline.js'),
-                window.loadScript('https://checkout.flutterwave.com/v3.js')
-            ]).then(() => {
-                window.paymentsLoaded = true;
-                console.log('✅ Payment scripts loaded');
-            });
-        };
-        
-        // Crypto scripts loader
-        window.loadCryptoScripts = async function() {
-            if (window.cryptoLoaded) return Promise.resolve();
-            
-            console.log('📦 Loading crypto scripts...');
-            
-            // Load config first
-            await window.loadPaymentConfig();
-            
-            return Promise.all([
-                window.loadScript('https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js'),
-                import("https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm")
-                    .then(module => {
-                        window.EthereumProvider = module.EthereumProvider;
-                        console.log('✅ EthereumProvider loaded');
-                    })
-            ]).then(() => {
-                window.cryptoLoaded = true;
-                console.log('✅ Crypto scripts loaded');
-            }).catch(err => {
-                console.error('❌ Crypto scripts failed:', err);
-                throw err;
-            });
-        };
-    </script>
+  Object.assign(window.Web3State, {
+    provider,
+    signer,
+    address,
+    chainId: 56,
+    network: 'bsc'
+  });
 
-    <!-- Core libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <script src="/js/supabase-config.js"></script>
-    <script src="/js/vote.js"></script>
-    
-    <script>
-        window.addEventListener('load', () => {
-            document.body.classList.add('loaded');
-            console.log('✅ Page Fully Loaded');
-        });
-        
-        document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
-            document.getElementById('mobile-menu')?.classList.toggle('hidden');
-        });
-    </script>
-</body>
-</html>
+  console.log('✅ Connected BSC injected wallet:', address);
+  return address;
+}
+
+/* ---------------- BSC – WALLETCONNECT QR ---------------- */
+
+async function connectBSCWalletConnect() {
+  await loadScriptOnce('https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js');
+
+  const { EthereumProvider } = await import(
+    'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm'
+  );
+
+  const config = await loadConfig();
+
+  const wcProvider = await EthereumProvider.init({
+    projectId: config.walletconnectProjectId,
+    chains: [56],
+    showQrModal: true,
+    methods: ['eth_sendTransaction', 'eth_sign'],
+    events: ['accountsChanged', 'chainChanged']
+  });
+
+  await wcProvider.connect();
+
+  const provider = new ethers.BrowserProvider(wcProvider);
+  const signer = await provider.getSigner();
+  const address = await signer.getAddress();
+  const network = await provider.getNetwork();
+
+  if (Number(network.chainId) !== 56) {
+    throw new Error('Wallet connected but not on BSC');
+  }
+
+  Object.assign(window.Web3State, {
+    provider,
+    signer,
+    address,
+    chainId: 56,
+    network: 'bsc',
+    wcProvider
+  });
+
+  console.log('✅ Connected BSC via WalletConnect:', address);
+  return address;
+}
+
+/* ---------------- TRON – TRONLINK ---------------- */
+
+async function connectTron() {
+  if (!window.tronWeb || !window.tronWeb.ready) {
+    throw new Error('TronLink wallet not detected');
+  }
+
+  const address = window.tronWeb.defaultAddress.base58;
+
+  Object.assign(window.Web3State, {
+    provider: window.tronWeb,
+    signer: null,
+    address,
+    network: 'tron'
+  });
+
+  console.log('✅ Connected TRON wallet:', address);
+  return address;
+}
+
+/* ---------------- PAYMENT INIT ---------------- */
+
+async function initiateCryptoPayment(voteCount) {
+  if (!window.Web3State.network || !window.Web3State.address) {
+    throw new Error('Wallet not connected');
+  }
+
+  const intentRes = await fetch('/api/onedream/init-crypto-payment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      network: window.Web3State.network,
+      votes: voteCount,
+      from: window.Web3State.address
+    })
+  });
+
+  if (!intentRes.ok) {
+    throw new Error('Failed to initialize payment');
+  }
+
+  const intent = await intentRes.json();
+
+  if (window.Web3State.network === 'bsc') {
+    return sendBSCUSDT(intent);
+  }
+
+  if (window.Web3State.network === 'tron') {
+    return sendTRONUSDT(intent);
+  }
+
+  throw new Error('Unsupported network');
+}
+
+/* ---------------- SEND USDT – BSC ---------------- */
+
+async function sendBSCUSDT(intent) {
+  const usdt = new ethers.Contract(
+    intent.token,
+    ['function transfer(address,uint256) returns (bool)'],
+    window.Web3State.signer
+  );
+
+  const tx = await usdt.transfer(intent.to, intent.amount);
+  console.log('⏳ BSC TX sent:', tx.hash);
+
+  await tx.wait();
+  console.log('✅ BSC TX confirmed:', tx.hash);
+
+  return tx.hash;
+}
+
+/* ---------------- SEND USDT – TRON ---------------- */
+
+async function sendTRONUSDT(intent) {
+  const tronWeb = window.Web3State.provider;
+  const contract = await tronWeb.contract().at(intent.token);
+
+  const tx = await contract.transfer(
+    intent.to,
+    intent.amount
+  ).send();
+
+  console.log('✅ TRON TX sent:', tx);
+  return tx;
+}
+
+/* ---------------- SAFE DISCONNECT ---------------- */
+
+async function disconnectWallet() {
+  if (window.Web3State.wcProvider) {
+    await window.Web3State.wcProvider.disconnect();
+  }
+
+  window.Web3State = {
+    provider: null,
+    signer: null,
+    address: null,
+    chainId: null,
+    network: null,
+    wcProvider: null,
+    config: window.Web3State.config
+  };
+
+  console.log('🔌 Wallet disconnected');
+}
+</script>
