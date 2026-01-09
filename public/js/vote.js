@@ -1,232 +1,306 @@
-// vote.js
-document.addEventListener("DOMContentLoaded", () => {
-  // Elements
-  const loadingState = document.getElementById("loadingState");
-  const errorState = document.getElementById("errorState");
-  const participantCard = document.getElementById("participantCard");
-
-  const participantName = document.getElementById("participantName");
-  const participantUsername = document.getElementById("participantUsername");
-  const participantEmail = document.getElementById("participantEmail");
-  const participantInitials = document.getElementById("participantInitials");
-  const currentVotes = document.getElementById("currentVotes");
-  const participantRank = document.getElementById("participantRank");
-  const progressBar = document.getElementById("progressBar");
-  const progressPercentage = document.getElementById("progressPercentage");
-
-  const voteButtons = document.querySelectorAll(".vote-amount-btn");
-  const customVoteInput = document.getElementById("customVoteAmount");
-  const totalCostEl = document.getElementById("totalCost");
-
-  const paymentButtons = document.querySelectorAll(".payment-method-btn");
-  const voteButton = document.getElementById("voteButton");
-  const voteButtonText = document.getElementById("voteButtonText");
-  const voteButtonSpinner = document.getElementById("voteButtonSpinner");
-
-  const successModal = document.getElementById("successModal");
-  const successParticipantName = document.getElementById("successParticipantName");
-  const successVoteCount = document.getElementById("successVoteCount");
-
-  let selectedVotes = 1;
-  let selectedCost = 2;
-  let selectedPaymentMethod = "flutterwave";
-  let participantData = null;
-
-  const VOTE_COST = 2; // $2 per vote
-
-  // Fetch participant data
-  async function fetchParticipant() {
+// ========================================
+// 🔒 SECURE CRYPTO PAYMENT INITIALIZATION
+// ========================================
+async function initializeCryptoPayment(participantId, voteCount, network) {
     try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const participantId = urlParams.get("id");
-      if (!participantId) throw new Error("Participant ID missing");
+        const response = await fetch('/api/onedream/init-crypto-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                participant_id: participantId,
+                vote_count: voteCount,
+                network: network
+            })
+        });
 
-      const res = await fetch(`/api/onedream/participant/${participantId}`);
-      if (!res.ok) throw new Error("Failed to fetch participant data");
-
-      participantData = await res.json();
-      populateParticipant(participantData);
-    } catch (err) {
-      console.error(err);
-      loadingState.classList.add("hidden");
-      errorState.classList.remove("hidden");
-      document.getElementById("errorMessage").textContent = err.message;
+        if (!response.ok) throw new Error('Failed to initialize payment');
+        return await response.json(); // { payment_id, recipient_address, amount, network }
+    } catch (error) {
+        console.error('Payment initialization error:', error);
+        throw error;
     }
-  }
+}
 
-  function populateParticipant(data) {
-    loadingState.classList.add("hidden");
-    participantCard.classList.remove("hidden");
+// ========================================
+// 🆕 PROCESS CRYPTO PAYMENT
+// ========================================
+async function processCryptoPayment() {
+    // Placeholder: get participant and vote info from your page
+    const participantId = window.currentParticipant?.id || prompt('Enter participant ID');
+    const selectedVoteAmount = window.selectedVoteAmount || prompt('Enter vote count');
 
-    participantName.textContent = data.full_name;
-    participantUsername.textContent = data.username;
-    participantEmail.textContent = data.email || "N/A";
-
-    const initials = data.full_name
-      .split(" ")
-      .map(n => n[0])
-      .join("")
-      .toUpperCase();
-    participantInitials.textContent = initials;
-
-    currentVotes.textContent = data.votes || 0;
-    participantRank.textContent = "#" + (data.rank || 1);
-
-    const progress = Math.min(((data.votes || 0) / 1000000) * 100, 100);
-    progressBar.style.width = progress + "%";
-    progressPercentage.textContent = progress.toFixed(1) + "%";
-  }
-
-  // Vote amount selection
-  voteButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      voteButtons.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-
-      selectedVotes = parseInt(btn.dataset.amount, 10);
-      selectedCost = parseFloat(btn.dataset.cost);
-
-      customVoteInput.value = "";
-      updateVoteUI();
-    });
-  });
-
-  customVoteInput.addEventListener("input", () => {
-    const val = parseInt(customVoteInput.value, 10);
-    if (!isNaN(val) && val > 0) {
-      selectedVotes = val;
-      selectedCost = val * VOTE_COST;
-      voteButtons.forEach(b => b.classList.remove("active"));
-      updateVoteUI();
-    }
-  });
-
-  function updateVoteUI() {
-    totalCostEl.textContent = selectedCost.toFixed(2);
-    voteButtonText.textContent = `Purchase Votes - $${selectedCost.toFixed(2)}`;
-  }
-
-  // Payment method selection
-  paymentButtons.forEach(btn => {
-    btn.addEventListener("click", () => {
-      paymentButtons.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      selectedPaymentMethod = btn.dataset.method;
-    });
-  });
-
-  // Vote button click
-  voteButton.addEventListener("click", async () => {
-    if (!window.configLoaded) {
-      alert("Payment configuration not loaded yet.");
-      return;
+    if (!participantId || !selectedVoteAmount) {
+        alert('Missing participant ID or vote count');
+        return { success: false, error: 'Missing info' };
     }
 
-    voteButton.disabled = true;
-    voteButtonSpinner.classList.remove("hidden");
+    // Step 1: Show network selection
+    const network = await showNetworkSelectionModal();
+    if (!network) return { success: false, error: 'User cancelled network selection' };
 
+    // Step 2: Initialize payment backend
+    let paymentInit;
     try {
-      if (selectedPaymentMethod === "flutterwave") await payWithFlutterwave();
-      else if (selectedPaymentMethod === "paystack") await payWithPaystack();
-      else if (selectedPaymentMethod === "crypto") await payWithCrypto();
-
-      // Update participant votes in Supabase
-      await updateVotes(participantData.id, selectedVotes);
-
-      // Refresh participant UI
-      participantData.votes += selectedVotes;
-      populateParticipant(participantData);
-
-      // Show success modal
-      successParticipantName.textContent = participantData.full_name;
-      successVoteCount.textContent = selectedVotes;
-      successModal.classList.remove("hidden");
-    } catch (err) {
-      console.error(err);
-      alert("Payment failed: " + err.message);
-    } finally {
-      voteButton.disabled = false;
-      voteButtonSpinner.classList.add("hidden");
+        paymentInit = await initializeCryptoPayment(participantId, selectedVoteAmount, network);
+    } catch (error) {
+        alert('Failed to initialize payment');
+        return { success: false, error: 'Backend init failed' };
     }
-  });
 
-  // Close success modal
-  window.closeSuccessModal = () => {
-    successModal.classList.add("hidden");
-  };
+    // Step 3: Process network-specific payment
+    if (network === 'bsc') return await processUSDTPaymentBSC(paymentInit);
+    if (network === 'tron') return await processUSDTPaymentTron(paymentInit);
 
-  // -------------------
-  // Payment Integrations
-  // -------------------
-  async function payWithFlutterwave() {
-    await window.loadPaymentScripts();
-    return new Promise((resolve, reject) => {
-      const txRef = `FD-${Date.now()}`;
-      const payment = FlutterwaveCheckout({
-        public_key: window.FLUTTERWAVE_PUBLIC_KEY,
-        tx_ref: txRef,
-        amount: selectedCost,
-        currency: "USD",
-        payment_options: "card",
-        customer: {
-          email: participantData.email || "user@example.com",
-          name: participantData.full_name
-        },
-        callback: function(response) {
-          if (response.status === "successful") resolve(response);
-          else reject(new Error("Flutterwave payment failed"));
-        },
-        onclose: function() {
-          reject(new Error("Flutterwave payment closed"));
+    return { success: false, error: 'Unsupported network' };
+}
+
+// ========================================
+// 🔒 BSC USDT PAYMENT (WalletConnect + MetaMask)
+// ========================================
+async function processUSDTPaymentBSC(paymentInit) {
+    const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+
+    if (isMobile && window.ethereum) {
+        return await processBSCWithMobileWallet(paymentInit);
+    } else {
+        return await processBSCWithQRCode(paymentInit);
+    }
+}
+
+// BSC QR (desktop fallback)
+async function processBSCWithQRCode(paymentInit) {
+    try {
+        const modal = showEnhancedPaymentModal('bsc', paymentInit.amount);
+
+        if (typeof EthereumProvider === 'undefined') {
+            throw new Error('WalletConnect library not loaded');
         }
-      });
-    });
-  }
 
-  async function payWithPaystack() {
-    await window.loadPaymentScripts();
-    return new Promise((resolve, reject) => {
-      const handler = window.PaystackPop.setup({
-        key: window.PAYSTACK_PUBLIC_KEY,
-        email: participantData.email || "user@example.com",
-        amount: selectedCost * 100, // NGN minor unit
-        currency: "NGN",
-        callback: function(response) {
-          if (response.status === "success") resolve(response);
-          else reject(new Error("Paystack payment failed"));
-        },
-        onClose: function() {
-          reject(new Error("Paystack payment closed"));
+        const provider = await EthereumProvider.init({
+            projectId: window.WALLETCONNECT_PROJECT_ID,
+            chains: [56],
+            showQrModal: true,
+            methods: ['eth_sendTransaction', 'eth_accounts', 'eth_requestAccounts', 'personal_sign'],
+            events: ['chainChanged', 'accountsChanged'],
+            metadata: {
+                name: 'One Dream Initiative',
+                description: 'USDT Payment for Voting',
+                url: window.location.origin,
+                icons: [`${window.location.origin}/logo.png`]
+            }
+        });
+
+        updateModalStatus(modal, 'Scan QR Code with Your Wallet App', 'connected');
+
+        await provider.connect();
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        const walletAddress = accounts[0];
+        updateModalStatus(modal, `✅ Wallet Connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`, 'connected');
+
+        const chainId = await provider.request({ method: 'eth_chainId' });
+        if (parseInt(chainId, 16) !== 56) {
+            await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
         }
-      });
-      handler.openIframe();
+
+        updateModalStatus(modal, 'Preparing USDT Transfer...', 'loading');
+        const ethersProvider = new ethers.BrowserProvider(provider);
+        const signer = await ethersProvider.getSigner();
+
+        const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
+        const recipientAddress = paymentInit.recipient_address;
+        const amountInWei = ethers.parseUnits(paymentInit.amount.toString(), 18);
+
+        const usdtContract = new ethers.Contract(
+            usdtAddress,
+            ['function transfer(address to, uint256 amount) returns (bool)'],
+            signer
+        );
+
+        const tx = await usdtContract.transfer(recipientAddress, amountInWei);
+        updateModalStatus(modal, '⏳ Transaction Sent! Waiting for confirmation...', 'pending');
+        await tx.wait(1);
+        updateModalStatus(modal, '✅ Payment Confirmed!', 'success');
+        setTimeout(() => modal.remove(), 2000);
+
+        await provider.disconnect();
+
+        return {
+            success: true,
+            payment_intent_id: tx.hash,
+            txHash: tx.hash,
+            network: 'bsc',
+            explorer: `https://bscscan.com/tx/${tx.hash}`
+        };
+
+    } catch (error) {
+        console.error('BSC QR payment error:', error);
+        return { success: false, error: error.message || 'BSC payment failed' };
+    }
+}
+
+// BSC mobile wallet (MetaMask / injected)
+async function processBSCWithMobileWallet(paymentInit) {
+    if (!window.ethereum) return { success: false, error: 'No wallet detected' };
+    try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const accounts = await provider.send('eth_requestAccounts', []);
+        const walletAddress = accounts[0];
+
+        const network = await provider.getNetwork();
+        if (network.chainId !== 56) {
+            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
+        }
+
+        const signer = await provider.getSigner();
+        const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
+        const amountInWei = ethers.parseUnits(paymentInit.amount.toString(), 18);
+
+        const usdtContract = new ethers.Contract(
+            usdtAddress,
+            ['function transfer(address to, uint256 amount) returns (bool)'],
+            signer
+        );
+
+        const tx = await usdtContract.transfer(paymentInit.recipient_address, amountInWei);
+        await tx.wait(1);
+
+        return { success: true, payment_intent_id: tx.hash, txHash: tx.hash, network: 'bsc', explorer: `https://bscscan.com/tx/${tx.hash}` };
+
+    } catch (error) {
+        return { success: false, error: error.message || 'BSC payment failed' };
+    }
+}
+
+// ========================================
+// 🔒 TRON USDT PAYMENT
+// ========================================
+async function processUSDTPaymentTron(paymentInit) {
+    if (window.tronWeb && window.tronWeb.ready) {
+        return await processTronWithTronLink(paymentInit);
+    } else {
+        return await processTronWithQRCode(paymentInit);
+    }
+}
+
+// TRON QR + deep link
+async function processTronWithQRCode(paymentInit) {
+    try {
+        const recipientAddress = paymentInit.recipient_address;
+        const amountUSD = paymentInit.amount;
+
+        const tronDeepLink = `tronlinkoutside://send?token=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&amount=${amountUSD*1000000}&receiver=${recipientAddress}`;
+
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4';
+        modal.innerHTML = `
+            <div class="glassmorphism rounded-2xl p-6 max-w-md w-full">
+                <h3 class="text-xl font-bold mb-2">🔴 TRON USDT Payment</h3>
+                <p class="mb-4">Amount: ${amountUSD} USDT (TRC-20)</p>
+                <button onclick="window.open('${tronDeepLink}','_blank')" class="w-full bg-red-600 py-3 rounded-lg text-white font-bold mb-2">Open in TronLink/Wallet</button>
+                <button onclick="this.closest('.fixed').remove()" class="w-full bg-gray-600 py-2 rounded-lg text-white font-semibold">Cancel</button>
+                <p class="mt-2 text-xs text-white/70">Scan QR or use mobile wallet</p>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Optional: generate QR
+        setTimeout(() => generateEnhancedQRCode(recipientAddress, 'tronQRCode', 'tron', amountUSD), 100);
+
+        return new Promise(resolve => {
+            window.confirmTronPayment = async function(txHash) {
+                modal.remove();
+                if (txHash?.length === 64) {
+                    resolve({ success: true, payment_intent_id: txHash, txHash, network: 'tron', explorer: `https://tronscan.org/#/transaction/${txHash}` });
+                } else {
+                    // Backend verification
+                    resolve({ success: true, payment_intent_id: `manual_${Date.now()}`, txHash: null, network: 'tron', manual: true });
+                }
+            };
+        });
+
+    } catch (error) {
+        console.error('TRON QR error:', error);
+        return { success: false, error: error.message || 'TRON payment failed' };
+    }
+}
+
+// TRON injected wallet (TronLink)
+async function processTronWithTronLink(paymentInit) {
+    try {
+        const tronWeb = window.tronWeb;
+        const usdtContract = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+        const amount = Math.floor(paymentInit.amount * 1000000);
+
+        const contract = await tronWeb.contract().at(usdtContract);
+        const txResult = await contract.transfer(paymentInit.recipient_address, amount).send();
+
+        return { success: true, payment_intent_id: txResult, txHash: txResult, network: 'tron', explorer: `https://tronscan.org/#/transaction/${txResult}` };
+
+    } catch (error) {
+        return { success: false, error: error.message || 'TronLink payment failed' };
+    }
+}
+
+// ========================================
+// 🔹 UI / MODALS / QR HELPERS
+// ========================================
+
+function showEnhancedPaymentModal(network, amount) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4';
+    modal.innerHTML = `
+        <div class="glassmorphism rounded-2xl p-8 max-w-md w-full text-center">
+            <h3 class="text-2xl font-bold mb-2">${network.toUpperCase()} Payment</h3>
+            <p class="mb-4">Amount: ${amount} USDT</p>
+            <div id="modalStatus">Connecting...</div>
+            <div class="loading-spinner mx-auto mt-2"></div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+function updateModalStatus(modal, message, status) {
+    if (!modal) return;
+    const statusDiv = modal.querySelector('#modalStatus');
+    if (statusDiv) statusDiv.innerText = message;
+}
+
+// Network selection modal
+async function showNetworkSelectionModal() {
+    return new Promise(resolve => {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4';
+        modal.innerHTML = `
+            <div class="glassmorphism rounded-2xl p-8 max-w-lg w-full">
+                <h3 class="text-2xl font-bold mb-2">Select USDT Network</h3>
+                <button onclick="selectCryptoNetwork('bsc')" class="w-full mb-2 bg-yellow-500 py-3 rounded-lg">BSC (BEP-20)</button>
+                <button onclick="selectCryptoNetwork('tron')" class="w-full mb-2 bg-red-500 py-3 rounded-lg">TRON (TRC-20)</button>
+                <button onclick="selectCryptoNetwork(null)" class="w-full py-2 bg-gray-600 rounded-lg">Cancel</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        window.selectCryptoNetwork = function(network) {
+            modal.remove();
+            delete window.selectCryptoNetwork;
+            resolve(network);
+        };
     });
-  }
+}
 
-  async function payWithCrypto() {
-    await window.loadCryptoScripts();
-    if (!window.ethereum) throw new Error("Crypto wallet not found");
+// QR code generator
+function generateEnhancedQRCode(address, elementId, network='tron', amount=0) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    let qrData = address;
+    if (network === 'tron') qrData = `tron:${address}?amount=${amount}&token=USDT`;
+    if (network === 'bsc') qrData = `ethereum:${address}@56?value=${amount}`;
+    const qrUrl = `https://chart.googleapis.com/chart?chs=192x192&cht=qr&chl=${encodeURIComponent(qrData)}&choe=UTF-8`;
+    element.innerHTML = `<img src="${qrUrl}" class="mx-auto rounded-lg shadow-lg"/>`;
+}
 
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer = await provider.getSigner();
-    const tx = await signer.sendTransaction({
-      to: "0xYourBackendWalletAddress", // replace with backend-generated wallet address
-      value: ethers.parseEther((selectedCost / 1).toString()) // example: $1 = 1 ETH
-    });
-    await tx.wait();
-  }
-
-  // Update votes in backend (Supabase)
-  async function updateVotes(participantId, votes) {
-    const res = await fetch(`/api/onedream/vote`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ participantId, votes })
-    });
-    if (!res.ok) throw new Error("Failed to update votes");
-  }
-
-  // Initialize
-  fetchParticipant();
-  updateVoteUI();
-});
+// Copy to clipboard helper
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => alert('Copied to clipboard!'));
+}
