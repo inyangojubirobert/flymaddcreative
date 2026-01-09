@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -505,14 +505,15 @@
                 const response = await fetch('/api/config');
                 const config = await response.json();
                 
-                // Set global config variables
-                window.PAYSTACK_PUBLIC_KEY = config.paystackPublicKey;
-                window.FLUTTERWAVE_PUBLIC_KEY = config.flutterwavePublicKey;
-                window.WALLETCONNECT_PROJECT_ID = config.walletconnectProjectId;
-                window.CRYPTO_WALLET_ADDRESS_BSC = config.cryptoWalletBSC;
-                window.CRYPTO_WALLET_ADDRESS_TRON = config.cryptoWalletTRON;
-                window.CRYPTO_NETWORK = config.cryptoNetwork;
-                window.CRYPTO_CHAIN_ID = config.cryptoChainId;
+                // Set global config variables (PUBLIC keys only)
+                window.PAYSTACK_PUBLIC_KEY = config.paystack?.publicKey;
+                window.FLUTTERWAVE_PUBLIC_KEY = config.flutterwave?.publicKey;
+                window.WALLETCONNECT_PROJECT_ID = config.walletconnect?.projectId;
+                window.CRYPTO_NETWORKS = config.crypto?.networks || ['bsc', 'tron'];
+                window.CRYPTO_CHAIN_ID = config.crypto?.chainId || 56;
+                
+                // Wallet addresses will be fetched from backend when needed
+                // Never expose wallet addresses in frontend code
                 
                 // Signal that config is loaded
                 window.configLoaded = true;
@@ -567,6 +568,127 @@
                 document.body.appendChild(script);
             });
         }
+    </script>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- ... all your head content ... -->
+</head>
+<body class="text-white">
+    <!-- ... all your HTML content ... -->
+
+    <!-- ========================================
+         ✅ SECURE SCRIPTS (NO EXPOSED KEYS)
+         ======================================== -->
+    
+    <script>
+        console.log('🚀 Loading Vote Page (Secure)...');
+        
+        // ❌ DON'T DO THIS - REMOVED ALL HARDCODED KEYS
+        // These will be fetched from backend API
+        window.paymentConfig = null;
+        
+        // Fetch configuration from backend
+        window.loadPaymentConfig = async function() {
+            if (window.paymentConfig) return window.paymentConfig;
+            
+            try {
+                const response = await fetch('/api/onedream/get-payment-config');
+                if (!response.ok) throw new Error('Failed to load config');
+                
+                window.paymentConfig = await response.json();
+                console.log('✅ Payment config loaded securely');
+                return window.paymentConfig;
+            } catch (error) {
+                console.error('❌ Failed to load payment config:', error);
+                throw error;
+            }
+        };
+        
+        // Script loader utility
+        window.loadScript = function(src) {
+            return new Promise((resolve, reject) => {
+                const existing = document.querySelector(`script[src="${src}"]`);
+                if (existing) {
+                    resolve();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    console.log('✅ Loaded:', src.split('/').pop());
+                    resolve();
+                };
+                script.onerror = () => {
+                    console.error('❌ Failed to load:', src);
+                    reject(new Error(`Failed to load ${src}`));
+                };
+                document.head.appendChild(script);
+            });
+        };
+        
+        // Payment scripts loader
+        window.loadPaymentScripts = async function() {
+            if (window.paymentsLoaded) return Promise.resolve();
+            
+            console.log('📦 Loading payment scripts...');
+            
+            // Load config first
+            await window.loadPaymentConfig();
+            
+            return Promise.all([
+                window.loadScript('https://js.paystack.co/v1/inline.js'),
+                window.loadScript('https://checkout.flutterwave.com/v3.js')
+            ]).then(() => {
+                window.paymentsLoaded = true;
+                console.log('✅ Payment scripts loaded');
+            });
+        };
+        
+        // Crypto scripts loader
+        window.loadCryptoScripts = async function() {
+            if (window.cryptoLoaded) return Promise.resolve();
+            
+            console.log('📦 Loading crypto scripts...');
+            
+            // Load config first
+            await window.loadPaymentConfig();
+            
+            return Promise.all([
+                window.loadScript('https://cdn.jsdelivr.net/npm/ethers@6.7.0/dist/ethers.umd.min.js'),
+                import("https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm")
+                    .then(module => {
+                        window.EthereumProvider = module.EthereumProvider;
+                        console.log('✅ EthereumProvider loaded');
+                    })
+            ]).then(() => {
+                window.cryptoLoaded = true;
+                console.log('✅ Crypto scripts loaded');
+            }).catch(err => {
+                console.error('❌ Crypto scripts failed:', err);
+                throw err;
+            });
+        };
+    </script>
+
+    <!-- Core libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="/js/supabase-config.js"></script>
+    <script src="/js/crypto-payments.js"></script>
+    <script src="/js/vote.js"></script>
+    
+    <script>
+        window.addEventListener('load', () => {
+            document.body.classList.add('loaded');
+            console.log('✅ Page Fully Loaded');
+        });
+        
+        document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
+            document.getElementById('mobile-menu')?.classList.toggle('hidden');
+        });
     </script>
 </body>
 </html>

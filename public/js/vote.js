@@ -1,4 +1,31 @@
 // ========================================
+// 🔒 SECURE CRYPTO PAYMENT INITIALIZATION
+// ========================================
+async function initializeCryptoPayment(participantId, voteCount, network) {
+    try {
+        const response = await fetch('/api/onedream/init-crypto-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                participant_id: participantId,
+                vote_count: voteCount,
+                network: network
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to initialize payment');
+        }
+
+        const data = await response.json();
+        return data; // Contains: payment_id, recipient_address, amount, network
+    } catch (error) {
+        console.error('Payment initialization error:', error);
+        throw error;
+    }
+}
+
+// ========================================
 // 🆕 IMPROVED CRYPTO USDT PAYMENT SYSTEM
 // ========================================
 
@@ -23,48 +50,61 @@ async function processCryptoPayment(paymentData) {
         return { success: false, error: 'Payment cancelled by user' };
     }
     
+    // Initialize payment on backend (gets wallet address securely)
+    let paymentInit;
+    try {
+        paymentInit = await initializeCryptoPayment(
+            currentParticipant.id,
+            selectedVoteAmount,
+            network
+        );
+    } catch (error) {
+        alert('Failed to initialize payment. Please try again.');
+        return { success: false, error: 'Failed to initialize payment' };
+    }
+    
     // Process based on selected network
     if (network === 'bsc') {
-        return await processUSDTPayment('bsc');
+        return await processUSDTPayment('bsc', paymentInit);
     } else if (network === 'tron') {
-        return await processUSDTPayment('tron');
+        return await processUSDTPayment('tron', paymentInit);
     }
 }
 
 // ========================================
-// 🆕 UNIFIED USDT PAYMENT FUNCTION
+// 🔒 UPDATED: Process USDT Payment (Secure)
 // ========================================
-async function processUSDTPayment(network) {
+async function processUSDTPayment(network, paymentInit) {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     
     if (network === 'bsc') {
         // BSC USDT Payment
         if (isMobile && window.ethereum) {
             // Mobile with injected wallet
-            return await processBSCWithMobileWallet();
+            return await processBSCWithMobileWallet(paymentInit);
         } else {
             // Desktop or mobile without wallet - show QR
-            return await processBSCWithQRCode();
+            return await processBSCWithQRCode(paymentInit);
         }
     } else if (network === 'tron') {
         // Tron USDT Payment
         if (window.tronWeb && window.tronWeb.ready) {
             // TronLink available
-            return await processTronWithTronLink();
+            return await processTronWithTronLink(paymentInit);
         } else {
             // Show QR code for mobile wallets
-            return await processTronWithQRCode();
+            return await processTronWithQRCode(paymentInit);
         }
     }
 }
 
 // ========================================
-// 🆕 BSC PAYMENT WITH QR CODE
+// 🔒 SECURE BSC PAYMENT WITH QR CODE
 // ========================================
-async function processBSCWithQRCode() {
+async function processBSCWithQRCode(paymentInit) {
     try {
         // Show custom loading modal with instructions
-        const modal = showEnhancedPaymentModal('bsc', selectedCost);
+        const modal = showEnhancedPaymentModal('bsc', paymentInit.amount);
         
         // Check if EthereumProvider is available
         if (typeof EthereumProvider === 'undefined') {
@@ -73,7 +113,7 @@ async function processBSCWithQRCode() {
 
         // Initialize WalletConnect with QR Modal
         const provider = await EthereumProvider.init({
-            projectId: window.WALLETCONNECT_PROJECT_ID || 'WALLETCONNECT_PROJECT_ID_REMOVED',
+            projectId: window.WALLETCONNECT_PROJECT_ID,
             chains: [56], // BSC
             showQrModal: true,
             methods: [
@@ -165,8 +205,8 @@ async function processBSCWithQRCode() {
 
         // USDT Contract (BSC-USD - 18 decimals)
         const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
-        const recipientAddress = window.CRYPTO_WALLET_ADDRESS_BSC;
-        const amountUSD = selectedCost;
+        const recipientAddress = paymentInit.recipient_address; // 🔒 From backend
+        const amountUSD = paymentInit.amount; // 🔒 From backend
         const amountInWei = ethers.parseUnits(amountUSD.toString(), 18);
 
         const usdtContract = new ethers.Contract(
@@ -222,10 +262,13 @@ async function processBSCWithQRCode() {
 // ========================================
 // 🆕 TRON PAYMENT WITH QR CODE
 // ========================================
-async function processTronWithQRCode() {
+// ========================================
+// 🔒 SECURE TRON PAYMENT WITH QR CODE
+// ========================================
+async function processTronWithQRCode(paymentInit) {
     try {
-        const recipientAddress = window.CRYPTO_WALLET_ADDRESS_TRON;
-        const amountUSD = selectedCost;
+        const recipientAddress = paymentInit.recipient_address; // 🔒 From backend
+        const amountUSD = paymentInit.amount; // 🔒 From backend
         const usdtAmount = amountUSD; // USDT has 6 decimals
 
         // Generate deep link for TronLink with USDT payment
@@ -366,7 +409,10 @@ async function processTronWithQRCode() {
 // ========================================
 // 🆕 MOBILE WALLET HELPERS
 // ========================================
-async function processBSCWithMobileWallet() {
+// ========================================
+// 🔒 SECURE BSC PAYMENT WITH MOBILE WALLET
+// ========================================
+async function processBSCWithMobileWallet(paymentInit) {
     if (!window.ethereum) {
         return { success: false, error: 'No wallet detected' };
     }
@@ -402,8 +448,8 @@ async function processBSCWithMobileWallet() {
 
         const signer = await provider.getSigner();
         const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
-        const recipientAddress = window.CRYPTO_WALLET_ADDRESS_BSC;
-        const amountUSD = selectedCost;
+        const recipientAddress = paymentInit.recipient_address; // 🔒 From backend
+        const amountUSD = paymentInit.amount; // 🔒 From backend
         const amountInWei = ethers.parseUnits(amountUSD.toString(), 18);
 
         const usdtContract = new ethers.Contract(
@@ -431,7 +477,10 @@ async function processBSCWithMobileWallet() {
     }
 }
 
-async function processTronWithTronLink() {
+// ========================================
+// 🔒 SECURE TRON PAYMENT WITH TRONLINK
+// ========================================
+async function processTronWithTronLink(paymentInit) {
     if (!window.tronWeb || !window.tronWeb.ready) {
         return { success: false, error: 'TronLink not available' };
     }
@@ -440,8 +489,8 @@ async function processTronWithTronLink() {
         const tronWeb = window.tronWeb;
         const userAddress = tronWeb.defaultAddress.base58;
         const usdtContract = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
-        const recipientAddress = window.CRYPTO_WALLET_ADDRESS_TRON;
-        const amountUSD = selectedCost;
+        const recipientAddress = paymentInit.recipient_address; // 🔒 From backend
+        const amountUSD = paymentInit.amount; // 🔒 From backend
         const amount = Math.floor(amountUSD * 1000000); // 6 decimals
 
         const contract = await tronWeb.contract().at(usdtContract);
