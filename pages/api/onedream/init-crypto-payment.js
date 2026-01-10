@@ -81,10 +81,18 @@ export default async function handler(req, res) {
       : process.env.CRYPTO_WALLET_ADDRESS_TRON;
 
     if (!walletAddress) {
+      console.error(`❌ Missing wallet address for ${network}`);
+      console.error('Available env vars:', {
+        bsc: !!process.env.CRYPTO_WALLET_ADDRESS_BSC,
+        tron: !!process.env.CRYPTO_WALLET_ADDRESS_TRON
+      });
+      
       return res.status(500).json({ 
-        error: `Wallet address not configured for ${network}` 
+        error: `Wallet address not configured for ${network}. Please contact support.` 
       });
     }
+
+    console.log(`✅ Crypto payment initialized: ${network} - ${amount} USDT`);
 
     return res.status(200).json({
       success: true,

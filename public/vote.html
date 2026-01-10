@@ -440,15 +440,15 @@
             </div>
         </div>
     </div>
-    <!-- Place these scripts at the END of <body> in this exact order: -->
     
-    <!-- Scripts - Load in correct order -->
+    <!-- ========================================
+         ✅ FIXED SCRIPTS - CORRECT ORDER & URLS
+         ======================================== -->
     
-    <!-- 1. WalletConnect & Web3 Libraries (MUST be before other scripts) -->
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/dist/index.umd.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+    <!-- 1. Core Libraries - MUST load first -->
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
     
-    <!-- 2. Initialize global state -->
+    <!-- 2. Initialize Global State & WalletConnect Loader -->
     <script>
         console.log('🚀 Vote Page Loading...');
         
@@ -459,7 +459,26 @@
         window.selectedPaymentMethod = 'stripe';
         
         // WalletConnect Project ID (get from https://cloud.walletconnect.com)
-        window.WALLETCONNECT_PROJECT_ID = 'YOUR_PROJECT_ID_HERE'; // Replace with your actual project ID
+        window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';
+        
+        // Load WalletConnect dynamically when needed (lazy loading)
+        window.loadWalletConnect = async function() {
+            if (window.EthereumProvider) {
+                console.log('✅ WalletConnect already loaded');
+                return true;
+            }
+            
+            try {
+                console.log('📦 Loading WalletConnect library...');
+                const module = await import('https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm');
+                window.EthereumProvider = module.EthereumProvider;
+                console.log('✅ WalletConnect loaded successfully');
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to load WalletConnect:', error);
+                throw new Error('WalletConnect library failed to load. Please check your internet connection and try again.');
+            }
+        };
     </script>
     
     <!-- 3. Supabase Config -->
@@ -471,9 +490,10 @@
     <!-- 5. Main Vote Logic -->
     <script src="/js/vote.js"></script>
     
-    <!-- 6. Initialize -->
+    <!-- 6. Page Ready -->
     <script>
-        console.log('✅ All scripts loaded');
+        console.log('✅ All core scripts loaded');
+        console.log('💡 WalletConnect will load on-demand when crypto payment is selected');
     </script>
 </body>
 </html>

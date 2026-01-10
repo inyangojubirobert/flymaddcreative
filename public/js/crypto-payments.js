@@ -74,20 +74,28 @@ async function processBSCWithWalletConnect(paymentInit) {
     const modal = showEnhancedPaymentModal('BSC', paymentInit.amount);
     
     try {
-        // Check if WalletConnect library is loaded
-        if (!window.EthereumProvider) {
-            throw new Error('WalletConnect library not loaded. Please refresh the page.');
+        // ✅ Load WalletConnect if not already loaded (lazy loading)
+        if (typeof window.loadWalletConnect === 'function') {
+            updateModalStatus(modal, 'Loading WalletConnect library...', 'loading');
+            try {
+                await window.loadWalletConnect();
+            } catch (error) {
+                modal?.remove();
+                throw new Error('Failed to load WalletConnect. Please refresh and try again.');
+            }
         }
 
-        if (!window.WALLETCONNECT_PROJECT_ID || window.WALLETCONNECT_PROJECT_ID === 'YOUR_PROJECT_ID_HERE') {
-            throw new Error('WalletConnect Project ID not configured. Please contact support.');
+        // ✅ Check if EthereumProvider is available
+        if (!window.EthereumProvider) {
+            modal?.remove();
+            throw new Error('WalletConnect library not loaded. Please refresh the page.');
         }
 
         updateModalStatus(modal, 'Initializing WalletConnect...', 'loading');
 
         // Initialize WalletConnect Provider
-        const provider = await window.EthereumProvider.default.init({
-            projectId: window.WALLETCONNECT_PROJECT_ID,
+        const provider = await window.EthereumProvider.init({
+            projectId: window.WALLETCONNECT_PROJECT_ID || '61d9b98f81731dffa9988c0422676fc5',
             chains: [56], // BSC Mainnet
             showQrModal: true,
             methods: ['eth_sendTransaction', 'eth_accounts', 'eth_requestAccounts', 'personal_sign'],
@@ -97,19 +105,27 @@ async function processBSCWithWalletConnect(paymentInit) {
                 description: 'USDT Payment for Voting',
                 url: window.location.origin,
                 icons: [`${window.location.origin}/favicon.png`]
+            },
+            qrModalOptions: {
+                themeMode: 'dark',
+                themeVariables: {
+                    '--wcm-z-index': '99999',
+                    '--wcm-accent-color': '#3b82f6'
+                }
             }
         });
 
-        updateModalStatus(modal, '📱 Scan QR Code with Your Wallet App', 'connected');
+        updateModalStatus(modal, '📱 Scan QR Code with Your Wallet App', 'waiting');
 
-        // Enable WalletConnect session (shows QR code)
-        await provider.enable();
-        
-        const accounts = provider.accounts;
+        // Connect wallet (this will show the QR code modal)
+        await provider.connect();
+
+        const accounts = await provider.request({ method: 'eth_accounts' });
         const walletAddress = accounts[0];
+
         updateModalStatus(modal, `✅ Connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`, 'connected');
 
-        // Check if on correct network
+        // Check if on correct network (BSC)
         const chainId = await provider.request({ method: 'eth_chainId' });
         if (parseInt(chainId, 16) !== 56) {
             updateModalStatus(modal, 'Switching to BSC network...', 'loading');
@@ -119,7 +135,7 @@ async function processBSCWithWalletConnect(paymentInit) {
                     params: [{ chainId: '0x38' }] // BSC Mainnet
                 });
             } catch (switchError) {
-                // If network doesn't exist, add it
+                // If network doesn't exist in wallet, add it
                 if (switchError.code === 4902) {
                     await provider.request({
                         method: 'wallet_addEthereumChain',
@@ -139,14 +155,14 @@ async function processBSCWithWalletConnect(paymentInit) {
 
         updateModalStatus(modal, 'Preparing USDT transfer...', 'loading');
 
-        // Create Ethers provider from WalletConnect
-        const ethersProvider = new ethers.BrowserProvider(provider);
-        const signer = await ethersProvider.getSigner();
+        // Create ethers provider (use ethers v5 from CDN)
+        const ethersProvider = new ethers.providers.Web3Provider(provider);
+        const signer = ethersProvider.getSigner();
 
         // BSC USDT Contract Address
         const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
         const recipientAddress = paymentInit.recipient_address;
-        const amountInWei = ethers.parseUnits(paymentInit.amount.toString(), 18);
+        const amountInWei = ethers.utils.parseUnits(paymentInit.amount.toString(), 18);
 
         // Create USDT contract instance
         const usdtContract = new ethers.Contract(
@@ -155,19 +171,19 @@ async function processBSCWithWalletConnect(paymentInit) {
             signer
         );
 
-        updateModalStatus(modal, '💳 Please confirm transaction in your wallet...', 'pending');
+        updateModalStatus(modal, `💸 Sending ${paymentInit.amount} USDT...`, 'loading');
 
         // Execute transfer
         const tx = await usdtContract.transfer(recipientAddress, amountInWei);
-        
-        updateModalStatus(modal, '⏳ Transaction sent! Waiting for confirmation...', 'pending');
-        
+
+        updateModalStatus(modal, '⏳ Waiting for confirmation...', 'pending');
+
         // Wait for transaction confirmation
         const receipt = await tx.wait(1);
-        
+
         updateModalStatus(modal, '✅ Payment Confirmed!', 'success');
-        
-        setTimeout(() => modal.remove(), 2000);
+
+        setTimeout(() => modal?.remove(), 2000);
 
         // Disconnect WalletConnect
         await provider.disconnect();
@@ -184,8 +200,11 @@ async function processBSCWithWalletConnect(paymentInit) {
     } catch (error) {
         console.error('BSC WalletConnect payment error:', error);
         updateModalStatus(modal, `❌ Error: ${error.message}`, 'error');
-        setTimeout(() => modal.remove(), 3000);
-        return { success: false, error: error.message || 'BSC payment failed' };
+        setTimeout(() => modal?.remove(), 3000);
+        return {
+            success: false,
+            error: error.message || 'BSC payment failed'
+        };
     }
 }
 
@@ -194,7 +213,7 @@ async function processBSCWithMobileWallet(paymentInit) {
     if (!window.ethereum) return { success: false, error: 'No wallet detected' };
     
     try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
         const accounts = await provider.send('eth_requestAccounts', []);
         const walletAddress = accounts[0];
 
@@ -206,9 +225,9 @@ async function processBSCWithMobileWallet(paymentInit) {
             });
         }
 
-        const signer = await provider.getSigner();
+        const signer = provider.getSigner();
         const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
-        const amountInWei = ethers.parseUnits(paymentInit.amount.toString(), 18);
+        const amountInWei = ethers.utils.parseUnits(paymentInit.amount.toString(), 18);
 
         const usdtContract = new ethers.Contract(
             usdtAddress,
