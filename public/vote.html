@@ -444,7 +444,11 @@
     
     <!-- Scripts - Load in correct order -->
     
-    <!-- 1. Initialize global state FIRST -->
+    <!-- 1. WalletConnect & Web3 Libraries (MUST be before other scripts) -->
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/dist/index.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+    
+    <!-- 2. Initialize global state -->
     <script>
         console.log('🚀 Vote Page Loading...');
         
@@ -453,15 +457,21 @@
         window.selectedVoteAmount = 1;
         window.selectedCost = 2.00;
         window.selectedPaymentMethod = 'stripe';
+        
+        // WalletConnect Project ID (get from https://cloud.walletconnect.com)
+        window.WALLETCONNECT_PROJECT_ID = 'YOUR_PROJECT_ID_HERE'; // Replace with your actual project ID
     </script>
     
-    <!-- 2. Supabase Config -->
+    <!-- 3. Supabase Config -->
     <script src="/js/supabase-config.js"></script>
     
-    <!-- 3. Main Vote Logic -->
+    <!-- 4. Crypto Payments Module -->
+    <script src="/js/crypto-payments.js"></script>
+    
+    <!-- 5. Main Vote Logic -->
     <script src="/js/vote.js"></script>
     
-    <!-- 4. Initialize -->
+    <!-- 6. Initialize -->
     <script>
         console.log('✅ All scripts loaded');
     </script>
