@@ -441,7 +441,29 @@
         </div>
     </div>
     <!-- Place these scripts at the END of <body> in this exact order: -->
+    
+    <!-- Scripts - Load in correct order -->
+    
+    <!-- 1. Initialize global state FIRST -->
+    <script>
+        console.log('🚀 Vote Page Loading...');
+        
+        // Global state
+        window.currentParticipant = null;
+        window.selectedVoteAmount = 1;
+        window.selectedCost = 2.00;
+        window.selectedPaymentMethod = 'stripe';
+    </script>
+    
+    <!-- 2. Supabase Config -->
     <script src="/js/supabase-config.js"></script>
+    
+    <!-- 3. Main Vote Logic -->
     <script src="/js/vote.js"></script>
+    
+    <!-- 4. Initialize -->
+    <script>
+        console.log('✅ All scripts loaded');
+    </script>
 </body>
 </html>
