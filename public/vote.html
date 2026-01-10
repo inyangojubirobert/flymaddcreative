@@ -12,6 +12,12 @@
     <!-- Tailwind CSS (built) -->
     <link rel="stylesheet" href="/dist/output.css">
 
+    <!-- Supabase Configuration (must be before any scripts) -->
+    <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
+    
+    <!-- Supabase CDN - Load FIRST before any other scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <!-- Enhanced CSS Styles -->
     <style>
         body {
@@ -178,7 +184,6 @@
             margin-top: 0.5rem;
         }
     </style>
-    <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
 </head>
 <body class="text-white">
     <!-- Navigation -->
@@ -436,7 +441,6 @@
         </div>
     </div>
     <!-- Place these scripts at the END of <body> in this exact order: -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="/js/supabase-config.js"></script>
     <script src="/js/vote.js"></script>
 </body>

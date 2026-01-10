@@ -422,6 +422,37 @@
         }
     };
 
+    // Supabase Configuration and Client Initialization
+
+    // Get Supabase credentials from meta tag
+    const supabaseConfigMeta = document.querySelector('meta[name="supabase-config"]');
+    const SUPABASE_URL = supabaseConfigMeta?.getAttribute('data-url');
+    const SUPABASE_ANON_KEY = supabaseConfigMeta?.getAttribute('data-anon');
+
+    // Initialize Supabase client (using CDN global)
+    let supabaseClient;
+
+    try {
+        if (!window.supabase) {
+            throw new Error('Supabase library not loaded');
+        }
+        
+        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+            throw new Error('Supabase configuration missing');
+        }
+        
+        // Use the global supabase object from CDN
+        const { createClient } = window.supabase;
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        console.log('✅ Supabase initialized successfully');
+    } catch (error) {
+        console.error('❌ Supabase initialization failed:', error);
+    }
+
+    // Export for use in other scripts
+    window.supabaseClient = supabaseClient;
+
     // ========================================
     // SUPABASE DIRECT QUERIES
     // ========================================
