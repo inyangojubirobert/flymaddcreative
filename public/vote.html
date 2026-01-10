@@ -21,6 +21,12 @@
             min-height: 100vh;
         }
         
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
         .glassmorphism {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
@@ -50,6 +56,11 @@
         .participant-avatar {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             animation: float 4s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
         
         .vote-button {
@@ -110,12 +121,28 @@
             100% { transform: rotate(360deg); }
         }
 
+        .vote-amount-btn {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .vote-amount-btn:hover {
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .vote-amount-btn.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.3);
+        }
+
         .payment-method-btn {
             transition: all 0.3s ease;
             cursor: pointer;
         }
         
-        .payment-method-btn:hover {
+        .payment-method-btn:hover:not(.disabled) {
             border-color: rgba(59, 130, 246, 0.5);
             transform: translateY(-2px);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
@@ -129,6 +156,26 @@
         .payment-method-btn.disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+        
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        
+        .error-input {
+            border-color: #ef4444 !important;
+        }
+        
+        .error-message {
+            color: #fca5a5;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
         }
     </style>
     <meta name="supabase-config" data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" data-anon="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqdHVpc3l2cHZvc3dtY2d4c2ZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1Mzg1MDUsImV4cCI6MjA3NzExNDUwNX0.Zj8WxKjj8d2tq2c5ATxN5RtvuIK5sLXPzM2ZC00vIzY">
