@@ -1,250 +1,3 @@
-// // ========================================
-// // ONE DREAM API CLIENT
-// // Backend-first architecture (Supabase is READ-ONLY on frontend)
-// // ========================================
-
-// const API_BASE_URL =
-//     window.location.hostname === 'localhost'
-//         ? 'http://localhost:5001/api/onedream'
-//         : '/api/onedream';
-
-// // ========================================
-// // AUTH FUNCTIONS (Participants ONLY)
-// // ========================================
-
-// async function registerParticipant(name, email, username, password) {
-//     const response = await fetch(`${API_BASE_URL}/register`, {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ name, email, username, password })
-//     });
-
-//     const data = await response.json();
-//     if (!response.ok) throw new Error(data.error || 'Registration failed');
-//     return data.participant;
-// }
-
-// async function loginParticipant(email, password) {
-//     const response = await fetch(`${API_BASE_URL}/login`, {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({ email, password })
-//     });
-
-//     const data = await response.json();
-//     if (!response.ok) throw new Error(data.error || 'Login failed');
-//     return data.user;
-// }
-
-// async function verifyToken() {
-//     const token = localStorage.getItem('onedream_token');
-//     if (!token) return null;
-
-//     try {
-//         const response = await fetch(`${API_BASE_URL}/verify`, {
-//             method: 'POST',
-//             headers: {
-//                 'Content-Type': 'application/json',
-//                 Authorization: `Bearer ${token}`
-//             }
-//         });
-
-//         if (!response.ok) {
-//             localStorage.removeItem('onedream_token');
-//             localStorage.removeItem('onedream_user');
-//             return null;
-//         }
-
-//         return await response.json();
-//     } catch {
-//         return null;
-//     }
-// }
-
-// async function getCurrentUser() {
-//     const token = localStorage.getItem('onedream_token');
-//     const savedUser = localStorage.getItem('onedream_user');
-//     if (!token || !savedUser) return null;
-
-//     try {
-//         const verified = await verifyToken();
-//         if (!verified) return null;
-//         return JSON.parse(savedUser);
-//     } catch {
-//         return null;
-//     }
-// }
-
-// function logout() {
-//     localStorage.removeItem('onedream_token');
-//     localStorage.removeItem('onedream_user');
-// }
-
-// // ========================================
-// // PARTICIPANTS (Public / Read-only)
-// // ========================================
-
-// async function getParticipantByUsername(username) {
-//     try {
-//         const res = await fetch(`${API_BASE_URL}/participants/${username}`);
-//         if (!res.ok) return null;
-//         return (await res.json()).participant;
-//     } catch {
-//         return null;
-//     }
-// }
-
-// async function getParticipantByUserCode(code) {
-//     try {
-//         const res = await fetch(`${API_BASE_URL}/participants/code/${code}`);
-//         if (!res.ok) return null;
-//         return (await res.json()).participant;
-//     } catch {
-//         return null;
-//     }
-// }
-
-// async function getLeaderboard(limit = 50) {
-//     try {
-//         const res = await fetch(`${API_BASE_URL}/leaderboard?limit=${limit}`);
-//         if (!res.ok) throw new Error();
-//         return (await res.json()).participants || [];
-//     } catch {
-//         return [];
-//     }
-// }
-
-// async function searchParticipants(query) {
-//     if (!query?.trim()) return [];
-//     try {
-//         const res = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
-//         if (!res.ok) throw new Error();
-//         return (await res.json()).participants || [];
-//     } catch {
-//         return [];
-//     }
-// }
-
-// async function testConnection() {
-//     try {
-//         const res = await fetch(`${API_BASE_URL}/health`);
-//         return { success: res.ok, data: await res.json() };
-//     } catch (err) {
-//         return { success: false, error: err };
-//     }
-// }
-
-// function getAuthHeader() {
-//     const token = localStorage.getItem('onedream_token');
-//     return token ? { Authorization: `Bearer ${token}` } : {};
-// }
-
-// // ========================================
-// // SUPABASE (READ-ONLY, PUBLIC DATA)
-// // ========================================
-
-// let supabase = null;
-
-// /**
-//  * Wait until Supabase CDN is available (prevents race conditions)
-//  */
-// function waitForSupabase(timeout = 3000) {
-//     return new Promise((resolve, reject) => {
-//         const start = Date.now();
-//         const timer = setInterval(() => {
-//             if (window.supabase?.createClient || typeof window.supabase === 'function') {
-//                 clearInterval(timer);
-//                 resolve(true);
-//             }
-//             if (Date.now() - start > timeout) {
-//                 clearInterval(timer);
-//                 reject(new Error('Supabase CDN not loaded'));
-//             }
-//         }, 50);
-//     });
-// }
-
-// /**
-//  * Initialize Supabase safely (v2 + v1)
-//  */
-// window.initSupabaseFromMeta = async function () {
-//     if (supabase) return true;
-
-//     const meta = document.querySelector('meta[name="supabase-config"]');
-//     const url = meta?.getAttribute('data-url');
-//     const anon = meta?.getAttribute('data-anon');
-
-//     if (!url || !anon) {
-//         console.warn('⚠️ Supabase meta config missing');
-//         return false;
-//     }
-
-//     try {
-//         await waitForSupabase();
-
-//         // v2 (current)
-//         if (window.supabase?.createClient) {
-//             supabase = window.supabase.createClient(url, anon);
-//             console.log('✅ Supabase v2 initialized');
-//             return true;
-//         }
-
-//         // v1 (legacy)
-//         if (typeof window.supabase === 'function') {
-//             supabase = window.supabase(url, anon);
-//             console.log('⚠️ Supabase v1 initialized');
-//             return true;
-//         }
-
-//         return false;
-//     } catch (err) {
-//         console.warn('⚠️ Supabase init skipped:', err.message);
-//         return false;
-//     }
-// };
-
-// window.fetchParticipantByUsername = async function (username) {
-//     if (!supabase) throw new Error('Supabase not initialized');
-//     const { data, error } = await supabase
-//         .from('participants')
-//         .select('id, name, username, email, user_code, total_votes, created_at')
-//         .eq('username', username)
-//         .single();
-//     if (error) throw error;
-//     return data;
-// };
-
-// window.fetchParticipantByUserCode = async function (code) {
-//     if (!supabase) throw new Error('Supabase not initialized');
-//     const { data, error } = await supabase
-//         .from('participants')
-//         .select('id, name, username, email, user_code, total_votes, created_at')
-//         .eq('user_code', code)
-//         .single();
-//     if (error) throw error;
-//     return data;
-// };
-
-// // ========================================
-// // EXPORT GLOBAL API
-// // ========================================
-
-// window.SupabaseAPI = {
-//     registerParticipant,
-//     loginParticipant,
-//     verifyToken,
-//     getCurrentUser,
-//     logout,
-//     getAuthHeader,
-//     getParticipantByUsername,
-//     getParticipantByUserCode,
-//     getLeaderboard,
-//     searchParticipants,
-//     testConnection
-// };
-
-// console.log('✅ One Dream API Client loaded');
-// console.log('📡 API Base URL:', API_BASE_URL);
 // ========================================
 // ONE DREAM API CLIENT
 // Calls backend API instead of direct Supabase
@@ -262,10 +15,6 @@
 
     function getSupabaseInstance() {
         return window.__onedreamSupabase;
-    }
-
-    function setSupabaseInstance(client) {
-        window.__onedreamSupabase = client;
     }
 
     // ----------------------------------------
@@ -385,92 +134,51 @@
     }
 
     // ========================================
-    // SUPABASE INITIALIZATION (SAFE)
+    // SUPABASE INITIALIZATION (UNIFIED)
     // ========================================
 
-    window.initSupabaseFromMeta = function () {
-        // Always try to read from meta tag (required for your setup)
+    function initializeSupabase() {
         const meta = document.querySelector('meta[name="supabase-config"]');
         const url = meta?.getAttribute('data-url');
         const anon = meta?.getAttribute('data-anon');
 
         if (!url || !anon) {
-            console.error('❌ Supabase meta config missing. Make sure your <meta name="supabase-config" ...> tag is present in the <head> of your HTML.');
+            console.warn('⚠️ Supabase config missing - some features may be limited');
             return false;
         }
 
         if (!window.supabase) {
-            console.error(
-                '❌ Supabase UMD not loaded. Make sure this comes BEFORE supabase-config.js:\n' +
-                '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>'
-            );
+            console.error('❌ Supabase library not loaded. Add this to <head>:\n<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>');
             return false;
         }
 
         try {
-            // Initialize with storage disabled to avoid tracking prevention issues
             const options = {
                 auth: {
-                    persistSession: false,  // Disable session persistence
-                    autoRefreshToken: false, // No auto refresh needed
-                    detectSessionInUrl: false, // Don't detect sessions in URL
-                    storage: undefined // Don't use localStorage/sessionStorage
+                    persistSession: false,
+                    autoRefreshToken: false,
+                    detectSessionInUrl: false,
+                    storage: undefined
                 }
             };
 
-            const client =
-                typeof window.supabase.createClient === 'function'
-                    ? window.supabase.createClient(url, anon, options)
-                    : window.supabase(url, anon, options);
+            const client = typeof window.supabase.createClient === 'function'
+                ? window.supabase.createClient(url, anon, options)
+                : window.supabase(url, anon, options);
 
             window.__onedreamSupabase = client;
-            window.supabaseClient = client; // Also set the global supabaseClient
-            console.log('✅ Supabase initialized (stateless mode - no storage)');
+            window.supabaseClient = client;
+            
+            console.log('✅ Supabase initialized (stateless mode)');
             return true;
         } catch (err) {
             console.error('❌ Supabase init failed:', err);
             return false;
         }
-    };
-
-    // Initialize immediately
-    const supabaseConfigMeta = document.querySelector('meta[name="supabase-config"]');
-    const SUPABASE_URL = supabaseConfigMeta?.getAttribute('data-url');
-    const SUPABASE_ANON_KEY = supabaseConfigMeta?.getAttribute('data-anon');
-
-    let supabaseClient;
-
-    try {
-        if (!window.supabase) {
-            throw new Error('Supabase library not loaded - ensure CDN script is in <head>');
-        }
-        
-        if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            throw new Error('Supabase configuration missing from meta tag');
-        }
-        
-        // Initialize with stateless configuration (no storage needed)
-        const options = {
-            auth: {
-                persistSession: false,
-                autoRefreshToken: false,
-                detectSessionInUrl: false,
-                storage: undefined
-            }
-        };
-        
-        const { createClient } = window.supabase;
-        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, options);
-        
-        // Set both global references
-        window.__onedreamSupabase = supabaseClient;
-        window.supabaseClient = supabaseClient;
-        
-        console.log('✅ Supabase initialized successfully (stateless mode)');
-    } catch (error) {
-        console.error('❌ Supabase initialization failed:', error);
-        console.warn('⚠️ Voting may fall back to backend API only');
     }
+
+    // Initialize on load
+    initializeSupabase();
 
     // ========================================
     // SUPABASE DIRECT QUERIES
