@@ -408,13 +408,24 @@
         }
 
         try {
+            // Initialize with storage disabled to avoid tracking prevention issues
+            const options = {
+                auth: {
+                    persistSession: false,  // Disable session persistence
+                    autoRefreshToken: false, // No auto refresh needed
+                    detectSessionInUrl: false, // Don't detect sessions in URL
+                    storage: undefined // Don't use localStorage/sessionStorage
+                }
+            };
+
             const client =
                 typeof window.supabase.createClient === 'function'
-                    ? window.supabase.createClient(url, anon)
-                    : window.supabase(url, anon);
+                    ? window.supabase.createClient(url, anon, options)
+                    : window.supabase(url, anon, options);
 
             window.__onedreamSupabase = client;
-            console.log('✅ Supabase initialized');
+            window.supabaseClient = client; // Also set the global supabaseClient
+            console.log('✅ Supabase initialized (stateless mode - no storage)');
             return true;
         } catch (err) {
             console.error('❌ Supabase init failed:', err);
@@ -422,36 +433,44 @@
         }
     };
 
-    // Supabase Configuration and Client Initialization
-
-    // Get Supabase credentials from meta tag
+    // Initialize immediately
     const supabaseConfigMeta = document.querySelector('meta[name="supabase-config"]');
     const SUPABASE_URL = supabaseConfigMeta?.getAttribute('data-url');
     const SUPABASE_ANON_KEY = supabaseConfigMeta?.getAttribute('data-anon');
 
-    // Initialize Supabase client (using CDN global)
     let supabaseClient;
 
     try {
         if (!window.supabase) {
-            throw new Error('Supabase library not loaded');
+            throw new Error('Supabase library not loaded - ensure CDN script is in <head>');
         }
         
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            throw new Error('Supabase configuration missing');
+            throw new Error('Supabase configuration missing from meta tag');
         }
         
-        // Use the global supabase object from CDN
-        const { createClient } = window.supabase;
-        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Initialize with stateless configuration (no storage needed)
+        const options = {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false,
+                storage: undefined
+            }
+        };
         
-        console.log('✅ Supabase initialized successfully');
+        const { createClient } = window.supabase;
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, options);
+        
+        // Set both global references
+        window.__onedreamSupabase = supabaseClient;
+        window.supabaseClient = supabaseClient;
+        
+        console.log('✅ Supabase initialized successfully (stateless mode)');
     } catch (error) {
         console.error('❌ Supabase initialization failed:', error);
+        console.warn('⚠️ Voting may fall back to backend API only');
     }
-
-    // Export for use in other scripts
-    window.supabaseClient = supabaseClient;
 
     // ========================================
     // SUPABASE DIRECT QUERIES
