@@ -346,20 +346,14 @@
                         <!-- Payment Method Selection -->
                         <div class="mb-6">
                             <label class="block text-sm font-medium mb-4 text-center">Choose Payment Method</label>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent active"
-                                        data-method="stripe" id="stripeBtn">
-                                    <div class="text-3xl mb-2">💳</div>
-                                    <div class="font-bold">Credit Card</div>
-                                    <div class="text-sm text-white/70">Stripe Secure</div>
-                                </button>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
                                         data-method="paystack" id="paystackBtn">
                                     <div class="text-3xl mb-2">🏦</div>
                                     <div class="font-bold">Bank Transfer</div>
                                     <div class="text-sm text-white/70">PayStack</div>
                                 </button>
-                                <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
+                                <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent active"
                                         data-method="crypto" id="cryptoBtn">
                                     <div class="text-3xl mb-2">₿</div>
                                     <div class="font-bold">Cryptocurrency</div>
@@ -378,8 +372,6 @@
                         <div class="mt-6 text-center">
                             <p class="text-sm text-white/60 mb-3">Secure payment powered by</p>
                             <div class="flex justify-center items-center space-x-6">
-                                <span class="text-lg font-bold text-blue-400">Stripe</span>
-                                <span class="text-white/40">•</span>
                                 <span class="text-lg font-bold text-green-400">PayStack</span>
                                 <span class="text-white/40">•</span>
                                 <span class="text-lg font-bold text-orange-400">Crypto</span>
@@ -446,7 +438,7 @@
          ======================================== -->
     
     <!-- 1. Core Libraries - MUST load first -->
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     
     <!-- 2. Initialize Global State & WalletConnect Loader -->
     <script>
@@ -456,7 +448,7 @@
         window.currentParticipant = null;
         window.selectedVoteAmount = 1;
         window.selectedCost = 2.00;
-        window.selectedPaymentMethod = 'stripe';
+        window.selectedPaymentMethod = 'crypto';
         
         // WalletConnect Project ID (get from https://cloud.walletconnect.com)
         window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';

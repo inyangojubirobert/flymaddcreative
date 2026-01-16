@@ -81,8 +81,57 @@ async function processBSCWithWalletConnect(paymentInit) {
                 await window.loadWalletConnect();
             } catch (error) {
                 console.error('WalletConnect loader failed (original):', error);
-                modal?.remove();
-                throw new Error('Failed to load WalletConnect. Please refresh and try again.');
+                updateModalStatus(modal, 'Failed to load WalletConnect. Click Retry or Refresh the page.', 'error');
+
+                // Provide a Retry / Cancel UI inside the modal
+                const inner = modal.querySelector('.glassmorphism') || modal.firstElementChild || modal;
+                const actionBar = document.createElement('div');
+                actionBar.style.marginTop = '12px';
+                actionBar.style.display = 'flex';
+                actionBar.style.gap = '8px';
+                actionBar.style.justifyContent = 'center';
+
+                const retryBtn = document.createElement('button');
+                retryBtn.textContent = 'Retry';
+                retryBtn.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg';
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.className = 'bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg';
+
+                actionBar.appendChild(retryBtn);
+                actionBar.appendChild(cancelBtn);
+                inner.appendChild(actionBar);
+
+                // Promise that resolves when retry succeeds or rejects on cancel
+                const retryPromise = new Promise((resolve, reject) => {
+                    retryBtn.addEventListener('click', async () => {
+                        retryBtn.disabled = true;
+                        updateModalStatus(modal, 'Retrying to load WalletConnect...', 'loading');
+                        try {
+                            await window.loadWalletConnect();
+                            // remove action bar and continue
+                            actionBar.remove();
+                            resolve(true);
+                        } catch (e) {
+                            console.error('Retry failed:', e);
+                            updateModalStatus(modal, 'Retry failed. Please refresh the page.', 'error');
+                            retryBtn.disabled = false;
+                        }
+                    });
+
+                    cancelBtn.addEventListener('click', () => {
+                        actionBar.remove();
+                        reject(new Error('User cancelled WalletConnect load'));
+                    });
+                });
+
+                try {
+                    await retryPromise;
+                } catch (err) {
+                    modal?.remove();
+                    throw new Error('Failed to load WalletConnect. Please refresh and try again.');
+                }
             }
         }
 

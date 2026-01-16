@@ -108,7 +108,7 @@ export default async function handler(req, res) {
       participant_id, 
       vote_count = 1, 
       payment_amount, 
-      payment_method = 'stripe',
+      payment_method = 'crypto',
       payment_intent_id,
       payment_status = 'pending',
       voter_info 
@@ -143,21 +143,7 @@ export default async function handler(req, res) {
     // ✅ STEP 2: Verify payment was successful
     let paymentVerification;
     try {
-      if (payment_method === 'stripe') {
-        // Verify Stripe payment
-        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
-        if (paymentIntent.status !== 'succeeded') {
-          return res.status(400).json({ 
-            error: 'Payment not completed',
-            payment_status: paymentIntent.status 
-          });
-        }
-        paymentVerification = {
-          verified: true,
-          amount: paymentIntent.amount / 100,
-          metadata: paymentIntent.metadata
-        };
-      } else if (payment_method === 'paystack') {
+      if (payment_method === 'paystack') {
         // Verify PayStack payment
         const response = await fetch(`https://api.paystack.co/transaction/verify/${payment_intent_id}`, {
           headers: {

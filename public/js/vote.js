@@ -182,12 +182,8 @@ async function handleVote() {
                 throw new Error('Crypto payment module not loaded');
             }
             paymentResult = await window.processCryptoPayment();
-        } else if (window.selectedPaymentMethod === 'stripe') {
-            // TODO: Implement Stripe payment
-            alert('Stripe payment coming soon. Please use Crypto for now.');
-            throw new Error('Stripe not implemented');
         } else if (window.selectedPaymentMethod === 'paystack') {
-            // TODO: Implement PayStack payment
+            // PayStack not implemented in frontend yet
             alert('PayStack payment coming soon. Please use Crypto for now.');
             throw new Error('PayStack not implemented');
         }
