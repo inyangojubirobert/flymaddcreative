@@ -80,6 +80,7 @@ async function processBSCWithWalletConnect(paymentInit) {
             try {
                 await window.loadWalletConnect();
             } catch (error) {
+                console.error('WalletConnect loader failed (original):', error);
                 modal?.remove();
                 throw new Error('Failed to load WalletConnect. Please refresh and try again.');
             }
