@@ -440,7 +440,10 @@
     <!-- 1. Core Libraries - MUST load first -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     
-    <!-- 2. Initialize Global State & WalletConnect Loader -->
+    <!-- 2. WalletConnect bundle (built) -->
+    <script src="/js/wc-bundle.js"></script>
+
+    <!-- 3. Initialize Global State & WalletConnect Loader -->
     <script>
         console.log('🚀 Vote Page Loading...');
         
@@ -503,13 +506,13 @@
         };
     </script>
     
-    <!-- 3. Supabase Config -->
+    <!-- 4. Supabase Config -->
     <script src="/js/supabase-config.js"></script>
-    
-    <!-- 4. Crypto Payments Module -->
+
+    <!-- 5. Crypto Payments Module -->
     <script src="/js/crypto-payments.js"></script>
-    
-    <!-- 5. Main Vote Logic -->
+
+    <!-- 6. Main Vote Logic -->
     <script src="/js/vote.js"></script>
     
     <!-- 6. Page Ready -->
