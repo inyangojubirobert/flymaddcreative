@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.90.1",
     "@walletconnect/ethereum-provider": "^2.23.3",
     "@walletconnect/modal": "^2.7.0",
     "bcryptjs": "^2.4.3",
