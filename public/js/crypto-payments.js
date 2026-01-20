@@ -104,22 +104,36 @@ async function processUSDTPaymentBSC(paymentInit) {
 }
 
 /* ---------------- WalletConnect v2 ---------------- */
+/* ---------------- WalletConnect v2 (FIXED) ---------------- */
 async function processBSCWithWalletConnect(paymentInit) {
   const modal = showEnhancedPaymentModal('BSC', paymentInit.amount);
 
   try {
+    // 1. WAIT for the library to be loaded (Calls the function in vote.html)
+    if (typeof window.loadWalletConnect === 'function') {
+      console.log('⏳ Waiting for WalletConnect SDK...');
+      await window.loadWalletConnect();
+    }
+
+    // 2. VERIFY the provider is now available
     if (!window.EthereumProvider) {
-      throw new Error('WalletConnect v2 provider not loaded');
+      throw new Error('WalletConnect SDK failed to inject into the page.');
     }
 
     if (!window.WALLETCONNECT_PROJECT_ID) {
       throw new Error('Missing WalletConnect projectId');
     }
 
+    updateModalStatus(modal, '🔄 Initializing connection...', 'loading');
+
+    // 3. INITIALIZE the provider
+    // Using init() correctly for WalletConnect v2
     const wcProvider = await window.EthereumProvider.init({
       projectId: window.WALLETCONNECT_PROJECT_ID,
-      chains: [56],
+      chains: [56], // BSC Mainnet
       showQrModal: true,
+      methods: ["eth_sendTransaction", "personal_sign"],
+      events: ["chainChanged", "accountsChanged"],
       metadata: {
         name: 'One Dream Initiative',
         description: 'USDT Voting Payment',
@@ -130,39 +144,43 @@ async function processBSCWithWalletConnect(paymentInit) {
 
     updateModalStatus(modal, '📱 Scan QR Code with your wallet', 'waiting');
 
+    // 4. CONNECT and handle potential relay issues
     try {
       await wcProvider.connect();
     } catch (relayErr) {
-      console.warn('WalletConnect relay failed → fallback to MetaMask');
+      console.warn('WalletConnect connection rejected or timed out');
       modal.remove();
+      // If user has MetaMask installed but WC failed, try MetaMask as fallback
       if (window.ethereum) {
         return processBSCWithInjectedWallet(paymentInit);
       }
       throw relayErr;
     }
 
+    // 5. PROCEED with Transaction
     const ethersProvider = new ethers.providers.Web3Provider(wcProvider, 'any');
     const signer = ethersProvider.getSigner();
 
     const usdt = new ethers.Contract(
-      '0x55d398326f99059fF775485246999027B3197955',
+      '0x55d398326f99059fF775485246999027B3197955', // BEP20 USDT
       ['function transfer(address to, uint256 amount) returns (bool)'],
       signer
     );
 
-    updateModalStatus(modal, '⏳ Sending USDT...', 'loading');
+    updateModalStatus(modal, '⏳ Confirm in your wallet...', 'loading');
 
     const tx = await usdt.transfer(
       paymentInit.recipient_address,
       ethers.utils.parseUnits(paymentInit.amount.toString(), 18)
     );
 
-    updateModalStatus(modal, '⏳ Waiting for confirmation...', 'pending');
+    updateModalStatus(modal, '⏳ Confirming on Blockchain...', 'pending');
     await tx.wait(1);
 
     updateModalStatus(modal, '✅ Payment Confirmed!', 'success');
     setTimeout(() => modal.remove(), 2000);
 
+    // Clean up session
     await wcProvider.disconnect();
 
     return {
@@ -176,7 +194,7 @@ async function processBSCWithWalletConnect(paymentInit) {
   } catch (err) {
     console.error('WC v2 BSC error:', err);
     updateModalStatus(modal, `❌ ${err.message}`, 'error');
-    setTimeout(() => modal.remove(), 3000);
+    setTimeout(() => modal.remove(), 4000);
     return { success: false, error: err.message };
   }
 }
