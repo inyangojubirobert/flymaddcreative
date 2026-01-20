@@ -6,6 +6,15 @@ console.log('📦 Vote.js Loading...');
 document.addEventListener('DOMContentLoaded', async function () {
   console.log('🎬 Vote page initializing...');
 
+  // Ensure Supabase is initialized
+  if (!window.__onedreamSupabase && typeof window.initializeSupabase === 'function') {
+    const ok = window.initializeSupabase();
+    if (!ok) {
+      showError('Supabase failed to initialize. Some features may not work.');
+      return;
+    }
+  }
+
   const urlParams = new URLSearchParams(window.location.search);
   const username = urlParams.get('user') || urlParams.get('username');
   const userCode = urlParams.get('code');
@@ -48,8 +57,7 @@ function showParticipant() {
   document.getElementById('participantName').textContent = p.name;
   document.getElementById('participantUsername').textContent = p.username;
   document.getElementById('participantEmail').textContent = p.email || 'N/A';
-  document.getElementById('currentVotes').textContent =
-    (p.total_votes || 0).toLocaleString();
+  document.getElementById('currentVotes').textContent = (p.total_votes || 0).toLocaleString();
   document.getElementById('participantRank').textContent = `#${p.rank || '?'}`;
 
   const initials = p.name
@@ -138,9 +146,7 @@ function initializePaymentMethods() {
 }
 
 function updateUI() {
-  document.getElementById('totalCost').textContent =
-    window.selectedCost.toFixed(2);
-
+  document.getElementById('totalCost').textContent = window.selectedCost.toFixed(2);
   document.getElementById('voteButtonText').textContent =
     `Purchase ${window.selectedVoteAmount} Vote${window.selectedVoteAmount > 1 ? 's' : ''} - $${window.selectedCost.toFixed(2)}`;
 }
@@ -235,10 +241,8 @@ async function recordVotesAfterPayment(paymentResult) {
 // SUCCESS + SHARING
 // ========================================
 function showSuccessModal() {
-  document.getElementById('successParticipantName').textContent =
-    window.currentParticipant.name;
-  document.getElementById('successVoteCount').textContent =
-    window.selectedVoteAmount;
+  document.getElementById('successParticipantName').textContent = window.currentParticipant.name;
+  document.getElementById('successVoteCount').textContent = window.selectedVoteAmount;
   document.getElementById('successModal').classList.remove('hidden');
 }
 
@@ -266,9 +270,7 @@ function shareOnFacebook() {
 }
 
 function copyVoteLink() {
-  navigator.clipboard.writeText(location.href).then(() =>
-    alert('Vote link copied 📋')
-  );
+  navigator.clipboard.writeText(location.href).then(() => alert('Vote link copied 📋'));
 }
 
 // ========================================
