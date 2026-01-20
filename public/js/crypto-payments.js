@@ -1,27 +1,33 @@
 console.log('📦 Crypto Payments Module Loading (WC v2)...');
 
-// ======================================================
-// 🔒 BACKEND PAYMENT INITIALIZATION
-// ======================================================
+/* ======================================================
+   🔒 BACKEND PAYMENT INITIALIZATION
+====================================================== */
 async function initializeCryptoPayment(participantId, voteCount, network) {
   const res = await fetch('/api/onedream/init-crypto-payment', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ participant_id: participantId, vote_count: voteCount, network })
+    body: JSON.stringify({
+      participant_id: participantId,
+      vote_count: voteCount,
+      network
+    })
   });
 
   if (!res.ok) throw new Error('Failed to initialize payment');
   return res.json();
 }
+
+/* ======================================================
+   🌐 NETWORK SELECTION (Mobile-first + Remembered)
+====================================================== */
 async function showNetworkSelectionModal() {
-  // 1️⃣ Check remembered network
-  const savedNetwork = localStorage.getItem('preferred_network');
-  if (savedNetwork) {
-    console.log('🔁 Using saved network:', savedNetwork);
-    return savedNetwork;
+  const saved = localStorage.getItem('preferred_network');
+  if (saved) {
+    console.log('🔁 Using saved network:', saved);
+    return saved;
   }
 
-  // 2️⃣ Mobile-first modal
   return new Promise((resolve) => {
     const modal = document.createElement('div');
     modal.className =
@@ -29,9 +35,7 @@ async function showNetworkSelectionModal() {
 
     modal.innerHTML = `
       <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-6 shadow-xl animate-slide-up">
-        <h3 class="text-xl font-bold text-center mb-4">
-          Select Payment Network
-        </h3>
+        <h3 class="text-xl font-bold text-center mb-4">Select Payment Network</h3>
 
         <button id="bscBtn"
           class="w-full bg-yellow-400 hover:bg-yellow-500 text-black py-3 rounded-xl mb-3 text-lg font-semibold">
@@ -44,35 +48,31 @@ async function showNetworkSelectionModal() {
         </button>
 
         <button id="cancelBtn"
-          class="w-full text-gray-500 py-2">
-          Cancel
-        </button>
+          class="w-full text-gray-500 py-2">Cancel</button>
       </div>
     `;
 
     document.body.appendChild(modal);
 
-    const selectNetwork = (network) => {
+    const select = (network) => {
       modal.remove();
       localStorage.setItem('preferred_network', network);
       resolve(network);
     };
 
-    modal.querySelector('#bscBtn').onclick = () => selectNetwork('bsc');
-    modal.querySelector('#tronBtn').onclick = () => selectNetwork('tron');
-
+    modal.querySelector('#bscBtn').onclick = () => select('bsc');
+    modal.querySelector('#tronBtn').onclick = () => select('tron');
     modal.querySelector('#cancelBtn').onclick = () => {
       modal.remove();
-      console.log('⚠️ Network selection cancelled → defaulting to BSC');
-      resolve('bsc'); // default fallback
+      console.log('⚠️ Cancelled → defaulting to BSC');
+      resolve('bsc');
     };
   });
 }
 
-
-// ======================================================
-// 🆕 MAIN ENTRY
-// ======================================================
+/* ======================================================
+   🆕 MAIN ENTRY
+====================================================== */
 async function processCryptoPayment() {
   const participantId = window.currentParticipant?.id;
   const voteCount = window.selectedVoteAmount;
@@ -82,19 +82,17 @@ async function processCryptoPayment() {
   }
 
   const network = await showNetworkSelectionModal();
-  if (!network) return { success: false, error: 'Cancelled' };
-
   const paymentInit = await initializeCryptoPayment(participantId, voteCount, network);
 
-  if (network === 'bsc') return await processUSDTPaymentBSC(paymentInit);
-  if (network === 'tron') return await processUSDTPaymentTron(paymentInit);
+  if (network === 'bsc') return processUSDTPaymentBSC(paymentInit);
+  if (network === 'tron') return processUSDTPaymentTron(paymentInit);
 
   return { success: false, error: 'Unsupported network' };
 }
 
-// ======================================================
-// 🔒 BSC (USDT) — WalletConnect v2 + MetaMask
-// ======================================================
+/* ======================================================
+   🔒 BSC (USDT) — WalletConnect v2 + MetaMask
+====================================================== */
 async function processUSDTPaymentBSC(paymentInit) {
   const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
 
@@ -105,35 +103,49 @@ async function processUSDTPaymentBSC(paymentInit) {
   return processBSCWithWalletConnect(paymentInit);
 }
 
-// ---------------- WalletConnect v2 ----------------
+/* ---------------- WalletConnect v2 ---------------- */
 async function processBSCWithWalletConnect(paymentInit) {
   const modal = showEnhancedPaymentModal('BSC', paymentInit.amount);
 
   try {
-    await window.loadWalletConnect();
+    if (!window.EthereumProvider) {
+      throw new Error('WalletConnect v2 provider not loaded');
+    }
+
+    if (!window.WALLETCONNECT_PROJECT_ID) {
+      throw new Error('Missing WalletConnect projectId');
+    }
 
     const wcProvider = await window.EthereumProvider.init({
       projectId: window.WALLETCONNECT_PROJECT_ID,
       chains: [56],
-      optionalChains: [56],
       showQrModal: true,
       metadata: {
         name: 'One Dream Initiative',
         description: 'USDT Voting Payment',
-        url: location.origin,
-        icons: [`${location.origin}/favicon.png`]
+        url: window.location.origin,
+        icons: [`${window.location.origin}/favicon.png`]
       }
     });
 
     updateModalStatus(modal, '📱 Scan QR Code with your wallet', 'waiting');
 
-    await wcProvider.connect();
+    try {
+      await wcProvider.connect();
+    } catch (relayErr) {
+      console.warn('WalletConnect relay failed → fallback to MetaMask');
+      modal.remove();
+      if (window.ethereum) {
+        return processBSCWithInjectedWallet(paymentInit);
+      }
+      throw relayErr;
+    }
 
     const ethersProvider = new ethers.providers.Web3Provider(wcProvider, 'any');
     const signer = ethersProvider.getSigner();
 
     const usdt = new ethers.Contract(
-      '0x55d398326f99059fF775485246999027B3197955', // BSC USDT
+      '0x55d398326f99059fF775485246999027B3197955',
       ['function transfer(address to, uint256 amount) returns (bool)'],
       signer
     );
@@ -169,51 +181,46 @@ async function processBSCWithWalletConnect(paymentInit) {
   }
 }
 
-// ---------------- MetaMask / Injected ----------------
+/* ---------------- MetaMask / Injected ---------------- */
 async function processBSCWithInjectedWallet(paymentInit) {
-  try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send('eth_requestAccounts', []);
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  await provider.send('eth_requestAccounts', []);
 
-    const network = await provider.getNetwork();
-    if (network.chainId !== 56) {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x38' }]
-      });
-    }
-
-    const signer = provider.getSigner();
-
-    const usdt = new ethers.Contract(
-      '0x55d398326f99059fF775485246999027B3197955',
-      ['function transfer(address to, uint256 amount) returns (bool)'],
-      signer
-    );
-
-    const tx = await usdt.transfer(
-      paymentInit.recipient_address,
-      ethers.utils.parseUnits(paymentInit.amount.toString(), 18)
-    );
-
-    await tx.wait(1);
-
-    return {
-      success: true,
-      txHash: tx.hash,
-      payment_intent_id: tx.hash,
-      network: 'bsc',
-      explorer: `https://bscscan.com/tx/${tx.hash}`
-    };
-
-  } catch (err) {
-    return { success: false, error: err.message };
+  const network = await provider.getNetwork();
+  if (network.chainId !== 56) {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: '0x38' }]
+    });
   }
+
+  const signer = provider.getSigner();
+
+  const usdt = new ethers.Contract(
+    '0x55d398326f99059fF775485246999027B3197955',
+    ['function transfer(address to, uint256 amount) returns (bool)'],
+    signer
+  );
+
+  const tx = await usdt.transfer(
+    paymentInit.recipient_address,
+    ethers.utils.parseUnits(paymentInit.amount.toString(), 18)
+  );
+
+  await tx.wait(1);
+
+  return {
+    success: true,
+    txHash: tx.hash,
+    payment_intent_id: tx.hash,
+    network: 'bsc',
+    explorer: `https://bscscan.com/tx/${tx.hash}`
+  };
 }
 
-// ======================================================
-// 🔒 TRON (UNCHANGED – STABLE)
-// ======================================================
+/* ======================================================
+   🔒 TRON (UNCHANGED — STABLE)
+====================================================== */
 async function processUSDTPaymentTron(paymentInit) {
   if (window.tronWeb?.ready) return processTronWithTronLink(paymentInit);
   return processTronWithQRCode(paymentInit);
@@ -235,9 +242,9 @@ async function processTronWithTronLink(paymentInit) {
   };
 }
 
-// ======================================================
-// 🔹 UI HELPERS (UNCHANGED)
-// ======================================================
+/* ======================================================
+   🔹 UI HELPERS
+====================================================== */
 function showEnhancedPaymentModal(network, amount) {
   const m = document.createElement('div');
   m.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-50';
@@ -256,16 +263,17 @@ function updateModalStatus(modal, text, status) {
   if (!modal) return;
   modal.querySelector('#modalStatus').textContent = text;
   const spinner = modal.querySelector('.loading-spinner');
-  if (spinner) spinner.style.display = (status === 'success' || status === 'error') ? 'none' : 'block';
+  if (spinner) spinner.style.display =
+    (status === 'success' || status === 'error') ? 'none' : 'block';
 }
 
-// ======================================================
-// 🔹 EXPORTS
-// ======================================================
+/* ======================================================
+   🔹 EXPORTS
+====================================================== */
 window.processCryptoPayment = processCryptoPayment;
 window.initializeCryptoPayment = initializeCryptoPayment;
-window.showNetworkSelectionModal = showNetworkSelectionModal;
 window.processUSDTPaymentBSC = processUSDTPaymentBSC;
 window.processUSDTPaymentTron = processUSDTPaymentTron;
+window.showNetworkSelectionModal = showNetworkSelectionModal;
 
-console.log('✅ Crypto Payments Module Loaded (WalletConnect v2)');
+console.log('✅ Crypto Payments Module Loaded (WalletConnect v2 SAFE)');
