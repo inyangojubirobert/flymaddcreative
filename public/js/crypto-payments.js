@@ -212,7 +212,27 @@ function generateQR(text, id) {
     const url = `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(text)}`;
     document.getElementById(id).innerHTML = `<img src="${url}" class="mx-auto" />`;
 }
+// At the bottom of crypto-payments.js
+async function processBSCWithInjectedWallet() {
+    try {
+        if (!window.ethereum) throw new Error("MetaMask or Injected Wallet not found.");
+        
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        const signer = provider.getSigner();
+
+        // This is where your USDT transfer logic goes
+        // For now, we return a mock success to test the connection
+        console.log("Wallet connected:", await signer.getAddress());
+        
+        return { success: true, txHash: "0x..." };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+}
+
+// CRITICAL: This line makes it visible to vote.js
+window.processBSCWithInjectedWallet = processBSCWithInjectedWallet;
 
 // EXPORTS
 window.processCryptoPayment = processCryptoPayment;
-window.processBSCWithInjectedWallet = processBSCWithInjectedWallet;
