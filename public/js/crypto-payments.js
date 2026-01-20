@@ -13,6 +13,62 @@ async function initializeCryptoPayment(participantId, voteCount, network) {
   if (!res.ok) throw new Error('Failed to initialize payment');
   return res.json();
 }
+async function showNetworkSelectionModal() {
+  // 1️⃣ Check remembered network
+  const savedNetwork = localStorage.getItem('preferred_network');
+  if (savedNetwork) {
+    console.log('🔁 Using saved network:', savedNetwork);
+    return savedNetwork;
+  }
+
+  // 2️⃣ Mobile-first modal
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className =
+      'fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center';
+
+    modal.innerHTML = `
+      <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-6 shadow-xl animate-slide-up">
+        <h3 class="text-xl font-bold text-center mb-4">
+          Select Payment Network
+        </h3>
+
+        <button id="bscBtn"
+          class="w-full bg-yellow-400 hover:bg-yellow-500 text-black py-3 rounded-xl mb-3 text-lg font-semibold">
+          Binance Smart Chain (USDT)
+        </button>
+
+        <button id="tronBtn"
+          class="w-full bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl mb-4 text-lg font-semibold">
+          TRON (USDT)
+        </button>
+
+        <button id="cancelBtn"
+          class="w-full text-gray-500 py-2">
+          Cancel
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const selectNetwork = (network) => {
+      modal.remove();
+      localStorage.setItem('preferred_network', network);
+      resolve(network);
+    };
+
+    modal.querySelector('#bscBtn').onclick = () => selectNetwork('bsc');
+    modal.querySelector('#tronBtn').onclick = () => selectNetwork('tron');
+
+    modal.querySelector('#cancelBtn').onclick = () => {
+      modal.remove();
+      console.log('⚠️ Network selection cancelled → defaulting to BSC');
+      resolve('bsc'); // default fallback
+    };
+  });
+}
+
 
 // ======================================================
 // 🆕 MAIN ENTRY
