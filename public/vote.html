@@ -4,27 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vote - One Dream Initiative | FlyMadd Creative</title>
-    <meta name="description" content="Support your favorite participant in the One Dream Initiative. Cast your vote and help make dreams come true.">
+    
+    <meta name="supabase-config" 
+          data-url="https://pjtuisyvpvoswmcgxsfs.supabase.co" 
+          data-anon="sb_publishable_Tt2LJZ8itium6JTt9PQyrQ_SZHiRW_m">
 
-    <!-- Favicon -->
+    <meta name="description" content="Support your favorite participant in the One Dream Initiative.">
+
     <link rel="icon" type="image/png" href="/favicon.png">
 
-    <!-- Tailwind CSS -->
     <link rel="stylesheet" href="/dist/output.css">
 
-    <!-- Supabase vendor SDK (load first) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 
-    <!-- Enhanced CSS -->
     <style>
+        /* ... Your existing styles ... */
         body { background: linear-gradient(-45deg, #1e3a8a, #3b82f6, #8b5cf6, #ec4899); background-size: 400% 400%; animation: gradient 15s ease infinite; min-height: 100vh; color: white;}
         @keyframes gradient {0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }}
         .glassmorphism { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border:1px solid rgba(255,255,255,0.2); box-shadow: 0 8px 32px rgba(0,0,0,0.1);}
         .gradient-text { background: linear-gradient(45deg,#3b82f6,#8b5cf6,#ec4899); background-size:200%200%; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation: gradient 3s ease infinite;}
         .vote-button { background: linear-gradient(45deg,#3b82f6,#8b5cf6); position: relative; overflow:hidden; transition:all 0.3s ease;}
-        .vote-button::before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent); transition:left 0.5s;}
-        .vote-button:hover::before { left:100%; }
-        .vote-button:hover { transform: translateY(-2px); box-shadow:0 10px 25px rgba(59,130,246,0.4);}
         .loading-spinner { border:3px solid rgba(255,255,255,0.3); border-top:3px solid #ffffff; border-radius:50%; width:20px;height:20px;animation:spin 1s linear infinite;}
         @keyframes spin {0% { transform:rotate(0deg); }100% { transform:rotate(360deg); }}
         .hidden { display:none; }
@@ -286,49 +285,29 @@
      <!-- 1. Ethers.js -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
-    <!-- 2. Global State & WalletConnect Loader -->
     <script>
         console.log('🚀 Vote Page Loading...');
-
-        // Global state
         window.currentParticipant = null;
         window.selectedVoteAmount = 1;
         window.selectedCost = 2.00;
         window.selectedPaymentMethod = 'crypto';
         window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';
 
-        // Lazy load WalletConnect v2 dynamically
         window.loadWalletConnect = async function() {
             if (window.EthereumProvider) return true;
-            const esmUrl = 'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm';
-            const umdUrl = 'https://unpkg.com/@walletconnect/ethereum-provider@2.11.0/dist/umd/index.min.js';
             try {
-                const module = await import(esmUrl);
-                window.EthereumProvider = module?.EthereumProvider || module.default?.EthereumProvider || module.default;
-                if (window.EthereumProvider) return true;
-            } catch(e){ console.warn('ESM import failed', e);}
-            return new Promise((resolve, reject)=>{
-                const s = document.createElement('script');
-                s.src = umdUrl; s.async=true;
-                s.onload = ()=>{ window.EthereumProvider = window.EthereumProvider || window.WalletConnectProvider || window.ethereumProvider; resolve(true); };
-                s.onerror = ()=>reject(new Error('Failed to load WalletConnect UMD'));
-                document.head.appendChild(s);
-            });
+                const module = await import('https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm');
+                window.EthereumProvider = module?.EthereumProvider || module.default;
+                return true;
+            } catch(e){ 
+                console.warn('WalletConnect load failed', e);
+                return false;
+            }
         };
     </script>
 
-    <!-- 3. Supabase Config -->
     <script src="/js/supabase-config.js"></script>
 
-    <!-- 4. Crypto Payments Module -->
     <script src="/js/crypto-payments.js"></script>
 
-    <!-- 5. Main Vote Logic -->
     <script src="/js/vote.js"></script>
-
-    <!-- 6. Ready Log -->
-    <script>
-        console.log('✅ Vote page scripts loaded; WalletConnect will lazy-load on crypto payment.');
-    </script>
-</body>
-</html>
