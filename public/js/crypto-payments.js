@@ -216,5 +216,12 @@ function updateModalStatus(modal, msg) {
 // ========================================
 window.processCryptoPayment = processCryptoPayment;
 window.initializeCryptoPayment = initializeCryptoPayment;
+window.showNetworkSelectionModal = showNetworkSelectionModal;
+window.processUSDTPaymentBSC = processUSDTPaymentBSC;
+window.processUSDTPaymentTron = processUSDTPaymentTron;
+window.manualConfirmation = manualConfirmation;
+window.successResult = successResult;
+window.showEnhancedPaymentModal = showEnhancedPaymentModal;
+window.updateModalStatus = updateModalStatus;
 
 console.log('✅ Crypto Payments Module Loaded');
