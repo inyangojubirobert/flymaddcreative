@@ -185,8 +185,57 @@ async function handleVote() {
       throw new Error(paymentResult?.error || 'Payment failed');
     }
 
+async function handleVote() {
+  if (!window.currentParticipant || window.selectedVoteAmount <= 0) {
+    alert('Please select a valid vote amount');
+    return;
+  }
+
+  const voteButton = document.getElementById('voteButton');
+  const spinner = document.getElementById('voteButtonSpinner');
+  const buttonText = document.getElementById('voteButtonText');
+
+  // 1. UI State: Loading
+  voteButton.disabled = true;
+  spinner.classList.remove('hidden');
+  buttonText.textContent = 'Preparing Secure Payment...';
+
+  try {
+    let paymentResult;
+
+    if (window.selectedPaymentMethod === 'crypto') {
+      if (typeof window.processCryptoPayment !== 'function') {
+        throw new Error('Crypto payment module not loaded. Please refresh.');
+      }
+      // This triggers the process in crypto-payments.js (and its internal WC v2 loader)
+      paymentResult = await window.processCryptoPayment();
+    } else {
+      throw new Error('Selected payment method not available yet');
+    }
+
+    // 2. Validate Payment Result
+    if (!paymentResult?.success) {
+      // If user closed the modal, we don't necessarily want a big red alert
+      if (paymentResult?.error === 'User rejected request') return; 
+      throw new Error(paymentResult?.error || 'Payment failed');
+    }
+
+    // 3. UI State: Recording
+    buttonText.textContent = 'Finalizing Votes...';
     await recordVotesAfterPayment(paymentResult);
-    showSuccessModal();
+    
+    // 4. UI State: Success
+    showSuccessModal(); 
+  } catch (error) {
+    console.error('Vote processing failed:', error);
+    alert(`Error: ${error.message}`);
+  } finally {
+    // Reset button regardless of outcome
+    voteButton.disabled = false;
+    spinner.classList.add('hidden');
+    updateUI();
+  }
+}
   } catch (error) {
     console.error('Vote processing failed:', error);
     alert(`Payment failed: ${error.message}`);
