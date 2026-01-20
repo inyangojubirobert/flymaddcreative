@@ -15,14 +15,14 @@ const VOTE_VALUE = 2; // $2 per vote
 const NETWORKS = {
   bsc: {
     rpcUrl: process.env.BSC_RPC_URL || 'https://bsc-dataseed.binance.org',
-    usdtContract: '0x55d398326f99059fF775485246999027B3197955',
+    usdtContract: '0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d',
     requiredConfirmations: 3,
     decimals: 18
   },
   tron: {
     apiUrl: process.env.TRON_GRID_API || 'https://api.trongrid.io',
     apiKey: process.env.TRON_PRO_API_KEY,
-    usdtContract: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t',
+    usdtContract: 'TVuPgEs4hSLSwPf8NMirVxeYse1vrmEtXL',
     requiredConfirmations: 1,
     decimals: 6
   }
