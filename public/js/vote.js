@@ -11,7 +11,7 @@ console.log('📦 Vote.js Loading...');
 // ========================================
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🎬 Vote page initializing...');
-    
+
     // Get participant from URL
     const urlParams = new URLSearchParams(window.location.search);
     const username = urlParams.get('user') || urlParams.get('username');
@@ -49,30 +49,25 @@ document.addEventListener('DOMContentLoaded', async function() {
 // ========================================
 function showParticipant() {
     if (!window.currentParticipant) return;
-    
+
     document.getElementById('loadingState').classList.add('hidden');
     document.getElementById('participantCard').classList.remove('hidden');
-    
-    // Populate participant details
+
     const p = window.currentParticipant;
     document.getElementById('participantName').textContent = p.name;
     document.getElementById('participantUsername').textContent = p.username;
     document.getElementById('participantEmail').textContent = p.email || 'N/A';
     document.getElementById('currentVotes').textContent = (p.total_votes || 0).toLocaleString();
-    
-    // Calculate rank (you'll need to implement this in backend)
     document.getElementById('participantRank').textContent = `#${p.rank || '?'}`;
-    
-    // Avatar initials
+
     const initials = p.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     document.getElementById('participantInitials').textContent = initials;
-    
-    // Progress bar (goal: 1M votes)
+
     const goal = 1000000;
     const progress = Math.min((p.total_votes / goal) * 100, 100);
     document.getElementById('progressPercentage').textContent = `${progress.toFixed(1)}%`;
     document.getElementById('progressBar').style.width = `${progress}%`;
-    
+
     console.log('✅ Participant displayed:', p.name);
 }
 
@@ -89,58 +84,49 @@ function showError(message) {
 function initializeVoteSelection() {
     const buttons = document.querySelectorAll('.vote-amount-btn');
     const customInput = document.getElementById('customVoteAmount');
-    
-    // Pre-select first option (1 vote)
+
     if (buttons[0]) {
         buttons[0].classList.add('active');
         window.selectedVoteAmount = 1;
         window.selectedCost = 2.00;
     }
     updateUI();
-    
-    // Vote amount buttons
+
     buttons.forEach(button => {
         button.addEventListener('click', function() {
             buttons.forEach(btn => btn.classList.remove('active'));
             customInput.value = '';
-            
             this.classList.add('active');
             window.selectedVoteAmount = parseInt(this.dataset.amount);
             window.selectedCost = parseFloat(this.dataset.cost);
             updateUI();
         });
     });
-    
-    // Custom input
+
     customInput.addEventListener('input', function() {
         buttons.forEach(btn => btn.classList.remove('active'));
-        
         const amount = parseInt(this.value) || 1;
         if (amount < 1 || amount > 1000) {
             this.classList.add('error-input');
             return;
         }
         this.classList.remove('error-input');
-        
         window.selectedVoteAmount = amount;
         window.selectedCost = window.selectedVoteAmount * 2;
         updateUI();
     });
-    
-    // Payment method selection
+
     initializePaymentMethods();
-    
-    // Vote button
+
+    // Attach vote button handler
     document.getElementById('voteButton').addEventListener('click', handleVote);
 }
 
 function initializePaymentMethods() {
     const buttons = document.querySelectorAll('.payment-method-btn');
-    
     buttons.forEach(button => {
         button.addEventListener('click', function() {
             if (this.classList.contains('disabled')) return;
-            
             buttons.forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
             window.selectedPaymentMethod = this.dataset.method;
@@ -158,46 +144,87 @@ function updateUI() {
 // ========================================
 // HANDLE VOTE/PAYMENT
 // ========================================
-async function handleVote() {
+
+// MetaMask initialization for direct BSC payments
+async function initMetaMask() {
+    if (typeof window.ethereum === "undefined") {
+        alert("MetaMask is not installed. Please install it to continue.");
+        throw new Error("MetaMask not found");
+    }
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    return provider;
+}
+
+// Direct USDT transfer using MetaMask (fallback)
+async function processVotePayment(amountUSDT) {
+    try {
+        const provider = await initMetaMask();
+        const signer = provider.getSigner();
+        const USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955";
+        const USDT_ABI = ["function transfer(address to, uint amount) returns (bool)"];
+        const usdt = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
+
+        const RECIPIENT_ADDRESS = "0xYOUR_RECIPIENT_ADDRESS"; // replace with your wallet
+        const tx = await usdt.transfer(
+            RECIPIENT_ADDRESS,
+            ethers.utils.parseUnits(amountUSDT.toString(), 18)
+        );
+
+        console.log("Transaction sent:", tx.hash);
+        await tx.wait();
+        console.log("Transaction confirmed!");
+        alert("Vote recorded successfully!");
+        return { success: true, txHash: tx.hash };
+    } catch (err) {
+        console.error("Vote processing failed:", err);
+        alert("Vote failed. Please try again.");
+        return { success: false, error: err.message };
+    }
+}
+
+async function handleVote(event) {
+    if (event) event.preventDefault();
+
     if (!window.currentParticipant || window.selectedVoteAmount <= 0) {
         alert('Please select a valid vote amount');
         return;
     }
-    
+
     const voteButton = document.getElementById('voteButton');
     const buttonText = document.getElementById('voteButtonText');
     const spinner = document.getElementById('voteButtonSpinner');
-    
+
     voteButton.disabled = true;
     buttonText.textContent = 'Processing Payment...';
     spinner.classList.remove('hidden');
-    
+
     try {
         let paymentResult;
-        
-        // Route to correct payment method
+
         if (window.selectedPaymentMethod === 'crypto') {
-            // Call crypto payment function from crypto-payments.js
-            if (typeof window.processCryptoPayment !== 'function') {
-                throw new Error('Crypto payment module not loaded');
+            // Call crypto-payments.js function
+            if (typeof window.processCryptoPayment === 'function') {
+                paymentResult = await window.processCryptoPayment();
+            } else {
+                // Fallback to direct MetaMask transfer
+                paymentResult = await processVotePayment(window.selectedVoteAmount);
             }
-            paymentResult = await window.processCryptoPayment();
         } else if (window.selectedPaymentMethod === 'paystack') {
-            // PayStack not implemented in frontend yet
             alert('PayStack payment coming soon. Please use Crypto for now.');
             throw new Error('PayStack not implemented');
         }
-        
+
         if (!paymentResult || !paymentResult.success) {
             throw new Error(paymentResult?.error || 'Payment failed');
         }
-        
-        // Record votes in database
+
+        // Record votes in DB
         await recordVotesAfterPayment(paymentResult);
-        
+
         // Show success
         showSuccessModal();
-        
+
     } catch (error) {
         console.error('Vote processing failed:', error);
         alert(`Payment failed: ${error.message}`);
@@ -223,10 +250,7 @@ async function recordVotesAfterPayment(paymentResult) {
                 payment_method: window.selectedPaymentMethod,
                 payment_intent_id: paymentResult.payment_intent_id || paymentResult.txHash,
                 payment_status: 'completed',
-                voter_info: {
-                    ip: null, // Backend will capture this
-                    userAgent: navigator.userAgent
-                }
+                voter_info: { ip: null, userAgent: navigator.userAgent }
             })
         });
 
@@ -236,22 +260,17 @@ async function recordVotesAfterPayment(paymentResult) {
         }
 
         const data = await response.json();
-        
-        // Update participant votes on the page
         if (data.participant) {
             window.currentParticipant.total_votes = data.participant.total_votes;
-            showParticipant(); // Refresh display
+            showParticipant();
         }
-        
-        console.log('✅ Votes recorded:', data);
-        
-        // Show milestone achievements if any
+
         if (data.milestones_achieved && data.milestones_achieved.length > 0) {
             showMilestoneAchievements(data.milestones_achieved);
         }
-        
+
         return data;
-        
+
     } catch (error) {
         console.error('Failed to record votes:', error);
         throw error;
@@ -262,10 +281,7 @@ async function recordVotesAfterPayment(paymentResult) {
 // MILESTONE ACHIEVEMENTS
 // ========================================
 function showMilestoneAchievements(milestones) {
-    const milestoneHtml = milestones.map(m => 
-        `<div class="mb-2">🏆 ${m.name} ${m.icon || ''}</div>`
-    ).join('');
-    
+    const milestoneHtml = milestones.map(m => `<div class="mb-2">🏆 ${m.name} ${m.icon || ''}</div>`).join('');
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4';
     modal.innerHTML = `
@@ -280,7 +296,6 @@ function showMilestoneAchievements(milestones) {
         </div>
     `;
     document.body.appendChild(modal);
-    
     setTimeout(() => modal.remove(), 5000);
 }
 
@@ -295,16 +310,13 @@ function showSuccessModal() {
 
 function closeSuccessModal() {
     document.getElementById('successModal').classList.add('hidden');
-    
-    // Reset selection
     window.selectedVoteAmount = 1;
     window.selectedCost = 2.00;
     document.getElementById('customVoteAmount').value = '';
-    
+
     const buttons = document.querySelectorAll('.vote-amount-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
     if (buttons[0]) buttons[0].classList.add('active');
-    
     updateUI();
 }
 
@@ -326,7 +338,6 @@ function copyVoteLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
         alert('Vote link copied to clipboard! 📋');
     }).catch(() => {
-        // Fallback for older browsers
         const input = document.createElement('input');
         input.value = window.location.href;
         document.body.appendChild(input);
