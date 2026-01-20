@@ -139,8 +139,8 @@ async function processBSCWithWalletConnect(paymentInit) {
         if (!provider.connected) {
             await provider.connect();
         }
-const accounts = await provider.request({ method: 'eth_requestAccounts' });
 
+        const accounts = await provider.request({ method: 'eth_accounts' });
         const walletAddress = accounts[0];
 
         updateModalStatus(modal, `✅ Connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`, 'connected');
