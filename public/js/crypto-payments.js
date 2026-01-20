@@ -60,101 +60,132 @@ async function processCryptoPayment() {
 // ========================================
 async function processUSDTPaymentBSC(paymentInit) {
     const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+    const hasMetaMask = typeof window.ethereum !== 'undefined';
 
-    /**
-     * IMPORTANT RULE:
-     * - Mobile → ALWAYS WalletConnect
-     * - Desktop → injected wallet if available, otherwise WalletConnect
-     *
-     * This prevents provider conflicts that cause:
-     * "ObjectMultiplex - malformed chunk without name 'ACK'"
-     */
-
-    // 📱 MOBILE (Trust Wallet, MetaMask Mobile, etc.)
-    if (isMobile) {
+    if (isMobile && hasMetaMask) {
+        return await processBSCWithMobileWallet(paymentInit);
+    } else {
         return await processBSCWithWalletConnect(paymentInit);
     }
-
-    // 🖥️ DESKTOP with injected wallet (MetaMask, Brave, etc.)
-    if (typeof window.ethereum !== 'undefined') {
-        return await processBSCWithMobileWallet(paymentInit);
-    }
-
-    // 🖥️ DESKTOP fallback (no injected wallet)
-    return await processBSCWithWalletConnect(paymentInit);
 }
 
-
 // BSC WalletConnect (QR Code for desktop + mobile wallets)
-// ========================================
-// 🔒 BSC WalletConnect (Refactored for persistent connection)
-// ========================================
 async function processBSCWithWalletConnect(paymentInit) {
-    // Create modal and keep reference
     const modal = showEnhancedPaymentModal('BSC', paymentInit.amount);
-
+    
     try {
-        updateModalStatus(modal, 'Loading WalletConnect library...', 'loading');
-
-        // Lazy load WalletConnect if not loaded
+        // ✅ Load WalletConnect if not already loaded (lazy loading)
         if (typeof window.loadWalletConnect === 'function') {
-            await window.loadWalletConnect();
+            updateModalStatus(modal, 'Loading WalletConnect library...', 'loading');
+            try {
+                await window.loadWalletConnect();
+            } catch (error) {
+                console.error('WalletConnect loader failed (original):', error);
+                updateModalStatus(modal, 'Failed to load WalletConnect. Click Retry or Refresh the page.', 'error');
+
+                // Provide a Retry / Cancel UI inside the modal
+                const inner = modal.querySelector('.glassmorphism') || modal.firstElementChild || modal;
+                const actionBar = document.createElement('div');
+                actionBar.style.marginTop = '12px';
+                actionBar.style.display = 'flex';
+                actionBar.style.gap = '8px';
+                actionBar.style.justifyContent = 'center';
+
+                const retryBtn = document.createElement('button');
+                retryBtn.textContent = 'Retry';
+                retryBtn.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg';
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.className = 'bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg';
+
+                actionBar.appendChild(retryBtn);
+                actionBar.appendChild(cancelBtn);
+                inner.appendChild(actionBar);
+
+                // Promise that resolves when retry succeeds or rejects on cancel
+                const retryPromise = new Promise((resolve, reject) => {
+                    retryBtn.addEventListener('click', async () => {
+                        retryBtn.disabled = true;
+                        updateModalStatus(modal, 'Retrying to load WalletConnect...', 'loading');
+                        try {
+                            await window.loadWalletConnect();
+                            // remove action bar and continue
+                            actionBar.remove();
+                            resolve(true);
+                        } catch (e) {
+                            console.error('Retry failed:', e);
+                            updateModalStatus(modal, 'Retry failed. Please refresh the page.', 'error');
+                            retryBtn.disabled = false;
+                        }
+                    });
+
+                    cancelBtn.addEventListener('click', () => {
+                        actionBar.remove();
+                        reject(new Error('User cancelled WalletConnect load'));
+                    });
+                });
+
+                try {
+                    await retryPromise;
+                } catch (err) {
+                    modal?.remove();
+                    throw new Error('Failed to load WalletConnect. Please refresh and try again.');
+                }
+            }
         }
 
+        // ✅ Check if EthereumProvider is available
         if (!window.EthereumProvider) {
+            modal?.remove();
             throw new Error('WalletConnect library not loaded. Please refresh the page.');
         }
 
         updateModalStatus(modal, 'Initializing WalletConnect...', 'loading');
 
-        // Keep provider persistent globally
-        if (!window.__walletConnectProvider) {
-            window.__walletConnectProvider = await window.EthereumProvider.init({
-                projectId: window.WALLETCONNECT_PROJECT_ID || '61d9b98f81731dffa9988c0422676fc5',
-                chains: [56], // BSC Mainnet
-                showQrModal: true,
-                methods: ['eth_sendTransaction', 'eth_accounts', 'eth_requestAccounts', 'personal_sign'],
-                events: ['chainChanged', 'accountsChanged'],
-                metadata: {
-                    name: 'One Dream Initiative',
-                    description: 'USDT Payment for Voting',
-                    url: window.location.origin,
-                    icons: [`${window.location.origin}/favicon.png`]
-                },
-                qrModalOptions: {
-                    themeMode: 'dark',
-                    themeVariables: {
-                        '--wcm-z-index': '99999',
-                        '--wcm-accent-color': '#3b82f6'
-                    }
+        // Initialize WalletConnect Provider
+        const provider = await window.EthereumProvider.init({
+            projectId: window.WALLETCONNECT_PROJECT_ID || '61d9b98f81731dffa9988c0422676fc5',
+            chains: [56], // BSC Mainnet
+            showQrModal: true,
+            methods: ['eth_sendTransaction', 'eth_accounts', 'eth_requestAccounts', 'personal_sign'],
+            events: ['chainChanged', 'accountsChanged'],
+            metadata: {
+                name: 'One Dream Initiative',
+                description: 'USDT Payment for Voting',
+                url: window.location.origin,
+                icons: [`${window.location.origin}/favicon.png`]
+            },
+            qrModalOptions: {
+                themeMode: 'dark',
+                themeVariables: {
+                    '--wcm-z-index': '99999',
+                    '--wcm-accent-color': '#3b82f6'
                 }
-            });
-        }
+            }
+        });
 
-        const provider = window.__walletConnectProvider;
+        updateModalStatus(modal, '📱 Scan QR Code with Your Wallet App', 'waiting');
 
-        updateModalStatus(modal, '📱 Scan QR Code with your wallet app...', 'waiting');
-
-        // Connect if not already connected
-        if (!provider.connected) {
-            await provider.connect();
-        }
+        // Connect wallet (this will show the QR code modal)
+        await provider.connect();
 
         const accounts = await provider.request({ method: 'eth_accounts' });
         const walletAddress = accounts[0];
 
         updateModalStatus(modal, `✅ Connected: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`, 'connected');
 
-        // Ensure BSC network
+        // Check if on correct network (BSC)
         const chainId = await provider.request({ method: 'eth_chainId' });
         if (parseInt(chainId, 16) !== 56) {
             updateModalStatus(modal, 'Switching to BSC network...', 'loading');
             try {
                 await provider.request({
                     method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: '0x38' }]
+                    params: [{ chainId: '0x38' }] // BSC Mainnet
                 });
             } catch (switchError) {
+                // If network doesn't exist in wallet, add it
                 if (switchError.code === 4902) {
                     await provider.request({
                         method: 'wallet_addEthereumChain',
@@ -166,18 +197,24 @@ async function processBSCWithWalletConnect(paymentInit) {
                             blockExplorerUrls: ['https://bscscan.com/']
                         }]
                     });
-                } else throw switchError;
+                } else {
+                    throw switchError;
+                }
             }
         }
 
         updateModalStatus(modal, 'Preparing USDT transfer...', 'loading');
 
+        // Create ethers provider (use ethers v5 from CDN)
         const ethersProvider = new ethers.providers.Web3Provider(provider);
         const signer = ethersProvider.getSigner();
 
+        // BSC USDT Contract Address
         const usdtAddress = '0x55d398326f99059fF775485246999027B3197955';
+        const recipientAddress = paymentInit.recipient_address;
         const amountInWei = ethers.utils.parseUnits(paymentInit.amount.toString(), 18);
 
+        // Create USDT contract instance
         const usdtContract = new ethers.Contract(
             usdtAddress,
             ['function transfer(address to, uint256 amount) returns (bool)'],
@@ -186,38 +223,40 @@ async function processBSCWithWalletConnect(paymentInit) {
 
         updateModalStatus(modal, `💸 Sending ${paymentInit.amount} USDT...`, 'loading');
 
-        const tx = await usdtContract.transfer(paymentInit.recipient_address, amountInWei);
+        // Execute transfer
+        const tx = await usdtContract.transfer(recipientAddress, amountInWei);
 
         updateModalStatus(modal, '⏳ Waiting for confirmation...', 'pending');
 
+        // Wait for transaction confirmation
         const receipt = await tx.wait(1);
 
         updateModalStatus(modal, '✅ Payment Confirmed!', 'success');
 
-        // Keep modal for 2s after success
         setTimeout(() => modal?.remove(), 2000);
 
-        // Do NOT disconnect immediately — keep provider alive for retry if needed
+        // Disconnect WalletConnect
+        await provider.disconnect();
+
         return {
             success: true,
             payment_intent_id: tx.hash,
             txHash: tx.hash,
             network: 'bsc',
             explorer: `https://bscscan.com/tx/${tx.hash}`,
-            receipt
+            receipt: receipt
         };
 
     } catch (error) {
         console.error('BSC WalletConnect payment error:', error);
         updateModalStatus(modal, `❌ Error: ${error.message}`, 'error');
-
-        // Keep modal for 3s to show error before removing
         setTimeout(() => modal?.remove(), 3000);
-
-        return { success: false, error: error.message || 'BSC payment failed' };
+        return {
+            success: false,
+            error: error.message || 'BSC payment failed'
+        };
     }
 }
-
 
 // BSC mobile wallet (MetaMask / injected)
 async function processBSCWithMobileWallet(paymentInit) {
