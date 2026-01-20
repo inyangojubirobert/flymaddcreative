@@ -1,6 +1,6 @@
 // ========================================
 // ONE DREAM API + SUPABASE CLIENT
-// Unified frontend client
+// Unified frontend client (safe global exports)
 // ========================================
 
 (function () {
@@ -192,7 +192,8 @@
         return data || [];
     }
 
-    window.fetchParticipantByUsernameSupabase = async function(username) {
+    // --- These are the names vote.js expects ---
+    window.fetchParticipantByUsername = async function(username) {
         const supabase = getSupabaseInstance();
         if (!supabase) throw new Error('Supabase not initialized');
 
@@ -206,7 +207,7 @@
         return data;
     };
 
-    window.fetchParticipantByUserCodeSupabase = async function(code) {
+    window.fetchParticipantByUserCode = async function(code) {
         const supabase = getSupabaseInstance();
         if (!supabase) throw new Error('Supabase not initialized');
 
@@ -239,8 +240,8 @@
 
         // Direct Supabase access (for votes, leaderboard, progress)
         getParticipantsFromSupabase,
-        getParticipantByUsername,
-        getParticipantByUserCode
+        fetchParticipantByUsername,
+        fetchParticipantByUserCode
     };
 
     console.log('✅ One Dream API + Supabase Client loaded');
