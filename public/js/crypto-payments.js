@@ -3,6 +3,22 @@ console.log('📦 Crypto Payments Module Loading (WalletConnect v2 Multi-Platfor
 /* ======================================================
     🔒 SECURE CRYPTO PAYMENT INITIALIZATION
 ====================================================== */
+// Helper to wait until the library is actually available on window
+async function loadWalletConnect() {
+    if (window.EthereumProvider) return window.EthereumProvider;
+
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
+        script.onload = () => {
+            console.log("✅ WalletConnect SDK loaded via CDN");
+            resolve(window.EthereumProvider);
+        };
+        script.onerror = () => reject(new Error("Failed to load WalletConnect SDK"));
+        document.head.appendChild(script);
+    });
+}
+
 async function initializeCryptoPayment(participantId, voteCount, network) {
     const res = await fetch('/api/onedream/init-crypto-payment', {
         method: 'POST',
