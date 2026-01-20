@@ -1,6 +1,6 @@
 // ========================================
-// ONE DREAM API CLIENT
-// Calls backend API instead of direct Supabase
+// ONE DREAM API + SUPABASE CLIENT
+// Unified frontend client
 // ========================================
 
 (function () {
@@ -28,14 +28,12 @@
     // ========================================
     // AUTH FUNCTIONS (BACKEND)
     // ========================================
-
     async function registerParticipant(name, email, username, password) {
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, email, username, password })
         });
-
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Registration failed');
         return data.participant;
@@ -47,7 +45,6 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
         });
-
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Login failed');
 
@@ -98,7 +95,6 @@
     // ========================================
     // PARTICIPANTS (BACKEND)
     // ========================================
-
     async function getParticipantByUsername(username) {
         const res = await fetch(`${API_BASE_URL}/participants/${username}`);
         if (!res.ok) return null;
@@ -134,9 +130,8 @@
     }
 
     // ========================================
-    // SUPABASE INITIALIZATION (UNIFIED)
+    // SUPABASE INITIALIZATION (STATLESS + SAFE)
     // ========================================
-
     function initializeSupabase() {
         const meta = document.querySelector('meta[name="supabase-config"]');
         const url = meta?.getAttribute('data-url');
@@ -168,7 +163,7 @@
 
             window.__onedreamSupabase = client;
             window.supabaseClient = client;
-            
+
             console.log('✅ Supabase initialized (stateless mode)');
             return true;
         } catch (err) {
@@ -181,9 +176,8 @@
     initializeSupabase();
 
     // ========================================
-    // SUPABASE DIRECT QUERIES
+    // SUPABASE DIRECT QUERIES (FOR VOTE MODULES)
     // ========================================
-
     async function getParticipantsFromSupabase(limit = 50) {
         const supabase = getSupabaseInstance();
         if (!supabase) throw new Error('Supabase not initialized');
@@ -198,7 +192,7 @@
         return data || [];
     }
 
-    window.fetchParticipantByUsername = async function (username) {
+    window.fetchParticipantByUsernameSupabase = async function(username) {
         const supabase = getSupabaseInstance();
         if (!supabase) throw new Error('Supabase not initialized');
 
@@ -212,7 +206,7 @@
         return data;
     };
 
-    window.fetchParticipantByUserCode = async function (code) {
+    window.fetchParticipantByUserCodeSupabase = async function(code) {
         const supabase = getSupabaseInstance();
         if (!supabase) throw new Error('Supabase not initialized');
 
@@ -229,8 +223,8 @@
     // ========================================
     // EXPORT GLOBAL API
     // ========================================
-
     window.SupabaseAPI = {
+        // Backend API
         registerParticipant,
         loginParticipant,
         verifyToken,
@@ -241,10 +235,14 @@
         getParticipantByUserCode,
         getLeaderboard,
         searchParticipants,
+        testConnection,
+
+        // Direct Supabase access (for votes, leaderboard, progress)
         getParticipantsFromSupabase,
-        testConnection
+        getParticipantByUsername,
+        getParticipantByUserCode
     };
 
-    console.log('✅ One Dream API Client loaded');
+    console.log('✅ One Dream API + Supabase Client loaded');
     console.log('📡 API Base URL:', API_BASE_URL);
 })();
