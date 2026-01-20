@@ -33,7 +33,7 @@ function isMobile() {
 
 // A robust provider.request wrapper that falls back to send/sendAsync if necessary.
 async function providerRequest(provider, payload) {
-  // payload: { method: 'eth_accounts', params: [] } or { method: 'eth_chainId' }
+  // payload: { method: 'eth_accounts', params: [] }
   if (!provider) throw new Error('No provider supplied to providerRequest');
 
   if (typeof provider.request === 'function') {
@@ -42,6 +42,7 @@ async function providerRequest(provider, payload) {
 
   // EIP-1193 fallback: some older providers implement send(method, params)
   if (typeof provider.send === 'function') {
+    // ethers may expect different shapes; try compatibility
     try {
       return await provider.send(payload.method, payload.params || []);
     } catch (err) {
@@ -120,72 +121,6 @@ async function initInjectedProviderSafe({ waitMs = DEFAULT_WAIT_MS } = {}) {
   }
 
   return provider;
-}
-
-// -----------------------------
-// WalletConnect helper: connect with timeout, retries and pairing URI fallback
-// -----------------------------
-async function connectWalletConnectWithTimeout(initOptions = {}, modal, { timeoutMs = 60000, retries = 1 } = {}) {
-  if (!initOptions.projectId) {
-    initOptions.projectId = window.WALLETCONNECT_PROJECT_ID || '61d9b98f81731dffa9988c0422676fc5';
-  }
-
-  if (typeof window.EthereumProvider !== 'function' && typeof window.EthereumProvider !== 'object') {
-    throw new Error('WalletConnect EthereumProvider factory not available on window');
-  }
-
-  // Initialize provider factory (this doesn't open QR yet)
-  const provider = await window.EthereumProvider.init(initOptions);
-
-  // Utility to attempt connect (race with timeout)
-  async function attemptConnect() {
-    // Try to pick pairing URI from known properties (WC v2)
-    const pairingUri =
-      provider.connector?.pairing?.uri ||
-      provider.session?.topic ||
-      provider.pairing?.uri ||
-      null;
-
-    // provider.connect() may open the QR modal (if showQrModal true). Race it with timeout.
-    const connectPromise = provider.connect();
-
-    const timeoutPromise = new Promise((_, reject) => {
-      const id = setTimeout(() => {
-        clearTimeout(id);
-        const e = new Error('WalletConnect connection timed out');
-        e.pairingUri = pairingUri;
-        reject(e);
-      }, timeoutMs);
-    });
-
-    try {
-      await Promise.race([connectPromise, timeoutPromise]);
-      return { provider, pairingUri: pairingUri || null };
-    } catch (err) {
-      // Attach pairingUri if available
-      if (!err.pairingUri) err.pairingUri = pairingUri;
-      // Try best-effort cleanup
-      try { if (typeof provider.disconnect === 'function') await provider.disconnect(); } catch (e) {}
-      throw err;
-    }
-  }
-
-  let lastError = null;
-  for (let i = 0; i <= retries; i++) {
-    try {
-      updateModalStatus(modal, i === 0 ? '📱 Scan QR Code with Your Wallet App' : 'Retrying connection...', 'loading');
-      const result = await attemptConnect();
-      return result; // { provider, pairingUri }
-    } catch (err) {
-      lastError = err;
-      console.warn(`WalletConnect attempt ${i + 1} failed:`, err);
-      updateModalStatus(modal, `Connection attempt ${i + 1} failed. ${err.message}`, 'error');
-      // small delay before retry
-      if (i < retries) await new Promise(r => setTimeout(r, 1200));
-    }
-  }
-
-  throw lastError || new Error('Failed to connect with WalletConnect');
 }
 
 // -----------------------------
@@ -270,12 +205,9 @@ async function processUSDTPaymentBSC(paymentInit) {
 }
 
 // WalletConnect + QR (desktop wallets and mobile wallets via QR)
-// Replaced implementation that uses connectWalletConnectWithTimeout
 async function processBSCWithWalletConnect(paymentInit) {
   const modal = showEnhancedPaymentModal('BSC', paymentInit.amount);
-
   try {
-    // Ensure walletconnect loader available and loaded (if you lazy-load)
     if (typeof window.loadWalletConnect === 'function') {
       updateModalStatus(modal, 'Loading WalletConnect...', 'loading');
       try {
@@ -287,10 +219,16 @@ async function processBSCWithWalletConnect(paymentInit) {
       }
     }
 
-    // Build init options with defaults, prefer global env var if set
-    const initOptions = {
+    if (typeof window.EthereumProvider !== 'function' && typeof window.EthereumProvider !== 'object') {
+      updateModalStatus(modal, 'WalletConnect provider factory not available', 'error');
+      throw new Error('WalletConnect provider factory not available');
+    }
+
+    // Initialize WalletConnect provider
+    updateModalStatus(modal, 'Initializing WalletConnect...', 'loading');
+    const wcProvider = await window.EthereumProvider.init({
       projectId: window.WALLETCONNECT_PROJECT_ID || '61d9b98f81731dffa9988c0422676fc5',
-      chains: [56],
+      chains: [BSC_CHAIN_ID_DEC],
       showQrModal: true,
       methods: ['eth_sendTransaction', 'eth_accounts', 'eth_requestAccounts', 'personal_sign'],
       events: ['chainChanged', 'accountsChanged'],
@@ -307,59 +245,14 @@ async function processBSCWithWalletConnect(paymentInit) {
           '--wcm-accent-color': '#3b82f6'
         }
       }
-    };
+    });
 
-    // Attempt to connect (with timeout + retries)
-    let connectResult;
-    try {
-      connectResult = await connectWalletConnectWithTimeout(initOptions, modal, { timeoutMs: 60000, retries: 1 });
-    } catch (err) {
-      // On failure, surface pairing URI if available and present copy/open options
-      const pairingUri = err && err.pairingUri ? err.pairingUri : null;
-      if (pairingUri) {
-        const box = modal.querySelector('.glassmorphism') || modal.firstElementChild || modal;
-        const fallback = document.createElement('div');
-        fallback.style.marginTop = '12px';
-        fallback.style.display = 'flex';
-        fallback.style.flexDirection = 'column';
-        fallback.style.gap = '8px';
-        fallback.style.alignItems = 'center';
+    updateModalStatus(modal, '📱 Scan QR Code with Your Wallet App', 'waiting');
 
-        const input = document.createElement('input');
-        input.value = pairingUri;
-        input.readOnly = true;
-        input.className = 'w-full bg-gray-800 text-sm p-2 rounded';
+    // connect will show a QR modal if necessary
+    await wcProvider.connect();
 
-        const copyBtn = document.createElement('button');
-        copyBtn.textContent = 'Copy pairing URI';
-        copyBtn.className = 'bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg';
-        copyBtn.addEventListener('click', async () => {
-          try { await navigator.clipboard.writeText(pairingUri); alert('Paired URI copied'); } catch (e) { alert('Copy failed'); }
-        });
-
-        const openBtn = document.createElement('a');
-        openBtn.textContent = 'Open in Wallet (Mobile)';
-        openBtn.href = `https://walletconnect.com/wc?uri=${encodeURIComponent(pairingUri)}`;
-        openBtn.target = '_blank';
-        openBtn.className = 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-block text-center';
-
-        fallback.appendChild(input);
-        fallback.appendChild(copyBtn);
-        fallback.appendChild(openBtn);
-        box.appendChild(fallback);
-      }
-
-      updateModalStatus(modal, 'Failed to connect. Please try again or use the pairing URI.', 'error');
-      setTimeout(() => modal?.remove(), 5000);
-      console.error('WalletConnect connect error:', err);
-      return { success: false, error: err.message || 'WalletConnect connect failed' };
-    }
-
-    const wcProvider = connectResult.provider;
-    const pairingUri = connectResult.pairingUri;
-
-    // Now we have wcProvider connected (or the provider after connect)
-    // Request accounts safely
+    // Request accounts using safe wrapper
     const accounts = await providerRequest(wcProvider, { method: 'eth_accounts' });
     const walletAddress = Array.isArray(accounts) ? accounts[0] : accounts;
     updateModalStatus(modal, `✅ Connected: ${String(walletAddress).slice(0, 6)}...${String(walletAddress).slice(-4)}`, 'connected');
@@ -371,6 +264,7 @@ async function processBSCWithWalletConnect(paymentInit) {
       try {
         await providerRequest(wcProvider, { method: 'wallet_switchEthereumChain', params: [{ chainId: BSC_CHAIN_ID_HEX }] });
       } catch (switchError) {
+        // If chain missing, try add chain
         if (switchError && switchError.code === 4902) {
           await providerRequest(wcProvider, {
             method: 'wallet_addEthereumChain',
@@ -397,8 +291,10 @@ async function processBSCWithWalletConnect(paymentInit) {
 
     const ethersProvider = new ethers.providers.Web3Provider(wcProvider);
     const signer = ethersProvider.getSigner();
-    const usdtContract = new ethers.Contract(BSC_USDT_ADDRESS, ['function transfer(address to, uint256 amount) returns (bool)'], signer);
+
+    // Ensure amount converted to token decimals (USDT on BSC = 18 here)
     const amountInWei = ethers.utils.parseUnits(String(paymentInit.amount), 18);
+    const usdtContract = new ethers.Contract(BSC_USDT_ADDRESS, ['function transfer(address to, uint256 amount) returns (bool)'], signer);
 
     updateModalStatus(modal, `💸 Sending ${paymentInit.amount} USDT...`, 'loading');
     const tx = await usdtContract.transfer(paymentInit.recipient_address, amountInWei);
@@ -409,9 +305,8 @@ async function processBSCWithWalletConnect(paymentInit) {
     updateModalStatus(modal, '✅ Payment Confirmed!', 'success');
     setTimeout(() => modal?.remove(), 2000);
 
-    // Disconnect provider when done (guarded)
-    if (wcProvider && typeof wcProvider.disconnect === 'function') {
-      try { await wcProvider.disconnect(); } catch (e) { /* ignore */ }
+    if (typeof wcProvider.disconnect === 'function') {
+      try { await wcProvider.disconnect(); } catch (e) { /* ignore disconnect errors */ }
     }
 
     return {
@@ -424,7 +319,7 @@ async function processBSCWithWalletConnect(paymentInit) {
     };
 
   } catch (error) {
-    console.error('BSC WalletConnect payment error (final):', error);
+    console.error('BSC WalletConnect payment error:', error);
     updateModalStatus(modal, `❌ Error: ${error?.message || error}`, 'error');
     setTimeout(() => modal?.remove(), 3000);
     return { success: false, error: error?.message || 'BSC payment failed' };
