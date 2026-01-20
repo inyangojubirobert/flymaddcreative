@@ -215,3 +215,4 @@ function generateQR(text, id) {
 
 // EXPORTS
 window.processCryptoPayment = processCryptoPayment;
+window.processBSCWithInjectedWallet = processBSCWithInjectedWallet;

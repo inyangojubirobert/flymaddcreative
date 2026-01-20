@@ -284,32 +284,55 @@
          ======================================== -->
     
     <!-- 1. Core Libraries - MUST load first -->
-     <!-- 1. Ethers.js -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-    <script>
-        console.log('🚀 Vote Page Loading...');
-        window.currentParticipant = null;
-        window.selectedVoteAmount = 1;
-        window.selectedCost = 2.00;
-        window.selectedPaymentMethod = 'crypto';
-        window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';
+<script>
+    // Global App State
+    window.currentParticipant = null;
+    window.selectedVoteAmount = 1;
+    window.selectedCost = 2.00;
+    window.selectedPaymentMethod = 'crypto'; // Default method
+    window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';
 
-        window.loadWalletConnect = async function() {
-            if (window.EthereumProvider) return true;
-            try {
-                const module = await import('https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.11.0/+esm');
-                window.EthereumProvider = module?.EthereumProvider || module.default;
-                return true;
-            } catch(e){ 
-                console.warn('WalletConnect load failed', e);
-                return false;
-            }
-        };
-    </script>
+    /**
+     * SDK LOADER: Fixes "Cannot read init of undefined"
+     * Dynamically pulls in WalletConnect only when needed
+     */
+    window.loadWalletConnect = async function() {
+        if (window.EthereumProvider) return window.EthereumProvider;
+        
+        console.log('⏳ Injecting WalletConnect SDK...');
+        try {
+            // Using the UMD bundle for maximum compatibility with vanilla JS
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
+                script.onload = () => {
+                    console.log('✅ WalletConnect SDK Ready');
+                    resolve(window.EthereumProvider);
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        } catch (e) {
+            console.error('WalletConnect load failed:', e);
+            return null;
+        }
+    };
+</script>
 
-    <script src="/js/supabase-config.js"></script>
+<script src="/js/supabase-config.js"></script>
+<script src="/js/crypto-payments.js"></script>
+<script src="/js/vote.js"></script>
 
-    <script src="/js/crypto-payments.js"></script>
-
-    <script src="/js/vote.js"></script>
+<script>
+    // Final check to ensure the bridge between files is open
+    window.addEventListener('load', () => {
+        console.log('🏁 All systems loaded.');
+        if (typeof window.processCryptoPayment !== 'function') {
+            console.error('❌ CRITICAL: crypto-payments.js failed to export processCryptoPayment');
+        }
+    });
+</script>
+</body></html>

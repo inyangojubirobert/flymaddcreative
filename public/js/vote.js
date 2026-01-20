@@ -63,6 +63,10 @@ async function loadWalletConnect() {
 // HANDLE VOTE / PAYMENT (CLEANED & MERGED)
 // ========================================
 async function handleVote() {
+    if (window.selectedPaymentMethod === 'crypto' && typeof window.processCryptoPayment !== 'function') {
+        alert("Payment system is still loading. Please wait 2 seconds and try again.");
+        return;
+    }
     if (!window.currentParticipant || window.selectedVoteAmount <= 0) {
         alert('Please select a valid vote amount');
         return;
