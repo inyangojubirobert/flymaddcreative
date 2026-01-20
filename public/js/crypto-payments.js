@@ -139,11 +139,7 @@ async function processBSCWithWalletConnect(paymentInit) {
         if (!provider.connected) {
             await provider.connect();
         }
-const accounts = provider.accounts;
-if (!accounts || !accounts.length) {
-    throw new Error('No wallet accounts found');
-}
-
+const accounts = await provider.request({ method: 'eth_requestAccounts' });
 
         const walletAddress = accounts[0];
 
