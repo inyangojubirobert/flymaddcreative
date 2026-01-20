@@ -149,6 +149,18 @@ async function processTronWithTronLink(paymentInit) {
 
     return successResult(tx, 'tron');
 }
+// ========================================
+// 🔹 NETWORK SELECTION MODAL (FIXED)
+// ========================================
+async function showNetworkSelectionModal() {
+    // If you only support BSC, we can skip user selection
+    // Or you can create a modal for multiple chains
+    return new Promise((resolve) => {
+        // Example: simple confirm modal for now
+        const useBSC = confirm("Proceed with Binance Smart Chain (BSC) payment?");
+        resolve(useBSC ? 'bsc' : null);
+    });
+}
 
 // ========================================
 // 🔴 TRON QR + DEEP LINK
@@ -214,9 +226,11 @@ function updateModalStatus(modal, msg) {
 // ========================================
 // EXPORTS
 // ========================================
+// 🔹 ATTACH FUNCTIONS TO WINDOW
+// ========================================
 window.processCryptoPayment = processCryptoPayment;
 window.initializeCryptoPayment = initializeCryptoPayment;
-window.showNetworkSelectionModal = showNetworkSelectionModal;
+window.showNetworkSelectionModal = showNetworkSelectionModal; // ✅ now defined
 window.processUSDTPaymentBSC = processUSDTPaymentBSC;
 window.processUSDTPaymentTron = processUSDTPaymentTron;
 window.manualConfirmation = manualConfirmation;
@@ -224,4 +238,4 @@ window.successResult = successResult;
 window.showEnhancedPaymentModal = showEnhancedPaymentModal;
 window.updateModalStatus = updateModalStatus;
 
-console.log('✅ Crypto Payments Module Loaded');
+console.log('✅ Crypto Payments Module Loaded with showNetworkSelectionModal');
