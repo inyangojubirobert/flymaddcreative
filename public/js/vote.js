@@ -248,7 +248,12 @@ window.initializeCryptoPayment = initializeCryptoPayment;
 window.processUSDTPaymentBSC = processUSDTPaymentBSC;
 window.processUSDTPaymentTron = processUSDTPaymentTron;
 window.processBSCWithWalletConnect = processBSCWithWalletConnect;
-window.processBSCWithInjectedWallet = processBSCWithInjectedWallet;
+// Line 251 in vote.js should look like this safely:
+if (typeof window.processBSCWithInjectedWallet === 'function') {
+    paymentResult = await window.processBSCWithInjectedWallet();
+} else {
+    throw new Error("Payment module not fully loaded. Please refresh.");
+}
 window.processTronWithQRCode = processTronWithQRCode;
 
 // UI Components
