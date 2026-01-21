@@ -13,25 +13,11 @@
 
     <link rel="icon" type="image/png" href="/favicon.png">
 
-  <link rel="stylesheet" href="/public/dist/output.css">
+    <link rel="stylesheet" href="/dist/output.css">
 
-   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
-
-<script>
-  (function() {
-    const initBuffer = () => {
-      if (typeof window.buffer !== 'undefined') {
-        window.Buffer = window.buffer.Buffer;
-        console.log("✅ Buffer Polyfill Initialized");
-      } else {
-        // If not ready yet, try again in 10ms
-        setTimeout(initBuffer, 10);
-      }
-    };
-    initBuffer();
-  })();
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
+<script>window.Buffer = window.buffer.Buffer;</script>
 
     <style>
         /* ... Your existing styles ... */
