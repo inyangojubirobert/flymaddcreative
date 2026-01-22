@@ -16,16 +16,7 @@
     <link rel="stylesheet" href="/dist/output.css">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
-    <script>
-        // Defensive assignment — some tracking-prevention blockers may prevent storage access; still set what we can
-        try {
-            if (!window.Buffer && window.buffer && window.buffer.Buffer) window.Buffer = window.buffer.Buffer;
-            if (!window.process && typeof process !== 'undefined') window.process = process;
-            if (typeof window.global === 'undefined') window.global = window;
-        } catch (e) {
-            console.warn('Polyfill assignment failed:', e);
-        }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js" crossorigin="anonymous"></script>
 
     <style>
         /* ... Your existing styles ... */
@@ -320,10 +311,13 @@
     window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';
 </script>
 
-<script src="/js/supabase-config.js"></script>
-<script src="/js/crypto-payments.js"></script>
-<script src="/js/paystack-payments.js"></script>
-<script src="/js/vote.js"></script>
+    <!-- Ensure Paystack inline SDK is present BEFORE our Paystack integration -->
+    <script src="https://js.paystack.co/v1/inline.js" crossorigin="anonymous"></script>
+
+    <script src="/js/supabase-config.js"></script>
+    <script src="/js/crypto-payments.js"></script>
+    <script src="/js/paystack-payments.js"></script>
+    <script src="/js/vote.js"></script>
 
 <script>
     // Final check to ensure the bridge between files is open

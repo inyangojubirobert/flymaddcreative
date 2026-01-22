@@ -1,13 +1,21 @@
-// Paystack SDK loader + payment flow (inline + redirect fallback)
+// Ensure Paystack SDK and robust inline handling
 
-async function ensurePaystack() {
+async function ensurePaystack(timeout = 5000) {
     if (window.PaystackPop) return;
     if (window._paystackLoading) return window._paystackLoading;
 
     window._paystackLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
         s.src = 'https://js.paystack.co/v1/inline.js';
-        s.onload = () => resolve();
+        s.crossOrigin = 'anonymous';
+        s.onload = () => {
+            const start = Date.now();
+            (function waitForPaystack() {
+                if (window.PaystackPop) return resolve();
+                if (Date.now() - start > timeout) return reject(new Error('PaystackPop not available after load'));
+                setTimeout(waitForPaystack, 50);
+            })();
+        };
         s.onerror = () => reject(new Error('Failed to load Paystack SDK'));
         document.head.appendChild(s);
     });
@@ -38,56 +46,75 @@ async function processPaystackPayment() {
 
         const data = await res.json();
 
-        // Ensure Paystack SDK present before inline flow
-        try { await ensurePaystack(); } catch (e) { console.warn('Paystack SDK failed to load:', e); }
+        // Try to ensure Paystack inline SDK; fall back to redirect if blocked
+        try {
+            await ensurePaystack();
+        } catch (e) {
+            console.warn('Paystack inline SDK not available:', e);
+            if (data.authorization_url) {
+                window.location.href = data.authorization_url;
+                return { success: true, redirect: true, url: data.authorization_url };
+            }
+            return { success: false, error: 'Paystack SDK unavailable' };
+        }
 
-        // If Paystack inline SDK is available, use it (return Promise resolved on callback)
-        if (window.PaystackPop) {
-            const key = window.PAYSTACK_PUBLIC_KEY || data.public_key || '';
-            const email = (window.currentUser && window.currentUser.email) || 'support@flymaddcreative.online';
-            // amount: server returns USD; replicate your server conversion if needed
-            const amountKobo = Math.round((data.amount || 0) * 100 * 1600);
+        if (typeof window.PaystackPop === 'undefined') {
+            if (data.authorization_url) {
+                window.location.href = data.authorization_url;
+                return { success: true, redirect: true, url: data.authorization_url };
+            }
+            return { success: false, error: 'PaystackPop not defined' };
+        }
 
-            return await new Promise((resolve) => {
-                const options = {
-                    key,
-                    email,
-                    amount: amountKobo,
-                    reference: data.reference || data.payment_intent_id,
-                    callback: function(response) {
-                        resolve({ success: true, payment_intent_id: response.reference, raw: response, redirect: false });
-                    },
-                    onClose: function() {
-                        resolve({ success: false, error: 'User closed Paystack dialog', redirect: false });
+        const key = window.PAYSTACK_PUBLIC_KEY || data.public_key || '';
+        const email = (window.currentUser && window.currentUser.email) || 'support@flymaddcreative.online';
+        const amountKobo = Math.round((data.amount || 0) * 100 * 1600);
+
+        return await new Promise((resolve) => {
+            const options = {
+                key,
+                email,
+                amount: amountKobo,
+                reference: data.reference || data.payment_intent_id,
+                callback: function(response) {
+                    resolve({ success: true, payment_intent_id: response.reference, raw: response, redirect: false });
+                },
+                onClose: function() {
+                    resolve({ success: false, error: 'User closed Paystack dialog', redirect: false });
+                }
+            };
+
+            try {
+                let handler = null;
+                if (typeof window.PaystackPop.setup === 'function') {
+                    handler = window.PaystackPop.setup(options);
+                } else if (typeof window.PaystackPop === 'function') {
+                    try { handler = new window.PaystackPop(options); } catch (e) { handler = window.PaystackPop(options); }
+                } else if (typeof window.paystack !== 'undefined' && typeof window.paystack.setup === 'function') {
+                    handler = window.paystack.setup(options);
+                }
+
+                if (handler && typeof handler.openIframe === 'function') {
+                    handler.openIframe();
+                } else {
+                    if (data.authorization_url) {
+                        window.location.href = data.authorization_url;
+                        resolve({ success: true, redirect: true, url: data.authorization_url });
+                    } else {
+                        resolve({ success: false, error: 'Paystack handler unavailable' });
                     }
-                };
-
-                try {
-                    // Paystack exposes setup as a function or constructor in some environments
-                    const handler = (typeof PaystackPop === 'function' && PaystackPop.setup) ? PaystackPop.setup(options) : PaystackPop && PaystackPop(options);
-                    if (handler && typeof handler.openIframe === 'function') handler.openIframe();
-                    else {
-                        if (data.authorization_url) {
-                            window.location.href = data.authorization_url;
-                            resolve({ success: true, redirect: true, url: data.authorization_url });
-                        } else {
-                            resolve({ success: false, error: 'Paystack handler unavailable' });
-                        }
-                    }
-                } catch (err) {
-                    console.error('Paystack inline error:', err);
+                }
+            } catch (err) {
+                console.error('Paystack inline error:', err);
+                if (data.authorization_url) {
+                    window.location.href = data.authorization_url;
+                    resolve({ success: true, redirect: true, url: data.authorization_url });
+                } else {
                     resolve({ success: false, error: err.message });
                 }
-            });
-        }
+            }
+        });
 
-        // Fallback: redirect to authorization_url
-        if (data.authorization_url) {
-            window.location.href = data.authorization_url;
-            return { success: true, redirect: true, url: data.authorization_url };
-        }
-
-        return { success: false, error: 'No Paystack flow available' };
     } catch (err) {
         console.error('Paystack payment error:', err);
         return { success: false, error: err.message };

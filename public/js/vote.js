@@ -80,47 +80,38 @@ console.log('📦 Vote.js Loading...');
         SDK LOADER: Prefer shared loader, fallback to UMD injection
     ====================================================== */
     async function ensureSharedWalletLoader(timeout = 2500) {
-        // If shared loader exists, wait for it to finish
+        // Try shared loader first
         if (typeof window.loadWalletConnect === 'function') {
             try {
-                return await window.loadWalletConnect();
+                const prov = await window.loadWalletConnect();
+                return prov || null;
             } catch (e) {
                 console.warn('Shared loadWalletConnect failed:', e);
             }
         }
 
-        // Wait briefly for other scripts to define the shared loader
+        // Wait briefly for a shared loader to appear
         const start = Date.now();
         while (typeof window.loadWalletConnect !== 'function' && (Date.now() - start) < timeout) {
-            // eslint-disable-next-line no-await-in-loop
             await new Promise(r => setTimeout(r, 100));
         }
         if (typeof window.loadWalletConnect === 'function') {
-            return await window.loadWalletConnect();
+            try {
+                const prov = await window.loadWalletConnect();
+                return prov || null;
+            } catch (e) {
+                console.warn('Shared loadWalletConnect failed after wait:', e);
+            }
         }
 
-        // Fallback: simple UMD injection (keeps the page resilient)
-        return new Promise((resolve, reject) => {
-            if (window.EthereumProvider) return resolve(window.EthereumProvider);
-            if (document.querySelector('script[data-wc-fallback]')) {
-                setTimeout(() => {
-                    if (window.EthereumProvider) return resolve(window.EthereumProvider);
-                    return reject(new Error('WalletConnect fallback present but provider not found'));
-                }, 100);
-                return;
-            }
-            const s = document.createElement('script');
-            s.setAttribute('data-wc-fallback', 'true');
-            s.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
-            s.onload = () => {
-                setTimeout(() => {
-                    if (window.EthereumProvider) return resolve(window.EthereumProvider);
-                    return reject(new Error('WalletConnect loaded but provider global not found'));
-                }, 50);
-            };
-            s.onerror = () => reject(new Error('Failed to load WalletConnect fallback'));
-            document.head.appendChild(s);
-        });
+        // Fallback: ask crypto-payments to load directly
+        try {
+            const prov = await window.loadWalletConnect?.();
+            return prov || null;
+        } catch (err) {
+            console.warn('Direct loadWalletConnect fallback failed:', err);
+            return null;
+        }
     }
 
     // ========================================
@@ -150,28 +141,29 @@ console.log('📦 Vote.js Loading...');
             let paymentResult;
 
             if (window.selectedPaymentMethod === 'crypto') {
-                // Ensure WalletConnect/provider is available via shared loader or fallback
-                try { await ensureSharedWalletLoader(); } catch (loaderErr) {
-                    throw new Error('Payment system initialization failed. Please refresh the page.');
+                // Try to ensure walletconnect/provider available
+                const prov = await ensureSharedWalletLoader();
+                if (!prov && !window.EthereumProvider) {
+                    // WalletConnect initialization failed — offer Paystack fallback
+                    console.warn('WalletConnect initialization failed; offering Paystack fallback.');
+                    const usePaystack = (typeof window.processPaystackPayment === 'function') && confirm('Wallet connection failed. Would you like to pay with Paystack instead?');
+                    if (usePaystack) {
+                        paymentResult = await window.processPaystackPayment();
+                    } else {
+                        throw new Error('Payment system initialization failed. Please refresh the page.');
+                    }
+                } else {
+                    if (typeof window.processCryptoPayment !== 'function') {
+                        throw new Error('Crypto payment module not loaded. Please refresh.');
+                    }
+                    paymentResult = await window.processCryptoPayment();
                 }
-
-                if (typeof window.processCryptoPayment !== 'function') {
-                    throw new Error('Crypto payment module not loaded. Please refresh.');
-                }
-
-                paymentResult = await window.processCryptoPayment();
             } else if (window.selectedPaymentMethod === 'paystack') {
                 if (typeof window.processPaystackPayment !== 'function') {
                     throw new Error('Paystack payment module not loaded. Please refresh.');
                 }
-                // call Paystack and await outcome
                 paymentResult = await window.processPaystackPayment();
-
-                // If Paystack triggered a full redirect, stop here (server will handle confirmation)
-                if (paymentResult && paymentResult.redirect) {
-                    // UI will be navigated away; return early
-                    return;
-                }
+                if (paymentResult && paymentResult.redirect) return;
             } else {
                 throw new Error('Selected payment method not available yet');
             }

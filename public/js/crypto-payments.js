@@ -1,56 +1,80 @@
 console.log('📦 Crypto Payments Module Loading (WalletConnect v2 Multi-Platform)...');
 
-// --- REPLACE ensureBufferPolyfill with ensureNodePolyfills (loads buffer + process and sets globals)
+// NEW: detect multiple injected wallet providers and warn (helps diagnose ObjectMultiplex malformed chunk errors)
+(function detectInjectedWalletConflicts() {
+    try {
+        const found = new Set();
+
+        // Common injected providers / markers
+        if (window.ethereum) {
+            // Some browsers expose multiple providers via ethereum.providers array
+            if (Array.isArray(window.ethereum.providers) && window.ethereum.providers.length) {
+                window.ethereum.providers.forEach(p => {
+                    if (p && p.isMetaMask) found.add('MetaMask');
+                    else if (p && p.isCoinbaseWallet) found.add('Coinbase Wallet');
+                    else found.add('Unknown EVM Provider');
+                });
+            } else {
+                if (window.ethereum.isMetaMask) found.add('MetaMask');
+                else if (window.ethereum.isCoinbaseWallet) found.add('Coinbase Wallet');
+                else found.add('Ethereum Provider');
+            }
+        }
+
+        if (window.tronWeb) found.add('TronLink/TronWeb');
+        if (window.walletconnect) found.add('WalletConnect (legacy global)');
+        if (window.WalletConnectProvider) found.add('WalletConnectProvider');
+
+        if (found.size > 1) {
+            console.warn(
+                '⚠️ Multiple wallet providers detected on this page:',
+                Array.from(found).join(', '),
+                '\nThis can cause extension message-channel warnings such as "ObjectMultiplex - malformed chunk without name \"ACK\"".',
+                'Recommendation: disable extra wallet extensions while testing (keep one), or test in a clean browser profile/incognito.'
+            );
+        }
+    } catch (e) {
+        // non-fatal
+    }
+})();
+
+// --- REPLACE ensureNodePolyfills with a safer, CDN-only Buffer loader + minimal process shim
 async function ensureNodePolyfills() {
-    if (typeof window === 'undefined') return;
-    if (window._nodePolyfillsLoading) return window._nodePolyfillsLoading;
+	if (typeof window === 'undefined') return;
+	if (window._nodePolyfillsLoading) return window._nodePolyfillsLoading;
 
-    // helper to load script and try local->cdn
-    const loadScript = (src) => new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.crossOrigin = 'anonymous';
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.appendChild(s);
-    });
+	const loadScript = (src) => new Promise((resolve, reject) => {
+		const s = document.createElement('script');
+		s.src = src;
+		s.crossOrigin = 'anonymous';
+		s.onload = resolve;
+		s.onerror = reject;
+		document.head.appendChild(s);
+	});
 
-    const tryLocalThenCdn = async (localPath, cdnUrl) => {
-        try {
-            await loadScript(localPath);
-            return 'local';
-        } catch (e) {
-            await loadScript(cdnUrl);
-            return 'cdn';
-        }
-    };
+	window._nodePolyfillsLoading = (async () => {
+		// Buffer polyfill via CDN if missing
+		if (typeof window.Buffer === 'undefined') {
+			try {
+				await loadScript('https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js');
+				if (!window.Buffer && window.Buffer && window.buffer.Buffer) window.Buffer = window.buffer.Buffer;
+			} catch (e) {
+				// Last-resort: create a minimal Buffer stub to avoid immediate crashes (not full-featured)
+				try { window.Buffer = window.Buffer || { from: () => { throw new Error('Buffer not available'); } }; } catch (ex) {}
+				console.warn('Buffer polyfill failed to load from CDN:', e);
+			}
+		}
 
-    window._nodePolyfillsLoading = (async () => {
-        // Buffer polyfill: prefer local
-        if (typeof window.Buffer === 'undefined') {
-            try {
-                await tryLocalThenCdn('/polyfills/buffer.min.js', 'https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js');
-                if (!window.Buffer && window.buffer && window.buffer.Buffer) window.Buffer = window.buffer.Buffer;
-            } catch (e) {
-                throw new Error('Failed to load buffer polyfill: ' + e.message);
-            }
-        }
+		// Minimal process shim (many libs only check process.env)
+		if (typeof window.process === 'undefined') {
+			window.process = { env: {} };
+		}
 
-        // process polyfill: prefer local
-        if (typeof window.process === 'undefined') {
-            try {
-                await tryLocalThenCdn('/polyfills/process.browser.js', 'https://cdn.jsdelivr.net/npm/process@0.11.10/browser.js');
-                if (!window.process && typeof process !== 'undefined') window.process = process;
-            } catch (e) {
-                throw new Error('Failed to load process polyfill: ' + e.message);
-            }
-        }
+		if (typeof window.global === 'undefined') window.global = window;
+		return true;
+	})();
 
-        if (typeof window.global === 'undefined') window.global = window;
-        return true;
-    })();
-
-    return window._nodePolyfillsLoading;
+	return window._nodePolyfillsLoading;
 }
 
 // --- NEW: ensure browser (UMD) builds of ethers and TronWeb are available
@@ -93,9 +117,8 @@ async function loadWalletConnect() {
     try {
         await ensureNodePolyfills();
     } catch (e) {
-        console.warn('Node polyfills failed to load:', e);
-        // Fail fast so callers know WalletConnect cannot initialize safely
-        throw new Error('Required Node polyfills (Buffer/process) are missing or blocked.');
+        console.warn('Node polyfills failed to load (continuing):', e);
+        // continue — polyfills helpful but not always fatal
     }
 
     // If already available, return it
@@ -104,33 +127,61 @@ async function loadWalletConnect() {
     // Reuse existing loading promise if present
     if (window._walletConnectLoading) return window._walletConnectLoading;
 
-    window._walletConnectLoading = new Promise((resolve, reject) => {
-        // Prevent double-appending the same script tag
-        if (document.querySelector('script[data-wc-loader="true"]')) {
-            // Wait a short moment for globals to appear
-            setTimeout(() => {
+    window._walletConnectLoading = (async () => {
+        const umdCandidates = [
+            "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js",
+            "https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js"
+        ];
+
+        // attempt to load UMD builds (try each CDN once)
+        for (const url of umdCandidates) {
+            try {
+                // skip if a script with same src already exists
+                if (!document.querySelector(`script[src="${url}"]`)) {
+                    await new Promise((res, rej) => {
+                        const s = document.createElement('script');
+                        s.src = url;
+                        s.crossOrigin = 'anonymous';
+                        s.onload = res;
+                        s.onerror = () => rej(new Error('UMD script load failed: ' + url));
+                        document.head.appendChild(s);
+                    });
+                }
+                // allow UMD to register globals
+                await new Promise(r => setTimeout(r, 80));
                 const provider = detectWalletConnectGlobal();
-                if (provider) return resolve(provider);
-                return reject(new Error('WalletConnect script already present but provider not found'));
-            }, 50);
-            return;
+                if (provider) {
+                    window.EthereumProvider = provider;
+                    return provider;
+                }
+            } catch (e) {
+                console.warn('WalletConnect UMD candidate failed:', url, e);
+            }
         }
 
-        const script = document.createElement('script');
-        script.setAttribute('data-wc-loader', 'true');
-        script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
-        script.onload = () => {
-            console.log("✅ WalletConnect SDK loaded via CDN");
-            // allow UMD to register globals
-            setTimeout(() => {
-                const provider = detectWalletConnectGlobal();
-                if (provider) return resolve(provider);
-                return reject(new Error('WalletConnect loaded but provider global not found'));
-            }, 50);
-        };
-        script.onerror = () => reject(new Error("Failed to load WalletConnect SDK"));
-        document.head.appendChild(script);
-    });
+        // Try ESM dynamic import fallback (jsdelivr +esm)
+        try {
+            const mod = await import('https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.1/+esm');
+            const exported = mod.EthereumProvider || mod.default?.EthereumProvider || mod.default;
+            if (exported) {
+                window.EthereumProvider = exported;
+                return window.EthereumProvider;
+            }
+        } catch (esmErr) {
+            console.warn('WalletConnect ESM dynamic import failed:', esmErr);
+        }
+
+        // Final attempt: try commonly exported globals one last time
+        const lastTry = detectWalletConnectGlobal();
+        if (lastTry) {
+            window.EthereumProvider = lastTry;
+            return lastTry;
+        }
+
+        // If we couldn't find a provider, return null so caller can decide fallback
+        console.warn('WalletConnect loaded but provider global not found after all fallbacks.');
+        return null;
+    })();
 
     return window._walletConnectLoading;
 }
