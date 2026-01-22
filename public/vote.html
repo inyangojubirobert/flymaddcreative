@@ -315,6 +315,25 @@
     <!-- Load Paystack inline SDK via CDN (plain <script> avoids CORS/fetch issues) -->
     <script src="https://js.paystack.co/v1/inline.js"></script>
 
+    <!-- NEW: load public config from Next API and expose globals for client scripts -->
+    <script>
+        // Expose a promise that other scripts can await: window.__publicConfigReady
+        window.__publicConfigReady = (async function(){
+            try {
+                const r = await fetch('/api/public-config', { credentials: 'same-origin' });
+                if (!r.ok) return {};
+                const cfg = await r.json();
+                if (cfg.paystackPublicKey) window.PAYSTACK_PUBLIC_KEY = cfg.paystackPublicKey;
+                if (cfg.walletConnectProjectId) window.WALLETCONNECT_PROJECT_ID = cfg.walletConnectProjectId;
+                if (cfg.supabaseAnonKey) window.NEXT_PUBLIC_SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
+                return cfg;
+            } catch (e) {
+                console.warn('Failed to load public config:', e);
+                return {};
+            }
+        })();
+    </script>
+
     <script src="/js/supabase-config.js"></script>
     <script src="/js/crypto-payments.js"></script>
     <script src="/js/paystack-payments.js"></script>
