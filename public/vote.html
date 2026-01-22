@@ -311,33 +311,8 @@
     window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';
 </script>
 
-    <!-- Ensure Paystack inline SDK is present BEFORE our Paystack integration -->
-    <script>
-        (function loadPaystackLocalFirst() {
-            function addScript(src) {
-                return new Promise((resolve, reject) => {
-                    // don't set crossOrigin to avoid CORS blocking when the host doesn't send CORS headers
-                    const s = document.createElement('script');
-                    s.src = src;
-                    s.onload = () => resolve(src);
-                    s.onerror = () => reject(new Error('Failed to load ' + src));
-                    document.head.appendChild(s);
-                });
-            }
-
-            // Try local copy first (self-host recommended)
-            addScript('/vendor/paystack-inline.js')
-                .then(() => console.log('Loaded Paystack (local)'))
-                .catch(() => {
-                    // Fallback: load CDN WITHOUT crossorigin attribute
-                    addScript('https://js.paystack.co/v1/inline.js')
-                        .then(() => console.log('Loaded Paystack (cdn)'))
-                        .catch((err) => {
-                            console.warn('Paystack SDK failed to load via local and CDN:', err);
-                        });
-                });
-        })();
-    </script>
+    <!-- Load Paystack inline SDK via CDN (plain <script> avoids CORS/fetch issues) -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
 
     <script src="/js/supabase-config.js"></script>
     <script src="/js/crypto-payments.js"></script>
