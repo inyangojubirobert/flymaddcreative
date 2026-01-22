@@ -69,20 +69,13 @@ console.log('📦 Vote.js Loading...');
         }
     }
 
-    /* ======================================================
-        🚀 SDK LOADER: Fixes "Cannot read init of undefined"
-    ====================================================== */
-    async function loadWalletConnect() {
-        if (window.EthereumProvider) return window.EthereumProvider;
-
-        return new Promise((resolve, reject) => {
-            console.log('⏳ Injecting WalletConnect SDK...');
-            const script = document.createElement('script');
-            script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
-            script.onload = () => resolve(window.EthereumProvider);
-            script.onerror = () => reject(new Error("Failed to load WalletConnect library."));
-            document.head.appendChild(script);
-        });
+    // --- NEW: small helper to wait for a condition (used to wait for shared loader)
+    async function waitFor(predicate, timeout = 3000, interval = 100) {
+        const start = Date.now();
+        while (!predicate()) {
+            if (Date.now() - start > timeout) throw new Error('Timed out waiting for condition');
+            await new Promise(r => setTimeout(r, interval));
+        }
     }
 
     // ========================================
@@ -113,9 +106,20 @@ console.log('📦 Vote.js Loading...');
             let paymentResult;
 
             if (window.selectedPaymentMethod === 'crypto') {
-                // Ensure SDK is ready
-                await loadWalletConnect();
-                
+                // Use the shared loader exposed by crypto-payments.js (avoid re-loading SDK here)
+                try {
+                    if (typeof window.loadWalletConnect === 'function') {
+                        await window.loadWalletConnect();
+                    } else {
+                        // wait briefly for the global loader to be defined (e.g. other script is still initializing)
+                        await waitFor(() => typeof window.loadWalletConnect === 'function', 2500);
+                        await window.loadWalletConnect();
+                    }
+                } catch (loaderErr) {
+                    console.warn('WalletConnect loader unavailable:', loaderErr);
+                    throw new Error('Payment system initialization failed. Please refresh the page.');
+                }
+
                 if (typeof window.processCryptoPayment !== 'function') {
                     throw new Error('Crypto payment module not loaded. Please refresh.');
                 }

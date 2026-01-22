@@ -60,29 +60,68 @@ async function ensureBrowserLibraries() {
 ====================================================== */
 // Helper to wait until the library is actually available on window
 async function loadWalletConnect() {
-    // Ensure Buffer polyfill before loading walletconnect or other libs that expect Node globals
-    try {
-        await ensureBufferPolyfill();
-    } catch (e) {
-        console.warn('Buffer polyfill failed to load:', e);
-    }
-
+    // If already available, return it
     if (window.EthereumProvider) return window.EthereumProvider;
 
-    return new Promise((resolve, reject) => {
+    // Reuse existing loading promise if present
+    if (window._walletConnectLoading) return window._walletConnectLoading;
+
+    // Ensure Buffer polyfill first (non-fatal)
+    try { await ensureBufferPolyfill(); } catch (e) { console.warn('Buffer polyfill failed to load:', e); }
+
+    window._walletConnectLoading = new Promise((resolve, reject) => {
+        // Prevent double-appending the same script tag
+        if (document.querySelector('script[data-wc-loader="true"]')) {
+            // Wait a short moment for globals to appear
+            setTimeout(() => {
+                const provider = detectWalletConnectGlobal();
+                if (provider) return resolve(provider);
+                return reject(new Error('WalletConnect script already present but provider not found'));
+            }, 50);
+            return;
+        }
+
         const script = document.createElement('script');
+        script.setAttribute('data-wc-loader', 'true');
         script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
         script.onload = () => {
             console.log("✅ WalletConnect SDK loaded via CDN");
+            // allow UMD to register globals
             setTimeout(() => {
-                const provider = window.EthereumProvider || window.WalletConnectProvider || window.WalletConnect || window.walletconnect || null;
+                const provider = detectWalletConnectGlobal();
                 if (provider) return resolve(provider);
                 return reject(new Error('WalletConnect loaded but provider global not found'));
-            }, 0);
+            }, 50);
         };
         script.onerror = () => reject(new Error("Failed to load WalletConnect SDK"));
         document.head.appendChild(script);
     });
+
+    return window._walletConnectLoading;
+}
+
+function detectWalletConnectGlobal() {
+    // Try many possible global names and default properties used by various builds
+    const candidates = [
+        'EthereumProvider',
+        'WalletConnectProvider',
+        'WalletConnect',
+        'walletconnect',
+        'walletConnect',
+        'WalletConnectEthereumProvider',
+        'WalletConnectModal',
+        'w3m', // wallet3 modal namespace (some builds)
+    ];
+
+    for (const k of candidates) {
+        const val = window[k];
+        if (val) return val;
+        // Some UMDs attach default export under `.default`
+        if (val && val.default) return val.default;
+    }
+    // Last attempt: check nested namespaces
+    if (window.Wallet && window.Wallet.connect) return window.Wallet;
+    return null;
 }
 
 async function initializeCryptoPayment(participantId, voteCount, network) {
