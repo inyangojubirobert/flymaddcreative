@@ -142,14 +142,19 @@ console.log('📦 Vote.js Loading...');
 
            if (window.selectedPaymentMethod === 'crypto') {
     try {
-        const prov = await ensureSharedWalletLoader();
-        const hasInjectedWallet = !!window.ethereum || !!window.EthereumProvider;
+if (typeof window.loadWalletConnect !== 'function' && typeof window.processCryptoPayment !== 'function') {
+    await loadScriptOnce('/path/to/crypto-payments.js'); // ensure crypto payments module loaded
+}
 
-        if (!prov && !hasInjectedWallet) {
-            console.warn('No crypto wallet detected.');
-            alert('Wallet not detected. Please choose another payment method.');
-            return; // Exit instead of throwing
-        }
+const prov = await ensureSharedWalletLoader();
+
+       const hasInjectedWallet = !!window.ethereum || !!window.EthereumProvider || !!window.WalletConnectEthereumProvider;
+if (!prov && !hasInjectedWallet) {
+    console.warn('No crypto wallet detected.');
+    alert('Wallet not detected. Please choose another payment method.');
+    return;
+}
+
 
         if (typeof window.processCryptoPayment !== 'function') {
             alert('Crypto payment module not loaded. Please refresh the page.');
@@ -174,10 +179,21 @@ console.log('📦 Vote.js Loading...');
                 throw new Error('Selected payment method not available yet');
             }
 
-            if (!paymentResult?.success) {
-                if (paymentResult?.error?.includes('rejected')) return;
-                throw new Error(paymentResult?.error || 'Payment failed');
-            }
+         if (!paymentResult?.success) {
+    console.warn('Crypto payment failed, consider trying Paystack.');
+    if (window.selectedPaymentMethod === 'crypto' && typeof window.processPaystackPayment === 'function') {
+        const tryPaystack = confirm('Crypto payment failed. Try Paystack instead?');
+        if (tryPaystack) {
+            window.selectedPaymentMethod = 'paystack';
+            paymentResult = await window.processPaystackPayment();
+        }
+    }
+    if (!paymentResult?.success) {
+        if (paymentResult?.error?.includes('rejected')) return;
+        throw new Error(paymentResult?.error || 'Payment failed');
+    }
+}
+
 
             buttonText.textContent = 'Finalizing Votes...';
             await recordVotesAfterPayment(paymentResult);

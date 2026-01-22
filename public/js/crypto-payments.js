@@ -117,12 +117,15 @@ async function processCryptoPayment() {
     }
 
     const network = await showNetworkSelectionModal();
-    if (!network) return;
+if (!network) return { success: false }; // always return an object
 
-    const paymentInit = await initializeCryptoPayment(participantId, voteCount, network);
+const paymentInit = await initializeCryptoPayment(participantId, voteCount, network);
 
-    if (network === 'bsc') return processUSDTPaymentBSC(paymentInit);
-    if (network === 'tron') return processUSDTPaymentTron(paymentInit);
+if (network === 'bsc') return processUSDTPaymentBSC(paymentInit);
+if (network === 'tron') return processUSDTPaymentTron(paymentInit);
+
+return { success: false }; // fallback, should never reach here
+
 }
 
 /* ======================================================
