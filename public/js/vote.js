@@ -292,14 +292,12 @@ console.log('📦 Vote.js Loading...');
     }
 
     function initializePaymentMethods() {
+        // Do not add click handlers here — main.js wires buttons to avoid duplicate listeners.
+        // This function now only sets the initial active state based on current selection.
         const buttons = document.querySelectorAll('.payment-method-btn');
-        buttons.forEach(button => {
-            button.addEventListener('click', function () {
-                buttons.forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                window.selectedPaymentMethod = this.dataset.method;
-                updateUI();
-            });
+        if (!buttons || buttons.length === 0) return;
+        buttons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.method === window.selectedPaymentMethod);
         });
     }
 
