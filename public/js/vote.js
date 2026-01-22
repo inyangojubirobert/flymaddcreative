@@ -119,8 +119,15 @@ console.log('📦 Vote.js Loading...');
     // HANDLE VOTE / PAYMENT
     // ========================================
     async function handleVote() {
-        if (window.selectedPaymentMethod === 'crypto' && typeof window.processCryptoPayment !== 'function') {
-            alert("Payment system is still loading. Please wait a moment and try again.");
+        // Validate user explicitly selected a payment method
+        if (!window.selectedPaymentMethod) {
+            alert('Please choose a payment method before proceeding.');
+            return;
+        }
+
+        // Quick availability check
+        if (!isPaymentMethodAvailable(window.selectedPaymentMethod)) {
+            alert('The selected payment method appears unavailable in this browser. Please choose another method or try again later.');
             return;
         }
 
@@ -287,6 +294,14 @@ console.log('📦 Vote.js Loading...');
         if (voteBtn) voteBtn.addEventListener('click', handleVote);
     }
 
+    // small helper: check if a payment method is ready (quick, best-effort)
+    function isPaymentMethodAvailable(method) {
+        if (!method) return false;
+        if (method === 'paystack') return typeof window.processPaystackPayment === 'function' || typeof window.PaystackPop !== 'undefined';
+        if (method === 'crypto') return typeof window.processCryptoPayment === 'function' || typeof window.EthereumProvider !== 'undefined' || typeof window.ethereum !== 'undefined';
+        return false;
+    }
+
     function initializePaymentMethods() {
         // Do not add click handlers here — main.js wires buttons to avoid duplicate listeners.
         // This function now only sets the initial active state based on current selection.
@@ -295,6 +310,33 @@ console.log('📦 Vote.js Loading...');
         buttons.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.method === window.selectedPaymentMethod);
         });
+
+        // Ensure Vote button disabled until user picks a method
+        const voteBtn = document.getElementById('voteButton');
+        if (voteBtn) voteBtn.disabled = !window.selectedPaymentMethod;
+
+        // Listen for user choosing a payment method to enable the Vote button and log availability
+        // This is minimal and does not duplicate the main.js handler responsibilities.
+        if (!initializePaymentMethods.__wired) {
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest && e.target.closest('.payment-method-btn');
+                if (!btn) return;
+                const method = btn.dataset.method;
+                // Sync global state (main.js also sets this)
+                window.selectedPaymentMethod = method || '';
+                // Visual (ensure active)
+                buttons.forEach(b => b.classList.toggle('active', b === btn));
+                // Enable vote button now that user explicitly chose a method
+                if (voteBtn) voteBtn.disabled = false;
+                // Log and provide quick feedback if method appears unavailable
+                console.log('Payment method selected:', method, 'available:', isPaymentMethodAvailable(method));
+                if (!isPaymentMethodAvailable(method)) {
+                  // Friendly non-blocking notice so user knows why a later attempt might fail
+                  window.appToast && window.appToast('Note: Selected payment method may be unavailable in this browser.', 4000);
+                }
+            });
+            initializePaymentMethods.__wired = true;
+        }
     }
 
     function updateUI() {
