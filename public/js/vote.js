@@ -191,14 +191,38 @@ console.log('📦 Vote.js Loading...');
         document.getElementById('participantCard').classList.remove('hidden');
 
         const p = window.currentParticipant;
-        document.getElementById('participantName').textContent = p.name;
-        document.getElementById('participantUsername').textContent = p.username;
-        document.getElementById('currentVotes').textContent = (p.total_votes || 0).toLocaleString();
-        
-        const goal = 1000000;
-        const progress = Math.min(((p.total_votes || 0) / goal) * 100, 100);
-        document.getElementById('progressPercentage').textContent = `${progress.toFixed(1)}%`;
-        document.getElementById('progressBar').style.width = `${progress}%`;
+
+        // Basic fields
+        document.getElementById('participantName').textContent = p.name || p.display_name || 'Unnamed';
+        document.getElementById('participantUsername').textContent = p.username || p.handle || 'unknown';
+        document.getElementById('participantEmail').textContent = p.email || p.contact || '';
+
+        // Initials for avatar
+        const initialsEl = document.getElementById('participantInitials');
+        if (initialsEl) {
+            const nameParts = (p.name || '').trim().split(/\s+/).filter(Boolean);
+            const initials = (nameParts[0]?.[0] || '') + (nameParts[1]?.[0] || '');
+            initialsEl.textContent = initials.toUpperCase() || '?';
+        }
+
+        // Determine goal: prefer shared leadership value if present, otherwise fallback
+        const sharedGoal = (window.leadership && window.leadership.goal) || (window.leadershipStats && window.leadershipStats.goal);
+        const goal = Number(sharedGoal) || 1000000;
+
+        // Dynamic stats
+        const totalVotes = Number(p.total_votes) || 0;
+        document.getElementById('currentVotes').textContent = totalVotes.toLocaleString();
+
+        const votesRemaining = Math.max(goal - totalVotes, 0);
+        const votesToGoalEl = document.getElementById('votesToGoal');
+        if (votesToGoalEl) votesToGoalEl.textContent = votesRemaining.toLocaleString();
+
+        const progress = Math.min((totalVotes / goal) * 100, 100);
+        const progressPctEl = document.getElementById('progressPercentage');
+        if (progressPctEl) progressPctEl.textContent = `${progress.toFixed(1)}%`;
+
+        const progressBar = document.getElementById('progressBar');
+        if (progressBar) progressBar.style.width = `${progress}%`;
     }
 
     function showError(message) {
