@@ -4,10 +4,24 @@ async function ensurePaystack(timeout = 5000) {
     if (window.PaystackPop) return;
     if (window._paystackLoading) return window._paystackLoading;
 
+    // If a script tag is already present (local or CDN), wait for PaystackPop to appear
+    const existing = document.querySelector('script[src="/vendor/paystack-inline.js"], script[src="https://js.paystack.co/v1/inline.js"]');
+    if (existing) {
+        window._paystackLoading = new Promise((resolve, reject) => {
+            const start = Date.now();
+            (function waitForPaystack() {
+                if (window.PaystackPop) return resolve();
+                if (Date.now() - start > timeout) return reject(new Error('PaystackPop not available after existing script load'));
+                setTimeout(waitForPaystack, 50);
+            })();
+        });
+        return window._paystackLoading;
+    }
+
     window._paystackLoading = new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'https://js.paystack.co/v1/inline.js';
-        s.crossOrigin = 'anonymous';
+        // intentionally DO NOT set s.crossOrigin to avoid CORS enforcement from servers without Access-Control-Allow-Origin
+        s.src = '/vendor/paystack-inline.js';
         s.onload = () => {
             const start = Date.now();
             (function waitForPaystack() {
@@ -16,7 +30,21 @@ async function ensurePaystack(timeout = 5000) {
                 setTimeout(waitForPaystack, 50);
             })();
         };
-        s.onerror = () => reject(new Error('Failed to load Paystack SDK'));
+        s.onerror = () => {
+            // fallback to CDN (no crossorigin)
+            const s2 = document.createElement('script');
+            s2.src = 'https://js.paystack.co/v1/inline.js';
+            s2.onload = () => {
+                const start = Date.now();
+                (function waitForPaystack() {
+                    if (window.PaystackPop) return resolve();
+                    if (Date.now() - start > timeout) return reject(new Error('PaystackPop not available after CDN load'));
+                    setTimeout(waitForPaystack, 50);
+                })();
+            };
+            s2.onerror = () => reject(new Error('Failed to load Paystack SDK from local and CDN'));
+            document.head.appendChild(s2);
+        };
         document.head.appendChild(s);
     });
 
