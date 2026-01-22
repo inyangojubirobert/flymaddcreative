@@ -305,58 +305,67 @@
         </div>
     </div>
     
-    <!-- ========================================
-         ✅ FIXED SCRIPTS - CORRECT ORDER & URLS
-         ======================================== -->
-    
-    <!-- 1. Core Libraries - MUST load after polyfills -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+   <!-- ========================================
+     CORE LIBRARIES (after polyfills)
+======================================== -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
+<!-- ========================================
+     PAYSTACK SDK (must be before paystack-payments.js)
+======================================== -->
+<script src="https://js.paystack.co/v1/inline.js"></script>
+
+<!-- ========================================
+     PUBLIC CONFIG (keys, project IDs)
+======================================== -->
 <script>
-    // Global App State
-    window.currentParticipant = null;
-    window.selectedVoteAmount = 1;
-    window.selectedCost = 2.00;
-    // No default payment method; user must pick one
-    window.selectedPaymentMethod = '';
-    window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';
+window.__publicConfigReady = (async function () {
+    try {
+        const r = await fetch('/api/public-config', { credentials: 'same-origin' });
+        if (!r.ok) return {};
+        const cfg = await r.json();
+
+        if (cfg.paystackPublicKey) window.PAYSTACK_PUBLIC_KEY = cfg.paystackPublicKey;
+        if (cfg.walletConnectProjectId) window.WALLETCONNECT_PROJECT_ID = cfg.walletConnectProjectId;
+        if (cfg.supabaseAnonKey) window.NEXT_PUBLIC_SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
+
+        return cfg;
+    } catch (e) {
+        console.warn('Failed to load public config:', e);
+        return {};
+    }
+})();
 </script>
 
-    <!-- Load Paystack inline SDK via CDN (plain <script> avoids CORS/fetch issues) -->
-    <script src="https://js.paystack.co/v1/inline.js"></script>
+<!-- ========================================
+     APP MODULES (STRICT ORDER)
+======================================== -->
+<script src="/js/supabase-config.js"></script>
 
-    <!-- NEW: load public config from Next API and expose globals for client scripts -->
-    <script>
-        // Expose a promise that other scripts can await: window.__publicConfigReady
-        window.__publicConfigReady = (async function(){
-            try {
-                const r = await fetch('/api/public-config', { credentials: 'same-origin' });
-                if (!r.ok) return {};
-                const cfg = await r.json();
-                if (cfg.paystackPublicKey) window.PAYSTACK_PUBLIC_KEY = cfg.paystackPublicKey;
-                if (cfg.walletConnectProjectId) window.WALLETCONNECT_PROJECT_ID = cfg.walletConnectProjectId;
-                if (cfg.supabaseAnonKey) window.NEXT_PUBLIC_SUPABASE_ANON_KEY = cfg.supabaseAnonKey;
-                return cfg;
-            } catch (e) {
-                console.warn('Failed to load public config:', e);
-                return {};
-            }
-        })();
-    </script>
+<script src="/js/paystack-payments.js"></script>
+<script src="/js/crypto-payments.js"></script>
+<script src="/js/vote-payments.js"></script> <!-- 🔑 REQUIRED -->
+<script src="/js/vote.js"></script>
 
-    <script src="/js/supabase-config.js"></script>
-    <script src="/js/crypto-payments.js"></script>
-    <script src="/js/paystack-payments.js"></script>
-    <script src="/js/vote.js"></script>
-
+<!-- ========================================
+     BOOT CHECK
+======================================== -->
 <script>
-    // Final check to ensure the bridge between files is open
-    window.addEventListener('load', () => {
-        console.log('🏁 All systems loaded.');
-        if (typeof window.processCryptoPayment !== 'function') {
-            console.error('❌ CRITICAL: crypto-payments.js failed to export processCryptoPayment');
-        }
-    });
+window.addEventListener('load', () => {
+    console.log('🏁 All systems loaded');
+
+    if (typeof window.processVotePayment !== 'function') {
+        console.error('❌ vote-payments.js missing or failed');
+    }
+
+    if (typeof window.processPaystackPayment !== 'function') {
+        console.error('❌ Paystack module not ready');
+    }
+
+    if (typeof window.processCryptoPayment !== 'function') {
+        console.error('❌ Crypto module not ready');
+    }
+});
 </script>
 </body></html>

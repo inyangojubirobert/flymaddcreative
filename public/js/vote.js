@@ -1,180 +1,144 @@
 /**
- * ONE DREAM INITIATIVE - VOTE MODULE
- * Vote.js: Handles UI, Supabase Data, and Paystack Payments Only.
+ * ONE DREAM INITIATIVE – VOTE ORCHESTRATOR
+ * Handles UI, participant loading, vote selection, and vote recording.
+ * NO payment SDK logic here.
  */
 
-console.log('📦 Vote.js Loading...');
+console.log('📦 vote.js loaded');
 
 (function () {
     'use strict';
 
     // ========================================
-    // GLOBAL STATE
+    // GLOBAL STATE (SINGLE SOURCE OF TRUTH)
     // ========================================
     window.currentParticipant = null;
     window.selectedVoteAmount = 1;
-    window.selectedCost = 2.0;
+    window.selectedCost = 2.00;
     window.selectedPaymentMethod = '';
 
-    // ========================================
-    // PAGE INITIALIZATION
-    // ========================================
-    window.addEventListener('SupabaseReady', async function () {
-        console.log('🎬 Supabase is ready. Initializing Vote page...');
-        await initializePage();
-    });
+    let pageInitialized = false;
 
-    document.addEventListener('DOMContentLoaded', async function () {
-        if (window.__onedreamSupabase) {
-            await initializePage();
-        }
-    });
+    // ========================================
+    // INIT
+    // ========================================
+    window.addEventListener('SupabaseReady', initializePage);
+    document.addEventListener('DOMContentLoaded', initializePage);
 
     async function initializePage() {
-        if (window.pageInitialized) return;
-        window.pageInitialized = true;
+        if (pageInitialized || !window.__onedreamSupabase) return;
+        pageInitialized = true;
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const username = urlParams.get('user') || urlParams.get('username');
-        const userCode = urlParams.get('code');
+        const params = new URLSearchParams(window.location.search);
+        const username = params.get('username') || params.get('user');
+        const code = params.get('code');
 
-        if (!username && !userCode) {
-            showError('To vote, search for the participant using their username or user code.');
-            return;
+        if (!username && !code) {
+            return showError('Please search for a participant to vote.');
         }
 
         try {
-            if (userCode) {
-                window.currentParticipant = await window.fetchParticipantByUserCode(userCode);
-            } else {
-                window.currentParticipant = await window.fetchParticipantByUsername(username);
-            }
+            window.currentParticipant = code
+                ? await window.fetchParticipantByUserCode(code)
+                : await window.fetchParticipantByUsername(username);
 
             if (!window.currentParticipant) {
-                showError('Participant not found.');
-                return;
+                return showError('Participant not found.');
             }
 
             showParticipant();
             initializeVoteSelection();
-            console.log('✅ Page Initialization Complete');
-        } catch (error) {
-            console.error('Failed to load participant:', error);
-            showError(`Failed to load participant: ${error.message}`);
+            initializePaymentMethods();
+
+        } catch (err) {
+            console.error(err);
+            showError('Failed to load participant.');
         }
     }
 
     // ========================================
-    // HANDLE VOTE / PAYSTACK PAYMENT ONLY
+    // MAIN VOTE HANDLER
     // ========================================
     async function handleVote() {
         if (!window.selectedPaymentMethod) {
-            alert('Please choose a payment method before proceeding.');
+            alert('Please select a payment method.');
             return;
         }
 
-        if (!isPaymentMethodAvailable(window.selectedPaymentMethod)) {
-            alert('The selected payment method appears unavailable. Please choose another method.');
-            return;
-        }
-
-        if (!window.currentParticipant || window.selectedVoteAmount <= 0) {
-            alert('Please select a valid vote amount');
-            return;
-        }
-
-        const voteButton = document.getElementById('voteButton');
+        const voteBtn = document.getElementById('voteButton');
         const spinner = document.getElementById('voteButtonSpinner');
-        const buttonText = document.getElementById('voteButtonText');
+        const text = document.getElementById('voteButtonText');
 
-        voteButton.disabled = true;
+        voteBtn.disabled = true;
         spinner.classList.remove('hidden');
-        const originalText = buttonText.textContent;
-        buttonText.textContent = 'Preparing Secure Payment...';
+        text.textContent = 'Processing payment...';
 
         try {
-            let paymentResult;
-
-            // ⚡ ONLY PAYSTACK
-            if (window.selectedPaymentMethod === 'paystack') {
-                if (typeof window.processPaystackPayment !== 'function') {
-                    throw new Error('Paystack payment module not loaded. Please refresh.');
-                }
-                paymentResult = await window.processPaystackPayment();
-                if (paymentResult && paymentResult.redirect) return;
-            } else {
-                throw new Error('Selected payment method not available yet');
+            if (typeof window.processVotePayment !== 'function') {
+                throw new Error('Payment router not loaded');
             }
+
+            const paymentResult = await window.processVotePayment();
+            if (paymentResult?.redirect) return;
 
             if (!paymentResult?.success) {
-                throw new Error(paymentResult?.error || 'Payment failed');
+                throw new Error('Payment failed');
             }
 
-            buttonText.textContent = 'Finalizing Votes...';
-            await recordVotesAfterPayment(paymentResult);
-
+            await recordVotes(paymentResult);
             showSuccessModal();
-        } catch (error) {
-            console.error('Vote processing failed:', error);
-            alert(`Error: ${error.message}`);
+
+        } catch (err) {
+            alert(err.message || 'Payment failed');
+            console.error(err);
         } finally {
-            voteButton.disabled = false;
+            voteBtn.disabled = false;
             spinner.classList.add('hidden');
-            buttonText.textContent = originalText;
             updateUI();
         }
     }
 
     // ========================================
-    // RECORD VOTES AFTER PAYMENT
+    // BACKEND RECORD
     // ========================================
-    async function recordVotesAfterPayment(paymentResult) {
-        const response = await fetch('/api/onedream/vote', {
+    async function recordVotes(payment) {
+        const res = await fetch('/api/onedream/vote', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 participant_id: window.currentParticipant.id,
                 vote_count: window.selectedVoteAmount,
                 payment_amount: window.selectedCost,
-                payment_method: window.selectedPaymentMethod,
-                payment_intent_id: paymentResult.txHash || paymentResult.payment_intent_id,
-                payment_status: 'completed',
-                voter_info: { userAgent: navigator.userAgent }
+                payment_method: payment.payment_method,
+                payment_reference: payment.payment_reference
             })
         });
 
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error || 'Failed to record votes');
+        if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.error || 'Vote recording failed');
         }
 
-        const data = await response.json();
-        if (data.participant) {
-            window.currentParticipant.total_votes = data.participant.total_votes;
-            showParticipant();
-        }
+        const data = await res.json();
+        window.currentParticipant.total_votes = data.participant.total_votes;
+        showParticipant();
     }
 
     // ========================================
-    // DISPLAY & UI HELPERS
+    // UI HELPERS (KEEP YOUR EXISTING ONES)
     // ========================================
-    function showParticipant() { /* same as original code */ }
-    function showError(message) { /* same as original code */ }
-    function initializeVoteSelection() { /* same as original code */ }
-    function isPaymentMethodAvailable(method) {
-        if (!method) return false;
-        // ⚡ PAYSTACK ONLY
-        return method === 'paystack' && (typeof window.processPaystackPayment === 'function' || typeof window.PaystackPop !== 'undefined');
-    }
-    function initializePaymentMethods() { /* same as original code */ }
-    function updateUI() { /* same as original code */ }
-    function showSuccessModal() { /* same as original code */ }
-    function closeSuccessModal() { /* same as original code */ }
+    function showParticipant() { /* unchanged */ }
+    function showError(msg) { /* unchanged */ }
+    function initializeVoteSelection() { /* unchanged */ }
+    function initializePaymentMethods() { /* unchanged */ }
+    function updateUI() { /* unchanged */ }
+    function showSuccessModal() { /* unchanged */ }
+    function closeSuccessModal() { /* unchanged */ }
 
     // ========================================
-    // GLOBAL EXPORTS (Window Scope)
+    // EXPORTS
     // ========================================
+    window.handleVote = handleVote;
     window.closeSuccessModal = closeSuccessModal;
 
-    console.log('✅ Vote.js (Paystack only) initialization logic exported.');
 })();
