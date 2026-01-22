@@ -11,15 +11,7 @@ console.log('📦 Vote.js Loading...');
     // ========================================
     // 0. DEFENSIVE BUFFER POLYFILL CHECK
     // ========================================
-    try {
-        if (typeof window !== 'undefined' && typeof window.Buffer === 'undefined' && typeof buffer !== 'undefined') {
-            window.Buffer = buffer.Buffer;
-            console.log('✅ Buffer polyfill applied (vote.js)');
-        }
-    } catch (e) {
-        console.warn('Buffer polyfill check failed:', e);
-    }
-
+  
     // ========================================
     // GLOBAL STATE
     // ========================================
