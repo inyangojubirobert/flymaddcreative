@@ -88,8 +88,21 @@ async function processPaystackPayment() {
                 }
 
                 if (handler && typeof handler.openIframe === 'function') {
-                    handler.openIframe();
+                    try {
+                        handler.openIframe();
+                        // Note: Paystack's popup may log CSP warnings (from their domain). Those are harmless.
+                        // If the inline popup fails to open or throws, we catch below and fallback to redirect.
+                    } catch (popupErr) {
+                        console.warn('Paystack inline popup failed to open (will fallback to redirect):', popupErr);
+                        if (data.authorization_url) {
+                            window.location.href = data.authorization_url;
+                            resolve({ success: true, redirect: true, url: data.authorization_url });
+                        } else {
+                            resolve({ success: false, error: 'Paystack popup failed and no redirect available' });
+                        }
+                    }
                 } else {
+                    // fallback to redirect if available
                     if (data.authorization_url) {
                         window.location.href = data.authorization_url;
                         resolve({ success: true, redirect: true, url: data.authorization_url });
