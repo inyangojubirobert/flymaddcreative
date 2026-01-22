@@ -40,9 +40,9 @@
         #paystackBtn.active {
             background: linear-gradient(45deg,#16a34a,#059669);
         }
-        /* Crypto (orange/pink) when active */
+        /* Crypto (now navy blue) when active */
         #cryptoBtn.active {
-            background: linear-gradient(45deg,#f97316,#f43f5e);
+            background: linear-gradient(45deg,#0f172a,#1e40af); /* navy -> indigo */
         }
     </style>
 </head>
@@ -214,7 +214,7 @@
                                     <div class="font-bold">Bank Transfer</div>
                                     <div class="text-sm text-white/70">PayStack</div>
                                 </button>
-                                <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent active"
+                                <button class="payment-method-btn bg-white/20 hover:bg-white/30 p-4 rounded-lg transition-all border-2 border-transparent"
                                         data-method="crypto" id="cryptoBtn">
                                     <div class="text-3xl mb-2">₿</div>
                                     <div class="font-bold">Cryptocurrency</div>
@@ -307,7 +307,8 @@
     window.currentParticipant = null;
     window.selectedVoteAmount = 1;
     window.selectedCost = 2.00;
-    window.selectedPaymentMethod = 'crypto'; // Default method
+    // No default payment method; user must pick one
+    window.selectedPaymentMethod = '';
     window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';
 </script>
 

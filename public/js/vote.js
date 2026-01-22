@@ -26,7 +26,8 @@ console.log('📦 Vote.js Loading...');
     window.currentParticipant = null;
     window.selectedVoteAmount = 1;
     window.selectedCost = 2.0;
-    window.selectedPaymentMethod = 'crypto'; // Default
+    // Do not pre-select a payment method — user must choose explicitly
+    window.selectedPaymentMethod = '';
 
     // ========================================
     // PAGE INITIALIZATION
@@ -144,14 +145,9 @@ console.log('📦 Vote.js Loading...');
                 // Try to ensure walletconnect/provider available
                 const prov = await ensureSharedWalletLoader();
                 if (!prov && !window.EthereumProvider) {
-                    // WalletConnect initialization failed — offer Paystack fallback
-                    console.warn('WalletConnect initialization failed; offering Paystack fallback.');
-                    const usePaystack = (typeof window.processPaystackPayment === 'function') && confirm('Wallet connection failed. Would you like to pay with Paystack instead?');
-                    if (usePaystack) {
-                        paymentResult = await window.processPaystackPayment();
-                    } else {
-                        throw new Error('Payment system initialization failed. Please refresh the page.');
-                    }
+                    // WalletConnect initialization failed — instruct user to choose another payment method
+                    console.warn('WalletConnect initialization failed for selected crypto method.');
+                    throw new Error('Wallet connection failed. Please choose another payment method or try again.');
                 } else {
                     if (typeof window.processCryptoPayment !== 'function') {
                         throw new Error('Crypto payment module not loaded. Please refresh.');
