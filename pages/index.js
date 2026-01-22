@@ -1,12 +1,12 @@
-import { useRouter } from 'next/router';
-import { useEffect } from 'react';
+export async function getServerSideProps() {
+  return {
+    redirect: {
+      destination: '/Onedream.html',
+      permanent: false
+    }
+  };
+}
 
 export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/Onedream.html');
-  }, [router]);
-
   return null;
 }

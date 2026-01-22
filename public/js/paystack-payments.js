@@ -1,15 +1,16 @@
-// Ensure Paystack SDK and robust inline handling
-
+// Wait for an existing Paystack inline script to expose PaystackPop.
+// Do NOT fetch/import inline.js here; vote.html should load it with a <script> tag.
 async function ensurePaystack(timeout = 5000) {
+    if (typeof window === 'undefined') throw new Error('Browser environment required');
     if (window.PaystackPop) return;
     if (window._paystackLoading) return window._paystackLoading;
 
     window._paystackLoading = new Promise((resolve, reject) => {
         const start = Date.now();
-        (function waitForPaystack() {
+        (function wait() {
             if (window.PaystackPop) return resolve();
             if (Date.now() - start > timeout) return reject(new Error('PaystackPop not available after wait'));
-            setTimeout(waitForPaystack, 50);
+            setTimeout(wait, 50);
         })();
     });
 
@@ -34,16 +35,44 @@ async function processPaystackPayment() {
 
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
+            console.error('create-payment-intent failed:', err);
             throw new Error(err.error || 'Failed to initialize Paystack payment');
         }
 
         const data = await res.json();
+        console.debug('Paystack init response:', data);
 
-        // Try to ensure Paystack inline SDK; fall back to redirect if blocked
+        // Validate returned data (amount presence)
+        // Prefer a server-provided kobo value (amount_kobo) if available
+        let amountKobo = null;
+        if (typeof data.amount_kobo === 'number') amountKobo = data.amount_kobo;
+        else if (typeof data.amount === 'number') {
+            // If server returns an integer assumed to be NGN, convert to kobo
+            amountKobo = Math.round(data.amount * 100);
+        } else {
+            // unable to determine amount reliably
+            console.warn('Paystack init response missing amount; falling back to server redirect if available');
+            if (data.authorization_url) {
+                window.location.href = data.authorization_url;
+                return { success: true, redirect: true, url: data.authorization_url };
+            }
+            return { success: false, error: 'Invalid payment amount from server' };
+        }
+
+        if (amountKobo <= 0) {
+            console.warn('Invalid amountKobo:', amountKobo);
+            if (data.authorization_url) {
+                window.location.href = data.authorization_url;
+                return { success: true, redirect: true, url: data.authorization_url };
+            }
+            return { success: false, error: 'Invalid payment amount' };
+        }
+
+        // Ensure PaystackPop available
         try {
             await ensurePaystack();
         } catch (e) {
-            console.warn('Paystack inline SDK not available:', e);
+            console.warn('Paystack inline SDK not available or blocked:', e);
             if (data.authorization_url) {
                 window.location.href = data.authorization_url;
                 return { success: true, redirect: true, url: data.authorization_url };
@@ -61,7 +90,6 @@ async function processPaystackPayment() {
 
         const key = window.PAYSTACK_PUBLIC_KEY || data.public_key || '';
         const email = (window.currentUser && window.currentUser.email) || 'support@flymaddcreative.online';
-        const amountKobo = Math.round((data.amount || 0) * 100 * 1600);
 
         return await new Promise((resolve) => {
             const options = {
@@ -69,10 +97,10 @@ async function processPaystackPayment() {
                 email,
                 amount: amountKobo,
                 reference: data.reference || data.payment_intent_id,
-                callback: function(response) {
+                callback: function (response) {
                     resolve({ success: true, payment_intent_id: response.reference, raw: response, redirect: false });
                 },
-                onClose: function() {
+                onClose: function () {
                     resolve({ success: false, error: 'User closed Paystack dialog', redirect: false });
                 }
             };
@@ -83,17 +111,13 @@ async function processPaystackPayment() {
                     handler = window.PaystackPop.setup(options);
                 } else if (typeof window.PaystackPop === 'function') {
                     try { handler = new window.PaystackPop(options); } catch (e) { handler = window.PaystackPop(options); }
-                } else if (typeof window.paystack !== 'undefined' && typeof window.paystack.setup === 'function') {
-                    handler = window.paystack.setup(options);
                 }
 
                 if (handler && typeof handler.openIframe === 'function') {
                     try {
                         handler.openIframe();
-                        // Note: Paystack's popup may log CSP warnings (from their domain). Those are harmless.
-                        // If the inline popup fails to open or throws, we catch below and fallback to redirect.
                     } catch (popupErr) {
-                        console.warn('Paystack inline popup failed to open (will fallback to redirect):', popupErr);
+                        console.warn('Paystack inline popup failed to open (fallback):', popupErr);
                         if (data.authorization_url) {
                             window.location.href = data.authorization_url;
                             resolve({ success: true, redirect: true, url: data.authorization_url });
@@ -102,7 +126,6 @@ async function processPaystackPayment() {
                         }
                     }
                 } else {
-                    // fallback to redirect if available
                     if (data.authorization_url) {
                         window.location.href = data.authorization_url;
                         resolve({ success: true, redirect: true, url: data.authorization_url });
@@ -123,10 +146,10 @@ async function processPaystackPayment() {
 
     } catch (err) {
         console.error('Paystack payment error:', err);
-        return { success: false, error: err.message };
+        return { success: false, error: err.message || 'Unknown Paystack error' };
     }
 }
 
-// Exports
+// Export to window for vote.js to call
 window.ensurePaystack = ensurePaystack;
 window.processPaystackPayment = processPaystackPayment;
