@@ -16,8 +16,18 @@
     <link rel="stylesheet" href="/dist/output.css">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
-<script>window.Buffer = window.buffer.Buffer;</script>
+    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/process@0.11.10/browser.js" crossorigin="anonymous"></script>
+    <script>
+        // Defensive assignment — some tracking-prevention blockers may prevent storage access; still set what we can
+        try {
+            if (!window.Buffer && window.buffer && window.buffer.Buffer) window.Buffer = window.buffer.Buffer;
+            if (!window.process && typeof process !== 'undefined') window.process = process;
+            if (typeof window.global === 'undefined') window.global = window;
+        } catch (e) {
+            console.warn('Polyfill assignment failed:', e);
+        }
+    </script>
 
     <style>
         /* ... Your existing styles ... */
@@ -283,9 +293,9 @@
          ✅ FIXED SCRIPTS - CORRECT ORDER & URLS
          ======================================== -->
     
-    <!-- 1. Core Libraries - MUST load first -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- 1. Core Libraries - MUST load after polyfills -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <script>
     // Global App State
@@ -294,32 +304,6 @@
     window.selectedCost = 2.00;
     window.selectedPaymentMethod = 'crypto'; // Default method
     window.WALLETCONNECT_PROJECT_ID = '61d9b98f81731dffa9988c0422676fc5';
-
-    /**
-     * SDK LOADER: Fixes "Cannot read init of undefined"
-     * Dynamically pulls in WalletConnect only when needed
-     */
-    window.loadWalletConnect = async function() {
-        if (window.EthereumProvider) return window.EthereumProvider;
-        
-        console.log('⏳ Injecting WalletConnect SDK...');
-        try {
-            // Using the UMD bundle for maximum compatibility with vanilla JS
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
-                script.onload = () => {
-                    console.log('✅ WalletConnect SDK Ready');
-                    resolve(window.EthereumProvider);
-                };
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
-        } catch (e) {
-            console.error('WalletConnect load failed:', e);
-            return null;
-        }
-    };
 </script>
 
 <script src="/js/supabase-config.js"></script>

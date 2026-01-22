@@ -1,33 +1,59 @@
 console.log('📦 Crypto Payments Module Loading (WalletConnect v2 Multi-Platform)...');
 
-// --- NEW: ensure Buffer polyfill is available (use jsDelivr to reduce Tracking Prevention blocks)
-async function ensureBufferPolyfill() {
-    if (typeof window !== 'undefined' && typeof window.Buffer !== 'undefined') return;
-    if (window._bufferPolyfillLoading) return window._bufferPolyfillLoading;
+// --- REPLACE ensureBufferPolyfill with ensureNodePolyfills (loads buffer + process and sets globals)
+async function ensureNodePolyfills() {
+    if (typeof window === 'undefined') return;
+    if (window._nodePolyfillsLoading) return window._nodePolyfillsLoading;
 
-    window._bufferPolyfillLoading = new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js';
-        s.onload = () => {
-            try {
-                if (window.buffer && window.buffer.Buffer) window.Buffer = window.buffer.Buffer;
-                if (!window.Buffer && window.buffer && window.buffer.default && window.buffer.default.Buffer) window.Buffer = window.buffer.default.Buffer;
-                resolve();
-            } catch (e) {
-                reject(e);
-            }
-        };
-        s.onerror = () => reject(new Error('Failed to load buffer polyfill'));
-        document.head.appendChild(s);
-    });
+    window._nodePolyfillsLoading = (async () => {
+        // Buffer polyfill (jsDelivr)
+        if (typeof window.Buffer === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js';
+                s.crossOrigin = 'anonymous';
+                s.onload = () => {
+                    try {
+                        if (window.buffer && window.buffer.Buffer) window.Buffer = window.buffer.Buffer;
+                        if (!window.Buffer && window.buffer && window.buffer.default && window.buffer.default.Buffer) window.Buffer = window.buffer.default.Buffer;
+                    } catch (e) { /* ignore */ }
+                    resolve();
+                };
+                s.onerror = () => reject(new Error('Failed to load buffer polyfill'));
+                document.head.appendChild(s);
+            });
+        }
 
-    return window._bufferPolyfillLoading;
+        // process polyfill (jsDelivr)
+        if (typeof window.process === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/process@0.11.10/browser.js';
+                s.crossOrigin = 'anonymous';
+                s.onload = () => {
+                    try {
+                        if (window.process) { /* ok */ }
+                    } catch (e) { /* ignore */ }
+                    resolve();
+                };
+                s.onerror = () => reject(new Error('Failed to load process polyfill'));
+                document.head.appendChild(s);
+            });
+        }
+
+        // alias global
+        if (typeof window.global === 'undefined') window.global = window;
+
+        return true;
+    })();
+
+    return window._nodePolyfillsLoading;
 }
 
 // --- NEW: ensure browser (UMD) builds of ethers and TronWeb are available
 async function ensureBrowserLibraries() {
     // ensure Buffer first
-    try { await ensureBufferPolyfill(); } catch (e) { /* non-fatal */ }
+    try { await ensureNodePolyfills(); } catch (e) { /* non-fatal */ }
 
     // load ethers v5 UMD if missing
     if (!window.ethers && !window._ethersLoading) {
@@ -60,14 +86,20 @@ async function ensureBrowserLibraries() {
 ====================================================== */
 // Helper to wait until the library is actually available on window
 async function loadWalletConnect() {
+    // Ensure Node polyfills before loading walletconnect or other libs that expect Node globals
+    try {
+        await ensureNodePolyfills();
+    } catch (e) {
+        console.warn('Node polyfills failed to load:', e);
+        // Fail fast so callers know WalletConnect cannot initialize safely
+        throw new Error('Required Node polyfills (Buffer/process) are missing or blocked.');
+    }
+
     // If already available, return it
     if (window.EthereumProvider) return window.EthereumProvider;
 
     // Reuse existing loading promise if present
     if (window._walletConnectLoading) return window._walletConnectLoading;
-
-    // Ensure Buffer polyfill first (non-fatal)
-    try { await ensureBufferPolyfill(); } catch (e) { console.warn('Buffer polyfill failed to load:', e); }
 
     window._walletConnectLoading = new Promise((resolve, reject) => {
         // Prevent double-appending the same script tag
