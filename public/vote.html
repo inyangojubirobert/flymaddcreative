@@ -16,8 +16,6 @@
     <link rel="stylesheet" href="/dist/output.css">
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/process@0.11.10/browser.js" crossorigin="anonymous"></script>
     <script>
         // Defensive assignment — some tracking-prevention blockers may prevent storage access; still set what we can
         try {
@@ -39,6 +37,22 @@
         .loading-spinner { border:3px solid rgba(255,255,255,0.3); border-top:3px solid #ffffff; border-radius:50%; width:20px;height:20px;animation:spin 1s linear infinite;}
         @keyframes spin {0% { transform:rotate(0deg); }100% { transform:rotate(360deg); }}
         .hidden { display:none; }
+
+        /* Payment method active states */
+        .payment-method-btn.active {
+            border-color: rgba(255,255,255,0.9);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            color: #fff;
+        }
+        /* Paystack (green-ish) when active */
+        #paystackBtn.active {
+            background: linear-gradient(45deg,#16a34a,#059669);
+        }
+        /* Crypto (orange/pink) when active */
+        #cryptoBtn.active {
+            background: linear-gradient(45deg,#f97316,#f43f5e);
+        }
     </style>
 </head>
 <body class="text-white">
@@ -308,6 +322,7 @@
 
 <script src="/js/supabase-config.js"></script>
 <script src="/js/crypto-payments.js"></script>
+<script src="/js/paystack-payments.js"></script>
 <script src="/js/vote.js"></script>
 
 <script>

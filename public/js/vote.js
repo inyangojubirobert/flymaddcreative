@@ -160,8 +160,19 @@ console.log('📦 Vote.js Loading...');
                 }
 
                 paymentResult = await window.processCryptoPayment();
+            } else if (window.selectedPaymentMethod === 'paystack') {
+                if (typeof window.processPaystackPayment !== 'function') {
+                    throw new Error('Paystack payment module not loaded. Please refresh.');
+                }
+                // call Paystack and await outcome
+                paymentResult = await window.processPaystackPayment();
+
+                // If Paystack triggered a full redirect, stop here (server will handle confirmation)
+                if (paymentResult && paymentResult.redirect) {
+                    // UI will be navigated away; return early
+                    return;
+                }
             } else {
-                // future: add paystack flow
                 throw new Error('Selected payment method not available yet');
             }
 
