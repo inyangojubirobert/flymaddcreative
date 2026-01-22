@@ -12,7 +12,12 @@ async function loadWalletConnect() {
         script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
         script.onload = () => {
             console.log("✅ WalletConnect SDK loaded via CDN");
-            resolve(window.EthereumProvider);
+            // Some UMD builds set different globals - allow detection
+            setTimeout(() => {
+                const provider = window.EthereumProvider || window.WalletConnectProvider || window.WalletConnect || window.walletconnect || null;
+                if (provider) return resolve(provider);
+                return reject(new Error('WalletConnect loaded but provider global not found'));
+            }, 0);
         };
         script.onerror = () => reject(new Error("Failed to load WalletConnect SDK"));
         document.head.appendChild(script);
@@ -55,6 +60,66 @@ async function processCryptoPayment() {
         if (network === 'tron') return await processUSDTPaymentTron(paymentInit);
     } catch (err) {
         console.error('Payment Flow Error:', err);
+        return { success: false, error: err.message };
+    }
+}
+
+// ========================================
+// PAYSTACK (CLIENT-SIDE)
+// ========================================
+async function processPaystackPayment() {
+    const participantId = window.currentParticipant?.id;
+    const voteCount = window.selectedVoteAmount;
+
+    if (!participantId || !voteCount) {
+        alert('Missing participant info or vote amount.');
+        return { success: false, error: 'Missing metadata' };
+    }
+
+    try {
+        const res = await fetch('/api/onedream/create-payment-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ participant_id: participantId, vote_count: voteCount, payment_method: 'paystack' })
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to initialize Paystack payment');
+        }
+
+        const data = await res.json();
+
+        // If Paystack inline SDK is available, use it
+        if (window.PaystackPop) {
+            const key = window.PAYSTACK_PUBLIC_KEY || data.public_key || '';
+            const handler = new PaystackPop();
+            const options = {
+                key: key,
+                email: (window.currentUser && window.currentUser.email) || 'support@flymaddcreative.online',
+                amount: Math.round((data.amount || 0) * 100 * 1600), // convert USD to NGN kobo similar to server
+                reference: data.reference || data.payment_intent_id,
+                callback: function(response) {
+                    // Post verification to server if needed
+                    window._lastPaystackResponse = response;
+                    window.location.reload();
+                },
+                onClose: function() { /* user cancelled */ }
+            };
+            handler.setup(options);
+            handler.openIframe();
+            return { success: true, redirect: false };
+        }
+
+        // Fallback: redirect to authorization_url
+        if (data.authorization_url) {
+            window.location.href = data.authorization_url;
+            return { success: true, redirect: true, url: data.authorization_url };
+        }
+
+        return { success: false, error: 'No Paystack flow available' };
+    } catch (err) {
+        console.error('Paystack payment error:', err);
         return { success: false, error: err.message };
     }
 }
@@ -236,3 +301,5 @@ window.processBSCWithInjectedWallet = processBSCWithInjectedWallet;
 
 // EXPORTS
 window.processCryptoPayment = processCryptoPayment;
+window.processPaystackPayment = processPaystackPayment;
+window.loadWalletConnect = loadWalletConnect;

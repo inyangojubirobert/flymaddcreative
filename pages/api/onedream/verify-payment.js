@@ -1,5 +1,5 @@
 // Payment verification API for One Dream Initiative
-// Handles verification for Flutterwave, PayStack, and Crypto payments
+// Handles verification for PayStack and Crypto payments
 // Used to confirm payment status before recording votes
 
 import { createClient } from '@supabase/supabase-js';
@@ -31,9 +31,6 @@ export default async function handler(req, res) {
     let verificationResult = {};
 
     switch (payment_method) {
-      case 'flutterwave':
-        verificationResult = await verifyFlutterwavePayment(payment_intent_id);
-        break;
       case 'paystack':
         verificationResult = await verifyPaystackPayment(reference || payment_intent_id);
         break;
@@ -55,51 +52,7 @@ export default async function handler(req, res) {
   }
 }
 
-// ✅ Verify Flutterwave Payment
-async function verifyFlutterwavePayment(txRef) {
-  try {
-    const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
-    
-    if (!flutterwaveSecretKey) {
-      throw new Error('Flutterwave not configured - missing FLUTTERWAVE_SECRET_KEY');
-    }
-
-    const response = await fetch(`https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${txRef}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${flutterwaveSecretKey}`,
-        'Content-Type': 'application/json',
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Flutterwave verification request failed');
-    }
-
-    const data = await response.json();
-
-    if (data.status === 'success' && data.data.status === 'successful') {
-      return {
-        verified: true,
-        status: 'succeeded',
-        amount: data.data.amount,
-        currency: data.data.currency,
-        metadata: data.data.meta,
-        provider: 'flutterwave',
-        tx_ref: data.data.tx_ref
-      };
-    } else {
-      return {
-        verified: false,
-        status: data.data?.status || 'failed',
-        provider: 'flutterwave'
-      };
-    }
-
-  } catch (error) {
-    throw new Error(`Flutterwave verification failed: ${error.message}`);
-  }
-}
+// (Flutterwave integration removed)
 
 // ✅ Verify PayStack Payment
 async function verifyPaystackPayment(reference) {

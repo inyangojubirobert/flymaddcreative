@@ -1293,7 +1293,7 @@
             }
         };
         
-        // 💳 Payment Component with Multiple Options (Flutterwave, Paystack, Crypto, PayPal)
+        // 💳 Payment Component with Multiple Options (Paystack, Crypto, PayPal)
         const PaymentComponent = ({ targetUsername, targetName }) => {
             const [isProcessing, setIsProcessing] = React.useState(false);
             const [selectedMethod, setSelectedMethod] = React.useState('paystack');
@@ -1458,28 +1458,7 @@
                                 key: 'desc'
                             }, 'Cards, Bank Transfer')
                         ]),
-                        React.createElement('button', {
-                            onClick: () => setSelectedMethod('flutterwave'),
-                            className: `p-3 border-2 rounded-lg text-center transition-all ${
-                                selectedMethod === 'flutterwave' 
-                                    ? 'border-orange-500 bg-orange-50 text-orange-700' 
-                                    : 'border-gray-200 hover:border-gray-300'
-                            }`,
-                            key: 'flutterwave'
-                        }, [
-                            React.createElement('div', {
-                                className: 'text-lg font-bold',
-                                key: 'icon'
-                            }, '💳'),
-                            React.createElement('div', {
-                                className: 'text-sm font-medium',
-                                key: 'text'
-                            }, 'Flutterwave'),
-                            React.createElement('div', {
-                                className: 'text-xs text-gray-500',
-                                key: 'desc'
-                            }, 'Credit/Debit Cards')
-                        ]),
+                        // Flutterwave option removed
                         React.createElement('button', {
                             onClick: () => setSelectedMethod('crypto'),
                             className: `p-3 border-2 rounded-lg text-center transition-all ${
@@ -1542,11 +1521,7 @@
                         key: 'paystack-btn'
                     }, isProcessing ? '⏳ Processing...' : `💳 Pay ₦${(amount * 400).toLocaleString()} with Paystack`),
 
-                    selectedMethod === 'flutterwave' && React.createElement('button', {
-                        onClick: () => alert('Flutterwave integration coming soon!'),
-                        className: 'w-full py-3 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-all',
-                        key: 'flutterwave-btn'
-                    }, `💳 Pay $${amount} with Flutterwave`),
+                    /* Flutterwave payment removed */
 
                     selectedMethod === 'crypto' && React.createElement('button', {
                         onClick: () => alert('Crypto payments coming soon!'),

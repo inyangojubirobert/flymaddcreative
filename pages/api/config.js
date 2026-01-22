@@ -16,7 +16,6 @@ export default function handler(req, res) {
       version: '1.0.0',
 
       paystack: { publicKey: process.env.PAYSTACK_PUBLIC_KEY },
-      flutterwave: { publicKey: process.env.FLUTTERWAVE_PUBLIC_KEY },
       walletconnect: { projectId: process.env.WALLETCONNECT_PROJECT_ID },
       crypto: { networks: ['bsc', 'tron'], chainId: 56 }
     };

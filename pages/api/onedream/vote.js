@@ -1,7 +1,7 @@
 // API endpoint to record PAID votes for One Dream Initiative
 // Each vote costs $2, multiple votes allowed per user
 // Requires payment verification before recording vote
-// Supports Flutterwave, PayStack, and Crypto payments
+// Supports PayStack and Crypto payments
 
 import { createClient } from '@supabase/supabase-js';
 

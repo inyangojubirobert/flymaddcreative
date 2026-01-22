@@ -1,5 +1,5 @@
 // Multi-payment processing API for One Dream Initiative votes
-// Supports Flutterwave, PayStack, and Crypto payments
+// Supports PayStack and Crypto payments
 // $2 per vote, multiple votes allowed
 
 import { createClient } from '@supabase/supabase-js';
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     const { 
       participant_id, 
       vote_count = 1, 
-      payment_method = 'flutterwave' // 'flutterwave', 'paystack', 'crypto'
+      payment_method = 'paystack' // 'paystack' or 'crypto'
     } = req.body;
 
     if (!participant_id || vote_count <= 0) {
@@ -30,9 +30,9 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!['flutterwave', 'paystack', 'crypto'].includes(payment_method)) {
+    if (!['paystack', 'crypto'].includes(payment_method)) {
       return res.status(400).json({ 
-        error: 'Invalid payment method. Supported: flutterwave, paystack, crypto' 
+        error: 'Invalid payment method. Supported: paystack, crypto' 
       });
     }
 
@@ -53,9 +53,6 @@ export default async function handler(req, res) {
     let paymentData = {};
 
     switch (payment_method) {
-      case 'flutterwave':
-        paymentData = await createFlutterwavePayment(amount, vote_count, participant);
-        break;
       case 'paystack':
         paymentData = await createPaystackPayment(amount, vote_count, participant);
         break;
@@ -87,64 +84,7 @@ export default async function handler(req, res) {
   }
 }
 
-// ✅ Flutterwave Payment Intent
-async function createFlutterwavePayment(amount, voteCount, participant) {
-  const flutterwaveSecretKey = process.env.FLUTTERWAVE_SECRET_KEY;
-  
-  if (!flutterwaveSecretKey) {
-    throw new Error('Flutterwave not configured - missing FLUTTERWAVE_SECRET_KEY');
-  }
 
-  const txRef = `ODI_FLW_${Date.now()}_${participant.username}`;
-  
-  const response = await fetch('https://api.flutterwave.com/v3/payments', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${flutterwaveSecretKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      tx_ref: txRef,
-      amount: amount,
-      currency: 'USD',
-      redirect_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/vote.html?user=${participant.username}&payment_success=true`,
-      payment_options: 'card,banktransfer,ussd',
-      customer: {
-        email: 'support@flymaddcreative.online',
-        name: 'One Dream Voter'
-      },
-      customizations: {
-        title: 'One Dream Initiative',
-        description: `${voteCount} vote${voteCount > 1 ? 's' : ''} for ${participant.name}`,
-        logo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/logo.png`
-      },
-      meta: {
-        participant_id: participant.id,
-        participant_name: participant.name,
-        participant_username: participant.username,
-        vote_count: voteCount,
-        vote_value: VOTE_VALUE,
-        type: 'onedream_votes'
-      }
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error('Flutterwave payment initialization failed');
-  }
-
-  const data = await response.json();
-
-  return {
-    payment_link: data.data.link,
-    tx_ref: txRef,
-    payment_intent_id: txRef,
-    provider_data: {
-      flutterwave_tx_ref: txRef,
-      flutterwave_link: data.data.link
-    }
-  };
-}
 
 // ✅ PayStack Payment Intent
 async function createPaystackPayment(amount, voteCount, participant) {

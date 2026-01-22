@@ -1,6 +1,6 @@
 // Mock webhook handler for payment providers
 // Converts payment events to votes and updates user records
-// Ready for integration with Flutterwave, Paystack, Coinbase Commerce, etc.
+// Ready for integration with Paystack, Coinbase Commerce, etc.
 
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const provider = req.query.provider || 'flutterwave'; // Default to Flutterwave
+  const provider = req.query.provider || 'paystack'; // Default to Paystack
   
   try {
     // Verify webhook signature based on provider
@@ -31,9 +31,6 @@ export default async function handler(req, res) {
     let paymentData = null;
     
     switch (provider) {
-      case 'flutterwave':
-        paymentData = await processFlutterwaveWebhook(req.body);
-        break;
       case 'paystack':
         paymentData = await processPaystackWebhook(req.body);
         break;
@@ -103,46 +100,23 @@ export default async function handler(req, res) {
 
 // Verify webhook signature for different providers
 async function verifyWebhookSignature(req, provider) {
-  const signature = req.headers['verif-hash'] || // Flutterwave
+  const signature = req.headers['verif-hash'] ||
                    req.headers['x-paystack-signature'] || // Paystack
                    req.headers['x-cc-webhook-signature'] || // Coinbase
                    req.headers['x-webhook-signature'];
 
-  switch (provider) {
-    case 'flutterwave':
-      return verifyFlutterwaveSignature(req.body, signature);
-    case 'paystack':
-      return verifyPaystackSignature(req.body, signature);
-    case 'coinbase':
-      return verifyCoinbaseSignature(req.body, signature);
-    case 'mock':
-      return true; // Skip verification for mock payments
-    default:
-      return false;
+    switch (provider) {
+      case 'paystack':
+        return verifyPaystackSignature(req.body, signature);
+      case 'coinbase':
+        return verifyCoinbaseSignature(req.body, signature);
+      case 'mock':
+        return true; // Skip verification for mock payments
+      default:
+        return false;
   }
 }
 
-// Flutterwave webhook signature verification
-function verifyFlutterwaveSignature(payload, signature) {
-  try {
-    const secret = process.env.FLUTTERWAVE_SECRET_HASH;
-    if (!secret) {
-      console.warn('Flutterwave webhook secret not configured');
-      return true; // Allow in development
-    }
-
-    // Flutterwave sends a hash in the verif-hash header
-    const expectedSignature = crypto
-      .createHash('sha256')
-      .update(secret, 'utf8')
-      .digest('hex');
-
-    return signature === expectedSignature;
-  } catch (error) {
-    console.error('Flutterwave signature verification error:', error);
-    return false;
-  }
-}
 
 // Paystack webhook signature verification
 function verifyPaystackSignature(payload, signature) {
@@ -189,23 +163,7 @@ function verifyCoinbaseSignature(payload, signature) {
   }
 }
 
-// Process Flutterwave webhook events
-async function processFlutterwaveWebhook(eventData) {
-  const { event, data } = eventData;
-
-  if (event === 'charge.completed') {
-    const transaction = data;
-    
-    return {
-      userId: transaction.meta?.participant_id || transaction.customer?.email,
-      amount: parseFloat(transaction.amount),
-      paymentId: transaction.tx_ref,
-      metadata: transaction.meta || {}
-    };
-  }
-
-  return null;
-}
+// (Flutterwave webhook processing removed)
 
 // Process Paystack webhook events
 async function processPaystackWebhook(eventData) {
