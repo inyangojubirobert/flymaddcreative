@@ -1,10 +1,72 @@
 console.log('📦 Crypto Payments Module Loading (WalletConnect v2 Multi-Platform)...');
 
+// --- NEW: ensure Buffer polyfill is available (use jsDelivr to reduce Tracking Prevention blocks)
+async function ensureBufferPolyfill() {
+    if (typeof window !== 'undefined' && typeof window.Buffer !== 'undefined') return;
+    if (window._bufferPolyfillLoading) return window._bufferPolyfillLoading;
+
+    window._bufferPolyfillLoading = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js';
+        s.onload = () => {
+            try {
+                if (window.buffer && window.buffer.Buffer) window.Buffer = window.buffer.Buffer;
+                if (!window.Buffer && window.buffer && window.buffer.default && window.buffer.default.Buffer) window.Buffer = window.buffer.default.Buffer;
+                resolve();
+            } catch (e) {
+                reject(e);
+            }
+        };
+        s.onerror = () => reject(new Error('Failed to load buffer polyfill'));
+        document.head.appendChild(s);
+    });
+
+    return window._bufferPolyfillLoading;
+}
+
+// --- NEW: ensure browser (UMD) builds of ethers and TronWeb are available
+async function ensureBrowserLibraries() {
+    // ensure Buffer first
+    try { await ensureBufferPolyfill(); } catch (e) { /* non-fatal */ }
+
+    // load ethers v5 UMD if missing
+    if (!window.ethers && !window._ethersLoading) {
+        window._ethersLoading = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js';
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('Failed to load ethers UMD'));
+            document.head.appendChild(s);
+        });
+    }
+    // load TronWeb browser build if missing
+    if (!window.TronWeb && !window._tronwebLoading) {
+        window._tronwebLoading = new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/tronweb/dist/TronWeb.js';
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('Failed to load TronWeb UMD'));
+            document.head.appendChild(s);
+        });
+    }
+
+    // wait for required loads (ignore failures individually)
+    try { if (window._ethersLoading) await window._ethersLoading; } catch (e) { console.warn(e); }
+    try { if (window._tronwebLoading) await window._tronwebLoading; } catch (e) { console.warn(e); }
+}
+
 /* ======================================================
     🔒 SECURE CRYPTO PAYMENT INITIALIZATION
 ====================================================== */
 // Helper to wait until the library is actually available on window
 async function loadWalletConnect() {
+    // Ensure Buffer polyfill before loading walletconnect or other libs that expect Node globals
+    try {
+        await ensureBufferPolyfill();
+    } catch (e) {
+        console.warn('Buffer polyfill failed to load:', e);
+    }
+
     if (window.EthereumProvider) return window.EthereumProvider;
 
     return new Promise((resolve, reject) => {
@@ -12,7 +74,6 @@ async function loadWalletConnect() {
         script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
         script.onload = () => {
             console.log("✅ WalletConnect SDK loaded via CDN");
-            // Some UMD builds set different globals - allow detection
             setTimeout(() => {
                 const provider = window.EthereumProvider || window.WalletConnectProvider || window.WalletConnect || window.walletconnect || null;
                 if (provider) return resolve(provider);
@@ -143,6 +204,9 @@ async function processBSCWithWalletConnect(paymentInit) {
     const modal = showEnhancedPaymentModal('BSC', paymentInit.amount);
     
     try {
+        // Ensure browser ethers is available (avoids require() or Node builds)
+        try { await ensureBrowserLibraries(); } catch (e) { console.warn('Browser libs load failed', e); }
+
         if (typeof window.loadWalletConnect === 'function') {
             await window.loadWalletConnect();
         }
@@ -150,7 +214,7 @@ async function processBSCWithWalletConnect(paymentInit) {
         const provider = await window.EthereumProvider.init({
             projectId: window.WALLETCONNECT_PROJECT_ID || '61d9b98f81731dffa9988c0422676fc5',
             chains: [56], 
-            showQrModal: true, // AUTO-HANDLES: Desktop (QR) vs Mobile (Wallet List)
+            showQrModal: true,
             methods: ["eth_sendTransaction", "personal_sign"],
             qrModalOptions: { themeMode: 'dark' }
         });
@@ -158,12 +222,14 @@ async function processBSCWithWalletConnect(paymentInit) {
         updateModalStatus(modal, '📱 Connect your wallet...', 'waiting');
         await provider.connect();
 
-        const ethersProvider = new ethers.providers.Web3Provider(provider);
+        // ethers should now be present as window.ethers (UMD v5)
+        const ethersLib = window.ethers;
+        const ethersProvider = new ethersLib.providers.Web3Provider(provider);
         const signer = ethersProvider.getSigner();
 
         updateModalStatus(modal, '💸 Confirming USDT Transfer...', 'loading');
 
-        const usdtContract = new ethers.Contract(
+        const usdtContract = new ethersLib.Contract(
             '0x55d398326f99059fF775485246999027B3197955',
             ['function transfer(address to, uint256 amount) returns (bool)'],
             signer
@@ -171,7 +237,7 @@ async function processBSCWithWalletConnect(paymentInit) {
 
         const tx = await usdtContract.transfer(
             paymentInit.recipient_address,
-            ethers.utils.parseUnits(paymentInit.amount.toString(), 18)
+            ethersLib.utils.parseUnits(paymentInit.amount.toString(), 18)
         );
 
         updateModalStatus(modal, '⛓️ Verifying on Blockchain...', 'pending');
@@ -282,12 +348,14 @@ async function processBSCWithInjectedWallet() {
     try {
         if (!window.ethereum) throw new Error("MetaMask or Injected Wallet not found.");
         
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        // Ensure ethers UMD available before using it
+        try { await ensureBrowserLibraries(); } catch (e) { console.warn('Failed to load browser libs', e); }
+
+        const ethersLib = window.ethers || ethers; // prefer UMD, fallback if already global
+        const provider = new ethersLib.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         const signer = provider.getSigner();
 
-        // This is where your USDT transfer logic goes
-        // For now, we return a mock success to test the connection
         console.log("Wallet connected:", await signer.getAddress());
         
         return { success: true, txHash: "0x..." };
