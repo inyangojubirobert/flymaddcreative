@@ -225,7 +225,12 @@ async function processUSDTPaymentTron(paymentInit) {
         return { success: true, txHash: tx };
     }
 
-    return processTronWithQRCode(paymentInit);
+async function processTronWithQRCode(paymentInit) {
+    // TODO: Implement QR code flow for Tron
+    console.warn('processTronWithQRCode not implemented yet');
+    return { success: false };
+}
+
 }
 
 /* ======================================================
