@@ -1,144 +1,389 @@
 /**
- * ONE DREAM INITIATIVE – VOTE ORCHESTRATOR
- * Handles UI, participant loading, vote selection, and vote recording.
- * NO payment SDK logic here.
+ * ONE DREAM INITIATIVE - VOTE MODULE
+ * Unified Script: Handles UI, Supabase Data, and Payment Orchestration.
  */
 
-console.log('📦 vote.js loaded');
+console.log('📦 Vote.js Loading...');
 
 (function () {
     'use strict';
 
     // ========================================
-    // GLOBAL STATE (SINGLE SOURCE OF TRUTH)
+    // 0. DEFENSIVE BUFFER POLYFILL CHECK
+    // ========================================
+  
+    // ========================================
+    // GLOBAL STATE
     // ========================================
     window.currentParticipant = null;
     window.selectedVoteAmount = 1;
-    window.selectedCost = 2.00;
+    window.selectedCost = 2.0;
+    // Do not pre-select a payment method — user must choose explicitly
     window.selectedPaymentMethod = '';
 
-    let pageInitialized = false;
+    // ========================================
+    // PAGE INITIALIZATION
+    // ========================================
+    window.addEventListener('SupabaseReady', async function () {
+        console.log('🎬 Supabase is ready. Initializing Vote page...');
+        await initializePage();
+    });
 
-    // ========================================
-    // INIT
-    // ========================================
-    window.addEventListener('SupabaseReady', initializePage);
-    document.addEventListener('DOMContentLoaded', initializePage);
+    document.addEventListener('DOMContentLoaded', async function () {
+        if (window.__onedreamSupabase) {
+            await initializePage();
+        }
+    });
 
     async function initializePage() {
-        if (pageInitialized || !window.__onedreamSupabase) return;
-        pageInitialized = true;
+        if (window.pageInitialized) return;
+        window.pageInitialized = true;
 
-        const params = new URLSearchParams(window.location.search);
-        const username = params.get('username') || params.get('user');
-        const code = params.get('code');
+        const urlParams = new URLSearchParams(window.location.search);
+        const username = urlParams.get('user') || urlParams.get('username');
+        const userCode = urlParams.get('code');
 
-        if (!username && !code) {
-            return showError('Please search for a participant to vote.');
+        if (!username && !userCode) {
+            showError('To vote, search for the participant using their username or user code.');
+            return;
         }
 
         try {
-            window.currentParticipant = code
-                ? await window.fetchParticipantByUserCode(code)
-                : await window.fetchParticipantByUsername(username);
+            if (userCode) {
+                window.currentParticipant = await window.fetchParticipantByUserCode(userCode);
+            } else {
+                window.currentParticipant = await window.fetchParticipantByUsername(username);
+            }
 
             if (!window.currentParticipant) {
-                return showError('Participant not found.');
+                showError('Participant not found.');
+                return;
             }
 
             showParticipant();
             initializeVoteSelection();
-            initializePaymentMethods();
+            console.log('✅ Page Initialization Complete');
+        } catch (error) {
+            console.error('Failed to load participant:', error);
+            showError(`Failed to load participant: ${error.message}`);
+        }
+    }
 
+    /* ======================================================
+        SDK LOADER: Prefer shared loader, fallback to UMD injection
+    ====================================================== */
+    async function ensureSharedWalletLoader(timeout = 2500) {
+        // Try shared loader first
+        if (typeof window.loadWalletConnect === 'function') {
+            try {
+                const prov = await window.loadWalletConnect();
+                return prov || null;
+            } catch (e) {
+                console.warn('Shared loadWalletConnect failed:', e);
+            }
+        }
+
+        // Wait briefly for a shared loader to appear
+        const start = Date.now();
+        while (typeof window.loadWalletConnect !== 'function' && (Date.now() - start) < timeout) {
+            await new Promise(r => setTimeout(r, 100));
+        }
+        if (typeof window.loadWalletConnect === 'function') {
+            try {
+                const prov = await window.loadWalletConnect();
+                return prov || null;
+            } catch (e) {
+                console.warn('Shared loadWalletConnect failed after wait:', e);
+            }
+        }
+
+        // Fallback: ask crypto-payments to load directly
+        try {
+            const prov = await window.loadWalletConnect?.();
+            return prov || null;
         } catch (err) {
-            console.error(err);
-            showError('Failed to load participant.');
+            console.warn('Direct loadWalletConnect fallback failed:', err);
+            return null;
         }
     }
 
     // ========================================
-    // MAIN VOTE HANDLER
+    // HANDLE VOTE / PAYMENT
     // ========================================
     async function handleVote() {
+        // Validate user explicitly selected a payment method
         if (!window.selectedPaymentMethod) {
-            alert('Please select a payment method.');
+            alert('Please choose a payment method before proceeding.');
             return;
         }
 
-        const voteBtn = document.getElementById('voteButton');
-        const spinner = document.getElementById('voteButtonSpinner');
-        const text = document.getElementById('voteButtonText');
+        // Quick availability check
+        if (!isPaymentMethodAvailable(window.selectedPaymentMethod)) {
+            alert('The selected payment method appears unavailable in this browser. Please choose another method or try again later.');
+            return;
+        }
 
-        voteBtn.disabled = true;
+        if (!window.currentParticipant || window.selectedVoteAmount <= 0) {
+            alert('Please select a valid vote amount');
+            return;
+        }
+
+        const voteButton = document.getElementById('voteButton');
+        const spinner = document.getElementById('voteButtonSpinner');
+        const buttonText = document.getElementById('voteButtonText');
+
+        voteButton.disabled = true;
         spinner.classList.remove('hidden');
-        text.textContent = 'Processing payment...';
+        const originalText = buttonText.textContent;
+        buttonText.textContent = 'Preparing Secure Payment...';
 
         try {
-            if (typeof window.processVotePayment !== 'function') {
-                throw new Error('Payment router not loaded');
+            let paymentResult;
+
+           if (window.selectedPaymentMethod === 'crypto') {
+    try {
+if (typeof window.loadWalletConnect !== 'function' && typeof window.processCryptoPayment !== 'function') {
+    await loadScriptOnce('/path/to/crypto-payments.js'); // ensure crypto payments module loaded
+}
+
+const prov = await ensureSharedWalletLoader();
+
+       const hasInjectedWallet = !!window.ethereum || !!window.EthereumProvider || !!window.WalletConnectEthereumProvider;
+if (!prov && !hasInjectedWallet) {
+    console.warn('No crypto wallet detected.');
+    alert('Wallet not detected. Please choose another payment method.');
+    return;
+}
+
+
+        if (typeof window.processCryptoPayment !== 'function') {
+            alert('Crypto payment module not loaded. Please refresh the page.');
+            return;
+        }
+
+        paymentResult = await window.processCryptoPayment();
+    } catch (err) {
+        console.error('Crypto payment failed:', err);
+        alert('Wallet connection failed or transaction rejected. Try again or choose another payment method.');
+        return;
+    }
+
+
+            } else if (window.selectedPaymentMethod === 'paystack') {
+                if (typeof window.processPaystackPayment !== 'function') {
+                    throw new Error('Paystack payment module not loaded. Please refresh.');
+                }
+                paymentResult = await window.processPaystackPayment();
+                if (paymentResult && paymentResult.redirect) return;
+            } else {
+                throw new Error('Selected payment method not available yet');
             }
 
-            const paymentResult = await window.processVotePayment();
-            if (paymentResult?.redirect) return;
+         if (!paymentResult?.success) {
+    console.warn('Crypto payment failed, consider trying Paystack.');
+    if (window.selectedPaymentMethod === 'crypto' && typeof window.processPaystackPayment === 'function') {
+        const tryPaystack = confirm('Crypto payment failed. Try Paystack instead?');
+        if (tryPaystack) {
+            window.selectedPaymentMethod = 'paystack';
+            paymentResult = await window.processPaystackPayment();
+        }
+    }
+    if (!paymentResult?.success) {
+        if (paymentResult?.error?.includes('rejected')) return;
+        throw new Error(paymentResult?.error || 'Payment failed');
+    }
+}
 
-            if (!paymentResult?.success) {
-                throw new Error('Payment failed');
-            }
 
-            await recordVotes(paymentResult);
+            buttonText.textContent = 'Finalizing Votes...';
+            await recordVotesAfterPayment(paymentResult);
+
             showSuccessModal();
-
-        } catch (err) {
-            alert(err.message || 'Payment failed');
-            console.error(err);
+        } catch (error) {
+            console.error('Vote processing failed:', error);
+            alert(`Error: ${error.message}`);
         } finally {
-            voteBtn.disabled = false;
+            voteButton.disabled = false;
             spinner.classList.add('hidden');
+            buttonText.textContent = originalText;
             updateUI();
         }
     }
 
     // ========================================
-    // BACKEND RECORD
+    // RECORD VOTES AFTER PAYMENT
     // ========================================
-    async function recordVotes(payment) {
-        const res = await fetch('/api/onedream/vote', {
+    async function recordVotesAfterPayment(paymentResult) {
+        const response = await fetch('/api/onedream/vote', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 participant_id: window.currentParticipant.id,
                 vote_count: window.selectedVoteAmount,
                 payment_amount: window.selectedCost,
-                payment_method: payment.payment_method,
-                payment_reference: payment.payment_reference
+                payment_method: window.selectedPaymentMethod,
+                payment_intent_id: paymentResult.txHash || paymentResult.payment_intent_id,
+                payment_status: 'completed',
+                voter_info: { userAgent: navigator.userAgent }
             })
         });
 
-        if (!res.ok) {
-            const e = await res.json().catch(() => ({}));
-            throw new Error(e.error || 'Vote recording failed');
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to record votes');
         }
 
-        const data = await res.json();
-        window.currentParticipant.total_votes = data.participant.total_votes;
-        showParticipant();
+        const data = await response.json();
+        if (data.participant) {
+            window.currentParticipant.total_votes = data.participant.total_votes;
+            showParticipant();
+        }
     }
 
     // ========================================
-    // UI HELPERS (KEEP YOUR EXISTING ONES)
+    // DISPLAY & UI HELPERS
     // ========================================
-    function showParticipant() { /* unchanged */ }
-    function showError(msg) { /* unchanged */ }
-    function initializeVoteSelection() { /* unchanged */ }
-    function initializePaymentMethods() { /* unchanged */ }
-    function updateUI() { /* unchanged */ }
-    function showSuccessModal() { /* unchanged */ }
-    function closeSuccessModal() { /* unchanged */ }
+    function showParticipant() {
+        if (!window.currentParticipant) return;
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('participantCard').classList.remove('hidden');
+
+        const p = window.currentParticipant;
+        document.getElementById('participantName').textContent = p.name || p.display_name || 'Unnamed';
+        document.getElementById('participantUsername').textContent = p.username || p.handle || 'unknown';
+        document.getElementById('participantEmail').textContent = p.email || p.contact || '';
+
+        const initialsEl = document.getElementById('participantInitials');
+        if (initialsEl) {
+            const nameParts = (p.name || '').trim().split(/\s+/).filter(Boolean);
+            const initials = (nameParts[0]?.[0] || '') + (nameParts[1]?.[0] || '');
+            initialsEl.textContent = (initials || '?').toUpperCase();
+        }
+
+        const sharedGoal = (window.leadership && window.leadership.goal) || (window.leadershipStats && window.leadershipStats.goal);
+        const goal = Number(sharedGoal) || 1000000;
+
+        const totalVotes = Number(p.total_votes) || 0;
+        document.getElementById('currentVotes').textContent = totalVotes.toLocaleString();
+
+        const votesRemaining = Math.max(goal - totalVotes, 0);
+        const votesToGoalEl = document.getElementById('votesToGoal');
+        if (votesToGoalEl) votesToGoalEl.textContent = votesRemaining.toLocaleString();
+
+        const progress = Math.min((totalVotes / goal) * 100, 100);
+        const progressPctEl = document.getElementById('progressPercentage');
+        if (progressPctEl) progressPctEl.textContent = `${progress.toFixed(1)}%`;
+
+        const progressBar = document.getElementById('progressBar');
+        if (progressBar) progressBar.style.width = `${progress}%`;
+    }
+
+    function showError(message) {
+        document.getElementById('loadingState').classList.add('hidden');
+        const errEl = document.getElementById('errorMessage');
+        if (errEl) errEl.textContent = message;
+        document.getElementById('errorState').classList.remove('hidden');
+    }
+
+    function initializeVoteSelection() {
+        const buttons = document.querySelectorAll('.vote-amount-btn');
+        const customInput = document.getElementById('customVoteAmount');
+
+        buttons.forEach(button => {
+            button.addEventListener('click', function () {
+                buttons.forEach(btn => btn.classList.remove('active'));
+                customInput.value = '';
+                this.classList.add('active');
+                window.selectedVoteAmount = parseInt(this.dataset.amount);
+                window.selectedCost = parseFloat(this.dataset.cost);
+                updateUI();
+            });
+        });
+
+        customInput.addEventListener('input', function () {
+            buttons.forEach(btn => btn.classList.remove('active'));
+            const amount = parseInt(this.value) || 1;
+            window.selectedVoteAmount = amount;
+            window.selectedCost = amount * 2.0;
+            updateUI();
+        });
+
+        initializePaymentMethods();
+        const voteBtn = document.getElementById('voteButton');
+        if (voteBtn) voteBtn.addEventListener('click', handleVote);
+    }
+
+    // small helper: check if a payment method is ready (quick, best-effort)
+    function isPaymentMethodAvailable(method) {
+        if (!method) return false;
+        if (method === 'paystack') return typeof window.processPaystackPayment === 'function' || typeof window.PaystackPop !== 'undefined';
+        if (method === 'crypto') return typeof window.processCryptoPayment === 'function' || typeof window.EthereumProvider !== 'undefined' || typeof window.ethereum !== 'undefined';
+        return false;
+    }
+
+    function initializePaymentMethods() {
+        // Do not add click handlers here — main.js wires buttons to avoid duplicate listeners.
+        // This function now only sets the initial active state based on current selection.
+        const buttons = document.querySelectorAll('.payment-method-btn');
+        if (!buttons || buttons.length === 0) return;
+        buttons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.method === window.selectedPaymentMethod);
+        });
+
+        // Ensure Vote button disabled until user picks a method
+        const voteBtn = document.getElementById('voteButton');
+        if (voteBtn) voteBtn.disabled = !window.selectedPaymentMethod;
+
+        // Listen for user choosing a payment method to enable the Vote button and log availability
+        // This is minimal and does not duplicate the main.js handler responsibilities.
+        if (!initializePaymentMethods.__wired) {
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest && e.target.closest('.payment-method-btn');
+                if (!btn) return;
+                const method = btn.dataset.method;
+                // Sync global state (main.js also sets this)
+                window.selectedPaymentMethod = method || '';
+                // Visual (ensure active)
+                buttons.forEach(b => b.classList.toggle('active', b === btn));
+                // Enable vote button now that user explicitly chose a method
+                if (voteBtn) voteBtn.disabled = false;
+                // Log and provide quick feedback if method appears unavailable
+                console.log('Payment method selected:', method, 'available:', isPaymentMethodAvailable(method));
+                if (!isPaymentMethodAvailable(method)) {
+                  // Friendly non-blocking notice so user knows why a later attempt might fail
+                  window.appToast && window.appToast('Note: Selected payment method may be unavailable in this browser.', 4000);
+                }
+            });
+            initializePaymentMethods.__wired = true;
+        }
+    }
+
+    function updateUI() {
+        const costEl = document.getElementById('totalCost');
+        const textEl = document.getElementById('voteButtonText');
+        if (costEl) costEl.textContent = window.selectedCost.toFixed(2);
+        if (textEl) {
+            textEl.textContent = `Purchase ${window.selectedVoteAmount} Vote${window.selectedVoteAmount > 1 ? 's' : ''} - $${window.selectedCost.toFixed(2)}`;
+        }
+    }
+
+    function showSuccessModal() {
+        document.getElementById('successParticipantName').textContent = window.currentParticipant.name;
+        document.getElementById('successVoteCount').textContent = window.selectedVoteAmount;
+        document.getElementById('successModal').classList.remove('hidden');
+    }
+
+    function closeSuccessModal() {
+        document.getElementById('successModal').classList.add('hidden');
+        updateUI();
+    }
 
     // ========================================
-    // EXPORTS
+    // GLOBAL EXPORTS (Window Scope)
     // ========================================
-    window.handleVote = handleVote;
     window.closeSuccessModal = closeSuccessModal;
+    window.WALLETCONNECT_PROJECT_ID = window.WALLETCONNECT_PROJECT_ID || '61d9b98f81731dffa9988c0422676fc5';
+
+    console.log('✅ Vote.js initialization logic exported.');
 
 })();
