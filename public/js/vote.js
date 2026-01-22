@@ -9,6 +9,18 @@ console.log('📦 Vote.js Loading...');
     'use strict';
 
     // ========================================
+    // 0. DEFENSIVE BUFFER POLYFILL CHECK
+    // ========================================
+    try {
+        if (typeof window !== 'undefined' && typeof window.Buffer === 'undefined' && typeof buffer !== 'undefined') {
+            window.Buffer = buffer.Buffer;
+            console.log('✅ Buffer polyfill applied (vote.js)');
+        }
+    } catch (e) {
+        console.warn('Buffer polyfill check failed:', e);
+    }
+
+    // ========================================
     // GLOBAL STATE
     // ========================================
     window.currentParticipant = null;
@@ -17,16 +29,13 @@ console.log('📦 Vote.js Loading...');
     window.selectedPaymentMethod = 'crypto'; // Default
 
     // ========================================
-    // PAGE INITIALIZATION (THE FIX)
+    // PAGE INITIALIZATION
     // ========================================
-    
-    // We listen for the custom 'SupabaseReady' event from our config script
     window.addEventListener('SupabaseReady', async function () {
         console.log('🎬 Supabase is ready. Initializing Vote page...');
         await initializePage();
     });
 
-    // Fallback: If Supabase takes too long, try DOMContentLoaded
     document.addEventListener('DOMContentLoaded', async function () {
         if (window.__onedreamSupabase) {
             await initializePage();
@@ -34,7 +43,6 @@ console.log('📦 Vote.js Loading...');
     });
 
     async function initializePage() {
-        // Prevent double-initialization
         if (window.pageInitialized) return;
         window.pageInitialized = true;
 
@@ -48,7 +56,6 @@ console.log('📦 Vote.js Loading...');
         }
 
         try {
-            // Use the globally exported fetch functions from supabase-config.js
             if (userCode) {
                 window.currentParticipant = await window.fetchParticipantByUserCode(userCode);
             } else {
@@ -69,24 +76,62 @@ console.log('📦 Vote.js Loading...');
         }
     }
 
-    // --- NEW: small helper to wait for a condition (used to wait for shared loader)
-    async function waitFor(predicate, timeout = 3000, interval = 100) {
-        const start = Date.now();
-        while (!predicate()) {
-            if (Date.now() - start > timeout) throw new Error('Timed out waiting for condition');
-            await new Promise(r => setTimeout(r, interval));
+    /* ======================================================
+        SDK LOADER: Prefer shared loader, fallback to UMD injection
+    ====================================================== */
+    async function ensureSharedWalletLoader(timeout = 2500) {
+        // If shared loader exists, wait for it to finish
+        if (typeof window.loadWalletConnect === 'function') {
+            try {
+                return await window.loadWalletConnect();
+            } catch (e) {
+                console.warn('Shared loadWalletConnect failed:', e);
+            }
         }
+
+        // Wait briefly for other scripts to define the shared loader
+        const start = Date.now();
+        while (typeof window.loadWalletConnect !== 'function' && (Date.now() - start) < timeout) {
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise(r => setTimeout(r, 100));
+        }
+        if (typeof window.loadWalletConnect === 'function') {
+            return await window.loadWalletConnect();
+        }
+
+        // Fallback: simple UMD injection (keeps the page resilient)
+        return new Promise((resolve, reject) => {
+            if (window.EthereumProvider) return resolve(window.EthereumProvider);
+            if (document.querySelector('script[data-wc-fallback]')) {
+                setTimeout(() => {
+                    if (window.EthereumProvider) return resolve(window.EthereumProvider);
+                    return reject(new Error('WalletConnect fallback present but provider not found'));
+                }, 100);
+                return;
+            }
+            const s = document.createElement('script');
+            s.setAttribute('data-wc-fallback', 'true');
+            s.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
+            s.onload = () => {
+                setTimeout(() => {
+                    if (window.EthereumProvider) return resolve(window.EthereumProvider);
+                    return reject(new Error('WalletConnect loaded but provider global not found'));
+                }, 50);
+            };
+            s.onerror = () => reject(new Error('Failed to load WalletConnect fallback'));
+            document.head.appendChild(s);
+        });
     }
 
     // ========================================
-    // HANDLE VOTE / PAYMENT (CLEANED & MERGED)
+    // HANDLE VOTE / PAYMENT
     // ========================================
     async function handleVote() {
         if (window.selectedPaymentMethod === 'crypto' && typeof window.processCryptoPayment !== 'function') {
-            alert("Payment system is still loading. Please wait 2 seconds and try again.");
+            alert("Payment system is still loading. Please wait a moment and try again.");
             return;
         }
-        
+
         if (!window.currentParticipant || window.selectedVoteAmount <= 0) {
             alert('Please select a valid vote amount');
             return;
@@ -96,7 +141,6 @@ console.log('📦 Vote.js Loading...');
         const spinner = document.getElementById('voteButtonSpinner');
         const buttonText = document.getElementById('voteButtonText');
 
-        // UI State: Loading
         voteButton.disabled = true;
         spinner.classList.remove('hidden');
         const originalText = buttonText.textContent;
@@ -106,41 +150,30 @@ console.log('📦 Vote.js Loading...');
             let paymentResult;
 
             if (window.selectedPaymentMethod === 'crypto') {
-                // Use the shared loader exposed by crypto-payments.js (avoid re-loading SDK here)
-                try {
-                    if (typeof window.loadWalletConnect === 'function') {
-                        await window.loadWalletConnect();
-                    } else {
-                        // wait briefly for the global loader to be defined (e.g. other script is still initializing)
-                        await waitFor(() => typeof window.loadWalletConnect === 'function', 2500);
-                        await window.loadWalletConnect();
-                    }
-                } catch (loaderErr) {
-                    console.warn('WalletConnect loader unavailable:', loaderErr);
+                // Ensure WalletConnect/provider is available via shared loader or fallback
+                try { await ensureSharedWalletLoader(); } catch (loaderErr) {
                     throw new Error('Payment system initialization failed. Please refresh the page.');
                 }
 
                 if (typeof window.processCryptoPayment !== 'function') {
                     throw new Error('Crypto payment module not loaded. Please refresh.');
                 }
-                
+
                 paymentResult = await window.processCryptoPayment();
             } else {
+                // future: add paystack flow
                 throw new Error('Selected payment method not available yet');
             }
 
-            // Validate Result
             if (!paymentResult?.success) {
-                if (paymentResult?.error?.includes('rejected')) return; 
+                if (paymentResult?.error?.includes('rejected')) return;
                 throw new Error(paymentResult?.error || 'Payment failed');
             }
 
-            // UI State: Recording
             buttonText.textContent = 'Finalizing Votes...';
             await recordVotesAfterPayment(paymentResult);
-            
-            // UI State: Success
-            showSuccessModal(); 
+
+            showSuccessModal();
         } catch (error) {
             console.error('Vote processing failed:', error);
             alert(`Error: ${error.message}`);
@@ -171,7 +204,7 @@ console.log('📦 Vote.js Loading...');
         });
 
         if (!response.ok) {
-            const err = await response.json();
+            const err = await response.json().catch(() => ({}));
             throw new Error(err.error || 'Failed to record votes');
         }
 
@@ -191,25 +224,20 @@ console.log('📦 Vote.js Loading...');
         document.getElementById('participantCard').classList.remove('hidden');
 
         const p = window.currentParticipant;
-
-        // Basic fields
         document.getElementById('participantName').textContent = p.name || p.display_name || 'Unnamed';
         document.getElementById('participantUsername').textContent = p.username || p.handle || 'unknown';
         document.getElementById('participantEmail').textContent = p.email || p.contact || '';
 
-        // Initials for avatar
         const initialsEl = document.getElementById('participantInitials');
         if (initialsEl) {
             const nameParts = (p.name || '').trim().split(/\s+/).filter(Boolean);
             const initials = (nameParts[0]?.[0] || '') + (nameParts[1]?.[0] || '');
-            initialsEl.textContent = initials.toUpperCase() || '?';
+            initialsEl.textContent = (initials || '?').toUpperCase();
         }
 
-        // Determine goal: prefer shared leadership value if present, otherwise fallback
         const sharedGoal = (window.leadership && window.leadership.goal) || (window.leadershipStats && window.leadershipStats.goal);
         const goal = Number(sharedGoal) || 1000000;
 
-        // Dynamic stats
         const totalVotes = Number(p.total_votes) || 0;
         document.getElementById('currentVotes').textContent = totalVotes.toLocaleString();
 
@@ -227,7 +255,8 @@ console.log('📦 Vote.js Loading...');
 
     function showError(message) {
         document.getElementById('loadingState').classList.add('hidden');
-        document.getElementById('errorMessage').textContent = message;
+        const errEl = document.getElementById('errorMessage');
+        if (errEl) errEl.textContent = message;
         document.getElementById('errorState').classList.remove('hidden');
     }
 
