@@ -1,24 +1,32 @@
-// Wait for an existing Paystack inline script to expose PaystackPop.
-// Do NOT fetch/import inline.js here; vote.html should load it with a <script> tag.
-async function ensurePaystack(timeout = 5000) {
-    if (typeof window === 'undefined') throw new Error('Browser environment required');
-    if (window.PaystackPop) return;
+/**
+ * ONE DREAM INITIATIVE - PAYSTACK INTEGRATION
+ * Handles Inline Checkout and Hosted Fallback.
+ */
+
+async function ensurePaystack(timeout = 8000) {
+    if (typeof window === 'undefined') return;
+    if (window.PaystackPop) return window.PaystackPop;
     if (window._paystackLoading) return window._paystackLoading;
 
     window._paystackLoading = new Promise((resolve, reject) => {
         const start = Date.now();
-        (function wait() {
-            if (window.PaystackPop) return resolve();
-            if (Date.now() - start > timeout) return reject(new Error('PaystackPop not available after wait'));
-            setTimeout(wait, 50);
-        })();
+        const checkInterval = setInterval(() => {
+            if (window.PaystackPop) {
+                clearInterval(checkInterval);
+                resolve(window.PaystackPop);
+            } else if (Date.now() - start > timeout) {
+                clearInterval(checkInterval);
+                window._paystackLoading = null; // Allow retry on next click
+                reject(new Error('Paystack SDK failed to load. Please check your internet connection.'));
+            }
+        }, 100);
     });
 
     return window._paystackLoading;
 }
 
 async function processPaystackPayment() {
-    // 🔑 CRITICAL FIX: wait for public config to load
+    // 1. Wait for configuration
     if (window.__publicConfigReady) {
         await window.__publicConfigReady;
     }
@@ -27,11 +35,11 @@ async function processPaystackPayment() {
     const voteCount = window.selectedVoteAmount;
 
     if (!participantId || !voteCount) {
-        alert('Missing participant info or vote amount.');
-        return { success: false, error: 'Missing metadata' };
+        return { success: false, error: 'Missing participant metadata' };
     }
 
     try {
+        // 2. Create Payment Intent on Server
         const res = await fetch('/api/onedream/create-payment-intent', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -44,152 +52,68 @@ async function processPaystackPayment() {
 
         if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            console.error('create-payment-intent failed:', err);
-            throw new Error(err.error || 'Failed to initialize Paystack payment');
+            throw new Error(err.error || 'Server failed to initialize payment');
         }
 
         const data = await res.json();
-        console.debug('Paystack init response:', data);
 
-        // Prefer client config, fallback to server-provided key
-        const configuredKey =
-            (typeof window.PAYSTACK_PUBLIC_KEY === 'string' && window.PAYSTACK_PUBLIC_KEY.trim())
-                ? window.PAYSTACK_PUBLIC_KEY.trim()
-                : (typeof data.public_key === 'string' ? data.public_key.trim() : '');
+        // 3. Resolve Public Key (Priority: Window Object -> Server Response)
+        const publicKey = (window.PAYSTACK_PUBLIC_KEY || data.public_key || '').trim();
+        const isKeyValid = /^pk_(test|live)_/.test(publicKey);
 
-        // Basic validation: Paystack public keys start with "pk_"
-        const keyLooksValid =
-            typeof configuredKey === 'string' &&
-            configuredKey.length > 10 &&
-            /^pk_/.test(configuredKey);
-
-        if (!keyLooksValid) {
-            console.error('Paystack public key missing or invalid:', configuredKey);
-
-            const canRedirect =
-                typeof data.authorization_url === 'string' &&
-                data.authorization_url.startsWith('http');
-
-            const userChoice = confirm(
-                'Payment setup error: Paystack public key is missing or invalid.\n' +
-                'The site can fall back to a secure external checkout page.\n\n' +
-                'Do you want to proceed?'
-            );
-
-            if (userChoice && canRedirect) {
-                console.info('Redirecting to Paystack hosted checkout');
-                window.location.href = data.authorization_url;
-                return { success: true, redirect: true, url: data.authorization_url };
-            }
-
-            return {
-                success: false,
-                error: 'Invalid Paystack public key; inline checkout unavailable'
-            };
-        }
-
-        // Determine amount in kobo
-        let amountKobo = null;
-
-        if (typeof data.amount_kobo === 'number' && Number.isFinite(data.amount_kobo)) {
-            amountKobo = data.amount_kobo;
-        } else if (typeof data.amount === 'number' && Number.isFinite(data.amount)) {
-            amountKobo = Math.round(data.amount * 100);
-        } else if (typeof data.amount === 'string' && !isNaN(Number(data.amount))) {
-            amountKobo = Math.round(Number(data.amount) * 100);
-        }
-
-        if (!amountKobo || amountKobo <= 0) {
-            console.warn('Invalid amount from server:', data);
+        // 4. Fallback to Hosted URL if Key is missing or Invalid
+        if (!isKeyValid || !window.PaystackPop) {
+            console.warn('Inline SDK unavailable or Key Invalid. Falling back to hosted checkout.');
             if (data.authorization_url) {
                 window.location.href = data.authorization_url;
-                return { success: true, redirect: true, url: data.authorization_url };
+                return { success: true, redirect: true };
             }
-            return { success: false, error: 'Invalid payment amount from server' };
+            throw new Error('Paystack configuration incomplete (Missing Public Key & Auth URL)');
         }
 
-        // Ensure inline SDK exists
-        try {
-            await ensurePaystack();
-        } catch (e) {
-            console.warn('Paystack SDK unavailable:', e);
-            if (data.authorization_url) {
-                window.location.href = data.authorization_url;
-                return { success: true, redirect: true, url: data.authorization_url };
-            }
-            return { success: false, error: 'Paystack SDK unavailable' };
-        }
+        // 5. Calculate Kobo (Paystack requires integers)
+        // Fixed: Math.round prevents floating point errors like 198.9999999
+        const amountKobo = data.amount_kobo || Math.round((data.amount || window.selectedCost) * 100);
 
-        if (typeof window.PaystackPop === 'undefined') {
-            console.warn('PaystackPop still undefined after ensurePaystack');
-            if (data.authorization_url) {
-                window.location.href = data.authorization_url;
-                return { success: true, redirect: true, url: data.authorization_url };
-            }
-            return { success: false, error: 'PaystackPop not defined' };
-        }
-
-        const email =
-            (window.currentUser && window.currentUser.email) ||
-            'support@flymaddcreative.online';
-
+        // 6. Launch Inline Popup
         return await new Promise((resolve) => {
             const options = {
-                key: configuredKey,
-                email,
+                key: publicKey,
+                email: window.currentUser?.email || 'voter@onedreaminitiative.com',
                 amount: amountKobo,
+                currency: 'NGN', // Ensure this matches your Paystack settings
                 reference: data.reference || data.payment_intent_id,
                 callback: (response) => {
+                    console.log('✅ Paystack Payment Success:', response);
                     resolve({
                         success: true,
                         payment_intent_id: response.reference,
-                        raw: response,
+                        txHash: response.transaction,
                         redirect: false
                     });
                 },
                 onClose: () => {
-                    resolve({
-                        success: false,
-                        error: 'User closed Paystack dialog',
-                        redirect: false
-                    });
+                    resolve({ success: false, error: 'Payment window closed by user' });
                 }
             };
 
-            try {
-                let handler = null;
-
-                if (typeof window.PaystackPop.setup === 'function') {
-                    handler = window.PaystackPop.setup(options);
-                } else if (typeof window.PaystackPop === 'function') {
-                    handler = new window.PaystackPop(options);
-                }
-
-                if (handler && typeof handler.openIframe === 'function') {
-                    handler.openIframe();
-                } else if (data.authorization_url) {
-                    window.location.href = data.authorization_url;
-                    resolve({ success: true, redirect: true, url: data.authorization_url });
-                } else {
-                    resolve({ success: false, error: 'Paystack handler unavailable' });
-                }
-            } catch (err) {
-                console.error('Paystack inline error:', err);
-                if (data.authorization_url) {
-                    window.location.href = data.authorization_url;
-                    resolve({ success: true, redirect: true, url: data.authorization_url });
-                } else {
-                    resolve({ success: false, error: err.message });
-                }
+            const handler = window.PaystackPop.setup ? window.PaystackPop.setup(options) : new window.PaystackPop(options);
+            
+            if (handler && typeof handler.openIframe === 'function') {
+                handler.openIframe();
+            } else {
+                // Last ditch effort: if inline fails to open, redirect
+                if (data.authorization_url) window.location.href = data.authorization_url;
+                resolve({ success: true, redirect: true });
             }
         });
 
     } catch (err) {
-        console.error('Paystack payment error:', err);
-        return { success: false, error: err.message || 'Unknown Paystack error' };
+        console.error('❌ Paystack Error:', err);
+        return { success: false, error: err.message };
     }
 }
 
-// Export for vote.js
+// Global Exports
 window.ensurePaystack = ensurePaystack;
 window.processPaystackPayment = processPaystackPayment;
