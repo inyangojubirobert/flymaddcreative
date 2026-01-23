@@ -1,6 +1,8 @@
 import { ethers } from 'ethers';
 import TronWeb from 'tronweb';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../../src/backend/supabase';
+
+
 
 export default async function handler(req, res) {
     const { paymentId, txHash } = req.body;
