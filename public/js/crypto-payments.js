@@ -572,10 +572,13 @@ async function processCryptoPayment() {
         if (!CONFIG || !ERROR_CODES || !paymentAttempts) {
             throw new PaymentError(
                 'System not properly initialized', 
-                ERROR_CODES.INITIALIZATION_ERROR
+                ERROR_CODES.INITIALIZATION_ERROR,
+                { config: !!CONFIG, errorCodes: !!ERROR_CODES, attempts: !!paymentAttempts }
             );
         }
 
+        console.debug('[Payment] Starting process with participant:', window.currentParticipant?.id);
+        
         const participantId = window.currentParticipant?.id;
         const voteCount = window.selectedVoteAmount;
 
@@ -584,31 +587,37 @@ async function processCryptoPayment() {
         checkRateLimit(participantId);
 
         // Network selection
+        console.debug('[Payment] Detecting preferred network...');
         const preferredNetwork = await detectPreferredNetwork();
+        console.debug('[Payment] Showing network selection modal...');
         const network = await showNetworkSelectionModal(preferredNetwork);
         
         if (!network) {
+            console.debug('[Payment] User cancelled network selection');
             trackEvent('payment_cancelled', { stage: 'network_selection' });
             return { success: false, cancelled: true };
         }
 
-        // Initialize payment
+        console.debug('[Payment] Initializing payment for network:', network);
         const init = await initializeCryptoPayment(participantId, voteCount, network);
         const modal = showPaymentStatusModal(network, init.amount);
 
         try {
             let result;
             if (network === 'BSC') {
+                console.debug('[Payment] Processing BSC payment...');
                 updateStatus(modal, 'Processing BSC payment...');
                 result = await processBSCPayment(init);
             } else if (network === 'TRON') {
+                console.debug('[Payment] Processing TRON payment...');
                 updateStatus(modal, 'Processing TRON payment...');
                 result = await processTronPayment(init);
             } else {
-                throw new PaymentError('Unsupported network', ERROR_CODES.NETWORK_ERROR);
+                throw new PaymentError('Unsupported network', ERROR_CODES.NETWORK_ERROR, { network });
             }
 
             if (result.success !== false) {
+                console.debug('[Payment] Payment successful, finalizing...');
                 successStatus(modal, result.txHash, result.explorerUrl);
                 trackEvent('payment_success', { network, amount: init.amount });
                 return await finalizePayment(result.txHash, network);
@@ -616,22 +625,41 @@ async function processCryptoPayment() {
 
             return result;
         } catch (error) {
-            errorStatus(modal, error.message);
-            throw error;
+            console.error('[Payment] Inner payment error:', error);
+            errorStatus(modal, error.message || 'Payment failed');
+            // Enhance the error before re-throwing
+            throw new PaymentError(
+                error.message || 'Payment processing failed',
+                error.code || ERROR_CODES.TRANSACTION_ERROR,
+                { 
+                    originalError: error,
+                    network,
+                    stage: 'payment-processing'
+                }
+            );
         }
     } catch (error) {
-        console.error('❌ Crypto Payment Error:', error);
+        // Enhanced error logging
+        console.error('❌ Crypto Payment Error:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack,
+            metadata: error.metadata
+        });
+        
         trackEvent('payment_failed', {
-            error: error.message,
-            code: error.code || ERROR_CODES.TRANSACTION_ERROR,
+            error: error.message || 'Unknown error',
+            code: error.code || ERROR_CODES.UNKNOWN_ERROR,
+            stack: error.stack,
             ...(error.metadata || {})
         });
 
         return {
             success: false,
-            error: error.message,
-            code: error.code || ERROR_CODES.TRANSACTION_ERROR,
-            cancelled: error.code === 4001
+            error: error.message || 'Payment failed',
+            code: error.code || ERROR_CODES.UNKNOWN_ERROR,
+            cancelled: error.code === 4001,
+            details: error.metadata
         };
     }
 }
