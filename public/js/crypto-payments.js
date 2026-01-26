@@ -18,11 +18,6 @@ const CONFIG = {
         SRC: "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js",
         PROJECT_ID: window.WALLETCONNECT_PROJECT_ID || "default_project_id"
     },
-    WALLETS: {
-        METAMASK: { id: 'metamask', name: 'MetaMask', logo: 'https://example.com/metamask-logo.png' },
-        TRUSTWALLET: { id: 'trustwallet', name: 'Trust Wallet', logo: 'https://example.com/trustwallet-logo.png' },
-        WALLETCONNECT: { id: 'walletconnect', name: 'WalletConnect', logo: 'https://example.com/walletconnect-logo.png' }
-    },
     LIMITS: {
         MAX_RETRIES: 3,
         TIMEOUT_MS: 300000, // 5 minutes
@@ -92,6 +87,10 @@ function trackEvent(name, metadata = {}) {
 /* ======================================================
    🔌 NETWORK & WALLET MANAGEMENT
 ====================================================== */
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 async function detectPreferredNetwork() {
     try {
         if (window.tronWeb && window.tronWeb.ready) return 'TRON';
@@ -125,6 +124,32 @@ async function loadWalletConnect() {
         };
         document.head.appendChild(script);
     });
+}
+
+async function connectWalletMobile() {
+    try {
+        await loadWalletConnect();
+        const wcProvider = await window.EthereumProvider.init({
+            projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
+            chains: [CONFIG.BSC.CHAIN_ID],
+            showQrModal: true,
+            qrModalOptions: { themeMode: 'dark' },
+            metadata: {
+                name: "OneDream Voting",
+                description: "Secure USDT Payment",
+                url: window.location.origin,
+                icons: ["https://yoursite.com/icon.png"]
+            }
+        });
+        await wcProvider.connect();
+        return new ethers.BrowserProvider(wcProvider);
+    } catch (error) {
+        throw new PaymentError(
+            'Failed to connect via WalletConnect',
+            ERROR_CODES.WALLET_ERROR,
+            { originalError: error }
+        );
+    }
 }
 
 async function ensureBSCNetwork(provider) {
@@ -319,21 +344,21 @@ function showNetworkSelectionModal(preferredNetwork) {
     });
 }
 
-function showTronManualModal(recipient, amount) {
+function showBSCManualModal(recipient, amount) {
     return new Promise((resolve) => {
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80">
-                <h3 class="font-bold mb-3">TRON USDT Payment</h3>
-                <p class="text-sm mb-2">Send ${amount} USDT (TRC-20) to:</p>
+                <h3 class="font-bold mb-3">BSC USDT Payment</h3>
+                <p class="text-sm mb-2">Send ${amount} USDT (BEP-20) to:</p>
                 <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3">${recipient}</div>
-                <div id="tronQR" class="mx-auto mb-3"></div>
-                <p class="text-sm text-gray-500">Scan with TRON wallet</p>
+                <div id="bscQR" class="mx-auto mb-3"></div>
+                <p class="text-sm text-gray-500">Scan with your BSC wallet</p>
                 <button id="copyAddress" class="mt-2 text-blue-500 text-xs">Copy Address</button>
-                <button id="closeTron" class="mt-4 px-4 py-2 bg-gray-200 rounded">Cancel</button>
+                <button id="closeBSC" class="mt-4 px-4 py-2 bg-gray-200 rounded">Cancel</button>
             </div>
         `);
 
-        generateQR(`tron:${CONFIG.TRON.USDT_ADDRESS}?contractAddress=${CONFIG.TRON.USDT_ADDRESS}&recipient=${recipient}&amount=${amount}`, 'tronQR');
+        generateQR(`ethereum:${recipient}?value=${amount}&contractAddress=${CONFIG.BSC.USDT_ADDRESS}`, 'bscQR');
 
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient)
@@ -341,7 +366,7 @@ function showTronManualModal(recipient, amount) {
                 .catch(() => alert('Failed to copy address'));
         };
 
-        modal.querySelector('#closeTron').onclick = () => {
+        modal.querySelector('#closeBSC').onclick = () => {
             modal.remove();
             resolve({ success: false, cancelled: true });
         };
@@ -391,30 +416,15 @@ function generateQR(text, elementId) {
 ====================================================== */
 async function processBSCPayment(init) {
     try {
-        if (window.ethereum) {
-            const provider = new ethers.BrowserProvider(window.ethereum);
+        let provider;
+        if (window.ethereum && !isMobileDevice()) {
+            provider = new ethers.BrowserProvider(window.ethereum);
             await ensureBSCNetwork(provider);
-            const signer = await provider.getSigner();
-            return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+        } else {
+            provider = await connectWalletMobile();
         }
-
-        await loadWalletConnect();
-        const wcProvider = await window.EthereumProvider.init({
-            projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
-            chains: [CONFIG.BSC.CHAIN_ID],
-            showQrModal: true,
-            qrModalOptions: { themeMode: 'dark' },
-            metadata: {
-                name: "OneDream Voting",
-                description: "Secure USDT Payment",
-                url: window.location.origin,
-                icons: ["https://yoursite.com/icon.png"]
-            }
-        });
-        await wcProvider.connect();
-        const provider = new ethers.BrowserProvider(wcProvider);
         const signer = await provider.getSigner();
-        return await executeBSCTransfer(signer, init.recipient_address, init.amount, true);
+        return await executeBSCTransfer(signer, init.recipient_address, init.amount);
     } catch (error) {
         throw new PaymentError(
             error.message || 'BSC payment processing failed',
