@@ -1,22 +1,27 @@
-console.log('🪙 Crypto Payments Module Loaded (BSC + TRON USDT)');
+// ======================================================
+// 🏗️  INITIALIZATION & CONFIGURATION
+// ======================================================
 
-/* ======================================================
-   🔒 CONFIGURATION & CONSTANTS
-====================================================== */
+// Check if we're in a browser environment
+if (typeof window === 'undefined') {
+    throw new Error('This script is designed to run in a browser environment');
+}
+
+// Configuration with fallbacks for all values
 const CONFIG = {
     BSC: {
         USDT_ADDRESS: "0x55d398326f99059fF775485246999027B3197955",
-        RPC_URL: process.env.NEXT_PUBLIC_BSC_RPC_URL || "https://bsc-dataseed.binance.org/",
-        CHAIN_ID: parseInt(process.env.NEXT_PUBLIC_CRYPTO_CHAIN_ID, 10) || 56,
+        RPC_URL: window.env?.NEXT_PUBLIC_BSC_RPC_URL || "https://bsc-dataseed.binance.org/",
+        CHAIN_ID: parseInt(window.env?.NEXT_PUBLIC_CRYPTO_CHAIN_ID, 10) || 56,
         EXPLORER: "https://bscscan.com/tx/",
-        WALLET_ADDRESS: process.env.NEXT_PUBLIC_CRYPTO_WALLET_ADDRESS_BSC || "0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d"
+        WALLET_ADDRESS: window.env?.NEXT_PUBLIC_CRYPTO_WALLET_ADDRESS_BSC || "0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d"
     },
     TRON: {
         USDT_ADDRESS: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
         EXPLORER: "https://tronscan.org/#/transaction/",
-        GRID_API: process.env.NEXT_PUBLIC_TRON_GRID_API || "https://api.trongrid.io",
-        API_KEY: process.env.NEXT_PUBLIC_TRON_PRO_API_KEY || "72ea8cc8-c0fb-44b6-8d07-f41bb5edc04c",
-        WALLET_ADDRESS: process.env.NEXT_PUBLIC_CRYPTO_WALLET_ADDRESS_TRON || "TVuPgEs4hSLSwPf8NMirVxeYse1vrmEtXL"
+        GRID_API: window.env?.NEXT_PUBLIC_TRON_GRID_API || "https://api.trongrid.io",
+        API_KEY: window.env?.NEXT_PUBLIC_TRON_PRO_API_KEY || "72ea8cc8-c0fb-44b6-8d07-f41bb5edc04c",
+        WALLET_ADDRESS: window.env?.NEXT_PUBLIC_CRYPTO_WALLET_ADDRESS_TRON || "TVuPgEs4hSLSwPf8NMirVxeYse1vrmEtXL"
     },
     WALLETCONNECT: {
         SRC: "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js",
@@ -24,14 +29,12 @@ const CONFIG = {
     },
     LIMITS: {
         MAX_RETRIES: 3,
-        TIMEOUT_MS: 300000,
-        ATTEMPT_TIMEOUT: 5 * 60 * 1000
+        TIMEOUT_MS: 300000, // 5 minutes
+        ATTEMPT_TIMEOUT: 5 * 60 * 1000 // 5 min
     }
 };
 
-/* ======================================================
-   🛡️ ERROR HANDLING & UTILITIES
-====================================================== */
+// Error codes
 const ERROR_CODES = {
     INVALID_INPUT: 'INVALID_INPUT',
     RATE_LIMIT: 'RATE_LIMIT',
@@ -39,18 +42,35 @@ const ERROR_CODES = {
     WALLET_ERROR: 'WALLET_ERROR',
     TRANSACTION_ERROR: 'TRANSACTION_ERROR',
     TIMEOUT: 'TIMEOUT',
-    PROVIDER_ERROR: 'PROVIDER_ERROR'
+    PROVIDER_ERROR: 'PROVIDER_ERROR',
+    INITIALIZATION_ERROR: 'INITIALIZATION_ERROR',
+    DEPENDENCY_ERROR: 'DEPENDENCY_ERROR'
 };
+
+// Track payment attempts
+const paymentAttempts = new Map();
+
+// ======================================================
+// 🛡️  ERROR HANDLING CLASS
+// ======================================================
 
 class PaymentError extends Error {
     constructor(message, code, metadata = {}) {
         super(message);
+        this.name = 'PaymentError';
         this.code = code;
         this.metadata = metadata;
+        
+        // Maintain proper stack trace
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, PaymentError);
+        }
     }
 }
 
-const paymentAttempts = new Map();
+// ======================================================
+// 🔌  UTILITY FUNCTIONS
+// ======================================================
 
 function validateInputs(participantId, voteCount) {
     if (!participantId || typeof participantId !== 'string') {
@@ -88,23 +108,26 @@ function trackEvent(name, metadata = {}) {
     }
 }
 
-/* ======================================================
-   🔌 NETWORK & WALLET MANAGEMENT
-====================================================== */
 function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
+// ======================================================
+// 🌐  NETWORK & WALLET MANAGEMENT
+// ======================================================
+
 async function detectPreferredNetwork() {
     try {
+        // Check for TRON first
         if (window.tronWeb && window.tronWeb.ready) {
             const tronNetwork = await window.tronWeb.trx.getNodeInfo();
             if (tronNetwork && tronNetwork.net) return 'TRON';
         }
         
+        // Then check for BSC
         if (window.ethereum) {
             const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-            if (chainId === '0x38') return 'BSC';
+            if (chainId === '0x38') return 'BSC'; // BSC mainnet
         }
     } catch (error) {
         console.warn('Network detection error:', error);
@@ -113,26 +136,35 @@ async function detectPreferredNetwork() {
 }
 
 async function loadWalletConnect() {
-    if (window.EthereumProvider) return window.EthereumProvider;
-    
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = CONFIG.WALLETCONNECT.SRC;
-        script.onload = () => {
-            console.log('✅ WalletConnect SDK loaded');
-            resolve(window.EthereumProvider);
-        };
-        script.onerror = () => {
-            reject(new PaymentError('Failed to load WalletConnect', ERROR_CODES.PROVIDER_ERROR));
-        };
-        document.head.appendChild(script);
-    });
+    try {
+        if (window.EthereumProvider) return window.EthereumProvider;
+        
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = CONFIG.WALLETCONNECT.SRC;
+            script.onload = () => {
+                if (!window.EthereumProvider) {
+                    reject(new PaymentError('WalletConnect not properly loaded', ERROR_CODES.PROVIDER_ERROR));
+                    return;
+                }
+                console.log('✅ WalletConnect SDK loaded');
+                resolve(window.EthereumProvider);
+            };
+            script.onerror = () => {
+                reject(new PaymentError('Failed to load WalletConnect', ERROR_CODES.PROVIDER_ERROR));
+            };
+            document.head.appendChild(script);
+        });
+    } catch (error) {
+        console.error('WalletConnect loading error:', error);
+        throw error;
+    }
 }
 
 async function connectWalletMobile() {
     try {
-        await loadWalletConnect();
-        const wcProvider = await window.EthereumProvider.init({
+        const wcProvider = await loadWalletConnect();
+        const provider = await window.EthereumProvider.init({
             projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
             chains: [CONFIG.BSC.CHAIN_ID],
             showQrModal: true,
@@ -144,8 +176,8 @@ async function connectWalletMobile() {
                 icons: ["https://yoursite.com/icon.png"]
             }
         });
-        await wcProvider.connect();
-        return wcProvider;
+        await provider.connect();
+        return provider;
     } catch (error) {
         throw new PaymentError(
             'Failed to connect via WalletConnect',
@@ -186,9 +218,10 @@ async function ensureBSCNetwork(provider) {
     }
 }
 
-/* ======================================================
-   🏦 PAYMENT PROCESSING
-====================================================== */
+// ======================================================
+// 🏦  PAYMENT PROCESSING
+// ======================================================
+
 async function initializeCryptoPayment(participantId, voteCount, network) {
     try {
         trackEvent('payment_initiated', { participantId, voteCount, network });
@@ -323,9 +356,10 @@ async function finalizePayment(txHash, network) {
     }
 }
 
-/* ======================================================
-   🧩 UI COMPONENTS
-====================================================== */
+// ======================================================
+// 🧩  UI COMPONENTS
+// ======================================================
+
 function createModal(content, className = '') {
     const modal = document.createElement('div');
     modal.className = `fixed inset-0 bg-black/80 flex items-center justify-center z-50 ${className}`;
@@ -482,19 +516,23 @@ function generateQR(text, elementId) {
     }
 }
 
-/* ======================================================
-   🚀 MAIN PAYMENT FLOW
-====================================================== */
+// ======================================================
+// 🚀  PAYMENT PROCESSING FUNCTIONS
+// ======================================================
+
 async function processBSCPayment(init) {
     try {
         let provider;
         if (window.ethereum && !isMobileDevice()) {
+            // Desktop with MetaMask
             provider = new ethers.BrowserProvider(window.ethereum);
             await ensureBSCNetwork(provider);
         } else if (isMobileDevice()) {
+            // Mobile with WalletConnect
             const wcProvider = await connectWalletMobile();
             provider = new ethers.BrowserProvider(wcProvider);
         } else {
+            // Fallback to manual payment
             return await showBSCManualModal(init.recipient_address, init.amount);
         }
         
@@ -524,14 +562,28 @@ async function processTronPayment(init) {
     }
 }
 
+// ======================================================
+// 🎯  MAIN PAYMENT FUNCTION
+// ======================================================
+
 async function processCryptoPayment() {
     try {
+        // Verify all required components are initialized
+        if (!CONFIG || !ERROR_CODES || !paymentAttempts) {
+            throw new PaymentError(
+                'System not properly initialized', 
+                ERROR_CODES.INITIALIZATION_ERROR
+            );
+        }
+
         const participantId = window.currentParticipant?.id;
         const voteCount = window.selectedVoteAmount;
 
+        // Validate inputs
         validateInputs(participantId, voteCount);
         checkRateLimit(participantId);
 
+        // Network selection
         const preferredNetwork = await detectPreferredNetwork();
         const network = await showNetworkSelectionModal(preferredNetwork);
         
@@ -540,6 +592,7 @@ async function processCryptoPayment() {
             return { success: false, cancelled: true };
         }
 
+        // Initialize payment
         const init = await initializeCryptoPayment(participantId, voteCount, network);
         const modal = showPaymentStatusModal(network, init.amount);
 
@@ -583,10 +636,64 @@ async function processCryptoPayment() {
     }
 }
 
-/* ======================================================
-   🔑 EXPORT & INITIALIZATION
-====================================================== */
-if (typeof window !== 'undefined') {
-    window.processCryptoPayment = processCryptoPayment;
-    console.log('🔒 Crypto Payments Module Ready');
+// ======================================================
+// 🔌  DEPENDENCY LOADING
+// ======================================================
+
+async function loadDependencies() {
+    try {
+        // Load ethers.js if not already available
+        if (typeof ethers === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.ethers.io/lib/ethers-5.6.umd.min.js';
+                script.onload = resolve;
+                script.onerror = () => reject(new Error('Failed to load ethers.js'));
+                document.head.appendChild(script);
+            });
+        }
+    } catch (error) {
+        throw new PaymentError(
+            'Failed to load required dependencies',
+            ERROR_CODES.DEPENDENCY_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+// ======================================================
+// 🏁  INITIALIZATION & EXPORT
+// ======================================================
+
+async function initializePaymentSystem() {
+    try {
+        await loadDependencies();
+        
+        // Verify all required components are available
+        if (typeof ethers === 'undefined') {
+            throw new PaymentError(
+                'Ethers.js not loaded',
+                ERROR_CODES.DEPENDENCY_ERROR
+            );
+        }
+
+        // Export the main payment function
+        window.processCryptoPayment = processCryptoPayment;
+        console.log('🔒 Crypto Payments Module Ready');
+    } catch (error) {
+        console.error('Initialization failed:', error);
+        // Provide a fallback function
+        window.processCryptoPayment = () => Promise.resolve({
+            success: false,
+            error: 'Payment system initialization failed',
+            code: ERROR_CODES.INITIALIZATION_ERROR
+        });
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializePaymentSystem);
+} else {
+    initializePaymentSystem();
 }
