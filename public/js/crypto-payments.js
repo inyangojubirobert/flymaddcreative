@@ -44,7 +44,8 @@ const ERROR_CODES = {
     TIMEOUT: 'TIMEOUT',
     PROVIDER_ERROR: 'PROVIDER_ERROR',
     INITIALIZATION_ERROR: 'INITIALIZATION_ERROR',
-    DEPENDENCY_ERROR: 'DEPENDENCY_ERROR'
+    DEPENDENCY_ERROR: 'DEPENDENCY_ERROR',
+    UNKNOWN_ERROR: 'UNKNOWN_ERROR'
 };
 
 // Track payment attempts
@@ -189,8 +190,11 @@ async function connectWalletMobile() {
 
 async function ensureBSCNetwork(provider) {
     try {
-        const { chainId } = await provider.getNetwork();
-        if (chainId !== BigInt(CONFIG.BSC.CHAIN_ID)) {
+        // For ethers v5
+        const network = await provider.getNetwork();
+        const chainId = network.chainId;
+        
+        if (chainId !== CONFIG.BSC.CHAIN_ID) {
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: `0x${CONFIG.BSC.CHAIN_ID.toString(16)}` }]
@@ -272,7 +276,7 @@ async function executeBSCTransfer(signer, recipient, amount) {
             signer
         );
 
-        const amountWei = ethers.parseUnits(amount.toString(), 18);
+        const amountWei = ethers.utils.parseUnits(amount.toString(), 18);
         const tx = await usdtContract.transfer(recipient, amountWei);
         
         const receipt = await Promise.race([
@@ -497,7 +501,14 @@ function successStatus(modal, txHash, explorerUrl) {
     setTimeout(() => modal.remove(), 5000);
 }
 
-function errorStatus(modal, message) {
+function errorStatus(modal, error) {
+    let message = error.message || 'Payment failed';
+    
+    // Special handling for ethers.js errors
+    if (error.message && error.message.includes('ethers.BrowserProvider')) {
+        message = 'Wallet connection error - please refresh and try again';
+    }
+    
     updateStatus(modal, `❌ ${message}`);
     modal.querySelector('.loading-spinner')?.remove();
     
@@ -522,27 +533,45 @@ function generateQR(text, elementId) {
 
 async function processBSCPayment(init) {
     try {
+        console.debug('[BSC Payment] Starting BSC payment process');
+        
         let provider;
         if (window.ethereum && !isMobileDevice()) {
-            // Desktop with MetaMask
-            provider = new ethers.BrowserProvider(window.ethereum);
+            console.debug('[BSC Payment] Using window.ethereum provider');
+            
+            // Using ethers v5 Web3Provider
+            provider = new ethers.providers.Web3Provider(window.ethereum);
             await ensureBSCNetwork(provider);
         } else if (isMobileDevice()) {
-            // Mobile with WalletConnect
+            console.debug('[BSC Payment] Using WalletConnect for mobile');
             const wcProvider = await connectWalletMobile();
-            provider = new ethers.BrowserProvider(wcProvider);
+            provider = new ethers.providers.Web3Provider(wcProvider);
         } else {
-            // Fallback to manual payment
+            console.debug('[BSC Payment] Falling back to manual payment');
             return await showBSCManualModal(init.recipient_address, init.amount);
         }
         
-        const signer = await provider.getSigner();
+        console.debug('[BSC Payment] Getting signer');
+        const signer = provider.getSigner();
+        
+        console.debug('[BSC Payment] Executing transfer');
         return await executeBSCTransfer(signer, init.recipient_address, init.amount);
     } catch (error) {
+        console.error('[BSC Payment] Error:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
+        
         throw new PaymentError(
             error.message || 'BSC payment processing failed',
             error.code || ERROR_CODES.TRANSACTION_ERROR,
-            { originalError: error }
+            { 
+                originalError: error,
+                stage: 'bsc-payment',
+                providerAvailable: !!window.ethereum,
+                isMobile: isMobileDevice()
+            }
         );
     }
 }
@@ -626,7 +655,7 @@ async function processCryptoPayment() {
             return result;
         } catch (error) {
             console.error('[Payment] Inner payment error:', error);
-            errorStatus(modal, error.message || 'Payment failed');
+            errorStatus(modal, error);
             // Enhance the error before re-throwing
             throw new PaymentError(
                 error.message || 'Payment processing failed',
@@ -674,9 +703,18 @@ async function loadDependencies() {
         if (typeof ethers === 'undefined') {
             await new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.src = 'https://cdn.ethers.io/lib/ethers-5.6.umd.min.js';
-                script.onload = resolve;
-                script.onerror = () => reject(new Error('Failed to load ethers.js'));
+                script.src = 'https://cdn.ethers.io/lib/ethers-5.7.2.min.js';
+                script.onload = () => {
+                    if (!ethers || !ethers.providers) {
+                        reject(new Error('Ethers.js not properly loaded'));
+                        return;
+                    }
+                    console.log('✅ Ethers.js v5 loaded');
+                    resolve();
+                };
+                script.onerror = () => {
+                    reject(new Error('Failed to load ethers.js'));
+                };
                 document.head.appendChild(script);
             });
         }
@@ -698,9 +736,9 @@ async function initializePaymentSystem() {
         await loadDependencies();
         
         // Verify all required components are available
-        if (typeof ethers === 'undefined') {
+        if (typeof ethers === 'undefined' || !ethers.providers) {
             throw new PaymentError(
-                'Ethers.js not loaded',
+                'Ethers.js not properly loaded',
                 ERROR_CODES.DEPENDENCY_ERROR
             );
         }
@@ -714,7 +752,8 @@ async function initializePaymentSystem() {
         window.processCryptoPayment = () => Promise.resolve({
             success: false,
             error: 'Payment system initialization failed',
-            code: ERROR_CODES.INITIALIZATION_ERROR
+            code: ERROR_CODES.INITIALIZATION_ERROR,
+            details: { error: error.message }
         });
     }
 }
