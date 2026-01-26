@@ -6,13 +6,17 @@ console.log('🪙 Crypto Payments Module Loaded (BSC + TRON USDT)');
 const CONFIG = {
     BSC: {
         USDT_ADDRESS: "0x55d398326f99059fF775485246999027B3197955",
-        RPC_URL: "https://bsc-dataseed.binance.org/",
-        CHAIN_ID: 56,
-        EXPLORER: "https://bscscan.com/tx/"
+        RPC_URL: process.env.NEXT_PUBLIC_BSC_RPC_URL || "https://bsc-dataseed.binance.org/",
+        CHAIN_ID: parseInt(process.env.NEXT_PUBLIC_CRYPTO_CHAIN_ID, 10) || 56,
+        EXPLORER: "https://bscscan.com/tx/",
+        WALLET_ADDRESS: process.env.NEXT_PUBLIC_CRYPTO_WALLET_ADDRESS_BSC || "0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d"
     },
     TRON: {
         USDT_ADDRESS: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-        EXPLORER: "https://tronscan.org/#/transaction/"
+        EXPLORER: "https://tronscan.org/#/transaction/",
+        GRID_API: process.env.NEXT_PUBLIC_TRON_GRID_API || "https://api.trongrid.io",
+        API_KEY: process.env.NEXT_PUBLIC_TRON_PRO_API_KEY || "72ea8cc8-c0fb-44b6-8d07-f41bb5edc04c",
+        WALLET_ADDRESS: process.env.NEXT_PUBLIC_CRYPTO_WALLET_ADDRESS_TRON || "TVuPgEs4hSLSwPf8NMirVxeYse1vrmEtXL"
     },
     WALLETCONNECT: {
         SRC: "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js",
@@ -20,8 +24,8 @@ const CONFIG = {
     },
     LIMITS: {
         MAX_RETRIES: 3,
-        TIMEOUT_MS: 300000, // 5 minutes
-        ATTEMPT_TIMEOUT: 5 * 60 * 1000 // 5 min
+        TIMEOUT_MS: 300000,
+        ATTEMPT_TIMEOUT: 5 * 60 * 1000
     }
 };
 
@@ -93,7 +97,11 @@ function isMobileDevice() {
 
 async function detectPreferredNetwork() {
     try {
-        if (window.tronWeb && window.tronWeb.ready) return 'TRON';
+        if (window.tronWeb && window.tronWeb.ready) {
+            const tronNetwork = await window.tronWeb.trx.getNodeInfo();
+            if (tronNetwork && tronNetwork.net) return 'TRON';
+        }
+        
         if (window.ethereum) {
             const chainId = await window.ethereum.request({ method: 'eth_chainId' });
             if (chainId === '0x38') return 'BSC';
@@ -108,11 +116,6 @@ async function loadWalletConnect() {
     if (window.EthereumProvider) return window.EthereumProvider;
     
     return new Promise((resolve, reject) => {
-        if (typeof window === 'undefined') {
-            reject(new PaymentError('Window object not available', ERROR_CODES.PROVIDER_ERROR));
-            return;
-        }
-
         const script = document.createElement('script');
         script.src = CONFIG.WALLETCONNECT.SRC;
         script.onload = () => {
@@ -124,6 +127,32 @@ async function loadWalletConnect() {
         };
         document.head.appendChild(script);
     });
+}
+
+async function connectWalletMobile() {
+    try {
+        await loadWalletConnect();
+        const wcProvider = await window.EthereumProvider.init({
+            projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
+            chains: [CONFIG.BSC.CHAIN_ID],
+            showQrModal: true,
+            qrModalOptions: { themeMode: 'dark' },
+            metadata: {
+                name: "OneDream Voting",
+                description: "Secure USDT Payment",
+                url: window.location.origin,
+                icons: ["https://yoursite.com/icon.png"]
+            }
+        });
+        await wcProvider.connect();
+        return wcProvider;
+    } catch (error) {
+        throw new PaymentError(
+            'Failed to connect via WalletConnect',
+            ERROR_CODES.WALLET_ERROR,
+            { originalError: error }
+        );
+    }
 }
 
 async function ensureBSCNetwork(provider) {
@@ -195,19 +224,28 @@ async function initializeCryptoPayment(participantId, voteCount, network) {
 
 async function executeBSCTransfer(signer, recipient, amount) {
     try {
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new PaymentError('Transaction timeout', ERROR_CODES.TIMEOUT)), 
+            CONFIG.LIMITS.TIMEOUT_MS)
+        );
+
         if (typeof ethers === 'undefined') {
             throw new PaymentError('Ethers.js not loaded', ERROR_CODES.PROVIDER_ERROR);
         }
 
         const usdtContract = new ethers.Contract(
-            CONFIG.BSC.USDT_ADDRESS, // Uses hardcoded USDT address
+            CONFIG.BSC.USDT_ADDRESS,
             ['function transfer(address,uint256) returns (bool)'],
             signer
         );
 
         const amountWei = ethers.parseUnits(amount.toString(), 18);
         const tx = await usdtContract.transfer(recipient, amountWei);
-        const receipt = await tx.wait();
+        
+        const receipt = await Promise.race([
+            tx.wait(),
+            timeoutPromise
+        ]);
 
         if (!receipt) {
             throw new PaymentError('Transaction receipt not found', ERROR_CODES.TRANSACTION_ERROR);
@@ -216,12 +254,70 @@ async function executeBSCTransfer(signer, recipient, amount) {
         return {
             txHash: tx.hash,
             network: 'BSC',
-            explorerUrl: `${CONFIG.BSC.EXPLORER}${tx.hash}` // Uses hardcoded explorer URL
+            explorerUrl: `${CONFIG.BSC.EXPLORER}${tx.hash}`
         };
     } catch (error) {
         throw new PaymentError(
             error.message || 'BSC transfer failed',
             ERROR_CODES.TRANSACTION_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function executeTronTransfer(recipient, amount) {
+    try {
+        if (!window.tronWeb || !window.tronWeb.ready) {
+            throw new PaymentError('TronWeb not available', ERROR_CODES.PROVIDER_ERROR);
+        }
+
+        const contract = await window.tronWeb.contract().at(CONFIG.TRON.USDT_ADDRESS);
+        const amountSun = Math.floor(amount * 1_000_000);
+        const tx = await contract.transfer(recipient, amountSun).send();
+
+        if (!tx || !tx.transaction || !tx.transaction.txID) {
+            throw new PaymentError('TRON transaction failed', ERROR_CODES.TRANSACTION_ERROR);
+        }
+
+        return {
+            txHash: tx.transaction.txID,
+            network: 'TRON',
+            explorerUrl: `${CONFIG.TRON.EXPLORER}${tx.transaction.txID}`
+        };
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'TRON transfer failed',
+            ERROR_CODES.TRANSACTION_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function finalizePayment(txHash, network) {
+    try {
+        const response = await fetch('/api/onedream/finalize-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                transaction_hash: txHash,
+                network: network.toLowerCase()
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new PaymentError(
+                errorData.message || 'Payment finalization failed',
+                ERROR_CODES.NETWORK_ERROR,
+                { status: response.status, ...errorData }
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'Payment finalization failed',
+            ERROR_CODES.NETWORK_ERROR,
             { originalError: error }
         );
     }
@@ -289,6 +385,7 @@ function showNetworkSelectionModal(preferredNetwork) {
         }
     });
 }
+
 function showBSCManualModal(recipient, amount) {
     return new Promise((resolve) => {
         const modal = createModal(`
@@ -346,6 +443,7 @@ function showTronManualModal(recipient, amount) {
         };
     });
 }
+
 function updateStatus(modal, text) {
     const element = modal.querySelector('#statusText');
     if (element) element.textContent = text;
@@ -377,7 +475,7 @@ function generateQR(text, elementId) {
     const element = document.getElementById(elementId);
     if (element) {
         element.innerHTML = `
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(text)}" 
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(text)}" 
                  alt="QR Code" 
                  class="mx-auto" />
         `;
@@ -393,10 +491,13 @@ async function processBSCPayment(init) {
         if (window.ethereum && !isMobileDevice()) {
             provider = new ethers.BrowserProvider(window.ethereum);
             await ensureBSCNetwork(provider);
+        } else if (isMobileDevice()) {
+            const wcProvider = await connectWalletMobile();
+            provider = new ethers.BrowserProvider(wcProvider);
         } else {
-            // Fallback to manual payment for mobile devices
             return await showBSCManualModal(init.recipient_address, init.amount);
         }
+        
         const signer = await provider.getSigner();
         return await executeBSCTransfer(signer, init.recipient_address, init.amount);
     } catch (error) {
@@ -428,11 +529,9 @@ async function processCryptoPayment() {
         const participantId = window.currentParticipant?.id;
         const voteCount = window.selectedVoteAmount;
 
-        // Validate inputs
         validateInputs(participantId, voteCount);
         checkRateLimit(participantId);
 
-        // Network selection
         const preferredNetwork = await detectPreferredNetwork();
         const network = await showNetworkSelectionModal(preferredNetwork);
         
@@ -441,7 +540,6 @@ async function processCryptoPayment() {
             return { success: false, cancelled: true };
         }
 
-        // Initialize payment
         const init = await initializeCryptoPayment(participantId, voteCount, network);
         const modal = showPaymentStatusModal(network, init.amount);
 
