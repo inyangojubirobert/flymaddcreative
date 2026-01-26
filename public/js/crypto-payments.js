@@ -1,6 +1,12 @@
 console.log('🪙 Crypto Payments Module Loaded (BSC + TRON USDT)');
 
 /* ======================================================
+   🔒 CONFIGURATION & ADDRESSES
+====================================================== */
+const BSC_USDT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955"; // BEP-20
+const TRON_USDT_ADDRESS = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";          // TRC-20 (Mainnet)
+
+/* ======================================================
    🔒 WALLETCONNECT LOADER
 ====================================================== */
 async function loadWalletConnect() {
@@ -63,86 +69,95 @@ async function processCryptoPayment() {
 /* ======================================================
    🟡 BSC – USDT (BEP-20)
 ====================================================== */
+/* ======================================================
+   🟡 BSC – USDT (BEP-20) – PRODUCTION READY
+====================================================== */
+
 async function processBSC(init) {
-    const isInjected = window.ethereum;
+    if (typeof ethers === 'undefined') {
+        alert("Payment library (ethers.js) failed to load. Please refresh.");
+        return { success: false };
+    }
 
-    if (isInjected) return processBSCInjected(init);
-    return processBSCWalletConnect(init);
-}
+    // Desktop wallet
+    if (window.ethereum) {
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            await ensureBSCNetwork(provider);
+            const signer = await provider.getSigner();
+            return await executeBSCTransfer(signer, init);
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
+    }
 
-async function processBSCInjected(init) {
-    const modal = showPaymentStatusModal('BSC', init.amount);
-
+    // Mobile wallets (WalletConnect)
     try {
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send('eth_requestAccounts', []);
-        const signer = provider.getSigner();
+        await loadWalletConnect();
+        const wcProvider = await window.EthereumProvider.init({
+            projectId: window.WALLETCONNECT_PROJECT_ID,
+            chains: [56],
+            showQrModal: true,
+            qrModalOptions: { themeMode: 'dark' },
+            metadata: { name: "OneDream Voting", url: window.location.origin }
+        });
 
-        updateStatus(modal, 'Confirm USDT transfer…');
-
-        const usdt = new ethers.Contract(
-            '0x55d398326f99059fF775485246999027B3197955',
-            ['function transfer(address,uint256) returns (bool)'],
-            signer
-        );
-
-        const tx = await usdt.transfer(
-            init.recipient_address,
-            ethers.utils.parseUnits(init.amount.toString(), 18)
-        );
-
-        updateStatus(modal, 'Waiting for confirmation…');
-        await tx.wait(1);
-
-        successStatus(modal);
-        return finalize(tx.hash, 'bsc');
+        await wcProvider.connect();
+        const provider = new ethers.BrowserProvider(wcProvider);
+        const signer = await provider.getSigner();
+        return await executeBSCTransfer(signer, init, true);
     } catch (err) {
-        errorStatus(modal, err.message);
         return { success: false, error: err.message };
     }
 }
 
-async function processBSCWalletConnect(init) {
-    const modal = showPaymentStatusModal('BSC', init.amount);
-
+// Shared function to perform BSC USDT transfer
+async function executeBSCTransfer(signer, init, mobile = false) {
+    const modal = showPaymentStatusModal(mobile ? 'BSC (Mobile)' : 'BSC', init.amount);
     try {
-        await loadWalletConnect();
+        const usdt = new ethers.Contract(BSC_USDT_ADDRESS, ['function transfer(address,uint256) returns (bool)'], signer);
+        updateStatus(modal, 'Confirming USDT transfer…');
 
-        const provider = await window.EthereumProvider.init({
-            projectId: window.WALLETCONNECT_PROJECT_ID,
-            chains: [56],
-            showQrModal: true,
-            methods: ['eth_sendTransaction'],
-            qrModalOptions: { themeMode: 'dark' }
-        });
-
-        updateStatus(modal, 'Connect your wallet…');
-        await provider.connect();
-
-        const ethersProvider = new ethers.providers.Web3Provider(provider);
-        const signer = ethersProvider.getSigner();
-
-        updateStatus(modal, 'Confirm USDT transfer…');
-
-        const usdt = new ethers.Contract(
-            '0x55d398326f99059fF775485246999027B3197955',
-            ['function transfer(address,uint256) returns (bool)'],
-            signer
-        );
-
-        const tx = await usdt.transfer(
-            init.recipient_address,
-            ethers.utils.parseUnits(init.amount.toString(), 18)
-        );
-
-        updateStatus(modal, 'Waiting for confirmation…');
-        await tx.wait(1);
+        const tx = await usdt.transfer(init.recipient_address, ethers.parseUnits(init.amount.toString(), 18));
+        updateStatus(modal, 'Waiting for network confirmation…');
+        await tx.wait(); // waits for 1 confirmation by default
 
         successStatus(modal);
         return finalize(tx.hash, 'bsc');
     } catch (err) {
-        errorStatus(modal, err.message);
+        if (err.code === 4001) errorStatus(modal, "User rejected the transaction");
+        else if (err.message.includes('insufficient')) errorStatus(modal, "Insufficient BNB for gas fee");
+        else errorStatus(modal, err.message);
         return { success: false, error: err.message };
+    }
+}
+
+// Ensure the user is on Binance Smart Chain
+async function ensureBSCNetwork(provider) {
+    const { chainId } = await provider.getNetwork();
+    if (chainId !== 56n) { // 56 = BSC
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x38' }]
+            });
+        } catch (err) {
+            // Add chain if missing
+            if (err.code === 4902) {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: '0x38',
+                        chainName: 'Binance Smart Chain',
+                        nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                        rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                        blockExplorerUrls: ['https://bscscan.com/']
+                    }]
+                });
+            } else {
+                throw err; // rethrow other errors
+            }
+        }
     }
 }
 
@@ -153,29 +168,30 @@ async function processTron(init) {
     const modal = showPaymentStatusModal('TRON', init.amount);
 
     try {
-        if (!window.tronWeb || !window.tronWeb.ready) {
-            modal.remove();
-            return showTronQR(init);
+        if (window.tronWeb && window.tronWeb.ready) {
+            updateStatus(modal, 'Preparing TRC-20…');
+            const contract = await window.tronWeb.contract().at(TRON_USDT_ADDRESS);
+            const amountSun = Math.floor(init.amount * 1_000_000);
+
+            updateStatus(modal, 'Sign transaction in TronLink…');
+            const tx = await contract.transfer(init.recipient_address, amountSun).send();
+
+            successStatus(modal);
+            return finalize(tx, 'tron');
         }
 
-        const contract = await tronWeb.contract().at('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t');
-        const amount = Math.floor(init.amount * 1e6);
-
-        updateStatus(modal, 'Confirm in TronLink…');
-        const tx = await contract.transfer(init.recipient_address, amount).send();
-
-        successStatus(modal);
-        return finalize(tx, 'tron');
+        // Fallback QR for users not in TronLink
+        modal.remove();
+        return showTronManualModal(init);
     } catch (err) {
         errorStatus(modal, err.message);
         return { success: false, error: err.message };
     }
 }
 
-function showTronQR(init) {
+function showTronManualModal(init) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50';
-
     modal.innerHTML = `
         <div class="bg-white p-6 rounded-xl text-center w-80">
             <h3 class="font-bold mb-3">TRON USDT</h3>
@@ -184,7 +200,6 @@ function showTronQR(init) {
             <button id="closeTron" class="mt-4 text-gray-500">Cancel</button>
         </div>
     `;
-
     document.body.appendChild(modal);
     generateQR(init.recipient_address, 'tronQR');
 
@@ -216,7 +231,7 @@ function updateStatus(modal, text) {
 
 function successStatus(modal) {
     modal.querySelector('#statusText').textContent = '✅ Payment confirmed';
-    modal.querySelector('.loading-spinner').remove();
+    modal.querySelector('.loading-spinner')?.remove();
     setTimeout(() => modal.remove(), 2000);
 }
 
@@ -260,5 +275,3 @@ function generateQR(text, id) {
    🔑 EXPORT
 ====================================================== */
 window.processCryptoPayment = processCryptoPayment;
-//
-
