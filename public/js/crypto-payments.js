@@ -7,24 +7,30 @@ if (typeof window === 'undefined') {
     throw new Error('This script is designed to run in a browser environment');
 }
 
-// Public configuration (safe to expose)
-const PUBLIC_CONFIG = {
-    NETWORKS: {
-        BSC: {
-            USDT_ADDRESS: "0x55d398326f99059fF775485246999027B3197955",
-            EXPLORER: "https://bscscan.com/tx/",
-            CHAIN_ID: 56,
-            SYMBOL: "BSC"
-        },
-        TRON: {
-            USDT_ADDRESS: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-            EXPLORER: "https://tronscan.org/#/transaction/",
-            SYMBOL: "TRON"
-        }
+// Configuration with fallbacks for all values
+const CONFIG = {
+    BSC: {
+        USDT_ADDRESS: "0x55d398326f99059fF775485246999027B3197955",
+        RPC_URL: window.env?.NEXT_PUBLIC_BSC_RPC_URL || "https://bsc-dataseed.binance.org/",
+        CHAIN_ID: parseInt(window.env?.NEXT_PUBLIC_CRYPTO_CHAIN_ID, 10) || 56,
+        EXPLORER: "https://bscscan.com/tx/",
+        WALLET_ADDRESS: window.env?.NEXT_PUBLIC_CRYPTO_WALLET_ADDRESS_BSC || "0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d"
     },
-    UI: {
+    TRON: {
+        USDT_ADDRESS: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+        EXPLORER: "https://tronscan.org/#/transaction/",
+        GRID_API: window.env?.NEXT_PUBLIC_TRON_GRID_API || "https://api.trongrid.io",
+        API_KEY: window.env?.NEXT_PUBLIC_TRON_PRO_API_KEY || "72ea8cc8-c0fb-44b6-8d07-f41bb5edc04c",
+        WALLET_ADDRESS: window.env?.NEXT_PUBLIC_CRYPTO_WALLET_ADDRESS_TRON || "TVuPgEs4hSLSwPf8NMirVxeYse1vrmEtXL"
+    },
+    WALLETCONNECT: {
+        SRC: "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js",
+        PROJECT_ID: window.WALLETCONNECT_PROJECT_ID || "default_project_id"
+    },
+    LIMITS: {
         MAX_RETRIES: 3,
-        TIMEOUT_MS: 300000
+        TIMEOUT_MS: 300000, // 5 minutes
+        ATTEMPT_TIMEOUT: 5 * 60 * 1000 // 5 min
     }
 };
 
@@ -56,6 +62,7 @@ class PaymentError extends Error {
         this.code = code;
         this.metadata = metadata;
         
+        // Maintain proper stack trace
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, PaymentError);
         }
@@ -78,9 +85,9 @@ function validateInputs(participantId, voteCount) {
 function checkRateLimit(participantId) {
     const now = Date.now();
     const attempts = paymentAttempts.get(participantId) || [];
-    const recentAttempts = attempts.filter(t => now - t < PUBLIC_CONFIG.UI.TIMEOUT_MS);
+    const recentAttempts = attempts.filter(t => now - t < CONFIG.LIMITS.ATTEMPT_TIMEOUT);
     
-    if (recentAttempts.length >= PUBLIC_CONFIG.UI.MAX_RETRIES) {
+    if (recentAttempts.length >= CONFIG.LIMITS.MAX_RETRIES) {
         throw new PaymentError(
             'Too many payment attempts. Please try again later.',
             ERROR_CODES.RATE_LIMIT,
@@ -103,8 +110,7 @@ function trackEvent(name, metadata = {}) {
 }
 
 function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 // ======================================================
@@ -113,14 +119,16 @@ function isMobileDevice() {
 
 async function detectPreferredNetwork() {
     try {
+        // Check for TRON first
         if (window.tronWeb && window.tronWeb.ready) {
             const tronNetwork = await window.tronWeb.trx.getNodeInfo();
             if (tronNetwork && tronNetwork.net) return 'TRON';
         }
         
+        // Then check for BSC
         if (window.ethereum) {
             const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-            if (chainId === '0x38') return 'BSC';
+            if (chainId === '0x38') return 'BSC'; // BSC mainnet
         }
     } catch (error) {
         console.warn('Network detection error:', error);
@@ -134,7 +142,7 @@ async function loadWalletConnect() {
         
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js";
+            script.src = CONFIG.WALLETCONNECT.SRC;
             script.onload = () => {
                 if (!window.EthereumProvider) {
                     reject(new PaymentError('WalletConnect not properly loaded', ERROR_CODES.PROVIDER_ERROR));
@@ -158,8 +166,8 @@ async function connectWalletMobile() {
     try {
         const wcProvider = await loadWalletConnect();
         const provider = await window.EthereumProvider.init({
-            projectId: "default_project_id",
-            chains: [PUBLIC_CONFIG.NETWORKS.BSC.CHAIN_ID],
+            projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
+            chains: [CONFIG.BSC.CHAIN_ID],
             showQrModal: true,
             qrModalOptions: { themeMode: 'dark' },
             metadata: {
@@ -175,6 +183,178 @@ async function connectWalletMobile() {
         throw new PaymentError(
             'Failed to connect via WalletConnect',
             ERROR_CODES.WALLET_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function ensureBSCNetwork(provider) {
+    try {
+        // For ethers v5
+        const network = await provider.getNetwork();
+        const chainId = network.chainId;
+        
+        if (chainId !== CONFIG.BSC.CHAIN_ID) {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: `0x${CONFIG.BSC.CHAIN_ID.toString(16)}` }]
+            });
+        }
+    } catch (switchError) {
+        if (switchError.code === 4902) {
+            await window.ethereum.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                    chainId: `0x${CONFIG.BSC.CHAIN_ID.toString(16)}`,
+                    chainName: 'Binance Smart Chain',
+                    nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                    rpcUrls: [CONFIG.BSC.RPC_URL],
+                    blockExplorerUrls: ['https://bscscan.com/']
+                }]
+            });
+        } else {
+            throw new PaymentError(
+                'Failed to switch to BSC network',
+                ERROR_CODES.NETWORK_ERROR,
+                { originalError: switchError }
+            );
+        }
+    }
+}
+
+// ======================================================
+// 🏦  PAYMENT PROCESSING
+// ======================================================
+
+async function initializeCryptoPayment(participantId, voteCount, network) {
+    try {
+        trackEvent('payment_initiated', { participantId, voteCount, network });
+        
+        const response = await fetch('/api/onedream/init-crypto-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                participant_id: participantId,
+                vote_count: voteCount,
+                network: network.toLowerCase()
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new PaymentError(
+                errorData.message || 'Backend initialization failed',
+                ERROR_CODES.NETWORK_ERROR,
+                { status: response.status, ...errorData }
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'Payment initialization failed',
+            ERROR_CODES.NETWORK_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function executeBSCTransfer(signer, recipient, amount) {
+    try {
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new PaymentError('Transaction timeout', ERROR_CODES.TIMEOUT)), 
+            CONFIG.LIMITS.TIMEOUT_MS)
+        );
+
+        if (typeof ethers === 'undefined') {
+            throw new PaymentError('Ethers.js not loaded', ERROR_CODES.PROVIDER_ERROR);
+        }
+
+        const usdtContract = new ethers.Contract(
+            CONFIG.BSC.USDT_ADDRESS,
+            ['function transfer(address,uint256) returns (bool)'],
+            signer
+        );
+
+        const amountWei = ethers.utils.parseUnits(amount.toString(), 18);
+        const tx = await usdtContract.transfer(recipient, amountWei);
+        
+        const receipt = await Promise.race([
+            tx.wait(),
+            timeoutPromise
+        ]);
+
+        if (!receipt) {
+            throw new PaymentError('Transaction receipt not found', ERROR_CODES.TRANSACTION_ERROR);
+        }
+
+        return {
+            txHash: tx.hash,
+            network: 'BSC',
+            explorerUrl: `${CONFIG.BSC.EXPLORER}${tx.hash}`
+        };
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'BSC transfer failed',
+            ERROR_CODES.TRANSACTION_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function executeTronTransfer(recipient, amount) {
+    try {
+        if (!window.tronWeb || !window.tronWeb.ready) {
+            throw new PaymentError('TronWeb not available', ERROR_CODES.PROVIDER_ERROR);
+        }
+
+        const contract = await window.tronWeb.contract().at(CONFIG.TRON.USDT_ADDRESS);
+        const amountSun = Math.floor(amount * 1_000_000);
+        const tx = await contract.transfer(recipient, amountSun).send();
+
+        if (!tx || !tx.transaction || !tx.transaction.txID) {
+            throw new PaymentError('TRON transaction failed', ERROR_CODES.TRANSACTION_ERROR);
+        }
+
+        return {
+            txHash: tx.transaction.txID,
+            network: 'TRON',
+            explorerUrl: `${CONFIG.TRON.EXPLORER}${tx.transaction.txID}`
+        };
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'TRON transfer failed',
+            ERROR_CODES.TRANSACTION_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function finalizePayment(txHash, network) {
+    try {
+        const response = await fetch('/api/onedream/finalize-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                transaction_hash: txHash,
+                network: network.toLowerCase()
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new PaymentError(
+                errorData.message || 'Payment finalization failed',
+                ERROR_CODES.NETWORK_ERROR,
+                { status: response.status, ...errorData }
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'Payment finalization failed',
+            ERROR_CODES.NETWORK_ERROR,
             { originalError: error }
         );
     }
@@ -197,67 +377,154 @@ function showPaymentStatusModal(network, amount) {
         <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[90vw]">
             <div class="flex justify-between items-center mb-3">
                 <h3 class="font-bold text-lg">${network} Payment</h3>
-                <span class="text-xs bg-gray-100 px-2 py-1 rounded">${network === 'BSC' ? 'BEP-20' : 'TRC-20'}</span>
+                <span class="text-xs bg-gray-100 px-2 py-1 rounded">${
+                    network === 'BSC' ? 'BEP-20' : 'TRC-20'
+                }</span>
             </div>
             <div class="text-2xl font-bold mb-4">${amount} USDT</div>
             <div id="statusText" class="min-h-6 mb-4">Initializing…</div>
             <div class="loading-spinner mx-auto mt-4"></div>
             <div id="txLink" class="mt-4 text-sm hidden">
-                <a href="#" target="_blank" rel="noopener noreferrer" class="text-blue-500">View on explorer</a>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="text-blue-500">
+                    View on explorer
+                </a>
             </div>
             <button id="closeModal" class="mt-4 text-gray-500 text-sm">Close</button>
         </div>
     `);
 }
 
-async function showWalletConnectQR(network, amount, recipient) {
+function showNetworkSelectionModal(preferredNetwork) {
     return new Promise((resolve) => {
         const modal = createModal(`
-            <div class="bg-white p-6 rounded-xl text-center w-80">
-                <h3 class="font-bold mb-3">${network} USDT Payment</h3>
-                <p class="text-sm mb-4">Scan with your crypto wallet</p>
-                <div id="wcQR" class="mx-auto mb-4"></div>
-                <p class="text-sm text-gray-500">Or connect manually if your wallet supports it</p>
-                <button id="connectWallet" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
-                    Connect Wallet
+            <div class="bg-white p-6 rounded-xl w-80 text-center">
+                <h3 class="font-bold mb-4">Choose Network</h3>
+                <button id="bsc" class="w-full bg-yellow-400 hover:bg-yellow-500 py-3 rounded mb-3 flex items-center justify-center gap-2 transition-colors">
+                    <span>🟡</span> BSC (BEP-20)
+                    ${preferredNetwork === 'BSC' ? '<span class="text-xs">(Detected)</span>' : ''}
                 </button>
-                <button id="closeModal" class="mt-2 text-gray-500 text-sm">Cancel</button>
+                <button id="tron" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded flex items-center justify-center gap-2 transition-colors">
+                    <span>🔴</span> TRON (TRC-20)
+                    ${preferredNetwork === 'TRON' ? '<span class="text-xs">(Detected)</span>' : ''}
+                </button>
+                <button id="cancel" class="mt-4 text-gray-500 text-sm">Cancel</button>
             </div>
         `);
 
-        // Initialize WalletConnect
-        loadWalletConnect().then(async () => {
-            const provider = await window.EthereumProvider.init({
-                projectId: "default_project_id",
-                chains: [PUBLIC_CONFIG.NETWORKS.BSC.CHAIN_ID],
-                showQrModal: true,
-                qrModalOptions: { themeMode: 'dark' }
-            });
+        modal.querySelector('#bsc').onclick = () => { modal.remove(); resolve('BSC'); };
+        modal.querySelector('#tron').onclick = () => { modal.remove(); resolve('TRON'); };
+        modal.querySelector('#cancel').onclick = () => { modal.remove(); resolve(null); };
 
-            provider.on('display_uri', (uri) => {
-                modal.querySelector('#wcQR').innerHTML = `
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(uri)}" 
-                         alt="WalletConnect QR Code" 
-                         class="mx-auto" />
-                `;
-            });
+        if (preferredNetwork) {
+            setTimeout(() => {
+                modal.querySelector(`#${preferredNetwork.toLowerCase()}`)
+                    .classList.add('ring-2', 'ring-blue-500');
+            }, 100);
+        }
+    });
+}
 
-            modal.querySelector('#connectWallet').onclick = async () => {
-                try {
-                    await provider.connect();
-                    resolve(provider);
-                    modal.remove();
-                } catch (error) {
-                    console.error('Connection error:', error);
-                }
-            };
-        });
+function showBSCManualModal(recipient, amount) {
+    return new Promise((resolve) => {
+        const modal = createModal(`
+            <div class="bg-white p-6 rounded-xl text-center w-80">
+                <h3 class="font-bold mb-3">BSC USDT Payment</h3>
+                <p class="text-sm mb-2">Send ${amount} USDT (BEP-20) to:</p>
+                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3">${recipient}</div>
+                <div id="bscQR" class="mx-auto mb-3"></div>
+                <p class="text-sm text-gray-500">Scan with your BSC wallet</p>
+                <button id="copyAddress" class="mt-2 text-blue-500 text-xs">Copy Address</button>
+                <button id="closeBSC" class="mt-4 px-4 py-2 bg-gray-200 rounded">Cancel</button>
+            </div>
+        `);
 
-        modal.querySelector('#closeModal').onclick = () => {
+        generateQR(`ethereum:${recipient}?value=${amount}&contractAddress=${CONFIG.BSC.USDT_ADDRESS}`, 'bscQR');
+
+        modal.querySelector('#copyAddress').onclick = () => {
+            navigator.clipboard.writeText(recipient)
+                .then(() => alert('Address copied to clipboard!'))
+                .catch(() => alert('Failed to copy address'));
+        };
+
+        modal.querySelector('#closeBSC').onclick = () => {
             modal.remove();
-            resolve(null);
+            resolve({ success: false, cancelled: true });
         };
     });
+}
+
+function showTronManualModal(recipient, amount) {
+    return new Promise((resolve) => {
+        const modal = createModal(`
+            <div class="bg-white p-6 rounded-xl text-center w-80">
+                <h3 class="font-bold mb-3">TRON USDT Payment</h3>
+                <p class="text-sm mb-2">Send ${amount} USDT (TRC-20) to:</p>
+                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3">${recipient}</div>
+                <div id="tronQR" class="mx-auto mb-3"></div>
+                <p class="text-sm text-gray-500">Scan with TRON wallet</p>
+                <button id="copyAddress" class="mt-2 text-blue-500 text-xs">Copy Address</button>
+                <button id="closeTron" class="mt-4 px-4 py-2 bg-gray-200 rounded">Cancel</button>
+            </div>
+        `);
+
+        generateQR(`tron:${CONFIG.TRON.USDT_ADDRESS}?contractAddress=${CONFIG.TRON.USDT_ADDRESS}&recipient=${recipient}&amount=${amount}`, 'tronQR');
+
+        modal.querySelector('#copyAddress').onclick = () => {
+            navigator.clipboard.writeText(recipient)
+                .then(() => alert('Address copied to clipboard!'))
+                .catch(() => alert('Failed to copy address'));
+        };
+
+        modal.querySelector('#closeTron').onclick = () => {
+            modal.remove();
+            resolve({ success: false, cancelled: true });
+        };
+    });
+}
+
+function updateStatus(modal, text) {
+    const element = modal.querySelector('#statusText');
+    if (element) element.textContent = text;
+}
+
+function successStatus(modal, txHash, explorerUrl) {
+    updateStatus(modal, '✅ Payment confirmed');
+    modal.querySelector('.loading-spinner')?.remove();
+    
+    const txLink = modal.querySelector('#txLink');
+    if (txLink) {
+        const link = txLink.querySelector('a');
+        if (link) link.href = explorerUrl;
+        txLink.classList.remove('hidden');
+    }
+    
+    setTimeout(() => modal.remove(), 5000);
+}
+
+function errorStatus(modal, error) {
+    let message = error.message || 'Payment failed';
+    
+    // Special handling for ethers.js errors
+    if (error.message && error.message.includes('ethers.BrowserProvider')) {
+        message = 'Wallet connection error - please refresh and try again';
+    }
+    
+    updateStatus(modal, `❌ ${message}`);
+    modal.querySelector('.loading-spinner')?.remove();
+    
+    const closeBtn = modal.querySelector('#closeModal');
+    if (closeBtn) closeBtn.classList.remove('hidden');
+}
+
+function generateQR(text, elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.innerHTML = `
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(text)}" 
+                 alt="QR Code" 
+                 class="mx-auto" />
+        `;
+    }
 }
 
 // ======================================================
@@ -269,23 +536,33 @@ async function processBSCPayment(init) {
         console.debug('[BSC Payment] Starting BSC payment process');
         
         let provider;
-        if (isMobileDevice() || !window.ethereum) {
-            console.debug('[BSC Payment] Using WalletConnect');
-            provider = await showWalletConnectQR('BSC', init.amount, init.recipient_address);
-            if (!provider) {
-                return { success: false, cancelled: true };
-            }
-            provider = new ethers.providers.Web3Provider(provider);
-        } else {
+        if (window.ethereum && !isMobileDevice()) {
             console.debug('[BSC Payment] Using window.ethereum provider');
+            
+            // Using ethers v5 Web3Provider
             provider = new ethers.providers.Web3Provider(window.ethereum);
             await ensureBSCNetwork(provider);
+        } else if (isMobileDevice()) {
+            console.debug('[BSC Payment] Using WalletConnect for mobile');
+            const wcProvider = await connectWalletMobile();
+            provider = new ethers.providers.Web3Provider(wcProvider);
+        } else {
+            console.debug('[BSC Payment] Falling back to manual payment');
+            return await showBSCManualModal(init.recipient_address, init.amount);
         }
         
+        console.debug('[BSC Payment] Getting signer');
         const signer = provider.getSigner();
+        
+        console.debug('[BSC Payment] Executing transfer');
         return await executeBSCTransfer(signer, init.recipient_address, init.amount);
     } catch (error) {
-        console.error('[BSC Payment] Error:', error);
+        console.error('[BSC Payment] Error:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
+        
         throw new PaymentError(
             error.message || 'BSC payment processing failed',
             error.code || ERROR_CODES.TRANSACTION_ERROR,
@@ -299,20 +576,46 @@ async function processBSCPayment(init) {
     }
 }
 
+async function processTronPayment(init) {
+    try {
+        if (window.tronWeb && window.tronWeb.ready) {
+            return await executeTronTransfer(init.recipient_address, init.amount);
+        }
+        return await showTronManualModal(init.recipient_address, init.amount);
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'TRON payment processing failed',
+            error.code || ERROR_CODES.TRANSACTION_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
 // ======================================================
 // 🎯  MAIN PAYMENT FUNCTION
 // ======================================================
 
 async function processCryptoPayment() {
     try {
+        // Verify all required components are initialized
+        if (!CONFIG || !ERROR_CODES || !paymentAttempts) {
+            throw new PaymentError(
+                'System not properly initialized', 
+                ERROR_CODES.INITIALIZATION_ERROR,
+                { config: !!CONFIG, errorCodes: !!ERROR_CODES, attempts: !!paymentAttempts }
+            );
+        }
+
         console.debug('[Payment] Starting process with participant:', window.currentParticipant?.id);
         
         const participantId = window.currentParticipant?.id;
         const voteCount = window.selectedVoteAmount;
 
+        // Validate inputs
         validateInputs(participantId, voteCount);
         checkRateLimit(participantId);
 
+        // Network selection
         console.debug('[Payment] Detecting preferred network...');
         const preferredNetwork = await detectPreferredNetwork();
         console.debug('[Payment] Showing network selection modal...');
@@ -353,6 +656,7 @@ async function processCryptoPayment() {
         } catch (error) {
             console.error('[Payment] Inner payment error:', error);
             errorStatus(modal, error);
+            // Enhance the error before re-throwing
             throw new PaymentError(
                 error.message || 'Payment processing failed',
                 error.code || ERROR_CODES.TRANSACTION_ERROR,
@@ -364,7 +668,14 @@ async function processCryptoPayment() {
             );
         }
     } catch (error) {
-        console.error('❌ Crypto Payment Error:', error);
+        // Enhanced error logging
+        console.error('❌ Crypto Payment Error:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack,
+            metadata: error.metadata
+        });
+        
         trackEvent('payment_failed', {
             error: error.message || 'Unknown error',
             code: error.code || ERROR_CODES.UNKNOWN_ERROR,
@@ -383,6 +694,40 @@ async function processCryptoPayment() {
 }
 
 // ======================================================
+// 🔌  DEPENDENCY LOADING
+// ======================================================
+
+async function loadDependencies() {
+    try {
+        // Load ethers.js if not already available
+        if (typeof ethers === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.ethers.io/lib/ethers-5.7.2.min.js';
+                script.onload = () => {
+                    if (!ethers || !ethers.providers) {
+                        reject(new Error('Ethers.js not properly loaded'));
+                        return;
+                    }
+                    console.log('✅ Ethers.js v5 loaded');
+                    resolve();
+                };
+                script.onerror = () => {
+                    reject(new Error('Failed to load ethers.js'));
+                };
+                document.head.appendChild(script);
+            });
+        }
+    } catch (error) {
+        throw new PaymentError(
+            'Failed to load required dependencies',
+            ERROR_CODES.DEPENDENCY_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+// ======================================================
 // 🏁  INITIALIZATION & EXPORT
 // ======================================================
 
@@ -390,6 +735,7 @@ async function initializePaymentSystem() {
     try {
         await loadDependencies();
         
+        // Verify all required components are available
         if (typeof ethers === 'undefined' || !ethers.providers) {
             throw new PaymentError(
                 'Ethers.js not properly loaded',
@@ -397,10 +743,12 @@ async function initializePaymentSystem() {
             );
         }
 
+        // Export the main payment function
         window.processCryptoPayment = processCryptoPayment;
         console.log('🔒 Crypto Payments Module Ready');
     } catch (error) {
         console.error('Initialization failed:', error);
+        // Provide a fallback function
         window.processCryptoPayment = () => Promise.resolve({
             success: false,
             error: 'Payment system initialization failed',
@@ -410,6 +758,7 @@ async function initializePaymentSystem() {
     }
 }
 
+// Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializePaymentSystem);
 } else {
