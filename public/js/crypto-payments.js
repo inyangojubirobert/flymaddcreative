@@ -155,3 +155,21 @@ function errorStatus(modal, msg) {
   closeBtn.onclick = () => modal.remove();
   modal.querySelector("div").appendChild(closeBtn);
 }
+function updateStatus(modal, text) {
+  if (!modal) return;
+
+  const statusEl = modal.querySelector("#statusText");
+  if (!statusEl) return;
+
+  statusEl.textContent = text;
+}
+
+/* ======================================================
+    🔑 GLOBAL EXPORTS (REQUIRED)
+====================================================== */
+
+window.cryptoModuleReady = true;
+
+window.processBSCWalletConnect = processBSCWalletConnect;
+window.processTron = processTron;
+window.loadWalletConnect = loadWalletConnect;
