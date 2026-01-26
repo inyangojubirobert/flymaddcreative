@@ -18,6 +18,11 @@ const CONFIG = {
         SRC: "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js",
         PROJECT_ID: window.WALLETCONNECT_PROJECT_ID || "default_project_id"
     },
+    WALLETS: {
+        METAMASK: { id: 'metamask', name: 'MetaMask', logo: 'https://example.com/metamask-logo.png' },
+        TRUSTWALLET: { id: 'trustwallet', name: 'Trust Wallet', logo: 'https://example.com/trustwallet-logo.png' },
+        WALLETCONNECT: { id: 'walletconnect', name: 'WalletConnect', logo: 'https://example.com/walletconnect-logo.png' }
+    },
     LIMITS: {
         MAX_RETRIES: 3,
         TIMEOUT_MS: 300000, // 5 minutes
