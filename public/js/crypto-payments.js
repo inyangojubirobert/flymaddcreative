@@ -25,7 +25,7 @@ const CONFIG = {
     },
     WALLETCONNECT: {
         SRC: "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js",
-        PROJECT_ID: window.WALLETCONNECT_PROJECT_ID || "default_project_id"
+        PROJECT_ID: window.WALLETCONNECT_PROJECT_ID || "61d9b98f81731dffa9988c0422676fc5"
     },
     LIMITS: {
         MAX_RETRIES: 3,
@@ -760,4 +760,179 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializePaymentSystem);
 } else {
     initializePaymentSystem();
+}
+// ======================================================
+// 📱 MOBILE OPTIMIZATION ENHANCEMENTS
+// ======================================================
+
+const MOBILE_CONFIG = {
+    // Deep links for popular wallets
+    WALLETS: {
+        METAMASK: "https://metamask.app.link/dapp/",
+        TRUST: "https://link.trustwallet.com/open_url?url=",
+        TRONLINK: "tronlinkoutside://pull.activity?param="
+    }
+};
+
+// Enhanced Mobile Detection
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+           (window.innerWidth <= 768);
+}
+
+// Check if running inside a Mobile DApp Browser (MetaMask/Trust/TronLink internal browser)
+function isDAppBrowser() {
+    return !!(window.ethereum || window.tronWeb?.isTronLink);
+}
+
+// ======================================================
+// 🔌 ENHANCED WALLETCONNECT FOR MOBILE
+// ======================================================
+
+async function connectWalletMobile() {
+    try {
+        await loadWalletConnect();
+        
+        const provider = await window.EthereumProvider.init({
+            projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
+            chains: [CONFIG.BSC.CHAIN_ID],
+            showQrModal: true, // On mobile, this automatically shows the "Connect Wallet" list
+            qrModalOptions: { 
+                themeMode: 'dark',
+                // This is crucial for mobile: it prioritizes native apps over QR codes
+                explorerExcludedWalletIds: 'ALL', 
+                enableExplorer: true 
+            },
+            metadata: {
+                name: "OneDream Voting",
+                description: "Secure USDT Payment",
+                url: window.location.origin,
+                icons: ["https://yoursite.com/icon.png"]
+            }
+        });
+
+        // Trigger connection
+        await provider.connect();
+
+        // Mobile Fix: Handle URI for manual deep linking if modal doesn't trigger
+        provider.on("display_uri", (uri) => {
+            console.log("Deep link URI generated:", uri);
+            if (isMobileDevice()) {
+                // You can manually redirect to a specific wallet if needed
+                // window.location.href = `algorand://current?selection=${uri}`;
+            }
+        });
+
+        return provider;
+    } catch (error) {
+        console.error("Mobile connection error:", error);
+        throw new PaymentError('Mobile wallet connection failed', ERROR_CODES.WALLET_ERROR);
+    }
+}
+
+// ======================================================
+// 🏦 ENHANCED BSC PROCESSING (MOBILE-FIRST)
+// ======================================================
+
+async function processBSCPayment(init) {
+    try {
+        // SCENARIO 1: Inside a DApp Browser (MetaMask/Trust App)
+        if (window.ethereum && isDAppBrowser()) {
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            await ensureBSCNetwork(provider);
+            const signer = provider.getSigner();
+            return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+        }
+
+        // SCENARIO 2: Mobile Web Browser (Chrome/Safari)
+        if (isMobileDevice()) {
+            try {
+                const wcProvider = await connectWalletMobile();
+                const provider = new ethers.providers.Web3Provider(wcProvider);
+                const signer = provider.getSigner();
+                return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+            } catch (wcError) {
+                console.warn("WalletConnect failed on mobile, falling back to QR", wcError);
+                return await showBSCManualModal(init.recipient_address, init.amount);
+            }
+        }
+
+        // SCENARIO 3: Desktop
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+
+    } catch (error) {
+        return await showBSCManualModal(init.recipient_address, init.amount);
+    }
+}
+
+// ======================================================
+// 🎨 RESPONSIVE UI ADJUSTMENTS
+// ======================================================
+
+function createModal(content, className = '') {
+    const modal = document.createElement('div');
+    // Added 'p-4' and 'overflow-y-auto' for small screens
+    modal.className = `fixed inset-0 bg-black/90 flex items-center justify-center z-[9999] p-4 overflow-y-auto ${className}`;
+    modal.innerHTML = content;
+    document.body.appendChild(modal);
+    
+    // Prevent background scrolling on mobile when modal is open
+    document.body.style.overflow = 'hidden';
+    
+    const cleanup = () => {
+        document.body.style.overflow = '';
+        modal.remove();
+    };
+    
+    // Attach cleanup to close buttons inside the modal logic
+    return { modal, cleanup };
+}
+
+// Updated BSC QR for better Mobile URI handling
+function showBSCManualModal(recipient, amount) {
+    return new Promise((resolve) => {
+        const { modal, cleanup } = createModal(`
+            <div class="bg-white p-6 rounded-2xl text-center w-full max-w-sm shadow-2xl">
+                <h3 class="font-bold text-xl mb-2">Pay with BSC</h3>
+                <p class="text-sm text-gray-600 mb-4">Transfer ${amount} USDT (BEP-20)</p>
+                
+                <div id="bscQR" class="bg-gray-50 p-4 rounded-xl inline-block mb-4"></div>
+                
+                <div class="space-y-3">
+                    <button id="openWallet" class="w-full py-3 bg-orange-500 text-white rounded-xl font-bold flex items-center justify-center gap-2">
+                        <span>🦊</span> Open MetaMask
+                    </button>
+                    <button id="copyAddress" class="w-full py-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium">
+                        Copy Recipient Address
+                    </button>
+                </div>
+                
+                <button id="closeBSC" class="mt-6 text-gray-400 text-sm">Cancel Payment</button>
+            </div>
+        `);
+
+        // Standard EIP-681 Mobile URI for transfer
+        const amountWei = ethers.utils.parseUnits(amount.toString(), 18);
+        const bscUri = `ethereum:${CONFIG.BSC.USDT_ADDRESS}@${CONFIG.BSC.CHAIN_ID}/transfer?address=${recipient}&uint256=${amountWei}`;
+
+        generateQR(bscUri, 'bscQR');
+
+        modal.querySelector('#openWallet').onclick = () => {
+            // Deep link logic: try to open the metamask app directly
+            const dappUrl = window.location.href.replace(/https?:\/\//, '');
+            window.location.href = `${MOBILE_CONFIG.WALLETS.METAMASK}${dappUrl}`;
+        };
+
+        modal.querySelector('#copyAddress').onclick = () => {
+            navigator.clipboard.writeText(recipient);
+            alert('Address Copied');
+        };
+
+        modal.querySelector('#closeBSC').onclick = () => {
+            cleanup();
+            resolve({ success: false, cancelled: true });
+        };
+    });
 }
