@@ -445,22 +445,49 @@ async function loadWalletConnect() {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = CONFIG.WALLETCONNECT.SRC;
+            script.crossOrigin = 'anonymous';
+            
+            // Set a timeout in case script hangs
+            const timeout = setTimeout(() => {
+                reject(new PaymentError(
+                    'WalletConnect loading timed out. Your browser may be blocking external scripts. Please try the QR code option instead.',
+                    ERROR_CODES.PROVIDER_ERROR
+                ));
+            }, 15000);
+            
             script.onload = () => {
-                if (!window.EthereumProvider) {
-                    reject(new PaymentError('WalletConnect not properly loaded', ERROR_CODES.PROVIDER_ERROR));
-                    return;
-                }
-                console.log('✅ WalletConnect SDK loaded');
-                resolve(window.EthereumProvider);
+                clearTimeout(timeout);
+                // Give it a moment for the module to initialize
+                setTimeout(() => {
+                    if (!window.EthereumProvider) {
+                        reject(new PaymentError(
+                            'WalletConnect blocked by browser. Please try the QR code option or disable tracking prevention.',
+                            ERROR_CODES.PROVIDER_ERROR
+                        ));
+                        return;
+                    }
+                    console.log('✅ WalletConnect SDK loaded');
+                    resolve(window.EthereumProvider);
+                }, 500);
             };
+            
             script.onerror = () => {
-                reject(new PaymentError('Failed to load WalletConnect', ERROR_CODES.PROVIDER_ERROR));
+                clearTimeout(timeout);
+                reject(new PaymentError(
+                    'Failed to load WalletConnect. Please try the QR code option instead.',
+                    ERROR_CODES.PROVIDER_ERROR
+                ));
             };
+            
             document.head.appendChild(script);
         });
     } catch (error) {
         console.error('WalletConnect loading error:', error);
-        throw error;
+        throw new PaymentError(
+            'WalletConnect unavailable. Please use QR code payment instead.',
+            ERROR_CODES.PROVIDER_ERROR,
+            { originalError: error }
+        );
     }
 }
 
@@ -1084,27 +1111,51 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             }
             
             if (choice === 'walletconnect') {
-                // Use WalletConnect
-                modal = showPaymentStatusModal(selectedNetwork, amount);
-                updateStatus(modal, 'Connecting via WalletConnect...');
-                
-                const provider = await connectWalletMobile();
-                updateStatus(modal, 'Sending transaction...');
-                
-                const result = await executeBSCTransferUnified(provider, recipient, amount);
-                
-                updateStatus(modal, 'Finalizing...');
-                await finalizePayment(result.txHash, selectedNetwork);
-                
-                successStatus(modal, result.txHash, result.explorerUrl);
-                
-                return { 
-                    success: true, 
-                    ...result,
-                    participant_id: participantId,
-                    payment_amount: amount,
-                    payment_intent_id: result.txHash
-                };
+                // Use WalletConnect with fallback to QR code
+                try {
+                    modal = showPaymentStatusModal(selectedNetwork, amount);
+                    updateStatus(modal, 'Loading WalletConnect...');
+                    
+                    const provider = await connectWalletMobile();
+                    updateStatus(modal, 'Sending transaction...');
+                    
+                    const result = await executeBSCTransferUnified(provider, recipient, amount);
+                    
+                    updateStatus(modal, 'Finalizing...');
+                    await finalizePayment(result.txHash, selectedNetwork);
+                    
+                    successStatus(modal, result.txHash, result.explorerUrl);
+                    
+                    return { 
+                        success: true, 
+                        ...result,
+                        participant_id: participantId,
+                        payment_amount: amount,
+                        payment_intent_id: result.txHash
+                    };
+                } catch (wcError) {
+                    console.warn('[WalletConnect] Failed, falling back to QR:', wcError.message);
+                    
+                    // Close the status modal if open
+                    if (modal) modal.remove();
+                    modal = null;
+                    
+                    // Show user-friendly message and offer QR fallback
+                    showCryptoAlert('WalletConnect unavailable. Showing QR code instead.', 'warning', 4000);
+                    
+                    // Fall back to QR code payment
+                    const manualResult = await showBSCManualModal(recipient, amount);
+                    
+                    if (manualResult.success) {
+                        return {
+                            ...manualResult,
+                            participant_id: participantId,
+                            payment_amount: amount,
+                            payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+                        };
+                    }
+                    return manualResult;
+                }
             }
             
             if (choice === 'browser') {

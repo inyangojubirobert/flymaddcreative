@@ -23,8 +23,29 @@
 <script src="https://cdn.jsdelivr.net/npm/process@0.11.10/browser.js"></script>
 
 <script>
-  window.Buffer = buffer.Buffer;
-  window.process = process;
+  // Safely set polyfills with fallbacks
+  try {
+    if (typeof buffer !== 'undefined' && buffer.Buffer) {
+      window.Buffer = buffer.Buffer;
+    } else if (typeof Buffer !== 'undefined') {
+      window.Buffer = Buffer;
+    } else {
+      console.warn('Buffer polyfill not available');
+    }
+  } catch (e) {
+    console.warn('Buffer polyfill error:', e);
+  }
+  
+  try {
+    if (typeof process !== 'undefined') {
+      window.process = process;
+    } else {
+      window.process = { env: {} };
+    }
+  } catch (e) {
+    window.process = { env: {} };
+  }
+  
   window.global = window;
 </script>
 
