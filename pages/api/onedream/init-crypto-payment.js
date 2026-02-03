@@ -20,99 +20,73 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { participant_id, vote_count, network } = req.body;
-
-  // Validate inputs
-  if (!participant_id || !vote_count || !network) {
-    return res.status(400).json({ 
-      error: 'Missing required fields: participant_id, vote_count, network' 
-    });
-  }
-
-  // Validate network
-  if (!['bsc', 'tron'].includes(network)) {
-    return res.status(400).json({ error: 'Invalid network. Must be "bsc" or "tron"' });
-  }
-
   try {
-    const amount = vote_count * 2; // $2 per vote
+    const { participant_id, vote_count, network } = req.body;
 
-    // Verify participant exists
-    const { data: participant, error: participantError } = await supabase
-      .from('participants')
-      .select('id, name, username')
-      .eq('id', participant_id)
-      .single();
-
-    if (participantError || !participant) {
-      return res.status(404).json({ error: 'Participant not found' });
-    }
-
-    // Create pending payment record (if you have this table)
-    // If you don't have crypto_payments table yet, skip this section
-    let paymentId = `${network}_${Date.now()}_${participant_id}`;
-    
-    try {
-      const { data: payment, error: paymentError } = await supabase
-        .from('crypto_payments')
-        .insert({
-          participant_id,
-          vote_count,
-          amount,
-          network,
-          status: 'pending',
-          payment_id: paymentId,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (payment) {
-        paymentId = payment.id;
-      }
-    } catch (err) {
-      // Table might not exist - continue anyway
-      console.log('Could not create payment record (table may not exist):', err.message);
-    }
-
-    // Return wallet address for THIS payment
-    const walletAddress = network === 'bsc' 
-      ? process.env.CRYPTO_WALLET_ADDRESS_BSC 
-      : process.env.CRYPTO_WALLET_ADDRESS_TRON;
-
-    if (!walletAddress) {
-      console.error(`❌ Missing wallet address for ${network}`);
-      console.error('Available env vars:', {
-        bsc: !!process.env.CRYPTO_WALLET_ADDRESS_BSC,
-        tron: !!process.env.CRYPTO_WALLET_ADDRESS_TRON
-      });
-      
-      return res.status(500).json({ 
-        error: `Wallet address not configured for ${network}. Please contact support.` 
+    // Validate inputs
+    if (!participant_id || !vote_count || !network) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: participant_id, vote_count, network' 
       });
     }
 
-    console.log(`✅ Crypto payment initialized: ${network} - ${amount} USDT`);
+    if (vote_count <= 0 || isNaN(vote_count)) {
+      return res.status(400).json({ message: 'Invalid vote count' });
+    }
+
+    if (!['bsc', 'tron'].includes(network.toLowerCase())) {
+      return res.status(400).json({ message: 'Invalid network. Use "bsc" or "tron"' });
+    }
+
+    // Calculate amount (example: $1 per vote)
+    const PRICE_PER_VOTE = 1; // USDT
+    const amount = vote_count * PRICE_PER_VOTE;
+
+    // Get recipient address based on network
+    const recipientAddresses = {
+      bsc: process.env.CRYPTO_WALLET_ADDRESS_BSC || '0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d',
+      tron: process.env.CRYPTO_WALLET_ADDRESS_TRON || 'TVuPgEs4hSLSwPf8NMirVxeYse1vrmEtXL'
+    };
+
+    const recipient_address = recipientAddresses[network.toLowerCase()];
+
+    // Generate payment reference (for tracking)
+    const payment_reference = `PAY-${Date.now()}-${participant_id.slice(0, 8)}`;
+
+    // TODO: Store pending payment in database
+    // await db.payments.create({
+    //     reference: payment_reference,
+    //     participant_id,
+    //     vote_count,
+    //     amount,
+    //     network,
+    //     status: 'pending',
+    //     created_at: new Date()
+    // });
+
+    console.log('[Crypto Payment] Initialized:', {
+      payment_reference,
+      participant_id,
+      vote_count,
+      amount,
+      network,
+      recipient_address
+    });
 
     return res.status(200).json({
       success: true,
-      payment_id: paymentId,
-      network,
-      recipient_address: walletAddress,
       amount,
-      vote_count,
-      participant: {
-        id: participant.id,
-        name: participant.name,
-        username: participant.username
-      }
+      recipient_address,
+      payment_reference,
+      network: network.toUpperCase(),
+      expires_at: Date.now() + (30 * 60 * 1000) // 30 minutes
     });
 
   } catch (error) {
-    console.error('Init crypto payment error:', error);
+    console.error('[Crypto Payment] Init error:', error);
     return res.status(500).json({ 
-      error: 'Failed to initialize payment',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'Payment initialization failed',
+      error: error.message 
     });
   }
 }

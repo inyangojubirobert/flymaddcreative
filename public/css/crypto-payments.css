@@ -1,0 +1,48 @@
+/* Loading Spinner */
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: crypto-spin 0.8s linear infinite;
+}
+
+@keyframes crypto-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Modal Animation */
+.crypto-modal-fade-in {
+  animation: crypto-fade-in 0.2s ease-out;
+}
+
+@keyframes crypto-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Wallet Button Hover States */
+.wallet-item:active {
+  transform: scale(0.97);
+}
+
+/* QR Code Container */
+#bscQR img,
+#tronQR img {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Copy Button Feedback */
+.copy-success {
+  color: #10b981 !important;
+}
