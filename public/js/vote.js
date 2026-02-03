@@ -864,141 +864,105 @@ console.log('📦 Vote.js Loading...');
     // ========================================
     // HANDLE VOTE / PAYMENT (Updated with better status)
     // ========================================
-    async function handleVote() {
-        if (!window.selectedPaymentMethod) {
-            alert('Please choose a payment method before proceeding.');
-            return;
-        }
-
-        if (!isPaymentMethodAvailable(window.selectedPaymentMethod)) {
-            alert('The selected payment method appears unavailable. Please choose another method or try again later.');
-            return;
-        }
-
-        if (!window.currentParticipant || window.selectedVoteAmount <= 0) {
-            alert('Please select a valid vote amount');
-            return;
-        }
-
-        const voteButton = document.getElementById('voteButton');
-        const spinner = document.getElementById('voteButtonSpinner');
-        const buttonText = document.getElementById('voteButtonText');
-
-        voteButton.disabled = true;
-        spinner?.classList.remove('hidden');
-        const originalText = buttonText?.textContent || 'Vote';
-        if (buttonText) buttonText.textContent = 'Preparing Payment...';
-
+    async function handleVote(event) {
+        event.preventDefault();
+        
+        const voteButton = event.target;
+        const originalText = voteButton.textContent;
+        
         try {
-            let paymentResult;
+            // Disable button during processing
+            voteButton.disabled = true;
+            voteButton.textContent = 'Processing...';
 
-            if (window.selectedPaymentMethod === 'crypto') {
-                paymentResult = await handleCryptoPayment();
-            } else if (window.selectedPaymentMethod === 'paystack') {
-                paymentResult = await handlePaystackPayment();
-                if (paymentResult?.redirect) return;
-            } else {
-                throw new Error('Selected payment method not available');
+            // Get vote details (adjust selectors based on your HTML)
+            const participantId = voteButton.dataset.participantId || 
+                                  document.querySelector('[data-participant-id]')?.dataset.participantId;
+            const voteCount = parseInt(document.querySelector('#voteCount')?.value || 
+                                           document.querySelector('[name="vote_count"]')?.value || 1);
+            const amount = parseFloat(document.querySelector('#voteAmount')?.value || 
+                                  document.querySelector('[name="amount"]')?.value || voteCount);
+            
+            if (!participantId) {
+                throw new Error('No participant selected');
             }
-
-            // Handle failed payment with Paystack fallback
-            if (!paymentResult?.success) {
+            
+            if (!voteCount || voteCount < 1) {
+                throw new Error('Please enter a valid vote count');
+            }
+            
+            showVoteAlert('🔄 Processing payment...', 'info', 0);
+            
+            // Process crypto payment
+            const paymentResult = await handleCryptoPayment(participantId, voteCount, amount);
+            
+            // Remove processing alert
+            document.getElementById('vote-alert')?.remove();
+            
+            console.log('[Vote] Payment result:', paymentResult);
+            
+            // Check if payment was successful
+            if (!paymentResult || !paymentResult.success) {
                 if (paymentResult?.cancelled) {
                     console.log('[Vote] Payment cancelled by user');
+                    showVoteAlert('Payment cancelled', 'info');
                     return;
                 }
-                
-                if (window.selectedPaymentMethod === 'crypto' && typeof window.processPaystackPayment === 'function') {
-                    const tryPaystack = confirm('Crypto payment failed. Would you like to try card payment instead?');
-                    if (tryPaystack) {
-                        window.selectedPaymentMethod = 'paystack';
-                        paymentResult = await handlePaystackPayment();
-                    }
-                }
-                
-                if (!paymentResult?.success) {
-                    throw new Error(paymentResult?.error || 'Payment failed');
-                }
+                throw new Error(paymentResult?.error || 'Payment failed');
             }
-
-            if (buttonText) buttonText.textContent = 'Recording Votes...';
-            await recordVotesAfterPayment(paymentResult);
-            showSuccessModal();
-
+            
+            // Record votes using the payment result fields
+            await recordVotesAfterPayment({
+                participant_id: paymentResult.participant_id || participantId,
+                payment_amount: paymentResult.payment_amount || amount,
+                payment_intent_id: paymentResult.payment_intent_id || paymentResult.txHash,
+                vote_count: voteCount
+            });
+            
+            // Optionally refresh vote count display
+            if (typeof refreshVoteCount === 'function') {
+                refreshVoteCount();
+            }
+            
         } catch (error) {
             console.error('[Vote] Processing failed:', error);
-            if (!error.message?.includes('cancelled')) {
-                alert(`Error: ${error.message}`);
+            
+            // Only show alert if not already shown by recordVotesAfterPayment
+            const existingAlert = document.getElementById('vote-alert');
+            if (!existingAlert || !existingAlert.textContent.includes('❌')) {
+                showVoteAlert(error.message || 'Failed to process vote. Please try again.', 'error');
             }
+            
         } finally {
+            // Re-enable button
             voteButton.disabled = false;
-            spinner?.classList.add('hidden');
-            if (buttonText) buttonText.textContent = originalText;
-            hideConnectingOverlay();
-            updateUI();
+            voteButton.textContent = originalText;
         }
     }
 
     // Dedicated crypto payment handler with detailed status updates
-    async function handleCryptoPayment() {
+    async function handleCryptoPayment(participantId, voteCount, amount) {
         try {
-            // Step 1: Wait for crypto module
-            showConnectingOverlay('Initializing payment...', 'Setting up secure connection');
-            updateOverlayStep(1);
+            await waitForCryptoPayments(5000);
             
-            if (window.CryptoPayments?.whenReady) {
-                try {
-                    await window.CryptoPayments.whenReady(8000);
-                } catch (e) {
-                    console.warn('[Vote] Crypto module not fully ready:', e.message);
-                }
-            }
-
-            // Step 2: Load wallet connection
-            updateOverlayMessage('Connecting to wallet...', isMobileDevice() ? 'Opening wallet app...' : 'Preparing QR code...');
-            updateOverlayStep(2);
-            
-            const walletReady = ensureWalletConnectReady(2, 1500).catch(() => null);
-            const hasWallet = window.ethereum || window.EthereumProvider || window.tronWeb?.ready;
-            
-            if (!hasWallet) {
-                const provider = await walletReady;
-                if (!provider && !window.ethereum && !window.tronWeb?.ready) {
-                    console.log('[Vote] No wallet detected, will use QR payment flow');
-                }
-            }
-
-            // Hide overlay - crypto-payments.js will show its own modals
-            hideConnectingOverlay();
-
-            // Use the main crypto payment function
-            if (typeof window.processCryptoPayment !== 'function') {
+            if (typeof window.initiateCryptoPayment !== 'function') {
                 throw new Error('Crypto payment module not loaded. Please refresh the page.');
             }
-
-            const result = await window.processCryptoPayment();
             
-            // Show success briefly if payment succeeded
-            if (result?.success) {
-                showConnectingOverlay('Payment successful!', 'Recording your votes...');
-                showOverlaySuccess('Payment confirmed! ✨');
-            }
+            console.log('[Vote] Starting crypto payment:', { participantId, voteCount, amount });
             
+            const result = await window.initiateCryptoPayment(
+                String(participantId), 
+                Number(voteCount), 
+                Number(amount)
+            );
+            
+            console.log('[Vote] Crypto payment result:', result);
             return result;
-
+            
         } catch (error) {
             console.error('[Vote] Crypto payment error:', error);
-            
-            if (error.message?.includes('rejected') || error.message?.includes('cancelled')) {
-                hideConnectingOverlay();
-                return { success: false, cancelled: true, error: error.message };
-            }
-            
-            showOverlayError('Payment failed');
-            await new Promise(r => setTimeout(r, 2000)); // Show error briefly
-            hideConnectingOverlay();
-            
-            return { success: false, error: error.message };
+            throw error;
         }
     }
 
@@ -1010,33 +974,214 @@ console.log('📦 Vote.js Loading...');
         return await window.processPaystackPayment();
     }
 
-    // ========================================
-    // RECORD VOTES AFTER PAYMENT
-    // ========================================
-    async function recordVotesAfterPayment(paymentResult) {
-        const response = await fetch('/api/onedream/vote', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                participant_id: window.currentParticipant.id,
-                vote_count: window.selectedVoteAmount,
-                payment_amount: window.selectedCost,
-                payment_method: window.selectedPaymentMethod,
-                payment_intent_id: paymentResult.txHash || paymentResult.payment_intent_id,
-                payment_status: 'completed',
-                voter_info: { userAgent: navigator.userAgent }
-            })
-        });
+    // ======================================================
+    // 🔔 ALERT UTILITY FUNCTION
+    // ======================================================
 
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error || 'Failed to record votes');
+    /**
+     * Show a styled alert message to the user
+     * @param {string} message - The message to display
+     * @param {string} type - Alert type: 'success', 'error', or 'info'
+     * @param {number} duration - How long to show the alert (ms), 0 for permanent
+     */
+    function showVoteAlert(message, type = "info", duration = 5000) {
+        // Remove any existing alert
+        const existingAlert = document.getElementById("vote-alert");
+        if (existingAlert) existingAlert.remove();
+        
+        // Create alert container
+        const alertBox = document.createElement("div");
+        alertBox.id = "vote-alert";
+        alertBox.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideDown 0.3s ease-out;
+            max-width: 90%;
+        `;
+        
+        // Style based on type
+        switch (type) {
+            case "success":
+                alertBox.style.backgroundColor = "#10b981";
+                alertBox.style.color = "#fff";
+                break;
+            case "error":
+                alertBox.style.backgroundColor = "#ef4444";
+                alertBox.style.color = "#fff";
+                break;
+            default:
+                alertBox.style.backgroundColor = "#3b82f6";
+                alertBox.style.color = "#fff";
         }
+        
+        alertBox.textContent = message;
+        document.body.appendChild(alertBox);
+        
+        // Add animation keyframes if not exists
+        if (!document.getElementById("vote-alert-styles")) {
+            const style = document.createElement("style");
+            style.id = "vote-alert-styles";
+            style.textContent = `
+                @keyframes slideDown {
+                    from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+                @keyframes slideUp {
+                    from { opacity: 1; transform: translateX(-50%) translateY(0); }
+                    to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Auto-remove after duration
+        if (duration > 0) {
+            setTimeout(() => {
+                alertBox.style.animation = "slideUp 0.3s ease-out forwards";
+                setTimeout(() => alertBox.remove(), 300);
+            }, duration);
+        }
+        
+        return alertBox;
+    }
 
-        const data = await response.json();
-        if (data.participant) {
-            window.currentParticipant.total_votes = data.participant.total_votes;
-            showParticipant();
+    // ======================================================
+    // 🔐 CRYPTO PAYMENT MODULE LOADER
+    // ======================================================
+
+    /**
+     * Wait for the crypto payments module to be ready
+     */
+    async function waitForCryptoPayments(timeout = 5000) {
+        return new Promise((resolve, reject) => {
+            if (window.initiateCryptoPayment && window.CryptoPaymentsReady) {
+                resolve(true);
+                return;
+            }
+            
+            const startTime = Date.now();
+            
+            const handleReady = () => {
+                cleanup();
+                resolve(true);
+            };
+            
+            document.addEventListener('cryptoPaymentsReady', handleReady);
+            
+            const checkInterval = setInterval(() => {
+                if (window.initiateCryptoPayment && window.CryptoPaymentsReady) {
+                    cleanup();
+                    resolve(true);
+                } else if (Date.now() - startTime > timeout) {
+                    cleanup();
+                    reject(new Error('Crypto payment module failed to load. Please refresh the page.'));
+                }
+            }, 100);
+            
+            function cleanup() {
+                clearInterval(checkInterval);
+                document.removeEventListener('cryptoPaymentsReady', handleReady);
+            }
+        });
+    }
+
+    // ======================================================
+    // 💳 HANDLE CRYPTO PAYMENT
+    // ======================================================
+
+    async function handleCryptoPayment(participantId, voteCount, amount) {
+        try {
+            await waitForCryptoPayments(5000);
+            
+            if (typeof window.initiateCryptoPayment !== 'function') {
+                throw new Error('Crypto payment module not loaded. Please refresh the page.');
+            }
+            
+            console.log('[Vote] Starting crypto payment:', { participantId, voteCount, amount });
+            
+            const result = await window.initiateCryptoPayment(
+                String(participantId), 
+                Number(voteCount), 
+                Number(amount)
+            );
+            
+            console.log('[Vote] Crypto payment result:', result);
+            return result;
+            
+        } catch (error) {
+            console.error('[Vote] Crypto payment error:', error);
+            throw error;
+        }
+    }
+
+    // ======================================================
+    // 📝 RECORD VOTES AFTER PAYMENT
+    // ======================================================
+
+    /**
+     * Record votes after successful payment
+     */
+    async function recordVotesAfterPayment({ participant_id, payment_amount, payment_intent_id, vote_count }) {
+        // Validate required fields
+        const missing = [];
+        if (!participant_id) missing.push("participant_id");
+        if (payment_amount === undefined || payment_amount === null) missing.push("payment_amount");
+        if (!payment_intent_id) missing.push("payment_intent_id");
+        
+        if (missing.length > 0) {
+            const errorMsg = `Missing required fields: ${missing.join(", ")}`;
+            showVoteAlert(`❌ ${errorMsg}`, "error");
+            throw new Error(errorMsg);
+        }
+        
+        try {
+            console.log('[Vote] Recording votes:', { participant_id, payment_amount, payment_intent_id, vote_count });
+            
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+            
+            const response = await fetch("/api/onedream/record-votes", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": csrfToken,
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    participant_id,
+                    payment_amount,
+                    payment_intent_id,
+                    vote_count: vote_count || Math.floor(Number(payment_amount))
+                }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMsg = errorData.message || `Vote recording failed: ${response.statusText}`;
+                showVoteAlert(`❌ ${errorMsg}`, "error");
+                throw new Error(errorMsg);
+            }
+            
+            const result = await response.json();
+            console.log("✅ Vote recorded successfully:", result);
+            showVoteAlert("✅ Vote recorded successfully! Thank you for voting.", "success");
+            return result;
+            
+        } catch (err) {
+            console.error("❌ Error recording vote:", err);
+            if (!err.message.includes("Missing required fields")) {
+                showVoteAlert("❌ Error recording vote. Please try again.", "error");
+            }
+            throw err;
         }
     }
 
