@@ -795,6 +795,48 @@ function showPaymentStatusModal(network, amount) {
     return modal;
 }
 
+// ======================================================
+// 📊  MODAL STATUS HELPER FUNCTIONS
+// ======================================================
+
+function updateStatus(modal, text) {
+    const element = modal.querySelector('#statusText');
+    if (element) element.textContent = text;
+}
+
+function successStatus(modal, txHash, explorerUrl) {
+    updateStatus(modal, '✅ Payment confirmed');
+    const spinner = modal.querySelector('.loading-spinner');
+    if (spinner) spinner.remove();
+    
+    const txLink = modal.querySelector('#txLink');
+    if (txLink) {
+        const link = txLink.querySelector('a');
+        if (link) link.href = explorerUrl;
+        txLink.classList.remove('hidden');
+    }
+    
+    // Auto-close after 5 seconds
+    setTimeout(() => modal.remove(), 5000);
+}
+
+function errorStatus(modal, error) {
+    let message = error.message || 'Payment failed';
+    
+    // Provide user-friendly message for common errors
+    if (error.message && error.message.includes('ethers.BrowserProvider')) {
+        message = 'Wallet connection error - please refresh and try again';
+    }
+    
+    updateStatus(modal, `❌ ${message}`);
+    
+    const spinner = modal.querySelector('.loading-spinner');
+    if (spinner) spinner.remove();
+    
+    const closeBtn = modal.querySelector('#closeModal');
+    if (closeBtn) closeBtn.classList.remove('hidden');
+}
+
 function showNetworkSelectionModal(preferredNetwork) {
     return new Promise((resolve) => {
         const modal = createModal(`
