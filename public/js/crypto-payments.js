@@ -502,53 +502,28 @@ function showNetworkSelectionModal(preferredNetwork) {
 
 function showNoWalletDetectedModal() {
     return new Promise((resolve) => {
-        const isMobile = isMobileDevice();
-        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[90vw]">
-                <h3 class="font-bold mb-3 text-lg">⚠️ Wallet Not Detected</h3>
+                <h3 class="font-bold mb-3 text-lg">📱 Connect Your Wallet</h3>
                 <p class="text-sm text-gray-600 mb-4">
-                    No crypto wallet was found on your device.
+                    Choose how you'd like to complete your payment:
                 </p>
-                <div class="bg-blue-50 p-3 rounded mb-4 text-xs text-gray-700">
-                    <p class="font-semibold mb-2">💡 What you can do:</p>
-                    <ul class="text-left space-y-1">
-                        ${isMobile ? `
-                            <li>• <a href="${openWalletApp('metamask')}" class="text-blue-500 underline">Open in MetaMask</a></li>
-                            <li>• <a href="${openWalletApp('trustwallet')}" class="text-blue-500 underline">Open in Trust Wallet</a></li>
-                        ` : `
-                            <li>• Install MetaMask browser extension</li>
-                            <li>• Install Trust Wallet extension</li>
-                        `}
-                        <li>• Use QR code payment below</li>
-                    </ul>
-                </div>
-                ${isMobile ? `
-                    <button id="openMetaMask" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded mb-2">
-                        🦊 Open MetaMask
-                    </button>
-                    <button id="openTrust" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded mb-2">
-                        🛡️ Open Trust Wallet
-                    </button>
-                ` : ''}
-                <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-2 rounded mb-2">
-                    📱 Use QR Code Payment
+                <button id="useWalletConnect" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded mb-2 flex items-center justify-center gap-2">
+                    <span>🔗</span> Connect via WalletConnect
                 </button>
-                <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded">
+                <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded mb-2 flex items-center justify-center gap-2">
+                    <span>📱</span> Pay via QR Code
+                </button>
+                <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded mt-2">
                     ← Back
                 </button>
             </div>
         `);
 
-        if (isMobile) {
-            modal.querySelector('#openMetaMask')?.addEventListener('click', () => {
-                window.location.href = openWalletApp('metamask');
-            });
-            
-            modal.querySelector('#openTrust')?.addEventListener('click', () => {
-                window.location.href = openWalletApp('trustwallet');
-            });
-        }
+        modal.querySelector('#useWalletConnect').onclick = () => {
+            modal.remove();
+            resolve('walletconnect');
+        };
 
         modal.querySelector('#useQR').onclick = () => {
             modal.remove();
@@ -674,89 +649,29 @@ function generateQR(text, elementId) {
 async function processBSCPayment(init) {
     try {
         console.debug('[BSC Payment] Starting BSC payment process');
-        console.debug('[BSC Payment] Is mobile:', isMobileDevice());
-        console.debug('[BSC Payment] window.ethereum exists:', !!window.ethereum);
         
-        let provider;
-        
-        // Desktop with wallet extension
-        if (!isMobileDevice() && window.ethereum) {
-            try {
-                console.debug('[BSC Payment] Desktop wallet detected');
-                
-                // Request account access
-                const connected = await requestWalletConnection();
-                if (!connected) {
-                    throw new Error('Wallet connection rejected');
-                }
-                
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                await ensureBSCNetwork(provider);
-                const signer = provider.getSigner();
-                return await executeBSCTransfer(signer, init.recipient_address, init.amount);
-            } catch (error) {
-                if (error.code === 4001 || error.code === 'ACTION_REJECTED') {
-                    console.debug('[BSC Payment] User rejected wallet action');
-                }
-                console.warn('[BSC Payment] Desktop wallet error:', error.message);
-                return await showBSCManualModal(init.recipient_address, init.amount);
-            }
-        }
-        
-        // Mobile device
-        if (isMobileDevice()) {
-            console.debug('[BSC Payment] Mobile device detected');
-            
-            // Wait for wallet injection (mobile apps inject after load)
-            console.debug('[BSC Payment] Waiting for wallet provider...');
-            const hasProvider = await waitForWalletProvider(2000);
-            
-            if (hasProvider && window.ethereum) {
-                try {
-                    console.debug('[BSC Payment] Mobile wallet detected, requesting access');
-                    
-                    const connected = await requestWalletConnection();
-                    if (connected) {
-                        console.debug('[BSC Payment] Mobile wallet connected');
-                        provider = new ethers.providers.Web3Provider(window.ethereum);
-                        await ensureBSCNetwork(provider);
-                        const signer = provider.getSigner();
-                        return await executeBSCTransfer(signer, init.recipient_address, init.amount);
-                    }
-                } catch (error) {
-                    console.warn('[BSC Payment] Mobile wallet error:', error.message);
-                }
-            }
-            
-            // Try WalletConnect
-            try {
-                console.debug('[BSC Payment] Trying WalletConnect');
-                const wcProvider = await connectWalletMobile();
-                provider = new ethers.providers.Web3Provider(wcProvider);
-                const signer = provider.getSigner();
-                return await executeBSCTransfer(signer, init.recipient_address, init.amount);
-            } catch (error) {
-                console.debug('[BSC Payment] WalletConnect failed:', error.message);
-            }
-            
-            // Show no wallet modal with deep links
-            console.debug('[BSC Payment] Showing wallet options modal');
-            const userChoice = await showNoWalletDetectedModal();
-            
-            if (userChoice === 'qr') {
-                return await showBSCManualModal(init.recipient_address, init.amount);
-            }
-            return { success: false, cancelled: true };
-        }
-        
-        // Desktop without wallet
-        console.debug('[BSC Payment] No wallet detected');
+        // Show connection options modal
         const userChoice = await showNoWalletDetectedModal();
         
-        if (userChoice === 'qr') {
+        if (userChoice === 'walletconnect') {
+            try {
+                console.debug('[BSC Payment] User selected WalletConnect');
+                const wcProvider = await connectWalletMobile();
+                const provider = new ethers.providers.Web3Provider(wcProvider);
+                const signer = provider.getSigner();
+                return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+            } catch (error) {
+                console.warn('[BSC Payment] WalletConnect failed:', error.message);
+                // If WalletConnect fails, fall back to QR code
+                return await showBSCManualModal(init.recipient_address, init.amount);
+            }
+        } else if (userChoice === 'qr') {
+            console.debug('[BSC Payment] User selected QR code payment');
             return await showBSCManualModal(init.recipient_address, init.amount);
+        } else {
+            // User clicked back
+            return { success: false, cancelled: true };
         }
-        return { success: false, cancelled: true };
 
     } catch (error) {
         console.error('[BSC Payment] Error:', error.message);
