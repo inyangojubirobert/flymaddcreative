@@ -62,6 +62,9 @@ const ERROR_CODES = {
 
 let isInitialized = false;
 let initializationPromise = null;
+let walletConnectLoaded = false;
+let walletConnectPromise = null;
+let walletConnectProvider = null;
 let resolveReady, rejectReady;
 const readyPromise = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
 
@@ -83,24 +86,122 @@ class PaymentError extends Error {
 // 🔌  DEPENDENCY LOADING
 // ======================================================
 
-async function loadScript(src, checkFn, name) {
-    if (checkFn()) { console.log(`✅ ${name} already loaded`); return true; }
+async function loadScript(src, checkFn, name, timeout = 20000) {
+    if (checkFn()) { 
+        console.log(`✅ ${name} already loaded`); 
+        return true; 
+    }
+    
     return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) {
-            const check = setInterval(() => { if (checkFn()) { clearInterval(check); resolve(true); } }, 100);
-            setTimeout(() => { clearInterval(check); reject(new PaymentError(`${name} load timeout`, ERROR_CODES.DEPENDENCY_ERROR)); }, 10000);
+        const startTime = Date.now();
+        const srcFile = src.split('/').pop().split('?')[0];
+        const existingScript = document.querySelector(`script[src*="${srcFile}"]`);
+        
+        // If script exists, wait for it
+        if (existingScript) {
+            console.log(`[${name}] Waiting for existing script...`);
+            const check = setInterval(() => {
+                if (checkFn()) { 
+                    clearInterval(check); 
+                    console.log(`✅ ${name} ready`);
+                    resolve(true); 
+                } else if (Date.now() - startTime > timeout) {
+                    clearInterval(check);
+                    console.warn(`[${name}] Timeout waiting for existing script`);
+                    // Don't reject - mark as "soft fail" and let caller handle
+                    resolve(false);
+                }
+            }, 150);
             return;
         }
-        const script = document.createElement('script'); script.src = src; script.async = true;
-        script.onload = () => setTimeout(() => { if (checkFn()) { console.log(`✅ ${name} loaded`); resolve(true); } else reject(new PaymentError(`${name} not initialized`, ERROR_CODES.DEPENDENCY_ERROR)); }, 100);
+        
+        // Load fresh script
+        const script = document.createElement('script'); 
+        script.src = src;
+        script.async = true;
+        
+        script.onload = () => {
+            const initCheck = setInterval(() => {
+                if (checkFn()) { 
+                    clearInterval(initCheck);
+                    console.log(`✅ ${name} loaded`); 
+                    resolve(true); 
+                } else if (Date.now() - startTime > timeout) {
+                    clearInterval(initCheck);
+                    reject(new PaymentError(`${name} init timeout`, ERROR_CODES.DEPENDENCY_ERROR));
+                }
+            }, 100);
+        };
+        
         script.onerror = () => reject(new PaymentError(`Failed to load ${name}`, ERROR_CODES.DEPENDENCY_ERROR));
         document.head.appendChild(script);
     });
 }
 
-async function loadEthers() { return loadScript(CONFIG.ETHERS.SRC, () => typeof ethers !== 'undefined' && ethers.utils, 'Ethers.js'); }
-async function loadWalletConnect() { await loadScript(CONFIG.WALLETCONNECT.SRC, () => !!window.EthereumProvider, 'WalletConnect'); return window.EthereumProvider; }
-async function loadPaystack() { return loadScript(CONFIG.PAYSTACK.SRC, () => typeof PaystackPop !== 'undefined', 'Paystack'); }
+async function loadEthers() { 
+    return loadScript(CONFIG.ETHERS.SRC, () => typeof ethers !== 'undefined' && ethers.utils, 'Ethers.js', 25000); 
+}
+
+// Shared WalletConnect loader with retry logic - can be called from vote.js
+async function loadWalletConnectWithRetry(retries = 3, delay = 2000) {
+    if (walletConnectLoaded && window.EthereumProvider) {
+        console.log('✅ WalletConnect already available');
+        return window.EthereumProvider;
+    }
+    
+    if (walletConnectPromise) {
+        console.log('[WalletConnect] Waiting for existing load...');
+        try {
+            return await walletConnectPromise;
+        } catch (e) {
+            console.warn('[WalletConnect] Existing load failed, retrying...');
+            walletConnectPromise = null;
+        }
+    }
+    
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            console.log(`[WalletConnect] Load attempt ${attempt}/${retries}...`);
+            
+            walletConnectPromise = loadScript(
+                CONFIG.WALLETCONNECT.SRC, 
+                () => !!window.EthereumProvider, 
+                'WalletConnect',
+                20000
+            );
+            
+            const result = await walletConnectPromise;
+            
+            if (result && window.EthereumProvider) {
+                walletConnectLoaded = true;
+                console.log('✅ WalletConnect loaded successfully');
+                return window.EthereumProvider;
+            }
+            
+            throw new Error('EthereumProvider not available after load');
+            
+        } catch (e) {
+            console.warn(`[WalletConnect] Attempt ${attempt} failed:`, e.message);
+            walletConnectPromise = null;
+            
+            if (attempt < retries) {
+                console.log(`[WalletConnect] Waiting ${delay}ms before retry...`);
+                await new Promise(r => setTimeout(r, delay));
+            }
+        }
+    }
+    
+    throw new PaymentError('WalletConnect failed after retries', ERROR_CODES.PROVIDER_ERROR);
+}
+
+// Simple alias for backward compatibility
+async function loadWalletConnect() {
+    return loadWalletConnectWithRetry(2, 1500);
+}
+
+async function loadPaystack() { 
+    return loadScript(CONFIG.PAYSTACK.SRC, () => typeof PaystackPop !== 'undefined', 'Paystack', 15000); 
+}
 
 // ======================================================
 // 🔌  UTILITY FUNCTIONS
@@ -142,23 +243,81 @@ async function detectNetwork() {
 }
 
 async function connectWalletConnect() {
-    const EthereumProvider = await loadWalletConnect();
-    const provider = await EthereumProvider.init({
-        projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
-        chains: [CONFIG.BSC.CHAIN_ID],
-        showQrModal: true,
-        qrModalOptions: { themeMode: 'dark', enableExplorer: true, explorerRecommendedWalletIds: ['c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0'] },
-        metadata: { name: "OneDream Voting", description: "Secure USDT Payment", url: window.location.origin, icons: [`${window.location.origin}/favicon.ico`] }
-    });
-    await provider.connect();
-    const chainId = await provider.request({ method: 'eth_chainId' });
-    if (chainId !== `0x${CONFIG.BSC.CHAIN_ID.toString(16)}`) {
-        try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${CONFIG.BSC.CHAIN_ID.toString(16)}` }] }); }
-        catch { throw new PaymentError('Please switch to BSC network', ERROR_CODES.NETWORK_ERROR); }
+    try {
+        // Use retry loader
+        const EthereumProvider = await loadWalletConnectWithRetry(3, 2000);
+        
+        if (!EthereumProvider) {
+            throw new PaymentError('WalletConnect not available', ERROR_CODES.PROVIDER_ERROR);
+        }
+        
+        // Clear stale sessions
+        try {
+            Object.keys(localStorage)
+                .filter(k => k.startsWith('wc@') || k.includes('walletconnect'))
+                .forEach(k => { try { localStorage.removeItem(k); } catch {} });
+        } catch {}
+        
+        console.log('[WalletConnect] Initializing provider...');
+        
+        const provider = await EthereumProvider.init({
+            projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
+            chains: [CONFIG.BSC.CHAIN_ID],
+            showQrModal: true,
+            qrModalOptions: { 
+                themeMode: 'dark', 
+                enableExplorer: true,
+                explorerRecommendedWalletIds: [
+                    'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96',
+                    '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0',
+                    '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369'
+                ] 
+            },
+            metadata: { 
+                name: "OneDream Voting", 
+                description: "Secure USDT Payment", 
+                url: window.location.origin, 
+                icons: [`${window.location.origin}/favicon.ico`] 
+            }
+        });
+        
+        console.log('[WalletConnect] Connecting...');
+        await provider.connect();
+        
+        // Chain verification
+        const chainId = await provider.request({ method: 'eth_chainId' });
+        const targetChain = `0x${CONFIG.BSC.CHAIN_ID.toString(16)}`;
+        
+        if (chainId !== targetChain) {
+            try { 
+                await provider.request({ 
+                    method: 'wallet_switchEthereumChain', 
+                    params: [{ chainId: targetChain }] 
+                }); 
+            } catch { 
+                throw new PaymentError('Please switch to BSC network', ERROR_CODES.NETWORK_ERROR); 
+            }
+        }
+        
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        if (!accounts?.length) throw new PaymentError('No wallet accounts', ERROR_CODES.WALLET_ERROR);
+        
+        walletConnectProvider = provider;
+        console.log('✅ WalletConnect connected:', accounts[0]);
+        return provider;
+        
+    } catch (error) {
+        console.error('[WalletConnect] Error:', error);
+        
+        // Handle component registry conflicts
+        if (error.message?.includes('already been used') || error.message?.includes('already registered')) {
+            console.log('[WalletConnect] Component conflict, provider may still work');
+            walletConnectLoaded = true;
+            if (walletConnectProvider) return walletConnectProvider;
+        }
+        
+        throw new PaymentError(error.message || 'WalletConnect failed', ERROR_CODES.WALLET_ERROR);
     }
-    const accounts = await provider.request({ method: 'eth_accounts' });
-    if (!accounts?.length) throw new PaymentError('No wallet accounts', ERROR_CODES.WALLET_ERROR);
-    return provider;
 }
 
 // ======================================================
@@ -274,6 +433,10 @@ async function initiateCryptoPayment(participantId, voteCount, amount, email = n
         validateInputs(participantId, voteCount);
         checkRateLimit(participantId);
         
+        // Update vote.js overlay if available (step 2: network selection)
+        if (window.updateOverlayStep) window.updateOverlayStep(2);
+        if (window.updateOverlayMessage) window.updateOverlayMessage('Choose payment network...', 'Select BSC, TRON, or Card');
+        
         const preferred = await detectNetwork();
         const method = await showNetworkModal(preferred);
         if (!method) return { success: false, cancelled: true };
@@ -293,13 +456,19 @@ async function initiateCryptoPayment(participantId, voteCount, amount, email = n
             if (choice === 'back') return initiateCryptoPayment(participantId, voteCount, amount, email);
             if (choice === 'qr') {
                 const result = await showManualPaymentModal(method, recipient, amount);
-                if (result.success && result.txHash) { try { await finalizePayment(result.txHash, method); } catch {} }
+                if (result.success && result.txHash) { 
+                    try { await finalizePayment(result.txHash, method); } catch {} 
+                }
                 trackEvent('payment_completed', { participantId, network: method, manual: true });
                 return result;
             }
             if (choice === 'walletconnect') {
                 modal = showPaymentStatusModal(method, amount);
                 updateStatus(modal, isMobile() ? 'Opening wallet...' : 'Scan QR with wallet...');
+                
+                // Update vote.js overlay (step 3: confirming)
+                if (window.updateOverlayStep) window.updateOverlayStep(3);
+                
                 try {
                     const provider = await connectWalletConnect();
                     updateStatus(modal, 'Confirm transaction...');
@@ -324,12 +493,18 @@ async function initiateCryptoPayment(participantId, voteCount, amount, email = n
         if (method === 'TRON') {
             if (!window.tronWeb?.ready) {
                 const result = await showManualPaymentModal(method, recipient, amount);
-                if (result.success && result.txHash) { try { await finalizePayment(result.txHash, method); } catch {} }
+                if (result.success && result.txHash) { 
+                    try { await finalizePayment(result.txHash, method); } catch {} 
+                }
                 trackEvent('payment_completed', { participantId, network: method, manual: true });
                 return result;
             }
             modal = showPaymentStatusModal(method, amount);
             updateStatus(modal, 'Confirm in TronLink...');
+            
+            // Update vote.js overlay (step 3: confirming)
+            if (window.updateOverlayStep) window.updateOverlayStep(3);
+            
             const result = await executeTronTransfer(recipient, amount);
             updateStatus(modal, 'Finalizing...');
             await finalizePayment(result.txHash, method);
@@ -341,7 +516,9 @@ async function initiateCryptoPayment(participantId, voteCount, amount, email = n
         return { success: false, error: 'Invalid method' };
     } catch (error) {
         console.error('[Payment] Error:', error);
-        if (modal) errorStatus(modal, error); else alert(error.message || 'Payment failed');
+        if (modal) errorStatus(modal, error); 
+        else if (window.showOverlayError) window.showOverlayError(error.message || 'Payment failed');
+        else alert(error.message || 'Payment failed');
         trackEvent('payment_error', { error: error.message, participantId });
         return { success: false, error: error.message };
     }
@@ -360,18 +537,27 @@ async function processCryptoPayment() {
 async function initialize() {
     if (isInitialized) return true;
     if (initializationPromise) return initializationPromise;
+    
     initializationPromise = (async () => {
         try {
             await loadEthers();
+            
+            // Pre-load WalletConnect in background - don't block
+            loadWalletConnectWithRetry(2, 1000).catch(e => 
+                console.warn('[Init] WalletConnect preload skipped:', e.message)
+            );
+            
             isInitialized = true;
             resolveReady(true);
             console.log('🔒 Crypto Payments Ready');
             return true;
         } catch (e) {
+            console.error('[Init] Failed:', e);
             rejectReady(e);
             throw e;
         }
     })();
+    
     return initializationPromise;
 }
 
@@ -382,7 +568,7 @@ async function whenReady(timeout = 15000) {
 }
 
 // Auto-initialize
-initialize().catch(console.error);
+setTimeout(() => initialize().catch(console.error), 50);
 
 // ======================================================
 // 🌍  GLOBAL EXPORTS
@@ -392,10 +578,16 @@ window.initiateCryptoPayment = initiateCryptoPayment;
 window.processCryptoPayment = processCryptoPayment;
 window.initiatePaystackPayment = initiatePaystackPayment;
 window.cryptoPaymentReady = readyPromise;
+
+// Shared loader for vote.js to use
+window.loadWalletConnectShared = loadWalletConnectWithRetry;
+
 window.CryptoPayments = {
     initiate: initiateCryptoPayment,
     process: processCryptoPayment,
     paystack: initiatePaystackPayment,
+    loadWalletConnect: loadWalletConnectWithRetry,
+    connectWallet: connectWalletConnect,
     isReady, whenReady, initialize,
     showManualPaymentModal,
     CONFIG, ERROR_CODES
