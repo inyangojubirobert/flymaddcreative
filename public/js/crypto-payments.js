@@ -151,120 +151,17 @@ async function requestWalletConnection() {
     }
 }
 
-// Deep link configurations for wallet apps
-function getWalletDeepLinks(network = 'bsc') {
-    const currentUrl = window.location.href;
-    const encodedUrl = encodeURIComponent(currentUrl);
-    const host = window.location.host;
-    const path = window.location.pathname;
+// Deep link to wallet app on mobile
+function openWalletApp(walletType = 'metamask') {
+    const currentUrl = encodeURIComponent(window.location.href);
     
-    const wallets = {
-        bsc: [
-            { key: 'metamask', name: 'MetaMask', icon: '🦊', color: 'bg-orange-500', link: `https://metamask.app.link/dapp/${host}${path}` },
-            { key: 'trustwallet', name: 'Trust Wallet', icon: '🛡️', color: 'bg-blue-500', link: `https://link.trustwallet.com/open_url?coin_id=60&url=${encodedUrl}` },
-            { key: 'tokenpocket', name: 'TokenPocket', icon: '💼', color: 'bg-indigo-500', link: `tpoutside://open?params={"url":"${currentUrl}"}` },
-            { key: 'binance', name: 'Binance', icon: '🟡', color: 'bg-yellow-500', link: `bnc://app.binance.com/dapp/${host}${path}` },
-            { key: 'safepal', name: 'SafePal', icon: '🔐', color: 'bg-purple-500', link: `safepalwallet://dapp?url=${encodedUrl}` }
-        ],
-        tron: [
-            { key: 'tronlink', name: 'TronLink', icon: '⚡', color: 'bg-red-500', link: `tronlink://dapp?url=${encodedUrl}` },
-            { key: 'trustwallet', name: 'Trust Wallet', icon: '🛡️', color: 'bg-blue-500', link: `https://link.trustwallet.com/open_url?coin_id=195&url=${encodedUrl}` },
-            { key: 'tokenpocket', name: 'TokenPocket', icon: '💼', color: 'bg-indigo-500', link: `tpoutside://open?params={"url":"${currentUrl}"}` },
-            { key: 'klever', name: 'Klever', icon: '🔷', color: 'bg-cyan-500', link: `klever://browser?url=${encodedUrl}` }
-        ]
+    const deepLinks = {
+        metamask: `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`,
+        trustwallet: `https://link.trustwallet.com/open_url?coin_id=60&url=${currentUrl}`,
+        tokenpocket: `tpoutside://open?params=${currentUrl}`,
     };
     
-    return wallets[network.toLowerCase()] || wallets.bsc;
-}
-
-// Mobile wallet connection modal with deep links
-function showMobileWalletModal(network) {
-    return new Promise((resolve) => {
-        const wallets = getWalletDeepLinks(network);
-        
-        let walletButtonsHtml = wallets.map(w => `
-            <button data-wallet="${w.key}" data-link="${w.link}" 
-                class="wallet-btn w-full ${w.color} hover:opacity-90 text-white py-3 rounded-lg mb-2 flex items-center justify-center gap-2 transition-all active:scale-95">
-                <span class="text-xl">${w.icon}</span>
-                <span class="font-medium">${w.name}</span>
-            </button>
-        `).join('');
-        
-        const modal = createModal(`
-            <div class="bg-white p-6 rounded-2xl text-center w-[340px] max-w-[95vw] max-h-[85vh] overflow-y-auto">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-lg">🔗 Connect Wallet</h3>
-                    <span class="text-xs bg-gray-100 px-2 py-1 rounded">${network}</span>
-                </div>
-                
-                <p class="text-sm text-gray-600 mb-4">
-                    Tap a wallet to open and connect:
-                </p>
-                
-                <div class="space-y-2 mb-4">
-                    ${walletButtonsHtml}
-                </div>
-                
-                <div class="relative my-4">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-gray-200"></div>
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-2 bg-white text-gray-500">or</span>
-                    </div>
-                </div>
-                
-                <button id="useWalletConnect" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg mb-2 flex items-center justify-center gap-2">
-                    <span>🔗</span> WalletConnect
-                </button>
-                
-                <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded-lg mb-2 flex items-center justify-center gap-2">
-                    <span>📱</span> Pay via QR Code
-                </button>
-                
-                <button id="goBack" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg mt-3">
-                    ← Back
-                </button>
-                
-                <p class="text-xs text-gray-400 mt-4">
-                    Don't have a wallet? Download one from your app store.
-                </p>
-            </div>
-        `);
-
-        // Handle wallet deep link clicks
-        modal.querySelectorAll('.wallet-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const walletKey = btn.dataset.wallet;
-                const link = btn.dataset.link;
-                
-                console.debug(`[Mobile Wallet] Opening ${walletKey}:`, link);
-                trackEvent('mobile_wallet_deeplink', { wallet: walletKey, network });
-                
-                window.location.href = link;
-                
-                setTimeout(() => {
-                    modal.remove();
-                    resolve({ method: 'deeplink', wallet: walletKey });
-                }, 300);
-            });
-        });
-
-        modal.querySelector('#useWalletConnect').onclick = () => {
-            modal.remove();
-            resolve({ method: 'walletconnect' });
-        };
-
-        modal.querySelector('#useQR').onclick = () => {
-            modal.remove();
-            resolve({ method: 'qr' });
-        };
-
-        modal.querySelector('#goBack').onclick = () => {
-            modal.remove();
-            resolve({ method: 'back' });
-        };
-    });
+    return deepLinks[walletType] || deepLinks.metamask;
 }
 
 // ======================================================
@@ -746,17 +643,132 @@ function generateQR(text, elementId) {
 }
 
 // ======================================================
-// 🚀  PAYMENT PROCESSING FUNCTIONS
+// 📱 MOBILE PAYMENT FUNCTIONS
 // ======================================================
 
-async function processBSCPayment(init) {
-    try {
-        console.debug('[BSC Payment] Starting, isMobile:', isMobileDevice());
+// Get wallet deep links for mobile
+function getMobileWalletLinks(network = 'bsc') {
+    const currentUrl = window.location.href;
+    const encodedUrl = encodeURIComponent(currentUrl);
+    const host = window.location.host;
+    const path = window.location.pathname;
+    
+    const wallets = {
+        bsc: [
+            { key: 'metamask', name: 'MetaMask', icon: '🦊', color: 'bg-orange-500', link: `https://metamask.app.link/dapp/${host}${path}` },
+            { key: 'trustwallet', name: 'Trust Wallet', icon: '🛡️', color: 'bg-blue-500', link: `https://link.trustwallet.com/open_url?coin_id=60&url=${encodedUrl}` },
+            { key: 'tokenpocket', name: 'TokenPocket', icon: '💼', color: 'bg-indigo-500', link: `tpoutside://open?params={"url":"${currentUrl}"}` },
+            { key: 'binance', name: 'Binance', icon: '🟡', color: 'bg-yellow-500', link: `bnc://app.binance.com/dapp/${host}${path}` },
+            { key: 'safepal', name: 'SafePal', icon: '🔐', color: 'bg-purple-500', link: `safepalwallet://dapp?url=${encodedUrl}` }
+        ],
+        tron: [
+            { key: 'tronlink', name: 'TronLink', icon: '⚡', color: 'bg-red-500', link: `tronlink://dapp?url=${encodedUrl}` },
+            { key: 'trustwallet', name: 'Trust Wallet', icon: '🛡️', color: 'bg-blue-500', link: `https://link.trustwallet.com/open_url?coin_id=195&url=${encodedUrl}` },
+            { key: 'tokenpocket', name: 'TokenPocket', icon: '💼', color: 'bg-indigo-500', link: `tpoutside://open?params={"url":"${currentUrl}"}` },
+            { key: 'klever', name: 'Klever', icon: '🔷', color: 'bg-cyan-500', link: `klever://browser?url=${encodedUrl}` }
+        ]
+    };
+    
+    return wallets[network.toLowerCase()] || wallets.bsc;
+}
+
+// Mobile wallet selection modal with deep links
+function showMobileWalletModal(network) {
+    return new Promise((resolve) => {
+        const wallets = getMobileWalletLinks(network);
         
-        // Check if already inside wallet browser (injected provider)
+        const walletButtonsHtml = wallets.map(w => `
+            <button data-wallet="${w.key}" data-link="${w.link}" 
+                class="wallet-btn w-full ${w.color} hover:opacity-90 text-white py-3 rounded-lg mb-2 flex items-center justify-center gap-2 transition-all active:scale-95">
+                <span class="text-xl">${w.icon}</span>
+                <span class="font-medium">${w.name}</span>
+            </button>
+        `).join('');
+        
+        const modal = createModal(`
+            <div class="bg-white p-6 rounded-2xl text-center w-[340px] max-w-[95vw] max-h-[85vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">🔗 Connect Wallet</h3>
+                    <span class="text-xs bg-gray-100 px-2 py-1 rounded">${network}</span>
+                </div>
+                
+                <p class="text-sm text-gray-600 mb-4">Tap a wallet to open and connect:</p>
+                
+                <div class="space-y-2 mb-4">
+                    ${walletButtonsHtml}
+                </div>
+                
+                <div class="relative my-4">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div class="relative flex justify-center text-sm">
+                        <span class="px-2 bg-white text-gray-500">or</span>
+                    </div>
+                </div>
+                
+                <button id="mobileWalletConnect" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg mb-2 flex items-center justify-center gap-2">
+                    <span>🔗</span> WalletConnect
+                </button>
+                
+                <button id="mobileQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded-lg mb-2 flex items-center justify-center gap-2">
+                    <span>📱</span> Pay via QR Code
+                </button>
+                
+                <button id="mobileBack" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg mt-3">
+                    ← Back
+                </button>
+                
+                <p class="text-xs text-gray-400 mt-4">
+                    Don't have a wallet? Download one from your app store.
+                </p>
+            </div>
+        `);
+
+        // Handle wallet deep link clicks
+        modal.querySelectorAll('.wallet-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const walletKey = btn.dataset.wallet;
+                const link = btn.dataset.link;
+                
+                console.debug(`[Mobile] Opening ${walletKey}:`, link);
+                trackEvent('mobile_wallet_deeplink', { wallet: walletKey, network });
+                
+                window.location.href = link;
+                
+                setTimeout(() => {
+                    modal.remove();
+                    resolve({ method: 'deeplink', wallet: walletKey });
+                }, 300);
+            });
+        });
+
+        modal.querySelector('#mobileWalletConnect').onclick = () => {
+            modal.remove();
+            resolve({ method: 'walletconnect' });
+        };
+
+        modal.querySelector('#mobileQR').onclick = () => {
+            modal.remove();
+            resolve({ method: 'qr' });
+        };
+
+        modal.querySelector('#mobileBack').onclick = () => {
+            modal.remove();
+            resolve({ method: 'back' });
+        };
+    });
+}
+
+// Mobile BSC payment processing
+async function processMobileBSCPayment(init) {
+    try {
+        console.debug('[Mobile BSC] Starting payment');
+        
+        // Check if already inside wallet app browser
         if (window.ethereum) {
             try {
-                console.debug('[BSC Payment] Injected wallet detected');
+                console.debug('[Mobile BSC] Injected wallet found');
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
                 if (accounts && accounts.length > 0) {
@@ -766,87 +778,132 @@ async function processBSCPayment(init) {
                     return await executeBSCTransfer(signer, init.recipient_address, init.amount);
                 }
             } catch (error) {
-                console.warn('[BSC Payment] Injected wallet failed:', error.message);
+                console.warn('[Mobile BSC] Injected wallet failed:', error.message);
             }
         }
         
-        // MOBILE: Show wallet selection with deep links
-        if (isMobileDevice()) {
-            const choice = await showMobileWalletModal('BSC');
-            
-            if (choice.method === 'deeplink') {
-                return await showBSCManualModal(init.recipient_address, init.amount);
-            }
-            if (choice.method === 'walletconnect') {
-                try {
-                    const wcProvider = await connectWalletMobile();
-                    const provider = new ethers.providers.Web3Provider(wcProvider);
-                    const signer = provider.getSigner();
-                    return await executeBSCTransfer(signer, init.recipient_address, init.amount);
-                } catch (error) {
-                    return await showBSCManualModal(init.recipient_address, init.amount);
-                }
-            }
-            if (choice.method === 'qr') {
-                return await showBSCManualModal(init.recipient_address, init.amount);
-            }
-            return { success: false, cancelled: true };
+        // Show mobile wallet selection modal
+        const choice = await showMobileWalletModal('BSC');
+        
+        if (choice.method === 'deeplink') {
+            // User opened wallet app, show QR as fallback when they return
+            return await showBSCManualModal(init.recipient_address, init.amount);
         }
         
-        // DESKTOP: Show simple options modal (existing behavior)
-        const userChoice = await showNoWalletDetectedModal();
-        
-        if (userChoice === 'walletconnect') {
+        if (choice.method === 'walletconnect') {
             try {
                 const wcProvider = await connectWalletMobile();
                 const provider = new ethers.providers.Web3Provider(wcProvider);
                 const signer = provider.getSigner();
                 return await executeBSCTransfer(signer, init.recipient_address, init.amount);
             } catch (error) {
+                console.warn('[Mobile BSC] WalletConnect failed:', error.message);
                 return await showBSCManualModal(init.recipient_address, init.amount);
             }
-        } else if (userChoice === 'qr') {
+        }
+        
+        if (choice.method === 'qr') {
             return await showBSCManualModal(init.recipient_address, init.amount);
         }
+        
         return { success: false, cancelled: true };
-
+        
     } catch (error) {
-        console.error('[BSC Payment] Error:', error.message);
+        console.error('[Mobile BSC] Error:', error.message);
         throw error;
     }
 }
 
-async function processTronPayment(init) {
+// Mobile TRON payment processing
+async function processMobileTronPayment(init) {
     try {
-        console.debug('[TRON Payment] Starting, isMobile:', isMobileDevice());
+        console.debug('[Mobile TRON] Starting payment');
         
-        // Check if already inside TronLink browser
+        // Check if already inside TronLink app browser
         if (window.tronWeb && window.tronWeb.ready) {
             try {
                 return await executeTronTransfer(init.recipient_address, init.amount);
             } catch (error) {
-                console.warn('[TRON Payment] TronLink failed:', error.message);
+                console.warn('[Mobile TRON] TronLink failed:', error.message);
             }
         }
         
-        // MOBILE: Show wallet selection with deep links
-        if (isMobileDevice()) {
-            const choice = await showMobileWalletModal('TRON');
-            
-            if (choice.method === 'deeplink') {
-                return await showTronManualModal(init.recipient_address, init.amount);
-            }
-            if (choice.method === 'walletconnect') {
-                alert('WalletConnect is not available for TRON. Please use a TRON wallet or QR code.');
-                return await showTronManualModal(init.recipient_address, init.amount);
-            }
-            if (choice.method === 'qr') {
-                return await showTronManualModal(init.recipient_address, init.amount);
-            }
-            return { success: false, cancelled: true };
+        // Show mobile wallet selection modal
+        const choice = await showMobileWalletModal('TRON');
+        
+        if (choice.method === 'deeplink') {
+            return await showTronManualModal(init.recipient_address, init.amount);
         }
         
-        // DESKTOP: Show simple options modal (existing behavior)
+        if (choice.method === 'walletconnect') {
+            alert('WalletConnect is not available for TRON. Please use a TRON wallet or QR code.');
+            return await showTronManualModal(init.recipient_address, init.amount);
+        }
+        
+        if (choice.method === 'qr') {
+            return await showTronManualModal(init.recipient_address, init.amount);
+        }
+        
+        return { success: false, cancelled: true };
+        
+    } catch (error) {
+        console.error('[Mobile TRON] Error:', error.message);
+        return await showTronManualModal(init.recipient_address, init.amount);
+    }
+}
+
+// ======================================================
+// 🖥️ DESKTOP PAYMENT FUNCTIONS
+// ======================================================
+
+// Desktop BSC payment processing
+async function processDesktopBSCPayment(init) {
+    try {
+        console.debug('[Desktop BSC] Starting payment');
+        
+        // Show desktop options modal
+        const userChoice = await showNoWalletDetectedModal();
+        
+        if (userChoice === 'walletconnect') {
+            try {
+                console.debug('[Desktop BSC] User selected WalletConnect');
+                const wcProvider = await connectWalletMobile();
+                const provider = new ethers.providers.Web3Provider(wcProvider);
+                const signer = provider.getSigner();
+                return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+            } catch (error) {
+                console.warn('[Desktop BSC] WalletConnect failed:', error.message);
+                return await showBSCManualModal(init.recipient_address, init.amount);
+            }
+        } else if (userChoice === 'qr') {
+            console.debug('[Desktop BSC] User selected QR code');
+            return await showBSCManualModal(init.recipient_address, init.amount);
+        }
+        
+        return { success: false, cancelled: true };
+        
+    } catch (error) {
+        console.error('[Desktop BSC] Error:', error.message);
+        throw error;
+    }
+}
+
+// Desktop TRON payment processing
+async function processDesktopTronPayment(init) {
+    try {
+        console.debug('[Desktop TRON] Starting payment');
+        
+        // Check if TronLink extension is available
+        if (window.tronWeb && window.tronWeb.ready) {
+            try {
+                return await executeTronTransfer(init.recipient_address, init.amount);
+            } catch (error) {
+                console.warn('[Desktop TRON] TronLink failed:', error.message);
+                return await showTronManualModal(init.recipient_address, init.amount);
+            }
+        }
+        
+        // Show desktop options modal
         const userChoice = await showNoWalletDetectedModal();
         
         if (userChoice === 'walletconnect') {
@@ -855,11 +912,32 @@ async function processTronPayment(init) {
         } else if (userChoice === 'qr') {
             return await showTronManualModal(init.recipient_address, init.amount);
         }
+        
         return { success: false, cancelled: true };
         
     } catch (error) {
-        console.warn('[TRON Payment] Error:', error.message);
+        console.warn('[Desktop TRON] Error:', error.message);
         return await showTronManualModal(init.recipient_address, init.amount);
+    }
+}
+
+// ======================================================
+// 🚀  PAYMENT ROUTING (Mobile vs Desktop)
+// ======================================================
+
+async function processBSCPayment(init) {
+    if (isMobileDevice()) {
+        return await processMobileBSCPayment(init);
+    } else {
+        return await processDesktopBSCPayment(init);
+    }
+}
+
+async function processTronPayment(init) {
+    if (isMobileDevice()) {
+        return await processMobileTronPayment(init);
+    } else {
+        return await processDesktopTronPayment(init);
     }
 }
 
