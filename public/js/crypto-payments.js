@@ -152,75 +152,16 @@ async function requestWalletConnection() {
 }
 
 // Deep link to wallet app on mobile
-function getWalletDeepLink(walletType, network = 'bsc') {
-    const currentUrl = window.location.href;
-    const encodedUrl = encodeURIComponent(currentUrl);
-    const host = window.location.host;
-    const path = window.location.pathname;
+function openWalletApp(walletType = 'metamask') {
+    const currentUrl = encodeURIComponent(window.location.href);
     
     const deepLinks = {
-        // BSC Compatible Wallets
-        metamask: {
-            name: 'MetaMask',
-            icon: '🦊',
-            color: 'bg-orange-500 hover:bg-orange-600',
-            link: `https://metamask.app.link/dapp/${host}${path}`,
-            supported: ['bsc']
-        },
-        trustwallet: {
-            name: 'Trust Wallet',
-            icon: '🛡️',
-            color: 'bg-blue-500 hover:bg-blue-600',
-            link: `https://link.trustwallet.com/open_url?coin_id=60&url=${encodedUrl}`,
-            supported: ['bsc', 'tron']
-        },
-        tokenpocket: {
-            name: 'TokenPocket',
-            icon: '💼',
-            color: 'bg-indigo-500 hover:bg-indigo-600',
-            link: `tpoutside://open?params={"url":"${currentUrl}"}`,
-            supported: ['bsc', 'tron']
-        },
-        binance: {
-            name: 'Binance Wallet',
-            icon: '🟡',
-            color: 'bg-yellow-500 hover:bg-yellow-600',
-            link: `https://app.binance.com/dapp/${host}${path}`,
-            supported: ['bsc']
-        },
-        safepal: {
-            name: 'SafePal',
-            icon: '🔐',
-            color: 'bg-purple-500 hover:bg-purple-600',
-            link: `safepalwallet://dapp?url=${encodedUrl}`,
-            supported: ['bsc', 'tron']
-        },
-        // TRON Specific Wallets
-        tronlink: {
-            name: 'TronLink',
-            icon: '⚡',
-            color: 'bg-red-500 hover:bg-red-600',
-            link: `tronlink://dapp?url=${encodedUrl}`,
-            supported: ['tron']
-        },
-        klever: {
-            name: 'Klever',
-            icon: '🔷',
-            color: 'bg-cyan-500 hover:bg-cyan-600',
-            link: `klever://browser?url=${encodedUrl}`,
-            supported: ['tron']
-        }
+        metamask: `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`,
+        trustwallet: `https://link.trustwallet.com/open_url?coin_id=60&url=${currentUrl}`,
+        tokenpocket: `tpoutside://open?params=${currentUrl}`,
     };
     
-    // Filter wallets by network support
-    const filteredWallets = {};
-    for (const [key, wallet] of Object.entries(deepLinks)) {
-        if (wallet.supported.includes(network.toLowerCase())) {
-            filteredWallets[key] = wallet;
-        }
-    }
-    
-    return filteredWallets;
+    return deepLinks[walletType] || deepLinks.metamask;
 }
 
 // ======================================================
@@ -708,43 +649,11 @@ function generateQR(text, elementId) {
 async function processBSCPayment(init) {
     try {
         console.debug('[BSC Payment] Starting BSC payment process');
-        console.debug('[BSC Payment] Is mobile:', isMobileDevice());
-        console.debug('[BSC Payment] window.ethereum:', !!window.ethereum);
         
-        // Check if already inside a wallet browser (injected provider)
-        if (window.ethereum) {
-            try {
-                console.debug('[BSC Payment] Detected injected wallet, requesting access...');
-                
-                const accounts = await window.ethereum.request({ 
-                    method: 'eth_requestAccounts' 
-                });
-                
-                if (accounts && accounts.length > 0) {
-                    console.debug('[BSC Payment] Wallet connected:', accounts[0]);
-                    
-                    const provider = new ethers.providers.Web3Provider(window.ethereum);
-                    await ensureBSCNetwork(provider);
-                    const signer = provider.getSigner();
-                    return await executeBSCTransfer(signer, init.recipient_address, init.amount);
-                }
-            } catch (error) {
-                console.warn('[BSC Payment] Injected wallet connection failed:', error.message);
-                // Continue to show wallet selection modal
-            }
-        }
+        // Show connection options modal
+        const userChoice = await showNoWalletDetectedModal();
         
-        // Show wallet connection modal
-        const userChoice = await showWalletConnectionModal('BSC');
-        
-        if (userChoice.method === 'deeplink') {
-            // User clicked a wallet deep link - they'll return after connecting
-            // For now, show QR as fallback since we can't track the return
-            console.debug('[BSC Payment] Deep link opened, showing QR fallback');
-            return await showBSCManualModal(init.recipient_address, init.amount);
-        }
-        
-        if (userChoice.method === 'walletconnect') {
+        if (userChoice === 'walletconnect') {
             try {
                 console.debug('[BSC Payment] User selected WalletConnect');
                 const wcProvider = await connectWalletMobile();
@@ -753,17 +662,16 @@ async function processBSCPayment(init) {
                 return await executeBSCTransfer(signer, init.recipient_address, init.amount);
             } catch (error) {
                 console.warn('[BSC Payment] WalletConnect failed:', error.message);
+                // If WalletConnect fails, fall back to QR code
                 return await showBSCManualModal(init.recipient_address, init.amount);
             }
-        }
-        
-        if (userChoice.method === 'qr') {
+        } else if (userChoice === 'qr') {
             console.debug('[BSC Payment] User selected QR code payment');
             return await showBSCManualModal(init.recipient_address, init.amount);
+        } else {
+            // User clicked back
+            return { success: false, cancelled: true };
         }
-        
-        // User clicked back
-        return { success: false, cancelled: true };
 
     } catch (error) {
         console.error('[BSC Payment] Error:', error.message);
@@ -774,44 +682,33 @@ async function processBSCPayment(init) {
 async function processTronPayment(init) {
     try {
         console.debug('[TRON Payment] Starting TRON payment process');
-        console.debug('[TRON Payment] Is mobile:', isMobileDevice());
-        console.debug('[TRON Payment] window.tronWeb:', !!window.tronWeb);
         
-        // Check if already inside TronLink browser
+        // Check if TronLink is available
         if (window.tronWeb && window.tronWeb.ready) {
             try {
-                console.debug('[TRON Payment] Detected TronLink, executing transfer...');
                 return await executeTronTransfer(init.recipient_address, init.amount);
             } catch (error) {
                 console.warn('[TRON Payment] TronLink transfer failed:', error.message);
-                // Continue to show wallet selection modal
+                // Fall back to QR if transfer fails
+                return await showTronManualModal(init.recipient_address, init.amount);
             }
         }
         
-        // Show wallet connection modal
-        const userChoice = await showWalletConnectionModal('TRON');
+        // No TronLink - show options modal (same as BSC)
+        const userChoice = await showNoWalletDetectedModal();
         
-        if (userChoice.method === 'deeplink') {
-            // User clicked a wallet deep link
-            console.debug('[TRON Payment] Deep link opened, showing QR fallback');
+        if (userChoice === 'walletconnect') {
+            // WalletConnect doesn't support TRON, show message and fall back to QR
+            alert('WalletConnect is not available for TRON. Please use QR code payment.');
             return await showTronManualModal(init.recipient_address, init.amount);
-        }
-        
-        if (userChoice.method === 'walletconnect') {
-            // WalletConnect doesn't support TRON
-            alert('WalletConnect is not available for TRON network. Please use a TRON wallet app or QR code.');
+        } else if (userChoice === 'qr') {
             return await showTronManualModal(init.recipient_address, init.amount);
+        } else {
+            return { success: false, cancelled: true };
         }
-        
-        if (userChoice.method === 'qr') {
-            return await showTronManualModal(init.recipient_address, init.amount);
-        }
-        
-        // User clicked back
-        return { success: false, cancelled: true };
         
     } catch (error) {
-        console.warn('[TRON Payment] Error:', error.message);
+        console.warn('[TRON Payment] Error, showing QR fallback:', error.message);
         return await showTronManualModal(init.recipient_address, init.amount);
     }
 }
