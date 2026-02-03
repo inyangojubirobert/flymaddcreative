@@ -1139,8 +1139,10 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
 // ======================================================
 
 window.initiateCryptoPayment = initiateCryptoPayment;
+window.processCryptoPayment = initiateCryptoPayment; // ✅ Alias for vote-payments.js compatibility
 window.CryptoPayments = {
     initiate: initiateCryptoPayment,
+    process: initiateCryptoPayment, // ✅ Alias
     showBSCManualModal,
     showTronManualModal,
     showNetworkSelectionModal,
