@@ -875,8 +875,9 @@ console.log('📦 Vote.js Loading...');
             voteButton.disabled = true;
             voteButton.textContent = 'Processing...';
 
-            // Get vote details (adjust selectors based on your HTML)
-            const participantId = voteButton.dataset.participantId || 
+            // Get vote details - prioritize window.currentParticipant (set from URL)
+            const participantId = window.currentParticipant?.id ||
+                                  voteButton.dataset.participantId || 
                                   document.querySelector('[data-participant-id]')?.dataset.participantId;
             const voteCount = parseInt(document.querySelector('#voteCount')?.value || 
                                            document.querySelector('[name="vote_count"]')?.value || 1);
