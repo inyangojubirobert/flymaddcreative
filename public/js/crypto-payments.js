@@ -164,8 +164,8 @@ async function loadWalletConnect() {
 
 async function connectWalletMobile() {
     try {
-        const wcProvider = await loadWalletConnect();
-        const provider = await window.EthereumProvider.init({
+        const EthereumProvider = await loadWalletConnect();
+        const provider = await EthereumProvider.init({
             projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
             chains: [CONFIG.BSC.CHAIN_ID],
             showQrModal: true,
@@ -190,19 +190,19 @@ async function connectWalletMobile() {
 
 async function ensureBSCNetwork(provider) {
     try {
-        // For ethers v5
+        // For ethers v5 - get signer first to access provider
         const network = await provider.getNetwork();
         const chainId = network.chainId;
         
         if (chainId !== CONFIG.BSC.CHAIN_ID) {
-            await window.ethereum.request({
+            await provider.provider.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: `0x${CONFIG.BSC.CHAIN_ID.toString(16)}` }]
             });
         }
     } catch (switchError) {
         if (switchError.code === 4902) {
-            await window.ethereum.request({
+            await provider.provider.request({
                 method: 'wallet_addEthereumChain',
                 params: [{
                     chainId: `0x${CONFIG.BSC.CHAIN_ID.toString(16)}`,
@@ -434,16 +434,13 @@ function showBSCManualModal(recipient, amount) {
                 <div id="bscQR" class="mx-auto mb-3"></div>
                 <p class="text-sm text-gray-500">Scan with your BSC wallet</p>
                 <button id="copyAddress" class="mt-2 text-blue-500 text-xs">Copy Address</button>
-                <button id="closeBSC" class="mt-4 px-4 py-2 bg-gray-200 rounded">Cancel</button>
+                <button id="closeBSC" class="mt-4 px-4 py-2 bg-gray-200 rounded">Done</button>
             </div>
         `);
 
-// This creates a standard EVM transfer URI
-// Format: ethereum:contractAddress@chainId/transfer?address=recipient&uint256=amount
-const amountWei = ethers.utils.parseUnits(amount.toString(), 18);
-const bscUri = `ethereum:${CONFIG.BSC.USDT_ADDRESS}@${CONFIG.BSC.CHAIN_ID}/transfer?address=${recipient}&uint256=${amountWei}`;
-
-generateQR(bscUri, 'bscQR');
+        const amountWei = ethers.utils.parseUnits(amount.toString(), 18);
+        const bscUri = `ethereum:${CONFIG.BSC.USDT_ADDRESS}@${CONFIG.BSC.CHAIN_ID}/transfer?address=${recipient}&uint256=${amountWei}`;
+        generateQR(bscUri, 'bscQR');
 
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient)
@@ -453,7 +450,7 @@ generateQR(bscUri, 'bscQR');
 
         modal.querySelector('#closeBSC').onclick = () => {
             modal.remove();
-            resolve({ success: false, cancelled: true });
+            resolve({ success: false, manual: true });
         };
     });
 }
@@ -468,11 +465,11 @@ function showTronManualModal(recipient, amount) {
                 <div id="tronQR" class="mx-auto mb-3"></div>
                 <p class="text-sm text-gray-500">Scan with TRON wallet</p>
                 <button id="copyAddress" class="mt-2 text-blue-500 text-xs">Copy Address</button>
-                <button id="closeTron" class="mt-4 px-4 py-2 bg-gray-200 rounded">Cancel</button>
+                <button id="closeTron" class="mt-4 px-4 py-2 bg-gray-200 rounded">Done</button>
             </div>
         `);
 
-        generateQR(`tron:${CONFIG.TRON.USDT_ADDRESS}?contractAddress=${CONFIG.TRON.USDT_ADDRESS}&recipient=${recipient}&amount=${amount}`, 'tronQR');
+        generateQR(`tron:${recipient}?contractAddress=${CONFIG.TRON.USDT_ADDRESS}&amount=${amount}`, 'tronQR');
 
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient)
@@ -482,7 +479,7 @@ function showTronManualModal(recipient, amount) {
 
         modal.querySelector('#closeTron').onclick = () => {
             modal.remove();
-            resolve({ success: false, cancelled: true });
+            resolve({ success: false, manual: true });
         };
     });
 }
@@ -541,34 +538,42 @@ async function processBSCPayment(init) {
         console.debug('[BSC Payment] Starting BSC payment process');
         
         let provider;
+        
         // Check if a browser wallet (MetaMask) is present
         if (window.ethereum && !isMobileDevice()) {
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            await ensureBSCNetwork(provider);
+            try {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await ensureBSCNetwork(provider);
+                const signer = provider.getSigner();
+                return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+            } catch (error) {
+                if (error.code === 4001 || error.code === 'ACTION_REJECTED') {
+                    console.debug('[BSC Payment] User rejected wallet action');
+                    return await showBSCManualModal(init.recipient_address, init.amount);
+                }
+                throw error;
+            }
         } 
-        // Check if we should use WalletConnect for mobile
+        // Mobile device - try WalletConnect or fallback to QR
         else if (isMobileDevice()) {
-            const wcProvider = await connectWalletMobile();
-            provider = new ethers.providers.Web3Provider(wcProvider);
+            try {
+                const wcProvider = await connectWalletMobile();
+                provider = new ethers.providers.Web3Provider(wcProvider);
+                const signer = provider.getSigner();
+                return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+            } catch (error) {
+                console.debug('[BSC Payment] WalletConnect failed, showing QR fallback');
+                return await showBSCManualModal(init.recipient_address, init.amount);
+            }
         } 
-        // No wallet detected? Go straight to QR
+        // No wallet detected - show QR code modal
         else {
-            console.debug('[BSC Payment] No provider, showing QR modal');
+            console.debug('[BSC Payment] No provider detected, showing QR modal');
             return await showBSCManualModal(init.recipient_address, init.amount);
         }
-        
-        const signer = provider.getSigner();
-        return await executeBSCTransfer(signer, init.recipient_address, init.amount);
 
     } catch (error) {
-        console.warn('[BSC Payment] Wallet flow failed/cancelled, offering QR fallback:', error.message);
-        
-        // If the user rejected the transaction or the wallet failed, 
-        // don't just crash—show the QR code modal as a backup!
-        if (error.code !== ERROR_CODES.INVALID_INPUT) {
-            return await showBSCManualModal(init.recipient_address, init.amount);
-        }
-        
+        console.error('[BSC Payment] Error:', error.message);
         throw error;
     }
 }
@@ -580,11 +585,8 @@ async function processTronPayment(init) {
         }
         return await showTronManualModal(init.recipient_address, init.amount);
     } catch (error) {
-        throw new PaymentError(
-            error.message || 'TRON payment processing failed',
-            error.code || ERROR_CODES.TRANSACTION_ERROR,
-            { originalError: error }
-        );
+        console.warn('[TRON Payment] TronWeb unavailable, showing QR fallback');
+        return await showTronManualModal(init.recipient_address, init.amount);
     }
 }
 
@@ -632,7 +634,7 @@ async function processCryptoPayment() {
             let result;
             if (network === 'BSC') {
                 console.debug('[Payment] Processing BSC payment...');
-                updateStatus(modal, 'Processing BSC payment...');
+                updateStatus(modal, 'Connecting wallet...');
                 result = await processBSCPayment(init);
             } else if (network === 'TRON') {
                 console.debug('[Payment] Processing TRON payment...');
@@ -642,7 +644,15 @@ async function processCryptoPayment() {
                 throw new PaymentError('Unsupported network', ERROR_CODES.NETWORK_ERROR, { network });
             }
 
-            if (result.success !== false) {
+            // Check if it's a manual/QR payment
+            if (result.manual === true) {
+                console.debug('[Payment] Manual payment mode - user scanned QR');
+                updateStatus(modal, 'Waiting for transaction confirmation...');
+                trackEvent('payment_manual_qr', { network });
+                return result;
+            }
+
+            if (result.success !== false && result.txHash) {
                 console.debug('[Payment] Payment successful, finalizing...');
                 successStatus(modal, result.txHash, result.explorerUrl);
                 trackEvent('payment_success', { network, amount: init.amount });
@@ -653,7 +663,6 @@ async function processCryptoPayment() {
         } catch (error) {
             console.error('[Payment] Inner payment error:', error);
             errorStatus(modal, error);
-            // Enhance the error before re-throwing
             throw new PaymentError(
                 error.message || 'Payment processing failed',
                 error.code || ERROR_CODES.TRANSACTION_ERROR,
@@ -684,7 +693,7 @@ async function processCryptoPayment() {
             success: false,
             error: error.message || 'Payment failed',
             code: error.code || ERROR_CODES.UNKNOWN_ERROR,
-            cancelled: error.code === 4001,
+            cancelled: error.code === 4001 || error.code === 'ACTION_REJECTED',
             details: error.metadata
         };
     }
