@@ -297,61 +297,60 @@ async function detectPreferredNetwork() {
     return null;
 }
 
-async function connectWalletMobile() {
+async function connectWithWalletConnect() {
     try {
+        console.log('[WalletConnect] Starting connection...');
         const EthereumProvider = await loadWalletConnect();
+        
         const provider = await EthereumProvider.init({
             projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
             chains: [CONFIG.BSC.CHAIN_ID],
             showQrModal: true,
-            qrModalOptions: { themeMode: 'dark', enableExplorer: true },
+            qrModalOptions: { 
+                themeMode: 'dark', 
+                enableExplorer: true,
+                explorerRecommendedWalletIds: [
+                    'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
+                    '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust Wallet
+                    '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369', // SafePal
+                ]
+            },
             metadata: {
                 name: "OneDream Voting",
-                description: "Secure USDT Payment",
+                description: "Secure USDT Payment for Voting",
                 url: window.location.origin,
-                icons: [`${window.location.origin}/images/logo.png`].filter(Boolean)
+                icons: [`${window.location.origin}/images/logo.png`, `${window.location.origin}/favicon.ico`].filter(Boolean)
+            }
+        });
+        
+        // Enable session persistence
+        provider.on('display_uri', (uri) => {
+            console.log('[WalletConnect] Display URI:', uri);
+            // On mobile, this will trigger the wallet app
+            if (isMobileDevice()) {
+                // The QR modal will show a deep link for mobile
+                console.log('[WalletConnect] Mobile device detected, wallet app should open');
             }
         });
         
         await provider.connect();
+        console.log('[WalletConnect] Connected successfully');
         
+        // Ensure correct chain
         const chainId = await provider.request({ method: 'eth_chainId' });
-        if (chainId !== `0x${CONFIG.BSC.CHAIN_ID.toString(16)}`) {
-            try {
-                await provider.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: `0x${CONFIG.BSC.CHAIN_ID.toString(16)}` }]
-                });
-            } catch (switchError) {
-                throw new PaymentError('Please switch to BSC network in your wallet', ERROR_CODES.NETWORK_ERROR);
-            }
-        }
-        
-        const accounts = await provider.request({ method: 'eth_accounts' });
-        if (!accounts?.length) throw new Error('No accounts returned from WalletConnect');
-        
-        return provider;
-    } catch (error) {
-        throw new PaymentError(error.message || 'Failed to connect via WalletConnect', ERROR_CODES.WALLET_ERROR, { originalError: error });
-    }
-}
-
-async function ensureBSCNetwork(eip1193Provider) {
-    if (isMobileDevice()) return;
-    
-    try {
-        const chainId = await eip1193Provider.request({ method: 'eth_chainId' });
         const targetChainId = `0x${CONFIG.BSC.CHAIN_ID.toString(16)}`;
         
         if (chainId !== targetChainId) {
+            console.log('[WalletConnect] Switching to BSC network...');
             try {
-                await eip1193Provider.request({
+                await provider.request({
                     method: 'wallet_switchEthereumChain',
                     params: [{ chainId: targetChainId }]
                 });
             } catch (switchError) {
+                // Try to add the chain if it doesn't exist
                 if (switchError.code === 4902) {
-                    await eip1193Provider.request({
+                    await provider.request({
                         method: 'wallet_addEthereumChain',
                         params: [{
                             chainId: targetChainId,
@@ -361,12 +360,26 @@ async function ensureBSCNetwork(eip1193Provider) {
                             blockExplorerUrls: ['https://bscscan.com/']
                         }]
                     });
-                } else throw switchError;
+                } else {
+                    throw new PaymentError('Please switch to BSC network in your wallet', ERROR_CODES.NETWORK_ERROR);
+                }
             }
         }
+        
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        if (!accounts?.length) throw new Error('No accounts returned from WalletConnect');
+        
+        console.log('[WalletConnect] Account:', accounts[0]);
+        return provider;
     } catch (error) {
-        console.warn('[Network] Switch failed:', error.message);
+        console.error('[WalletConnect] Connection error:', error);
+        throw new PaymentError(error.message || 'Failed to connect via WalletConnect', ERROR_CODES.WALLET_ERROR, { originalError: error });
     }
+}
+
+// Keep the old function name for compatibility
+async function connectWalletMobile() {
+    return connectWithWalletConnect();
 }
 
 // ======================================================
@@ -548,21 +561,42 @@ function showNetworkSelectionModal(preferredNetwork) {
     });
 }
 
-function showDesktopWalletModal() {
+function showBSCPaymentOptionsModal() {
     return new Promise((resolve) => {
+        const isMobile = isMobileDevice();
+        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[90vw]">
-                <h3 class="font-bold mb-3 text-lg">📱 Connect Your Wallet</h3>
-                <p class="text-sm text-gray-600 mb-4">Choose how you'd like to complete your payment:</p>
-                <button id="useWalletConnect" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded mb-2">🔗 Connect via WalletConnect</button>
-                <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded mb-2">📱 Pay via QR Code</button>
+                <h3 class="font-bold mb-3 text-lg">💳 BSC Payment</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    ${isMobile 
+                        ? 'Connect your mobile wallet to complete the payment:' 
+                        : 'Choose how you\'d like to complete your payment:'}
+                </p>
+                <button id="useWalletConnect" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded mb-2 flex items-center justify-center gap-2">
+                    <span>🔗</span> ${isMobile ? 'Connect Wallet App' : 'Connect via WalletConnect'}
+                </button>
+                <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded mb-2 flex items-center justify-center gap-2">
+                    <span>📱</span> Pay via QR Code
+                </button>
+                <p class="text-xs text-gray-500 mt-3 mb-2">
+                    ${isMobile 
+                        ? 'Supported wallets: MetaMask, Trust Wallet, SafePal, etc.' 
+                        : 'Scan QR code with your mobile wallet'}
+                </p>
                 <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded mt-2">← Back</button>
             </div>
         `);
+        
         modal.querySelector('#useWalletConnect').onclick = () => { modal.remove(); resolve('walletconnect'); };
         modal.querySelector('#useQR').onclick = () => { modal.remove(); resolve('qr'); };
         modal.querySelector('#goBack').onclick = () => { modal.remove(); resolve('back'); };
     });
+}
+
+function showDesktopWalletModal() {
+    // Redirect to the new unified modal
+    return showBSCPaymentOptionsModal();
 }
 
 function showManualPaymentModal(network, recipient, amount) {
@@ -681,10 +715,10 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
         if (!selectedNetwork) return { success: false, cancelled: true };
         
         const recipient = selectedNetwork === 'BSC' ? CONFIG.BSC.WALLET_ADDRESS : CONFIG.TRON.WALLET_ADDRESS;
-        const hasWallet = selectedNetwork === 'BSC' ? await waitForWalletProvider(2000) : window.tronWeb?.ready;
         
-        if (!hasWallet) {
-            const choice = await showDesktopWalletModal();
+        if (selectedNetwork === 'BSC') {
+            // BSC: Always use WalletConnect or QR code for both mobile and desktop
+            const choice = await showBSCPaymentOptionsModal();
             
             if (choice === 'back') return initiateCryptoPayment(participantId, voteCount, amount);
             
@@ -697,49 +731,81 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 return result;
             }
             
-            if (choice === 'walletconnect' && selectedNetwork === 'BSC') {
+            if (choice === 'walletconnect') {
                 modal = showPaymentStatusModal(selectedNetwork, amount);
-                updateStatus(modal, 'Connecting wallet...');
-                const provider = await connectWalletMobile();
-                updateStatus(modal, 'Sending transaction...');
-                const result = await executeBSCTransfer(provider, recipient, amount);
-                updateStatus(modal, 'Finalizing...');
-                await finalizePayment(result.txHash, selectedNetwork);
-                successStatus(modal, result.txHash, result.explorerUrl);
-                trackEvent('payment_completed', { participantId, network: selectedNetwork, method: 'walletconnect' });
-                return { success: true, ...result };
+                
+                if (isMobileDevice()) {
+                    updateStatus(modal, 'Opening wallet app...');
+                } else {
+                    updateStatus(modal, 'Scan QR code with your wallet...');
+                }
+                
+                try {
+                    const provider = await connectWithWalletConnect();
+                    updateStatus(modal, 'Connected! Sending transaction...');
+                    
+                    const result = await executeBSCTransfer(provider, recipient, amount);
+                    updateStatus(modal, 'Confirming transaction...');
+                    
+                    await finalizePayment(result.txHash, selectedNetwork);
+                    successStatus(modal, result.txHash, result.explorerUrl);
+                    trackEvent('payment_completed', { 
+                        participantId, 
+                        network: selectedNetwork, 
+                        method: 'walletconnect',
+                        isMobile: isMobileDevice()
+                    });
+                    return { success: true, ...result };
+                } catch (wcError) {
+                    console.error('[WalletConnect] Payment failed:', wcError);
+                    errorStatus(modal, wcError);
+                    
+                    // Offer fallback to QR code
+                    if (confirm('Wallet connection failed. Would you like to pay via QR code instead?')) {
+                        modal.remove();
+                        const result = await showManualPaymentModal(selectedNetwork, recipient, amount);
+                        if (result.success && result.txHash) {
+                            try { await finalizePayment(result.txHash, selectedNetwork); } catch (e) { console.warn('[Payment] Finalization error:', e); }
+                            trackEvent('payment_completed', { participantId, network: selectedNetwork, manual: true, fallback: true });
+                        }
+                        return result;
+                    }
+                    return { success: false, error: wcError.message };
+                }
             }
             
             return { success: false, cancelled: true };
-        }
-        
-        modal = showPaymentStatusModal(selectedNetwork, amount);
-        
-        if (selectedNetwork === 'BSC') {
-            updateStatus(modal, 'Connecting wallet...');
-            if (!await requestWalletConnection()) throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
-            await ensureBSCNetwork(window.ethereum);
-            updateStatus(modal, 'Confirm in wallet...');
-            const result = await executeBSCTransfer(window.ethereum, recipient, amount);
-            updateStatus(modal, 'Finalizing...');
-            await finalizePayment(result.txHash, selectedNetwork);
-            successStatus(modal, result.txHash, result.explorerUrl);
-            trackEvent('payment_completed', { participantId, network: selectedNetwork, method: 'direct' });
-            return { success: true, ...result };
-        } else {
-            updateStatus(modal, 'Confirm in wallet...');
+            
+        } else if (selectedNetwork === 'TRON') {
+            // TRON: Check for TronLink wallet, otherwise show manual payment
+            const hasWallet = window.tronWeb?.ready;
+            
+            if (!hasWallet) {
+                const result = await showManualPaymentModal(selectedNetwork, recipient, amount);
+                if (result.success && result.txHash) {
+                    try { await finalizePayment(result.txHash, selectedNetwork); } catch (e) { console.warn('[Payment] Finalization error:', e); }
+                    trackEvent('payment_completed', { participantId, network: selectedNetwork, manual: true, autoDetected: result.autoDetected || false });
+                }
+                return result;
+            }
+            
+            modal = showPaymentStatusModal(selectedNetwork, amount);
+            updateStatus(modal, 'Confirm in TronLink...');
             const result = await executeTronTransfer(recipient, amount);
             updateStatus(modal, 'Finalizing...');
             await finalizePayment(result.txHash, selectedNetwork);
             successStatus(modal, result.txHash, result.explorerUrl);
-            trackEvent('payment_completed', { participantId, network: selectedNetwork, method: 'direct' });
+            trackEvent('payment_completed', { participantId, network: selectedNetwork, method: 'tronlink' });
             return { success: true, ...result };
         }
+        
+        return { success: false, error: 'Invalid network selected' };
+        
     } catch (error) {
         console.error('[CryptoPayment] Error:', error);
         if (modal) errorStatus(modal, error);
         else alert(error.message || 'Payment failed. Please try again.');
-        trackEvent('payment_error', { error: error.message, code: error.code, participantId });
+        trackEvent('payment_error', { error: error.message, code: error.code, participantId, isMobile: isMobileDevice() });
         return { success: false, error: error.message };
     }
 }
