@@ -263,6 +263,236 @@ function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
+function isInAppBrowser() {
+    // Check if we're inside a wallet's in-app browser
+    const ua = navigator.userAgent.toLowerCase();
+    return ua.includes('metamask') || 
+           ua.includes('trust') || 
+           ua.includes('tokenpocket') ||
+           ua.includes('imtoken') ||
+           ua.includes('coinbase') ||
+           (window.ethereum && window.ethereum.isMetaMask) ||
+           (window.ethereum && window.ethereum.isTrust) ||
+           (window.ethereum && window.ethereum.isCoinbaseWallet);
+}
+
+function getWalletDeepLinks(network, recipient, amount) {
+    // Deep links for popular mobile wallets
+    const chainId = network === 'BSC' ? 56 : 1;
+    const usdtAddress = network === 'BSC' ? CONFIG.BSC.USDT_ADDRESS : '';
+    
+    return {
+        metamask: `https://metamask.app.link/send/${usdtAddress}@${chainId}/transfer?address=${recipient}&uint256=${amount}e18`,
+        trust: `trust://send?asset=c20000714_t${usdtAddress}&address=${recipient}&amount=${amount}`,
+        tokenpocket: `tpoutside://pull.activity?param=${encodeURIComponent(JSON.stringify({
+            action: 'transfer',
+            chain: 'BSC',
+            contract: usdtAddress,
+            to: recipient,
+            amount: amount.toString()
+        }))}`,
+        // Generic WalletConnect deep link
+        walletconnect: `wc:`
+    };
+}
+
+function showMobileWalletModal(network, recipient, amount) {
+    return new Promise((resolve) => {
+        const hasInjectedWallet = window.ethereum || window.BinanceChain;
+        const deepLinks = getWalletDeepLinks(network, recipient, amount);
+        
+        const modal = createModal(`
+            <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
+                <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
+                <h3 class="font-bold mb-3 text-lg pr-6">💳 Connect Wallet</h3>
+                <p class="text-sm text-gray-600 mb-4">Choose your wallet to pay <strong>${amount} USDT</strong></p>
+                
+                ${hasInjectedWallet ? `
+                <button id="useInjectedWallet" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-lg mb-3 flex items-center justify-center gap-2 font-semibold transition-all shadow-md">
+                    <span>🔗</span> Connect Current Wallet
+                </button>
+                <div class="text-xs text-gray-400 mb-3">— or open another wallet —</div>
+                ` : ''}
+                
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button id="openMetaMask" class="bg-orange-500 hover:bg-orange-600 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
+                        <span>🦊</span> MetaMask
+                    </button>
+                    <button id="openTrust" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
+                        <span>🛡️</span> Trust
+                    </button>
+                    <button id="openTokenPocket" class="bg-purple-500 hover:bg-purple-600 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
+                        <span>💰</span> TokenPocket
+                    </button>
+                    <button id="openOther" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
+                        <span>📱</span> Other
+                    </button>
+                </div>
+                
+                <div class="border-t pt-3 mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Already paid? Enter transaction hash:</p>
+                    <input type="text" id="txHashInput" placeholder="0x..." class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm transition-colors">✅ Confirm Payment</button>
+                </div>
+                
+                <button id="cancelPayment" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded text-sm mt-2 transition-colors">Cancel</button>
+            </div>
+        `);
+
+        // Close handlers
+        modal.querySelector('#modalCloseX').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+        modal.querySelector('#cancelPayment').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+
+        // Use injected wallet (if in wallet browser)
+        if (hasInjectedWallet) {
+            modal.querySelector('#useInjectedWallet').onclick = () => { 
+                modal.remove(); 
+                resolve({ success: false, useInjected: true }); 
+            };
+        }
+
+        // Open wallet apps via deep links
+        modal.querySelector('#openMetaMask').onclick = () => {
+            window.location.href = deepLinks.metamask;
+            // Keep modal open - user will return after wallet interaction
+        };
+        
+        modal.querySelector('#openTrust').onclick = () => {
+            window.location.href = deepLinks.trust;
+        };
+        
+        modal.querySelector('#openTokenPocket').onclick = () => {
+            window.location.href = deepLinks.tokenpocket;
+        };
+        
+        modal.querySelector('#openOther').onclick = () => {
+            // Show address and amount for manual sending
+            modal.remove();
+            resolve({ success: false, showManual: true });
+        };
+
+        // Confirm payment with tx hash
+        modal.querySelector('#confirmPayment').onclick = () => {
+            const txHash = modal.querySelector('#txHashInput').value.trim();
+            modal.remove();
+            
+            if (txHash && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` 
+                });
+            } else if (txHash) {
+                showCryptoAlert('Invalid transaction hash format', 'error');
+                resolve({ success: false, error: 'Invalid transaction hash' });
+            } else {
+                resolve({ success: false, manual: true, pendingConfirmation: true });
+            }
+        };
+    });
+}
+
+function showMobileTronWalletModal(recipient, amount) {
+    return new Promise((resolve) => {
+        const hasTronLink = window.tronWeb && window.tronWeb.ready;
+        
+        const modal = createModal(`
+            <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
+                <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
+                <h3 class="font-bold mb-3 text-lg pr-6">💳 TRON Payment</h3>
+                <p class="text-sm text-gray-600 mb-4">Pay <strong>${amount} USDT</strong> (TRC-20)</p>
+                
+                ${hasTronLink ? `
+                <button id="useTronLink" class="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white py-3 rounded-lg mb-3 flex items-center justify-center gap-2 font-semibold transition-all shadow-md">
+                    <span>🔴</span> Pay with TronLink
+                </button>
+                ` : ''}
+                
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button id="openTronLink" class="bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
+                        <span>🔴</span> TronLink
+                    </button>
+                    <button id="openTrustTron" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
+                        <span>🛡️</span> Trust
+                    </button>
+                </div>
+                
+                <div class="bg-gray-100 p-3 rounded mb-3">
+                    <p class="text-xs text-gray-500 mb-1">Send to this address:</p>
+                    <div class="text-xs font-mono break-all text-gray-700">${recipient}</div>
+                    <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mt-2 transition-colors">📋 Copy Address</button>
+                </div>
+                
+                <div class="border-t pt-3">
+                    <p class="text-xs text-gray-500 mb-2">Already paid? Enter transaction hash:</p>
+                    <input type="text" id="txHashInput" placeholder="Transaction hash..." class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-red-500 outline-none" />
+                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm transition-colors">✅ Confirm Payment</button>
+                </div>
+                
+                <button id="cancelPayment" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded text-sm mt-2 transition-colors">Cancel</button>
+            </div>
+        `);
+
+        // Close handlers
+        modal.querySelector('#modalCloseX').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+        modal.querySelector('#cancelPayment').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+
+        // Use TronLink directly
+        if (hasTronLink) {
+            modal.querySelector('#useTronLink').onclick = () => { 
+                modal.remove(); 
+                resolve({ success: false, useTronLink: true }); 
+            };
+        }
+
+        // Open wallet apps
+        modal.querySelector('#openTronLink').onclick = () => {
+            window.location.href = `tronlinkoutside://pull.activity?param=${encodeURIComponent(JSON.stringify({
+                action: 'transfer',
+                contract: CONFIG.TRON.USDT_ADDRESS,
+                to: recipient,
+                amount: (amount * 1e6).toString()
+            }))}`;
+        };
+        
+        modal.querySelector('#openTrustTron').onclick = () => {
+            window.location.href = `trust://send?asset=c195_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&address=${recipient}&amount=${amount}`;
+        };
+
+        // Copy address
+        modal.querySelector('#copyAddress').onclick = () => {
+            navigator.clipboard.writeText(recipient)
+                .then(() => {
+                    const btn = modal.querySelector('#copyAddress');
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
+                })
+                .catch(() => showCryptoAlert('Failed to copy address', 'error'));
+        };
+
+        // Confirm payment
+        modal.querySelector('#confirmPayment').onclick = () => {
+            const txHash = modal.querySelector('#txHashInput').value.trim();
+            modal.remove();
+            
+            if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` 
+                });
+            } else if (txHash) {
+                showCryptoAlert('Invalid transaction hash format', 'error');
+                resolve({ success: false, error: 'Invalid transaction hash' });
+            } else {
+                resolve({ success: false, manual: true, pendingConfirmation: true });
+            }
+        };
+    });
+}
+
 async function waitForWalletProvider(timeout = 3000) {
     return new Promise((resolve) => {
         if (window.ethereum) {
@@ -1085,10 +1315,117 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             ? CONFIG.BSC.WALLET_ADDRESS 
             : CONFIG.TRON.WALLET_ADDRESS;
         
-        // For BSC: Always show payment options (WalletConnect, QR, or Browser Wallet)
+        // For BSC: Show different options for mobile vs desktop
         // For TRON: Use TronLink if available, otherwise show manual QR
         if (selectedNetwork === 'BSC') {
-            // Always show payment method selection for BSC
+            const isMobile = isMobileDevice();
+            const isInWalletBrowser = isInAppBrowser();
+            
+            // If we're inside a wallet's browser, use the injected provider directly
+            if (isInWalletBrowser && window.ethereum) {
+                console.log('[Payment] Detected in-app wallet browser, using injected provider');
+                modal = showPaymentStatusModal(selectedNetwork, amount);
+                updateStatus(modal, 'Connecting wallet...');
+                
+                try {
+                    const connected = await requestWalletConnection();
+                    if (!connected) {
+                        throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
+                    }
+                    
+                    await ensureBSCNetworkDesktop(window.ethereum);
+                    
+                    updateStatus(modal, 'Confirm in wallet...');
+                    const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
+                    
+                    updateStatus(modal, 'Finalizing...');
+                    await finalizePayment(result.txHash, selectedNetwork);
+                    
+                    successStatus(modal, result.txHash, result.explorerUrl);
+                    
+                    return { 
+                        success: true, 
+                        ...result,
+                        participant_id: participantId,
+                        payment_amount: amount,
+                        payment_intent_id: result.txHash
+                    };
+                } catch (walletError) {
+                    if (modal) modal.remove();
+                    throw walletError;
+                }
+            }
+            
+            // Mobile device - show mobile wallet modal with deep links
+            if (isMobile) {
+                const mobileResult = await showMobileWalletModal(selectedNetwork, recipient, amount);
+                
+                if (mobileResult.cancelled) {
+                    return { success: false, cancelled: true };
+                }
+                
+                // User wants to use injected wallet
+                if (mobileResult.useInjected && window.ethereum) {
+                    modal = showPaymentStatusModal(selectedNetwork, amount);
+                    updateStatus(modal, 'Connecting wallet...');
+                    
+                    try {
+                        const connected = await requestWalletConnection();
+                        if (!connected) {
+                            throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
+                        }
+                        
+                        await ensureBSCNetworkDesktop(window.ethereum);
+                        
+                        updateStatus(modal, 'Confirm in wallet...');
+                        const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
+                        
+                        updateStatus(modal, 'Finalizing...');
+                        await finalizePayment(result.txHash, selectedNetwork);
+                        
+                        successStatus(modal, result.txHash, result.explorerUrl);
+                        
+                        return { 
+                            success: true, 
+                            ...result,
+                            participant_id: participantId,
+                            payment_amount: amount,
+                            payment_intent_id: result.txHash
+                        };
+                    } catch (walletError) {
+                        if (modal) modal.remove();
+                        throw walletError;
+                    }
+                }
+                
+                // User chose "Other" - show manual payment
+                if (mobileResult.showManual) {
+                    const manualResult = await showBSCManualModal(recipient, amount);
+                    if (manualResult.success) {
+                        return {
+                            ...manualResult,
+                            participant_id: participantId,
+                            payment_amount: amount,
+                            payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+                        };
+                    }
+                    return manualResult;
+                }
+                
+                // User confirmed payment with tx hash
+                if (mobileResult.success) {
+                    return {
+                        ...mobileResult,
+                        participant_id: participantId,
+                        payment_amount: amount,
+                        payment_intent_id: mobileResult.txHash || `manual_${Date.now()}`
+                    };
+                }
+                
+                return mobileResult;
+            }
+            
+            // Desktop - show payment method selection
             const choice = await showDesktopWalletModal();
             
             if (choice === 'back') {
