@@ -424,6 +424,43 @@ function showNetworkSelectionModal(preferredNetwork) {
     });
 }
 
+function showNoWalletDetectedModal() {
+    return new Promise((resolve) => {
+        const modal = createModal(`
+            <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[90vw]">
+                <h3 class="font-bold mb-3 text-lg">⚠️ Wallet Not Detected</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    No crypto wallet was found on your device. Please choose another payment method.
+                </p>
+                <div class="bg-blue-50 p-3 rounded mb-4 text-xs text-gray-700">
+                    <p class="font-semibold mb-2">💡 What you can do:</p>
+                    <ul class="text-left space-y-1">
+                        <li>• Install a wallet app (TrustWallet, MetaMask)</li>
+                        <li>• Use the QR code payment method below</li>
+                        <li>• Try a different payment option</li>
+                    </ul>
+                </div>
+                <button id="useQR" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded mb-2">
+                    Use QR Code Payment
+                </button>
+                <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded">
+                    Back
+                </button>
+            </div>
+        `);
+
+        modal.querySelector('#useQR').onclick = () => {
+            modal.remove();
+            resolve('qr');
+        };
+
+        modal.querySelector('#goBack').onclick = () => {
+            modal.remove();
+            resolve('back');
+        };
+    });
+}
+
 function showBSCManualModal(recipient, amount) {
     return new Promise((resolve) => {
         const modal = createModal(`
@@ -562,14 +599,28 @@ async function processBSCPayment(init) {
                 const signer = provider.getSigner();
                 return await executeBSCTransfer(signer, init.recipient_address, init.amount);
             } catch (error) {
-                console.debug('[BSC Payment] WalletConnect failed, showing QR fallback');
-                return await showBSCManualModal(init.recipient_address, init.amount);
+                console.debug('[BSC Payment] WalletConnect failed or cancelled, checking options');
+                
+                // Show wallet not detected modal
+                const userChoice = await showNoWalletDetectedModal();
+                
+                if (userChoice === 'qr') {
+                    return await showBSCManualModal(init.recipient_address, init.amount);
+                } else if (userChoice === 'back') {
+                    return { success: false, cancelled: true };
+                }
             }
         } 
-        // No wallet detected - show QR code modal
+        // No wallet detected - show no wallet modal
         else {
-            console.debug('[BSC Payment] No provider detected, showing QR modal');
-            return await showBSCManualModal(init.recipient_address, init.amount);
+            console.debug('[BSC Payment] No provider detected');
+            const userChoice = await showNoWalletDetectedModal();
+            
+            if (userChoice === 'qr') {
+                return await showBSCManualModal(init.recipient_address, init.amount);
+            } else if (userChoice === 'back') {
+                return { success: false, cancelled: true };
+            }
         }
 
     } catch (error) {
