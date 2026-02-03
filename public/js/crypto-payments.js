@@ -72,6 +72,10 @@ const CONFIG = {
         MAX_RETRIES: 3,
         TIMEOUT_MS: 300000,
         ATTEMPT_TIMEOUT: 5 * 60 * 1000
+    },
+    POLLING: {
+        INTERVAL_MS: 10000,
+        TIMEOUT_MS: 10 * 60 * 1000
     }
 };
 
@@ -357,11 +361,9 @@ async function connectWalletMobile() {
         console.debug('[WalletConnect] Connecting...');
         await provider.connect();
         
-        // ✅ FIX #6: Verify chain after connection
         const chainId = await provider.request({ method: 'eth_chainId' });
         if (chainId !== `0x${CONFIG.BSC.CHAIN_ID.toString(16)}`) {
             console.warn('[WalletConnect] Wrong chain detected:', chainId);
-            // Try to switch chain
             try {
                 await provider.request({
                     method: 'wallet_switchEthereumChain',
@@ -435,7 +437,7 @@ async function ensureBSCNetworkDesktop(eip1193Provider) {
 // 🏦  PAYMENT PROCESSING
 // ======================================================
 
-async function initializeCryptoPayment(participantId, voteCount, network) {
+async function initializeCryptoPaymentBackend(participantId, voteCount, network) {
     try {
         trackEvent('payment_initiated', { participantId, voteCount, network });
         
@@ -588,6 +590,111 @@ async function finalizePayment(txHash, network) {
 }
 
 // ======================================================
+// 🔄  AUTO-POLLING FOR MANUAL PAYMENTS
+// ======================================================
+
+async function pollForBSCPayment(recipient, expectedAmount, onStatusUpdate) {
+    const startTime = Date.now();
+    
+    if (typeof ethers === 'undefined') {
+        console.warn('[Polling] Ethers.js not available, skipping auto-detection');
+        return null;
+    }
+    
+    const BSC_USDT_DECIMALS = 18;
+    const expectedWei = ethers.utils.parseUnits(expectedAmount.toString(), BSC_USDT_DECIMALS);
+    
+    console.debug('[Polling] Starting BSC payment detection for', expectedAmount, 'USDT to', recipient);
+    
+    while (Date.now() - startTime < CONFIG.POLLING.TIMEOUT_MS) {
+        try {
+            const provider = new ethers.providers.JsonRpcProvider(CONFIG.BSC.RPC_URL);
+            
+            // Get recent blocks to check for transfers
+            const currentBlock = await provider.getBlockNumber();
+            const fromBlock = Math.max(0, currentBlock - 100); // Last ~100 blocks (~5 mins)
+            
+            // Create contract interface for USDT
+            const usdtContract = new ethers.Contract(
+                CONFIG.BSC.USDT_ADDRESS,
+                ['event Transfer(address indexed from, address indexed to, uint256 value)'],
+                provider
+            );
+            
+            // Query transfer events to our wallet
+            const filter = usdtContract.filters.Transfer(null, recipient);
+            const events = await usdtContract.queryFilter(filter, fromBlock, currentBlock);
+            
+            for (const event of events.reverse()) {
+                const transferAmount = event.args.value;
+                // Check if amount matches (with small tolerance for fees)
+                if (transferAmount.gte(expectedWei.mul(99).div(100))) {
+                    console.debug('[Polling] Found matching BSC transaction:', event.transactionHash);
+                    return event.transactionHash;
+                }
+            }
+            
+            if (onStatusUpdate) {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                onStatusUpdate(`Scanning for payment... (${elapsed}s)`);
+            }
+            
+        } catch (e) {
+            console.warn('[Polling] BSC scan error:', e.message);
+        }
+        
+        await new Promise(r => setTimeout(r, CONFIG.POLLING.INTERVAL_MS));
+    }
+    
+    return null;
+}
+
+async function pollForTronPayment(recipient, expectedAmount, onStatusUpdate) {
+    const startTime = Date.now();
+    const TRON_USDT_DECIMALS = 6;
+    const expectedSun = Math.floor(expectedAmount * Math.pow(10, TRON_USDT_DECIMALS));
+    
+    console.debug('[Polling] Starting TRON payment detection for', expectedAmount, 'USDT to', recipient);
+    
+    while (Date.now() - startTime < CONFIG.POLLING.TIMEOUT_MS) {
+        try {
+            // Use TronGrid API to check for transfers
+            const response = await fetch(
+                `https://api.trongrid.io/v1/accounts/${recipient}/transactions/trc20?limit=20&contract_address=${CONFIG.TRON.USDT_ADDRESS}`
+            );
+            
+            if (response.ok) {
+                const data = await response.json();
+                const transactions = data.data || [];
+                
+                for (const tx of transactions) {
+                    if (tx.to === recipient && tx.type === 'Transfer') {
+                        const txAmount = parseInt(tx.value || '0');
+                        // Check if amount matches (with small tolerance)
+                        if (txAmount >= expectedSun * 0.99) {
+                            console.debug('[Polling] Found matching TRON transaction:', tx.transaction_id);
+                            return tx.transaction_id;
+                        }
+                    }
+                }
+            }
+            
+            if (onStatusUpdate) {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                onStatusUpdate(`Scanning for payment... (${elapsed}s)`);
+            }
+            
+        } catch (e) {
+            console.warn('[Polling] TRON scan error:', e.message);
+        }
+        
+        await new Promise(r => setTimeout(r, CONFIG.POLLING.INTERVAL_MS));
+    }
+    
+    return null;
+}
+
+// ======================================================
 // 🧩  UI COMPONENTS
 // ======================================================
 
@@ -612,7 +719,7 @@ function showPaymentStatusModal(network, amount) {
             <div id="txLink" class="mt-4 text-sm hidden">
                 <a href="#" target="_blank" rel="noopener noreferrer" class="text-blue-500">View on explorer</a>
             </div>
-            <button id="closeModal" class="mt-4 text-gray-500 text-sm">Close</button>
+            <button id="closeModal" class="mt-4 text-gray-500 text-sm hidden">Close</button>
         </div>
     `);
 }
@@ -671,6 +778,9 @@ function showDesktopWalletModal() {
 
 function showBSCManualModal(recipient, amount) {
     return new Promise((resolve) => {
+        let isPolling = false;
+        let pollingStopped = false;
+        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw]">
                 <h3 class="font-bold mb-3">BSC USDT Payment</h3>
@@ -679,6 +789,10 @@ function showBSCManualModal(recipient, amount) {
                 <div id="bscQR" class="mx-auto mb-3"></div>
                 <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on BSC network</p>
                 <button id="copyAddress" class="text-blue-500 text-xs mb-3">📋 Copy Address</button>
+                <div id="pollingStatus" class="text-xs text-gray-500 mb-2 hidden">
+                    <div class="loading-spinner mx-auto mb-2" style="width:20px;height:20px;border-width:2px;"></div>
+                    <span id="pollingText">Waiting for payment...</span>
+                </div>
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
                     <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2" />
@@ -690,6 +804,25 @@ function showBSCManualModal(recipient, amount) {
 
         generateQR(recipient, 'bscQR');
 
+        // Start auto-polling in background
+        const pollingStatusEl = modal.querySelector('#pollingStatus');
+        const pollingTextEl = modal.querySelector('#pollingText');
+        
+        if (typeof ethers !== 'undefined') {
+            pollingStatusEl.classList.remove('hidden');
+            isPolling = true;
+            
+            pollForBSCPayment(recipient, amount, (status) => {
+                if (pollingTextEl && !pollingStopped) pollingTextEl.textContent = status;
+            }).then((txHash) => {
+                if (txHash && !pollingStopped) {
+                    pollingStopped = true;
+                    modal.remove();
+                    resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}`, autoDetected: true });
+                }
+            }).catch(console.warn);
+        }
+
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient)
                 .then(() => {
@@ -708,6 +841,7 @@ function showBSCManualModal(recipient, amount) {
                 }
             }
             
+            pollingStopped = true;
             modal.remove();
             if (txHash && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
                 resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` });
@@ -716,12 +850,18 @@ function showBSCManualModal(recipient, amount) {
             }
         };
 
-        modal.querySelector('#closeBSC').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+        modal.querySelector('#closeBSC').onclick = () => { 
+            pollingStopped = true;
+            modal.remove(); 
+            resolve({ success: false, cancelled: true }); 
+        };
     });
 }
 
 function showTronManualModal(recipient, amount) {
     return new Promise((resolve) => {
+        let pollingStopped = false;
+        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw]">
                 <h3 class="font-bold mb-3">TRON USDT Payment</h3>
@@ -730,6 +870,10 @@ function showTronManualModal(recipient, amount) {
                 <div id="tronQR" class="mx-auto mb-3"></div>
                 <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on TRON network</p>
                 <button id="copyAddress" class="text-blue-500 text-xs mb-3">📋 Copy Address</button>
+                <div id="pollingStatus" class="text-xs text-gray-500 mb-2">
+                    <div class="loading-spinner mx-auto mb-2" style="width:20px;height:20px;border-width:2px;"></div>
+                    <span id="pollingText">Waiting for payment...</span>
+                </div>
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
                     <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2" />
@@ -741,6 +885,19 @@ function showTronManualModal(recipient, amount) {
 
         generateQR(recipient, 'tronQR');
 
+        // Start auto-polling in background
+        const pollingTextEl = modal.querySelector('#pollingText');
+        
+        pollForTronPayment(recipient, amount, (status) => {
+            if (pollingTextEl && !pollingStopped) pollingTextEl.textContent = status;
+        }).then((txHash) => {
+            if (txHash && !pollingStopped) {
+                pollingStopped = true;
+                modal.remove();
+                resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}`, autoDetected: true });
+            }
+        }).catch(console.warn);
+
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient)
                 .then(() => {
@@ -759,6 +916,7 @@ function showTronManualModal(recipient, amount) {
                 }
             }
             
+            pollingStopped = true;
             modal.remove();
             if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
                 resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` });
@@ -767,7 +925,11 @@ function showTronManualModal(recipient, amount) {
             }
         };
 
-        modal.querySelector('#closeTron').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+        modal.querySelector('#closeTron').onclick = () => { 
+            pollingStopped = true;
+            modal.remove(); 
+            resolve({ success: false, cancelled: true }); 
+        };
     });
 }
 
@@ -843,12 +1005,30 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             }
             
             if (choice === 'qr') {
-                // Show manual payment modal
+                // Show manual payment modal with auto-polling
+                let result;
                 if (selectedNetwork === 'BSC') {
-                    return await showBSCManualModal(recipient, amount);
+                    result = await showBSCManualModal(recipient, amount);
                 } else {
-                    return await showTronManualModal(recipient, amount);
+                    result = await showTronManualModal(recipient, amount);
                 }
+                
+                // If payment was detected/confirmed, finalize it
+                if (result.success && result.txHash) {
+                    try {
+                        await finalizePayment(result.txHash, selectedNetwork);
+                        trackEvent('payment_completed', { 
+                            participantId, 
+                            network: selectedNetwork, 
+                            manual: true,
+                            autoDetected: result.autoDetected || false
+                        });
+                    } catch (e) {
+                        console.warn('[Payment] Finalization error:', e);
+                    }
+                }
+                
+                return result;
             }
             
             if (choice === 'walletconnect' && selectedNetwork === 'BSC') {
@@ -865,6 +1045,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 await finalizePayment(result.txHash, selectedNetwork);
                 
                 successStatus(modal, result.txHash, result.explorerUrl);
+                trackEvent('payment_completed', { participantId, network: selectedNetwork, method: 'walletconnect' });
                 return { success: true, ...result };
             }
             
@@ -891,6 +1072,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             await finalizePayment(result.txHash, selectedNetwork);
             
             successStatus(modal, result.txHash, result.explorerUrl);
+            trackEvent('payment_completed', { participantId, network: selectedNetwork, method: 'direct' });
             return { success: true, ...result };
             
         } else if (selectedNetwork === 'TRON') {
@@ -901,6 +1083,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             await finalizePayment(result.txHash, selectedNetwork);
             
             successStatus(modal, result.txHash, result.explorerUrl);
+            trackEvent('payment_completed', { participantId, network: selectedNetwork, method: 'direct' });
             return { success: true, ...result };
         }
         
@@ -937,4 +1120,4 @@ window.CryptoPayments = {
     ERROR_CODES
 };
 
-console.log('✅ Crypto Payments module loaded');
+console.log('✅ Crypto Payments module loaded with auto-polling');
