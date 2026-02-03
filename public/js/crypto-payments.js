@@ -42,7 +42,16 @@ const scriptTag = document.currentScript || document.querySelector('script[src*=
 const CONFIG = {
     BSC: {
         USDT_ADDRESS: "0x55d398326f99059fF775485246999027B3197955",
-        RPC_URL: window.env?.NEXT_PUBLIC_BSC_RPC_URL || "https://bsc-dataseed.binance.org/",
+        // Multiple RPC URLs for fallback
+        RPC_URLS: [
+            window.env?.NEXT_PUBLIC_BSC_RPC_URL || "https://bsc-dataseed1.binance.org/",
+            "https://bsc-dataseed2.binance.org/",
+            "https://bsc-dataseed3.binance.org/",
+            "https://bsc-dataseed4.binance.org/",
+            "https://bsc.publicnode.com",
+            "https://binance.llamarpc.com"
+        ],
+        RPC_URL: window.env?.NEXT_PUBLIC_BSC_RPC_URL || "https://bsc-dataseed1.binance.org/",
         CHAIN_ID: parseInt(window.env?.NEXT_PUBLIC_CRYPTO_CHAIN_ID, 10) || 56,
         EXPLORER: "https://bscscan.com/tx/",
         WALLET_ADDRESS: window.env?.NEXT_PUBLIC_CRYPTO_WALLET_ADDRESS_BSC 
@@ -92,6 +101,8 @@ const ERROR_CODES = {
 let isInitialized = false;
 let initializationPromise = null;
 let initializationError = null;
+let walletConnectLoaded = false;
+let walletConnectLoadPromise = null;
 
 // Ready promise that external code can await
 let resolveReady;
@@ -144,22 +155,75 @@ async function loadEthersJS() {
 }
 
 async function loadWalletConnect() {
-    if (window.EthereumProvider) return window.EthereumProvider;
+    // Prevent duplicate loading
+    if (walletConnectLoaded && window.EthereumProvider) {
+        console.log('✅ WalletConnect already loaded');
+        return window.EthereumProvider;
+    }
     
-    return new Promise((resolve, reject) => {
+    // If already loading, wait for it
+    if (walletConnectLoadPromise) {
+        console.log('[WalletConnect] Waiting for existing load...');
+        return walletConnectLoadPromise;
+    }
+    
+    walletConnectLoadPromise = new Promise((resolve, reject) => {
+        // Check if already loaded
+        if (window.EthereumProvider) {
+            walletConnectLoaded = true;
+            console.log('✅ WalletConnect already available');
+            resolve(window.EthereumProvider);
+            return;
+        }
+        
+        // Check if script already exists
+        const existingScript = document.querySelector(`script[src*="walletconnect"]`);
+        if (existingScript) {
+            console.log('[WalletConnect] Script already in DOM, waiting...');
+            // Wait for it to load
+            const checkInterval = setInterval(() => {
+                if (window.EthereumProvider) {
+                    clearInterval(checkInterval);
+                    walletConnectLoaded = true;
+                    resolve(window.EthereumProvider);
+                }
+            }, 100);
+            
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                if (!window.EthereumProvider) {
+                    reject(new PaymentError('WalletConnect load timeout', ERROR_CODES.PROVIDER_ERROR));
+                }
+            }, 10000);
+            return;
+        }
+        
         const script = document.createElement('script');
         script.src = CONFIG.WALLETCONNECT.SRC;
+        script.async = true;
+        
         script.onload = () => {
-            if (!window.EthereumProvider) {
-                reject(new PaymentError('WalletConnect not properly loaded', ERROR_CODES.PROVIDER_ERROR));
-                return;
-            }
-            console.log('✅ WalletConnect SDK loaded');
-            resolve(window.EthereumProvider);
+            // Wait a bit for the provider to initialize
+            setTimeout(() => {
+                if (!window.EthereumProvider) {
+                    reject(new PaymentError('WalletConnect not properly loaded', ERROR_CODES.PROVIDER_ERROR));
+                    return;
+                }
+                walletConnectLoaded = true;
+                console.log('✅ WalletConnect SDK loaded');
+                resolve(window.EthereumProvider);
+            }, 100);
         };
-        script.onerror = () => reject(new PaymentError('Failed to load WalletConnect', ERROR_CODES.PROVIDER_ERROR));
+        
+        script.onerror = (e) => {
+            console.error('[WalletConnect] Script load error:', e);
+            reject(new PaymentError('Failed to load WalletConnect', ERROR_CODES.PROVIDER_ERROR));
+        };
+        
         document.head.appendChild(script);
     });
+    
+    return walletConnectLoadPromise;
 }
 
 // ======================================================
@@ -300,7 +364,32 @@ async function detectPreferredNetwork() {
 async function connectWithWalletConnect() {
     try {
         console.log('[WalletConnect] Starting connection...');
+        
+        // Ensure WalletConnect is loaded properly
         const EthereumProvider = await loadWalletConnect();
+        
+        if (!EthereumProvider) {
+            throw new PaymentError('WalletConnect provider not available', ERROR_CODES.PROVIDER_ERROR);
+        }
+        
+        // Check if there's an existing session we need to clean up
+        try {
+            // Clear any stale sessions
+            if (window.localStorage) {
+                const keys = Object.keys(localStorage);
+                keys.forEach(key => {
+                    if (key.startsWith('wc@') || key.startsWith('walletconnect')) {
+                        try {
+                            localStorage.removeItem(key);
+                        } catch (e) {
+                            console.debug('[WalletConnect] Could not clear session key:', key);
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.debug('[WalletConnect] LocalStorage not available:', e);
+        }
         
         const provider = await EthereumProvider.init({
             projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
@@ -348,7 +437,6 @@ async function connectWithWalletConnect() {
                     params: [{ chainId: targetChainId }]
                 });
             } catch (switchError) {
-                // Try to add the chain if it doesn't exist
                 if (switchError.code === 4902) {
                     await provider.request({
                         method: 'wallet_addEthereumChain',
@@ -373,6 +461,18 @@ async function connectWithWalletConnect() {
         return provider;
     } catch (error) {
         console.error('[WalletConnect] Connection error:', error);
+        
+        // Reset load state on error to allow retry
+        if (error.message?.includes('already been used')) {
+            console.log('[WalletConnect] Detected duplicate registration, attempting recovery...');
+            walletConnectLoaded = true; // Mark as loaded since components exist
+            
+            // Try to use existing provider
+            if (window.EthereumProvider) {
+                return connectWithWalletConnect(); // Retry
+            }
+        }
+        
         throw new PaymentError(error.message || 'Failed to connect via WalletConnect', ERROR_CODES.WALLET_ERROR, { originalError: error });
     }
 }
@@ -448,17 +548,30 @@ async function finalizePayment(txHash, network) {
 // 🔄  AUTO-POLLING FOR MANUAL PAYMENTS
 // ======================================================
 
+let currentRpcIndex = 0;
+
+function getNextRpcUrl() {
+    const urls = CONFIG.BSC.RPC_URLS;
+    currentRpcIndex = (currentRpcIndex + 1) % urls.length;
+    return urls[currentRpcIndex];
+}
+
 async function pollForBSCPayment(recipient, expectedAmount, onStatusUpdate) {
     if (typeof ethers === 'undefined') return null;
     
     const startTime = Date.now();
     const expectedWei = ethers.utils.parseUnits(expectedAmount.toString(), 18);
+    let consecutiveErrors = 0;
+    const maxConsecutiveErrors = 3;
     
     while (Date.now() - startTime < CONFIG.POLLING.TIMEOUT_MS) {
         try {
-            const provider = new ethers.providers.JsonRpcProvider(CONFIG.BSC.RPC_URL);
+            // Use rotating RPC URLs to avoid rate limits
+            const rpcUrl = CONFIG.BSC.RPC_URLS[currentRpcIndex];
+            const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+            
             const currentBlock = await provider.getBlockNumber();
-            const fromBlock = Math.max(0, currentBlock - 100);
+            const fromBlock = Math.max(0, currentBlock - 50); // Reduced block range to avoid rate limits
             
             const usdtContract = new ethers.Contract(
                 CONFIG.BSC.USDT_ADDRESS,
@@ -468,6 +581,8 @@ async function pollForBSCPayment(recipient, expectedAmount, onStatusUpdate) {
             
             const events = await usdtContract.queryFilter(usdtContract.filters.Transfer(null, recipient), fromBlock, currentBlock);
             
+            consecutiveErrors = 0; // Reset on success
+            
             for (const event of events.reverse()) {
                 if (event.args.value.gte(expectedWei.mul(99).div(100))) {
                     return event.transactionHash;
@@ -475,7 +590,21 @@ async function pollForBSCPayment(recipient, expectedAmount, onStatusUpdate) {
             }
             
             if (onStatusUpdate) onStatusUpdate(`Scanning for payment... (${Math.floor((Date.now() - startTime) / 1000)}s)`);
-        } catch (e) { console.warn('[Polling] BSC scan error:', e.message); }
+            
+        } catch (e) {
+            console.warn('[Polling] BSC scan error, switching RPC:', e.message);
+            consecutiveErrors++;
+            
+            // Switch to next RPC on error
+            getNextRpcUrl();
+            
+            // If too many errors, increase wait time
+            if (consecutiveErrors >= maxConsecutiveErrors) {
+                console.warn('[Polling] Multiple RPC errors, waiting longer...');
+                await new Promise(r => setTimeout(r, CONFIG.POLLING.INTERVAL_MS * 2));
+                consecutiveErrors = 0;
+            }
+        }
         
         await new Promise(r => setTimeout(r, CONFIG.POLLING.INTERVAL_MS));
     }
