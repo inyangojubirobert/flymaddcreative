@@ -1529,7 +1529,66 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
         
         // TRON network handling
         const hasTronWallet = window.tronWeb && window.tronWeb.ready;
+        const isMobileTron = isMobileDevice();
         
+        // Mobile TRON handling
+        if (isMobileTron) {
+            // Check if in TronLink app browser
+            if (hasTronWallet) {
+                modal = showPaymentStatusModal(selectedNetwork, amount);
+                updateStatus(modal, 'Confirm in TronLink...');
+                const result = await executeTronTransfer(recipient, amount);
+                
+                updateStatus(modal, 'Finalizing...');
+                await finalizePayment(result.txHash, selectedNetwork);
+                
+                successStatus(modal, result.txHash, result.explorerUrl);
+                
+                return { 
+                    success: true, 
+                    ...result,
+                    participant_id: participantId,
+                    payment_amount: amount,
+                    payment_intent_id: result.txHash
+                };
+            }
+            
+            // Show mobile TRON wallet modal with deep links
+            const mobileResult = await showMobileTronWalletModal(recipient, amount);
+            
+            if (mobileResult.useTronLink) {
+                // User chose to use TronLink (in-app browser)
+                modal = showPaymentStatusModal(selectedNetwork, amount);
+                updateStatus(modal, 'Confirm in TronLink...');
+                const result = await executeTronTransfer(recipient, amount);
+                
+                updateStatus(modal, 'Finalizing...');
+                await finalizePayment(result.txHash, selectedNetwork);
+                
+                successStatus(modal, result.txHash, result.explorerUrl);
+                
+                return { 
+                    success: true, 
+                    ...result,
+                    participant_id: participantId,
+                    payment_amount: amount,
+                    payment_intent_id: result.txHash
+                };
+            }
+            
+            if (mobileResult.success) {
+                return {
+                    ...mobileResult,
+                    participant_id: participantId,
+                    payment_amount: amount,
+                    payment_intent_id: mobileResult.txHash || `manual_${Date.now()}`
+                };
+            }
+            
+            return mobileResult;
+        }
+        
+        // Desktop TRON handling
         if (!hasTronWallet) {
             // No TronLink - show manual QR modal
             const manualResult = await showTronManualModal(recipient, amount);
