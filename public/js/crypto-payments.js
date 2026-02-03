@@ -649,8 +649,39 @@ function generateQR(text, elementId) {
 async function processBSCPayment(init) {
     try {
         console.debug('[BSC Payment] Starting BSC payment process');
+        console.debug('[BSC Payment] window.ethereum available:', !!window.ethereum);
+        console.debug('[BSC Payment] Is mobile device:', isMobileDevice());
         
-        // Show connection options modal
+        // STEP 1: Check if we're inside a wallet app browser (injected provider)
+        if (window.ethereum) {
+            try {
+                console.debug('[BSC Payment] Detected injected wallet, requesting access...');
+                
+                // Request account access
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (accounts && accounts.length > 0) {
+                    console.debug('[BSC Payment] Wallet connected:', accounts[0]);
+                    
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await ensureBSCNetwork(provider);
+                    const signer = provider.getSigner();
+                    return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+                }
+            } catch (error) {
+                console.warn('[BSC Payment] Injected wallet failed:', error.message);
+                // User rejected or error - continue to show options
+                if (error.code === 4001) {
+                    // User rejected - show options modal
+                    console.debug('[BSC Payment] User rejected, showing options...');
+                }
+            }
+        }
+        
+        // STEP 2: No injected wallet or it failed - show connection options
+        console.debug('[BSC Payment] Showing wallet connection options...');
         const userChoice = await showNoWalletDetectedModal();
         
         if (userChoice === 'walletconnect') {
@@ -662,14 +693,12 @@ async function processBSCPayment(init) {
                 return await executeBSCTransfer(signer, init.recipient_address, init.amount);
             } catch (error) {
                 console.warn('[BSC Payment] WalletConnect failed:', error.message);
-                // If WalletConnect fails, fall back to QR code
                 return await showBSCManualModal(init.recipient_address, init.amount);
             }
         } else if (userChoice === 'qr') {
             console.debug('[BSC Payment] User selected QR code payment');
             return await showBSCManualModal(init.recipient_address, init.amount);
         } else {
-            // User clicked back
             return { success: false, cancelled: true };
         }
 
@@ -681,12 +710,36 @@ async function processBSCPayment(init) {
 
 async function processTronPayment(init) {
     try {
+        console.debug('[TRON Payment] Starting TRON payment process');
+        console.debug('[TRON Payment] window.tronWeb available:', !!window.tronWeb);
+        console.debug('[TRON Payment] TronWeb ready:', window.tronWeb?.ready);
+        
+        // STEP 1: Check if TronLink is available (user is in TronLink browser)
         if (window.tronWeb && window.tronWeb.ready) {
-            return await executeTronTransfer(init.recipient_address, init.amount);
+            try {
+                console.debug('[TRON Payment] Detected TronLink, executing transfer...');
+                return await executeTronTransfer(init.recipient_address, init.amount);
+            } catch (error) {
+                console.warn('[TRON Payment] TronLink transfer failed:', error.message);
+                // Fall back to QR if transfer fails
+            }
         }
-        return await showTronManualModal(init.recipient_address, init.amount);
+        
+        // STEP 2: No TronLink - show options modal
+        console.debug('[TRON Payment] Showing wallet connection options...');
+        const userChoice = await showNoWalletDetectedModal();
+        
+        if (userChoice === 'walletconnect') {
+            alert('WalletConnect is not available for TRON. Please use QR code payment or open this page in TronLink wallet.');
+            return await showTronManualModal(init.recipient_address, init.amount);
+        } else if (userChoice === 'qr') {
+            return await showTronManualModal(init.recipient_address, init.amount);
+        } else {
+            return { success: false, cancelled: true };
+        }
+        
     } catch (error) {
-        console.warn('[TRON Payment] TronWeb unavailable, showing QR fallback');
+        console.warn('[TRON Payment] Error, showing QR fallback:', error.message);
         return await showTronManualModal(init.recipient_address, init.amount);
     }
 }
