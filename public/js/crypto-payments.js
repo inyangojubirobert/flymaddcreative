@@ -113,6 +113,57 @@ function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
+// Wait for wallet provider to be injected (mobile apps inject after page load)
+async function waitForWalletProvider(timeout = 3000) {
+    return new Promise((resolve) => {
+        if (window.ethereum) {
+            resolve(true);
+            return;
+        }
+        
+        const startTime = Date.now();
+        const checkInterval = setInterval(() => {
+            if (window.ethereum) {
+                clearInterval(checkInterval);
+                resolve(true);
+            } else if (Date.now() - startTime > timeout) {
+                clearInterval(checkInterval);
+                resolve(false);
+            }
+        }, 100);
+    });
+}
+
+// Request wallet connection (required for mobile wallets)
+async function requestWalletConnection() {
+    if (!window.ethereum) {
+        return false;
+    }
+    
+    try {
+        const accounts = await window.ethereum.request({ 
+            method: 'eth_requestAccounts' 
+        });
+        return accounts && accounts.length > 0;
+    } catch (error) {
+        console.warn('[Wallet] Connection request failed:', error.message);
+        return false;
+    }
+}
+
+// Deep link to wallet app on mobile
+function openWalletApp(walletType = 'metamask') {
+    const currentUrl = encodeURIComponent(window.location.href);
+    
+    const deepLinks = {
+        metamask: `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`,
+        trustwallet: `https://link.trustwallet.com/open_url?coin_id=60&url=${currentUrl}`,
+        tokenpocket: `tpoutside://open?params=${currentUrl}`,
+    };
+    
+    return deepLinks[walletType] || deepLinks.metamask;
+}
+
 // ======================================================
 // 🌐  NETWORK & WALLET MANAGEMENT
 // ======================================================
@@ -121,14 +172,22 @@ async function detectPreferredNetwork() {
     try {
         // Check for TRON first
         if (window.tronWeb && window.tronWeb.ready) {
-            const tronNetwork = await window.tronWeb.trx.getNodeInfo();
-            if (tronNetwork && tronNetwork.net) return 'TRON';
+            try {
+                const tronNetwork = await window.tronWeb.trx.getNodeInfo();
+                if (tronNetwork && tronNetwork.net) return 'TRON';
+            } catch (e) {
+                console.debug('TRON detection error:', e);
+            }
         }
         
         // Then check for BSC
         if (window.ethereum) {
-            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-            if (chainId === '0x38') return 'BSC'; // BSC mainnet
+            try {
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (chainId === '0x38') return 'BSC'; // BSC mainnet
+            } catch (e) {
+                console.debug('BSC detection error:', e);
+            }
         }
     } catch (error) {
         console.warn('Network detection error:', error);
@@ -164,24 +223,41 @@ async function loadWalletConnect() {
 
 async function connectWalletMobile() {
     try {
+        console.debug('[WalletConnect] Loading SDK...');
         const EthereumProvider = await loadWalletConnect();
+        
+        console.debug('[WalletConnect] Initializing provider...');
         const provider = await EthereumProvider.init({
             projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
             chains: [CONFIG.BSC.CHAIN_ID],
             showQrModal: true,
-            qrModalOptions: { themeMode: 'dark' },
+            qrModalOptions: { 
+                themeMode: 'dark',
+                enableExplorer: true 
+            },
             metadata: {
                 name: "OneDream Voting",
                 description: "Secure USDT Payment",
                 url: window.location.origin,
-                icons: ["https://yoursite.com/icon.png"]
+                icons: [`${window.location.origin}/images/logo.png`]
             }
         });
+        
+        console.debug('[WalletConnect] Connecting...');
         await provider.connect();
+        
+        // Verify connection
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        if (!accounts || accounts.length === 0) {
+            throw new Error('No accounts returned from WalletConnect');
+        }
+        
+        console.debug('[WalletConnect] Connected with accounts:', accounts);
         return provider;
     } catch (error) {
+        console.error('[WalletConnect] Error:', error);
         throw new PaymentError(
-            'Failed to connect via WalletConnect',
+            error.message || 'Failed to connect via WalletConnect',
             ERROR_CODES.WALLET_ERROR,
             { originalError: error }
         );
@@ -426,28 +502,53 @@ function showNetworkSelectionModal(preferredNetwork) {
 
 function showNoWalletDetectedModal() {
     return new Promise((resolve) => {
+        const isMobile = isMobileDevice();
+        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[90vw]">
                 <h3 class="font-bold mb-3 text-lg">⚠️ Wallet Not Detected</h3>
                 <p class="text-sm text-gray-600 mb-4">
-                    No crypto wallet was found on your device. Please choose another payment method.
+                    No crypto wallet was found on your device.
                 </p>
                 <div class="bg-blue-50 p-3 rounded mb-4 text-xs text-gray-700">
                     <p class="font-semibold mb-2">💡 What you can do:</p>
                     <ul class="text-left space-y-1">
-                        <li>• Install a wallet app (TrustWallet, MetaMask)</li>
-                        <li>• Use the QR code payment method below</li>
-                        <li>• Try a different payment option</li>
+                        ${isMobile ? `
+                            <li>• <a href="${openWalletApp('metamask')}" class="text-blue-500 underline">Open in MetaMask</a></li>
+                            <li>• <a href="${openWalletApp('trustwallet')}" class="text-blue-500 underline">Open in Trust Wallet</a></li>
+                        ` : `
+                            <li>• Install MetaMask browser extension</li>
+                            <li>• Install Trust Wallet extension</li>
+                        `}
+                        <li>• Use QR code payment below</li>
                     </ul>
                 </div>
-                <button id="useQR" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded mb-2">
-                    Use QR Code Payment
+                ${isMobile ? `
+                    <button id="openMetaMask" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded mb-2">
+                        🦊 Open MetaMask
+                    </button>
+                    <button id="openTrust" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded mb-2">
+                        🛡️ Open Trust Wallet
+                    </button>
+                ` : ''}
+                <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-2 rounded mb-2">
+                    📱 Use QR Code Payment
                 </button>
                 <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded">
-                    Back
+                    ← Back
                 </button>
             </div>
         `);
+
+        if (isMobile) {
+            modal.querySelector('#openMetaMask')?.addEventListener('click', () => {
+                window.location.href = openWalletApp('metamask');
+            });
+            
+            modal.querySelector('#openTrust')?.addEventListener('click', () => {
+                window.location.href = openWalletApp('trustwallet');
+            });
+        }
 
         modal.querySelector('#useQR').onclick = () => {
             modal.remove();
@@ -573,12 +674,22 @@ function generateQR(text, elementId) {
 async function processBSCPayment(init) {
     try {
         console.debug('[BSC Payment] Starting BSC payment process');
+        console.debug('[BSC Payment] Is mobile:', isMobileDevice());
+        console.debug('[BSC Payment] window.ethereum exists:', !!window.ethereum);
         
         let provider;
         
-        // Check if a browser wallet (MetaMask) is present
-        if (window.ethereum && !isMobileDevice()) {
+        // Desktop with wallet extension
+        if (!isMobileDevice() && window.ethereum) {
             try {
+                console.debug('[BSC Payment] Desktop wallet detected');
+                
+                // Request account access
+                const connected = await requestWalletConnection();
+                if (!connected) {
+                    throw new Error('Wallet connection rejected');
+                }
+                
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 await ensureBSCNetwork(provider);
                 const signer = provider.getSigner();
@@ -586,42 +697,66 @@ async function processBSCPayment(init) {
             } catch (error) {
                 if (error.code === 4001 || error.code === 'ACTION_REJECTED') {
                     console.debug('[BSC Payment] User rejected wallet action');
-                    return await showBSCManualModal(init.recipient_address, init.amount);
                 }
-                throw error;
+                console.warn('[BSC Payment] Desktop wallet error:', error.message);
+                return await showBSCManualModal(init.recipient_address, init.amount);
             }
-        } 
-        // Mobile device - try WalletConnect or fallback to QR
-        else if (isMobileDevice()) {
+        }
+        
+        // Mobile device
+        if (isMobileDevice()) {
+            console.debug('[BSC Payment] Mobile device detected');
+            
+            // Wait for wallet injection (mobile apps inject after load)
+            console.debug('[BSC Payment] Waiting for wallet provider...');
+            const hasProvider = await waitForWalletProvider(2000);
+            
+            if (hasProvider && window.ethereum) {
+                try {
+                    console.debug('[BSC Payment] Mobile wallet detected, requesting access');
+                    
+                    const connected = await requestWalletConnection();
+                    if (connected) {
+                        console.debug('[BSC Payment] Mobile wallet connected');
+                        provider = new ethers.providers.Web3Provider(window.ethereum);
+                        await ensureBSCNetwork(provider);
+                        const signer = provider.getSigner();
+                        return await executeBSCTransfer(signer, init.recipient_address, init.amount);
+                    }
+                } catch (error) {
+                    console.warn('[BSC Payment] Mobile wallet error:', error.message);
+                }
+            }
+            
+            // Try WalletConnect
             try {
+                console.debug('[BSC Payment] Trying WalletConnect');
                 const wcProvider = await connectWalletMobile();
                 provider = new ethers.providers.Web3Provider(wcProvider);
                 const signer = provider.getSigner();
                 return await executeBSCTransfer(signer, init.recipient_address, init.amount);
             } catch (error) {
-                console.debug('[BSC Payment] WalletConnect failed or cancelled, checking options');
-                
-                // Show wallet not detected modal
-                const userChoice = await showNoWalletDetectedModal();
-                
-                if (userChoice === 'qr') {
-                    return await showBSCManualModal(init.recipient_address, init.amount);
-                } else if (userChoice === 'back') {
-                    return { success: false, cancelled: true };
-                }
+                console.debug('[BSC Payment] WalletConnect failed:', error.message);
             }
-        } 
-        // No wallet detected - show no wallet modal
-        else {
-            console.debug('[BSC Payment] No provider detected');
+            
+            // Show no wallet modal with deep links
+            console.debug('[BSC Payment] Showing wallet options modal');
             const userChoice = await showNoWalletDetectedModal();
             
             if (userChoice === 'qr') {
                 return await showBSCManualModal(init.recipient_address, init.amount);
-            } else if (userChoice === 'back') {
-                return { success: false, cancelled: true };
             }
+            return { success: false, cancelled: true };
         }
+        
+        // Desktop without wallet
+        console.debug('[BSC Payment] No wallet detected');
+        const userChoice = await showNoWalletDetectedModal();
+        
+        if (userChoice === 'qr') {
+            return await showBSCManualModal(init.recipient_address, init.amount);
+        }
+        return { success: false, cancelled: true };
 
     } catch (error) {
         console.error('[BSC Payment] Error:', error.message);
