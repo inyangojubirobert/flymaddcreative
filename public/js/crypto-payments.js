@@ -1136,27 +1136,17 @@ function showDesktopWalletModal() {
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[90vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
-                <h3 class="font-bold mb-3 text-lg pr-6">📱 Choose Payment Method</h3>
+                <h3 class="font-bold mb-3 text-lg pr-6">� Choose Payment Method</h3>
                 <p class="text-sm text-gray-600 mb-4">How would you like to pay?</p>
-                <button id="useWalletConnect" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
-                    <span>🔗</span> WalletConnect (Recommended)
+                <button id="useQR" class="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors shadow-md">
+                    <span>📱</span> Pay via QR Code / Wallet
                 </button>
-                <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
-                    <span>📱</span> Pay via QR Code
-                </button>
-                <button id="useBrowserWallet" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors hidden">
-                    <span>🦊</span> Browser Wallet (MetaMask)
+                <button id="useWalletConnect" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
+                    <span>🔗</span> WalletConnect
                 </button>
                 <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded mt-2 transition-colors">← Back</button>
             </div>
         `);
-
-        // Show browser wallet option if available
-        const hasBrowserWallet = window.ethereum || window.BinanceChain;
-        if (hasBrowserWallet) {
-            const browserBtn = modal.querySelector('#useBrowserWallet');
-            if (browserBtn) browserBtn.classList.remove('hidden');
-        }
 
         // ✅ FIX: Attach close handler
         const closeX = modal.querySelector('#modalCloseX');
@@ -1166,18 +1156,27 @@ function showDesktopWalletModal() {
 
         modal.querySelector('#useWalletConnect').onclick = () => { modal.remove(); resolve('walletconnect'); };
         modal.querySelector('#useQR').onclick = () => { modal.remove(); resolve('qr'); };
-        modal.querySelector('#useBrowserWallet')?.addEventListener('click', () => { modal.remove(); resolve('browser'); });
         modal.querySelector('#goBack').onclick = () => { modal.remove(); resolve('back'); };
     });
 }
 
 function showBSCManualModal(recipient, amount) {
     return new Promise((resolve) => {
+        const hasBrowserWallet = window.ethereum || window.BinanceChain;
+        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
                 <h3 class="font-bold mb-3 pr-6">BSC USDT Payment</h3>
                 <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (BEP-20) to:</p>
+                
+                ${hasBrowserWallet ? `
+                <button id="useBrowserWallet" class="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white py-3 rounded-lg mb-3 flex items-center justify-center gap-2 font-semibold transition-all shadow-md">
+                    <span>🦊</span> Pay with MetaMask / Browser Wallet
+                </button>
+                <div class="text-xs text-gray-400 mb-3">— or scan QR code —</div>
+                ` : ''}
+                
                 <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
                 <div id="bscQR" class="mx-auto mb-3"></div>
                 <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on BSC network</p>
@@ -1197,6 +1196,14 @@ function showBSCManualModal(recipient, amount) {
         const closeX = modal.querySelector('#modalCloseX');
         if (closeX) {
             closeX.onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+        }
+        
+        // Browser wallet option
+        if (hasBrowserWallet) {
+            modal.querySelector('#useBrowserWallet').onclick = () => {
+                modal.remove();
+                resolve({ success: false, useBrowserWallet: true });
+            };
         }
 
         modal.querySelector('#copyAddress').onclick = () => {
@@ -1433,8 +1440,42 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             }
             
             if (choice === 'qr') {
-                // Show manual payment modal with QR code
+                // Show manual payment modal with QR code and browser wallet option
                 const manualResult = await showBSCManualModal(recipient, amount);
+                
+                // User chose to use browser wallet from the QR modal
+                if (manualResult.useBrowserWallet) {
+                    modal = showPaymentStatusModal(selectedNetwork, amount);
+                    updateStatus(modal, 'Connecting browser wallet...');
+                    
+                    try {
+                        const connected = await requestWalletConnection();
+                        if (!connected) {
+                            throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
+                        }
+                        
+                        await ensureBSCNetworkDesktop(window.ethereum);
+                        
+                        updateStatus(modal, 'Confirm in wallet...');
+                        const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
+                        
+                        updateStatus(modal, 'Finalizing...');
+                        await finalizePayment(result.txHash, selectedNetwork);
+                        
+                        successStatus(modal, result.txHash, result.explorerUrl);
+                        
+                        return { 
+                            success: true, 
+                            ...result,
+                            participant_id: participantId,
+                            payment_amount: amount,
+                            payment_intent_id: result.txHash
+                        };
+                    } catch (walletError) {
+                        if (modal) modal.remove();
+                        throw walletError;
+                    }
+                }
                 
                 if (manualResult.success) {
                     return {
@@ -1493,35 +1534,6 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                     }
                     return manualResult;
                 }
-            }
-            
-            if (choice === 'browser') {
-                // Use browser wallet (MetaMask, etc.)
-                modal = showPaymentStatusModal(selectedNetwork, amount);
-                updateStatus(modal, 'Connecting browser wallet...');
-                
-                const connected = await requestWalletConnection();
-                if (!connected) {
-                    throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
-                }
-                
-                await ensureBSCNetworkDesktop(window.ethereum);
-                
-                updateStatus(modal, 'Confirm in wallet...');
-                const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
-                
-                updateStatus(modal, 'Finalizing...');
-                await finalizePayment(result.txHash, selectedNetwork);
-                
-                successStatus(modal, result.txHash, result.explorerUrl);
-                
-                return { 
-                    success: true, 
-                    ...result,
-                    participant_id: participantId,
-                    payment_amount: amount,
-                    payment_intent_id: result.txHash
-                };
             }
             
             return { success: false, cancelled: true };
