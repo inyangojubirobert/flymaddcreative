@@ -991,11 +991,18 @@ console.log('📦 Vote.js Loading...');
                 throw new Error(paymentResult?.error || 'Payment failed');
             }
             
+            // Validate payment_intent_id before recording
+            const finalPaymentIntentId = paymentResult.payment_intent_id || paymentResult.txHash || paymentResult.reference;
+            if (!finalPaymentIntentId) {
+                console.error('[Vote] Payment succeeded but missing transaction reference:', paymentResult);
+                throw new Error('Payment completed but transaction reference is missing. Please contact support.');
+            }
+            
             // Record votes using the payment result fields
             await recordVotesAfterPayment({
                 participant_id: paymentResult.participant_id || participantId,
                 payment_amount: paymentResult.payment_amount || amount,
-                payment_intent_id: paymentResult.payment_intent_id || paymentResult.txHash,
+                payment_intent_id: finalPaymentIntentId,
                 vote_count: voteCount
             });
             

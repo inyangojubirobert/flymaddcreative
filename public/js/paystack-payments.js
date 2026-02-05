@@ -67,13 +67,29 @@ async function processPaystackPayment() {
                     currency: 'NGN',
                     reference: paymentReference,
                     callback: (response) => {
-                        console.log('✅ Paystack Payment Success:', response);
+                        console.log('✅ Paystack Payment Success - Full Response:', response);
+                        
+                        // Extract reference from response - Paystack may use different field names
+                        const txRef = response.reference || response.ref || response.trxref || paymentReference;
+                        const txId = response.transaction || response.trans || response.id || '';
+                        
+                        console.log('[Paystack] Extracted - txRef:', txRef, 'txId:', txId);
+                        
+                        if (!txRef) {
+                            console.error('[Paystack] No transaction reference in callback!', response);
+                            resolve({ 
+                                success: false, 
+                                error: 'Payment completed but no reference received' 
+                            });
+                            return;
+                        }
+                        
                         resolve({
                             success: true,
                             participant_id: participantId,
                             payment_amount: paymentAmountUSD,
-                            payment_intent_id: response.reference || paymentReference,
-                            txHash: response.transaction,
+                            payment_intent_id: txRef,
+                            txHash: txId || txRef,
                             vote_count: voteCount
                         });
                     },
