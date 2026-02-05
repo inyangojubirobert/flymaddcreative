@@ -57,10 +57,102 @@ console.log('📦 Vote.js Loading...');
 
             showParticipant();
             initializeVoteSelection();
+            
+            // Check for pending Paystack payment (user returning from hosted checkout)
+            await checkPendingPaystackPayment();
+            
             console.log('✅ Page Initialization Complete');
         } catch (error) {
             console.error('Failed to load participant:', error);
             showError(`Failed to load participant: ${error.message}`);
+        }
+    }
+
+    // ========================================
+    // 🔄 CHECK PENDING PAYSTACK PAYMENT (Hosted Checkout Return)
+    // ========================================
+    async function checkPendingPaystackPayment() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentSuccess = urlParams.get('payment_success');
+        const paystackRef = urlParams.get('reference') || urlParams.get('trxref');
+        
+        // Check if returning from Paystack hosted checkout
+        if (!paymentSuccess && !paystackRef) {
+            return; // Not a payment return
+        }
+        
+        console.log('[Vote] Detected return from Paystack:', { paymentSuccess, paystackRef });
+        
+        // Get stored payment info
+        const storedPaymentStr = sessionStorage.getItem('pending_paystack_payment');
+        if (!storedPaymentStr) {
+            console.warn('[Vote] No pending payment info found in session');
+            // Still try to verify if we have a reference
+            if (!paystackRef) {
+                return;
+            }
+        }
+        
+        let storedPayment = {};
+        try {
+            storedPayment = storedPaymentStr ? JSON.parse(storedPaymentStr) : {};
+        } catch (e) {
+            console.error('[Vote] Failed to parse stored payment:', e);
+        }
+        
+        // Use URL reference or stored reference
+        const paymentReference = paystackRef || storedPayment.payment_intent_id;
+        
+        if (!paymentReference) {
+            console.error('[Vote] No payment reference found');
+            showVoteAlert('❌ Payment verification failed - no reference found', 'error');
+            return;
+        }
+        
+        try {
+            showVoteAlert('🔄 Verifying payment...', 'info', 0);
+            
+            // Verify the payment with backend
+            const verifyRes = await fetch('/api/onedream/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reference: paymentReference })
+            });
+            
+            if (!verifyRes.ok) {
+                const errData = await verifyRes.json().catch(() => ({}));
+                throw new Error(errData.error || 'Payment verification failed');
+            }
+            
+            const verifyData = await verifyRes.json();
+            console.log('[Vote] Payment verification result:', verifyData);
+            
+            if (!verifyData.success && !verifyData.verified) {
+                throw new Error(verifyData.message || 'Payment could not be verified');
+            }
+            
+            // Record the votes
+            await recordVotesAfterPayment({
+                participant_id: storedPayment.participant_id || window.currentParticipant?.id,
+                payment_amount: storedPayment.payment_amount || verifyData.amount,
+                payment_intent_id: paymentReference,
+                vote_count: storedPayment.vote_count || Math.floor((verifyData.amount || 2) / 2)
+            });
+            
+            // Clear stored payment info
+            sessionStorage.removeItem('pending_paystack_payment');
+            
+            // Clean up URL
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete('payment_success');
+            cleanUrl.searchParams.delete('reference');
+            cleanUrl.searchParams.delete('trxref');
+            window.history.replaceState({}, '', cleanUrl.toString());
+            
+        } catch (err) {
+            console.error('[Vote] Payment verification error:', err);
+            showVoteAlert(`❌ ${err.message}`, 'error');
+            sessionStorage.removeItem('pending_paystack_payment');
         }
     }
 
@@ -989,6 +1081,15 @@ console.log('📦 Vote.js Loading...');
                     return;
                 }
                 throw new Error(paymentResult?.error || 'Payment failed');
+            }
+            
+            // Check if this is a redirect flow (hosted checkout)
+            // In this case, user is being redirected to payment page - don't record yet
+            if (paymentResult.redirect) {
+                console.log('[Vote] Redirecting to payment page - will record vote on return');
+                // Vote will be recorded when user returns from payment page
+                // See checkPendingPaystackPayment() below
+                return;
             }
             
             // Validate payment_intent_id before recording

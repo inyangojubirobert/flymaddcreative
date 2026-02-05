@@ -22,20 +22,37 @@ export default async function handler(req, res) {
       reference // For PayStack
     } = req.body;
 
-    if (!payment_intent_id || !payment_method) {
+    // Get the reference to verify
+    const refToVerify = reference || payment_intent_id;
+    
+    if (!refToVerify) {
       return res.status(400).json({ 
-        error: 'Missing payment_intent_id or payment_method' 
+        error: 'Missing reference or payment_intent_id' 
       });
+    }
+
+    // Auto-detect payment method if not provided
+    let detectedMethod = payment_method;
+    if (!detectedMethod) {
+      // Paystack references typically start with ODI_ or contain alphanumeric patterns
+      if (refToVerify.startsWith('ODI_') || refToVerify.startsWith('paystack_') || /^[a-zA-Z0-9_]+$/.test(refToVerify)) {
+        detectedMethod = 'paystack';
+      } else if (refToVerify.startsWith('0x') || refToVerify.length === 64) {
+        detectedMethod = 'crypto';
+      } else {
+        // Default to paystack for hosted checkout returns
+        detectedMethod = 'paystack';
+      }
     }
 
     let verificationResult = {};
 
-    switch (payment_method) {
+    switch (detectedMethod) {
       case 'paystack':
-        verificationResult = await verifyPaystackPayment(reference || payment_intent_id);
+        verificationResult = await verifyPaystackPayment(refToVerify);
         break;
       case 'crypto':
-        verificationResult = await verifyCryptoPayment(payment_intent_id);
+        verificationResult = await verifyCryptoPayment(refToVerify);
         break;
       default:
         return res.status(400).json({ error: 'Unsupported payment method' });
