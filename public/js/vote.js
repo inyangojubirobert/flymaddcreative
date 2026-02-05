@@ -1163,7 +1163,12 @@ console.log('📦 Vote.js Loading...');
             
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
             
-            const response = await fetch("/api/onedream/record-votes", {
+            // Determine payment method based on payment_intent_id format
+            const isPaystack = payment_intent_id.startsWith('ODI_') || payment_intent_id.startsWith('paystack_');
+            const isCrypto = payment_intent_id.startsWith('0x') || payment_intent_id.startsWith('CRYPTO_') || payment_intent_id.length === 64;
+            const payment_method = isPaystack ? 'paystack' : (isCrypto ? 'crypto' : 'unknown');
+            
+            const response = await fetch("/api/onedream/vote", {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
@@ -1174,7 +1179,8 @@ console.log('📦 Vote.js Loading...');
                     participant_id,
                     payment_amount,
                     payment_intent_id,
-                    vote_count: vote_count || Math.floor(Number(payment_amount))
+                    payment_method,
+                    vote_count: vote_count || Math.floor(Number(payment_amount) / 2) // $2 per vote
                 }),
             });
             
