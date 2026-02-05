@@ -128,11 +128,19 @@ async function createPaystackPayment(amount, voteCount, participant) {
 
   const data = await response.json();
 
+  // Calculate amounts for frontend
+  const NGN_RATE = 1600; // 1 USD = 1600 NGN
+  const amountNGN = amount * NGN_RATE;
+  const amountKobo = amountNGN * 100;
+  
   return {
     authorization_url: data.data.authorization_url,
     access_code: data.data.access_code,
     reference: data.data.reference,
     payment_intent_id: data.data.reference,
+    amount: amount, // USD amount
+    amount_ngn: amountNGN,
+    amount_kobo: amountKobo,
     provider_data: {
       paystack_reference: data.data.reference,
       paystack_access_code: data.data.access_code

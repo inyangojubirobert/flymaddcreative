@@ -71,10 +71,18 @@ async function processPaystackPayment() {
             throw new Error('Paystack configuration incomplete (Missing Public Key & Auth URL)');
         }
 
-        // 5. Calculate Kobo (Paystack requires integers)
-        // Fixed: Math.round prevents floating point errors like 198.9999999
-        const amountKobo = data.amount_kobo || Math.round((data.amount || window.selectedCost) * 100);
-        const paymentAmount = data.amount || window.selectedCost || (amountKobo / 100);
+        // 5. Get amounts from server response (server handles USD to NGN conversion)
+        // amount_kobo = USD * 1600 (NGN rate) * 100 (kobo)
+        const amountKobo = data.amount_kobo || Math.round((data.amount || window.selectedCost) * 1600 * 100);
+        // payment_amount should be in USD for vote recording
+        const paymentAmountUSD = data.amount || window.selectedCost || (voteCount * 2); // $2 per vote
+
+        console.log('[Paystack] Payment amounts:', { 
+            amountKobo, 
+            paymentAmountUSD, 
+            serverAmount: data.amount,
+            serverAmountKobo: data.amount_kobo 
+        });
 
         // 6. Launch Inline Popup
         return await new Promise((resolve) => {
@@ -89,7 +97,7 @@ async function processPaystackPayment() {
                     resolve({
                         success: true,
                         participant_id: participantId,
-                        payment_amount: paymentAmount,
+                        payment_amount: paymentAmountUSD, // USD amount for vote recording
                         payment_intent_id: response.reference,
                         txHash: response.transaction,
                         vote_count: voteCount,
