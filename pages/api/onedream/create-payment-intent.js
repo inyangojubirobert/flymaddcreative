@@ -55,6 +55,8 @@ export default async function handler(req, res) {
     switch (payment_method) {
       case 'paystack':
         paymentData = await createPaystackPayment(amount, vote_count, participant);
+        // Include public key for inline checkout
+        paymentData.public_key = process.env.PAYSTACK_PUBLIC_KEY || process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
         break;
       case 'crypto':
         paymentData = await createCryptoPayment(amount, vote_count, participant);

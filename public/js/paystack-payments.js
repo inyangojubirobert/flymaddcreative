@@ -119,7 +119,7 @@ async function processPaystackPayment() {
                     // Store payment info for when user returns from redirect
                     sessionStorage.setItem('pending_paystack_payment', JSON.stringify({
                         participant_id: participantId,
-                        payment_amount: paymentAmount,
+                        payment_amount: paymentAmountUSD,
                         payment_intent_id: data.reference || data.payment_intent_id,
                         vote_count: voteCount
                     }));
