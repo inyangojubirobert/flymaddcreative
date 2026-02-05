@@ -34,6 +34,13 @@ async function processPaystackPayment() {
         const data = await res.json();
         console.log('[Paystack] Payment intent created:', data);
 
+        // Validate response has required fields
+        const paymentReference = data.reference || data.payment_intent_id;
+        if (!paymentReference) {
+            console.error('[Paystack] API response missing reference:', data);
+            throw new Error('Payment initialization failed - no reference received');
+        }
+
         // Get payment amounts
         const paymentAmountUSD = data.amount || (voteCount * 2); // $2 per vote
         const amountKobo = data.amount_kobo || Math.round(paymentAmountUSD * 1600 * 100);
@@ -41,6 +48,13 @@ async function processPaystackPayment() {
         // Try inline checkout first if PaystackPop is available
         const publicKey = (window.PAYSTACK_PUBLIC_KEY || data.public_key || '').trim();
         const isKeyValid = /^pk_(test|live)_/.test(publicKey);
+        
+        console.log('[Paystack] Payment setup:', { 
+            reference: paymentReference, 
+            amountKobo, 
+            publicKeyValid: isKeyValid,
+            hasPaystackPop: !!window.PaystackPop 
+        });
 
         if (isKeyValid && window.PaystackPop) {
             console.log('[Paystack] Using inline checkout');
@@ -51,14 +65,14 @@ async function processPaystackPayment() {
                     email: window.currentUser?.email || 'voter@onedreaminitiative.com',
                     amount: amountKobo,
                     currency: 'NGN',
-                    reference: data.reference || data.payment_intent_id,
+                    reference: paymentReference,
                     callback: (response) => {
                         console.log('✅ Paystack Payment Success:', response);
                         resolve({
                             success: true,
                             participant_id: participantId,
                             payment_amount: paymentAmountUSD,
-                            payment_intent_id: response.reference,
+                            payment_intent_id: response.reference || paymentReference,
                             txHash: response.transaction,
                             vote_count: voteCount
                         });
@@ -79,7 +93,7 @@ async function processPaystackPayment() {
             sessionStorage.setItem('pending_paystack_payment', JSON.stringify({
                 participant_id: participantId,
                 payment_amount: paymentAmountUSD,
-                payment_intent_id: data.reference || data.payment_intent_id,
+                payment_intent_id: paymentReference,
                 vote_count: voteCount
             }));
             window.location.href = data.authorization_url;
