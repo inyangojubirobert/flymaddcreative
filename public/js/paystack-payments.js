@@ -74,6 +74,7 @@ async function processPaystackPayment() {
         // 5. Calculate Kobo (Paystack requires integers)
         // Fixed: Math.round prevents floating point errors like 198.9999999
         const amountKobo = data.amount_kobo || Math.round((data.amount || window.selectedCost) * 100);
+        const paymentAmount = data.amount || window.selectedCost || (amountKobo / 100);
 
         // 6. Launch Inline Popup
         return await new Promise((resolve) => {
@@ -87,13 +88,16 @@ async function processPaystackPayment() {
                     console.log('✅ Paystack Payment Success:', response);
                     resolve({
                         success: true,
+                        participant_id: participantId,
+                        payment_amount: paymentAmount,
                         payment_intent_id: response.reference,
                         txHash: response.transaction,
+                        vote_count: voteCount,
                         redirect: false
                     });
                 },
                 onClose: () => {
-                    resolve({ success: false, error: 'Payment window closed by user' });
+                    resolve({ success: false, cancelled: true, error: 'Payment window closed by user' });
                 }
             };
 
@@ -103,8 +107,17 @@ async function processPaystackPayment() {
                 handler.openIframe();
             } else {
                 // Last ditch effort: if inline fails to open, redirect
-                if (data.authorization_url) window.location.href = data.authorization_url;
-                resolve({ success: true, redirect: true });
+                if (data.authorization_url) {
+                    // Store payment info for when user returns from redirect
+                    sessionStorage.setItem('pending_paystack_payment', JSON.stringify({
+                        participant_id: participantId,
+                        payment_amount: paymentAmount,
+                        payment_intent_id: data.reference || data.payment_intent_id,
+                        vote_count: voteCount
+                    }));
+                    window.location.href = data.authorization_url;
+                }
+                resolve({ success: true, redirect: true, payment_intent_id: data.reference || data.payment_intent_id });
             }
         });
 
