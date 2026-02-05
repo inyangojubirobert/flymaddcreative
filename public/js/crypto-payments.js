@@ -1144,10 +1144,19 @@ function showDesktopWalletModal() {
                 <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
                     <span>📱</span> Pay via QR Code
                 </button>
-                <!-- Browser Wallet option moved to QR modal -->
+                <button id="useBrowserWallet" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors hidden">
+                    <span>🦊</span> Browser Wallet (MetaMask)
+                </button>
                 <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded mt-2 transition-colors">← Back</button>
             </div>
         `);
+
+        // Show browser wallet option if available
+        const hasBrowserWallet = window.ethereum || window.BinanceChain;
+        if (hasBrowserWallet) {
+            const browserBtn = modal.querySelector('#useBrowserWallet');
+            if (browserBtn) browserBtn.classList.remove('hidden');
+        }
 
         // ✅ FIX: Attach close handler
         const closeX = modal.querySelector('#modalCloseX');
@@ -1157,14 +1166,13 @@ function showDesktopWalletModal() {
 
         modal.querySelector('#useWalletConnect').onclick = () => { modal.remove(); resolve('walletconnect'); };
         modal.querySelector('#useQR').onclick = () => { modal.remove(); resolve('qr'); };
+        modal.querySelector('#useBrowserWallet')?.addEventListener('click', () => { modal.remove(); resolve('browser'); });
         modal.querySelector('#goBack').onclick = () => { modal.remove(); resolve('back'); };
     });
 }
 
-function showBSCManualModal(recipient, amount, isDesktop = false) {
+function showBSCManualModal(recipient, amount) {
     return new Promise((resolve) => {
-        const hasBrowserWallet = window.ethereum || window.BinanceChain;
-        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
@@ -1174,17 +1182,6 @@ function showBSCManualModal(recipient, amount, isDesktop = false) {
                 <div id="bscQR" class="mx-auto mb-3"></div>
                 <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on BSC network</p>
                 <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
-                
-                ${isDesktop && hasBrowserWallet ? `
-                <div class="border-t border-b py-3 my-3">
-                    <p class="text-sm font-medium mb-2">Connect Browser Wallet:</p>
-                    <button id="connectBrowserWallet" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
-                        <span>🦊</span> Connect MetaMask
-                    </button>
-                    <p class="text-xs text-gray-500">Use browser extension to pay directly</p>
-                </div>
-                ` : ''}
-                
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
                     <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
@@ -1211,14 +1208,6 @@ function showBSCManualModal(recipient, amount, isDesktop = false) {
                 })
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
         };
-
-        // NEW: Browser wallet connection (for desktop only)
-        if (isDesktop && hasBrowserWallet) {
-            modal.querySelector('#connectBrowserWallet').onclick = () => {
-                modal.remove();
-                resolve({ success: false, connectBrowserWallet: true });
-            };
-        }
 
         modal.querySelector('#confirmPayment').onclick = () => {
             const txHash = modal.querySelector('#txHashInput').value.trim();
@@ -1411,7 +1400,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 
                 // User chose "Other" - show manual payment
                 if (mobileResult.showManual) {
-                    const manualResult = await showBSCManualModal(recipient, amount, false); // false = not desktop
+                    const manualResult = await showBSCManualModal(recipient, amount);
                     if (manualResult.success) {
                         return {
                             ...manualResult,
@@ -1444,37 +1433,8 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             }
             
             if (choice === 'qr') {
-                // Show manual payment modal with QR code AND browser wallet option
-                const manualResult = await showBSCManualModal(recipient, amount, true); // true = isDesktop
-                
-                if (manualResult.connectBrowserWallet) {
-                    // User chose to connect browser wallet from QR modal
-                    modal = showPaymentStatusModal(selectedNetwork, amount);
-                    updateStatus(modal, 'Connecting browser wallet...');
-                    
-                    const connected = await requestWalletConnection();
-                    if (!connected) {
-                        throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
-                    }
-                    
-                    await ensureBSCNetworkDesktop(window.ethereum);
-                    
-                    updateStatus(modal, 'Confirm in wallet...');
-                    const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
-                    
-                    updateStatus(modal, 'Finalizing...');
-                    await finalizePayment(result.txHash, selectedNetwork);
-                    
-                    successStatus(modal, result.txHash, result.explorerUrl);
-                    
-                    return { 
-                        success: true, 
-                        ...result,
-                        participant_id: participantId,
-                        payment_amount: amount,
-                        payment_intent_id: result.txHash
-                    };
-                }
+                // Show manual payment modal with QR code
+                const manualResult = await showBSCManualModal(recipient, amount);
                 
                 if (manualResult.success) {
                     return {
@@ -1520,37 +1480,8 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                     // Show user-friendly message and offer QR fallback
                     showCryptoAlert('WalletConnect unavailable. Showing QR code instead.', 'warning', 4000);
                     
-                    // Fall back to QR code payment (with browser wallet option)
-                    const manualResult = await showBSCManualModal(recipient, amount, true); // true = isDesktop
-                    
-                    if (manualResult.connectBrowserWallet) {
-                        // User chose to connect browser wallet from QR modal
-                        modal = showPaymentStatusModal(selectedNetwork, amount);
-                        updateStatus(modal, 'Connecting browser wallet...');
-                        
-                        const connected = await requestWalletConnection();
-                        if (!connected) {
-                            throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
-                        }
-                        
-                        await ensureBSCNetworkDesktop(window.ethereum);
-                        
-                        updateStatus(modal, 'Confirm in wallet...');
-                        const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
-                        
-                        updateStatus(modal, 'Finalizing...');
-                        await finalizePayment(result.txHash, selectedNetwork);
-                        
-                        successStatus(modal, result.txHash, result.explorerUrl);
-                        
-                        return { 
-                            success: true, 
-                            ...result,
-                            participant_id: participantId,
-                            payment_amount: amount,
-                            payment_intent_id: result.txHash
-                        };
-                    }
+                    // Fall back to QR code payment
+                    const manualResult = await showBSCManualModal(recipient, amount);
                     
                     if (manualResult.success) {
                         return {
@@ -1562,6 +1493,35 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                     }
                     return manualResult;
                 }
+            }
+            
+            if (choice === 'browser') {
+                // Use browser wallet (MetaMask, etc.)
+                modal = showPaymentStatusModal(selectedNetwork, amount);
+                updateStatus(modal, 'Connecting browser wallet...');
+                
+                const connected = await requestWalletConnection();
+                if (!connected) {
+                    throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
+                }
+                
+                await ensureBSCNetworkDesktop(window.ethereum);
+                
+                updateStatus(modal, 'Confirm in wallet...');
+                const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
+                
+                updateStatus(modal, 'Finalizing...');
+                await finalizePayment(result.txHash, selectedNetwork);
+                
+                successStatus(modal, result.txHash, result.explorerUrl);
+                
+                return { 
+                    success: true, 
+                    ...result,
+                    participant_id: participantId,
+                    payment_amount: amount,
+                    payment_intent_id: result.txHash
+                };
             }
             
             return { success: false, cancelled: true };
