@@ -129,6 +129,372 @@ if (typeof window === 'undefined') {
             background: #e5e7eb;
             color: #374151;
         }
+        
+        /* Additional styles for modals */
+        .hidden {
+            display: none !important;
+        }
+        
+        .flex {
+            display: flex;
+        }
+        
+        .items-center {
+            align-items: center;
+        }
+        
+        .justify-center {
+            justify-content: center;
+        }
+        
+        .mx-auto {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .rounded-xl {
+            border-radius: 0.75rem;
+        }
+        
+        .rounded-lg {
+            border-radius: 0.5rem;
+        }
+        
+        .rounded {
+            border-radius: 0.25rem;
+        }
+        
+        .bg-black\\/80 {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        .bg-white {
+            background-color: #fff;
+        }
+        
+        .bg-gray-100 {
+            background-color: #f3f4f6;
+        }
+        
+        .bg-gray-200 {
+            background-color: #e5e7eb;
+        }
+        
+        .bg-gray-800 {
+            background-color: #1f2937;
+        }
+        
+        .bg-blue-600 {
+            background-color: #2563eb;
+        }
+        
+        .bg-green-600 {
+            background-color: #059669;
+        }
+        
+        .bg-red-600 {
+            background-color: #dc2626;
+        }
+        
+        .bg-yellow-400 {
+            background-color: #fbbf24;
+        }
+        
+        .bg-orange-500 {
+            background-color: #f97316;
+        }
+        
+        .bg-purple-500 {
+            background-color: #8b5cf6;
+        }
+        
+        .bg-gradient-to-r {
+            background-image: linear-gradient(to right, var(--tw-gradient-stops));
+        }
+        
+        .from-blue-600 {
+            --tw-gradient-from: #2563eb;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(37, 99, 235, 0));
+        }
+        
+        .to-purple-600 {
+            --tw-gradient-to: #7c3aed;
+        }
+        
+        .hover\\:from-blue-700:hover {
+            --tw-gradient-from: #1d4ed8;
+        }
+        
+        .hover\\:to-purple-700:hover {
+            --tw-gradient-to: #6d28d9;
+        }
+        
+        .hover\\:bg-blue-700:hover {
+            background-color: #1d4ed8;
+        }
+        
+        .hover\\:bg-gray-300:hover {
+            background-color: #d1d5db;
+        }
+        
+        .hover\\:bg-gray-900:hover {
+            background-color: #111827;
+        }
+        
+        .hover\\:bg-green-700:hover {
+            background-color: #047857;
+        }
+        
+        .hover\\:bg-red-700:hover {
+            background-color: #b91c1c;
+        }
+        
+        .hover\\:bg-yellow-500:hover {
+            background-color: #f59e0b;
+        }
+        
+        .hover\\:bg-orange-600:hover {
+            background-color: #ea580c;
+        }
+        
+        .hover\\:bg-purple-600:hover {
+            background-color: #7c3aed;
+        }
+        
+        .text-white {
+            color: #fff;
+        }
+        
+        .text-gray-500 {
+            color: #6b7280;
+        }
+        
+        .text-gray-600 {
+            color: #4b5563;
+        }
+        
+        .text-gray-700 {
+            color: #374151;
+        }
+        
+        .text-blue-500 {
+            color: #3b82f6;
+        }
+        
+        .text-red-500 {
+            color: #ef4444;
+        }
+        
+        .text-sm {
+            font-size: 0.875rem;
+        }
+        
+        .text-xs {
+            font-size: 0.75rem;
+        }
+        
+        .text-lg {
+            font-size: 1.125rem;
+        }
+        
+        .text-2xl {
+            font-size: 1.5rem;
+        }
+        
+        .font-bold {
+            font-weight: 700;
+        }
+        
+        .font-medium {
+            font-weight: 500;
+        }
+        
+        .font-semibold {
+            font-weight: 600;
+        }
+        
+        .font-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+        
+        .p-2 {
+            padding: 0.5rem;
+        }
+        
+        .p-3 {
+            padding: 0.75rem;
+        }
+        
+        .p-6 {
+            padding: 1.5rem;
+        }
+        
+        .py-2 {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        
+        .py-3 {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        
+        .px-3 {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        
+        .pr-6 {
+            padding-right: 1.5rem;
+        }
+        
+        .mb-2 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .mb-3 {
+            margin-bottom: 0.75rem;
+        }
+        
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+        
+        .mt-2 {
+            margin-top: 0.5rem;
+        }
+        
+        .mt-3 {
+            margin-top: 0.75rem;
+        }
+        
+        .mt-4 {
+            margin-top: 1rem;
+        }
+        
+        .mt-6 {
+            margin-top: 1.5rem;
+        }
+        
+        .my-3 {
+            margin-top: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .w-full {
+            width: 100%;
+        }
+        
+        .w-80 {
+            width: 20rem;
+        }
+        
+        .max-w-\\[90vw\\] {
+            max-width: 90vw;
+        }
+        
+        .max-w-\\[95vw\\] {
+            max-width: 95vw;
+        }
+        
+        .gap-1 {
+            gap: 0.25rem;
+        }
+        
+        .gap-2 {
+            gap: 0.5rem;
+        }
+        
+        .grid {
+            display: grid;
+        }
+        
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        
+        .break-all {
+            word-break: break-all;
+        }
+        
+        .border {
+            border-width: 1px;
+            border-color: #d1d5db;
+        }
+        
+        .border-t {
+            border-top-width: 1px;
+            border-top-color: #d1d5db;
+        }
+        
+        .border-b {
+            border-bottom-width: 1px;
+            border-bottom-color: #d1d5db;
+        }
+        
+        .shadow-md {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .focus\\:ring-2:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        .focus\\:ring-blue-500:focus {
+            --tw-ring-color: #3b82f6;
+        }
+        
+        .focus\\:ring-red-500:focus {
+            --tw-ring-color: #ef4444;
+        }
+        
+        .focus\\:border-blue-500:focus {
+            border-color: #3b82f6;
+        }
+        
+        .outline-none {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+        }
+        
+        .transition-colors {
+            transition-property: color, background-color, border-color;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+        
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+        
+        .z-50 {
+            z-index: 50;
+        }
+        
+        .fixed {
+            position: fixed;
+        }
+        
+        .inset-0 {
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+        
+        .relative {
+            position: relative;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .min-h-6 {
+            min-height: 1.5rem;
+        }
     `;
     document.head.appendChild(style);
 })();
@@ -181,9 +547,6 @@ const ERROR_CODES = {
     DEPENDENCY_ERROR: 'DEPENDENCY_ERROR',
     UNKNOWN_ERROR: 'UNKNOWN_ERROR'
 };
-
-// Track payment attempts
-// const paymentAttempts = new Map(); // REMOVED
 
 // ======================================================
 // 🛡️  ERROR HANDLING CLASS
@@ -1335,7 +1698,6 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             : CONFIG.TRON.WALLET_ADDRESS;
         
         // For BSC: Show different options for mobile vs desktop
-        // For TRON: Use TronLink if available, otherwise show manual QR
         if (selectedNetwork === 'BSC') {
             const isMobile = isMobileDevice();
             const isInWalletBrowser = isInAppBrowser();

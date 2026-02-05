@@ -862,7 +862,228 @@ console.log('📦 Vote.js Loading...');
     }
 
     // ========================================
-    // HANDLE VOTE / PAYMENT (Updated with better status)
+    // 💳 PAYSTACK PAYMENT INTEGRATION (FIXED)
+    // ========================================
+
+    /**
+     * Generate a unique Paystack reference
+     */
+    function generatePaystackReference() {
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substr(2, 9);
+        return `ODI_${timestamp}_${random}`;
+    }
+
+    /**
+     * Check if Paystack is available
+     */
+    function isPaystackAvailable() {
+        // Check multiple ways Paystack might be available
+        return (
+            typeof window.processPaystackPayment === 'function' ||
+            typeof window.initiatePaystackPayment === 'function' ||
+            (window.PaystackPop && typeof window.PaystackPop.setup === 'function')
+        );
+    }
+
+    /**
+     * Handle Paystack payment with proper intent creation
+     */
+    async function handlePaystackPayment(participantId, voteCount, amount) {
+        try {
+            console.log('[Paystack] Starting payment process:', { participantId, voteCount, amount });
+            
+            // Check availability
+            if (!isPaystackAvailable()) {
+                throw new Error('Paystack payment is not available in this browser. Please try crypto payment instead.');
+            }
+            
+            // Generate unique reference
+            const reference = generatePaystackReference();
+            
+            // Show overlay
+            showConnectingOverlay('Processing Card Payment', 'Redirecting to secure payment page...');
+            
+            // Create payment intent with backend
+            const paymentIntent = await createPaystackPaymentIntent(
+                participantId,
+                voteCount,
+                amount,
+                reference
+            );
+            
+            if (!paymentIntent || !paymentIntent.authorization_url) {
+                throw new Error('Failed to create payment. Please try again.');
+            }
+            
+            // Open Paystack in new tab
+            window.open(paymentIntent.authorization_url, '_blank', 'noopener,noreferrer');
+            
+            // Store reference for verification
+            sessionStorage.setItem(`paystack_ref_${participantId}`, reference);
+            
+            // Start polling for payment confirmation
+            const result = await pollForPaystackConfirmation(participantId, reference, amount);
+            
+            // Return payment result
+            return {
+                success: true,
+                participant_id: participantId,
+                payment_amount: amount,
+                payment_intent_id: reference,
+                txHash: reference, // Alias for compatibility
+                requires_redirect: true
+            };
+            
+        } catch (error) {
+            console.error('[Paystack] Payment failed:', error);
+            hideConnectingOverlay();
+            throw error;
+        }
+    }
+
+    /**
+     * Create Paystack payment intent on backend
+     */
+    async function createPaystackPaymentIntent(participantId, voteCount, amount, reference) {
+        try {
+            const response = await fetch('/api/onedream/create-paystack-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    participant_id: participantId,
+                    vote_count: voteCount,
+                    amount: amount,
+                    reference: reference,
+                    currency: 'NGN', // or 'USD' based on your config
+                    callback_url: `${window.location.origin}/paystack-callback`,
+                    metadata: {
+                        participantId,
+                        voteCount,
+                        amount,
+                        timestamp: Date.now()
+                    }
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Payment initialization failed');
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('[Paystack] Create intent failed:', error);
+            throw new Error('Unable to start payment. Please check your connection and try again.');
+        }
+    }
+
+    /**
+     * Poll backend for Paystack payment confirmation
+     */
+    async function pollForPaystackConfirmation(participantId, reference, amount) {
+        return new Promise((resolve, reject) => {
+            const maxAttempts = 60; // 5 minutes (5 seconds per attempt)
+            let attempts = 0;
+            
+            const checkPayment = async () => {
+                attempts++;
+                
+                if (attempts > maxAttempts) {
+                    hideConnectingOverlay();
+                    reject(new Error('Payment confirmation timeout. Please check your payment status.'));
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/onedream/verify-paystack-payment?reference=${reference}`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        
+                        if (result.status === 'success') {
+                            // Payment successful
+                            showOverlaySuccess('✅ Card Payment Confirmed!');
+                            
+                            // Clear stored reference
+                            sessionStorage.removeItem(`paystack_ref_${participantId}`);
+                            
+                            resolve({
+                                success: true,
+                                status: 'success',
+                                reference,
+                                amount
+                            });
+                            return;
+                        } else if (result.status === 'failed') {
+                            // Payment failed
+                            hideConnectingOverlay();
+                            reject(new Error('Payment failed. Please try again or use another method.'));
+                            return;
+                        }
+                        // Payment still pending, continue polling
+                    }
+                } catch (error) {
+                    console.warn('[Paystack] Polling error:', error);
+                }
+                
+                // Continue polling every 5 seconds
+                setTimeout(checkPayment, 5000);
+            };
+            
+            // Start polling
+            setTimeout(checkPayment, 5000);
+        });
+    }
+
+    // ========================================
+    // 🔐 CRYPTO PAYMENT MODULE LOADER
+    // ========================================
+
+    /**
+     * Wait for the crypto payments module to be ready
+     */
+    async function waitForCryptoPayments(timeout = 5000) {
+        return new Promise((resolve, reject) => {
+            if (window.initiateCryptoPayment && window.CryptoPaymentsReady) {
+                resolve(true);
+                return;
+            }
+            
+            const startTime = Date.now();
+            
+            const handleReady = () => {
+                cleanup();
+                resolve(true);
+            };
+            
+            document.addEventListener('cryptoPaymentsReady', handleReady);
+            
+            const checkInterval = setInterval(() => {
+                if (window.initiateCryptoPayment && window.CryptoPaymentsReady) {
+                    cleanup();
+                    resolve(true);
+                } else if (Date.now() - startTime > timeout) {
+                    cleanup();
+                    reject(new Error('Crypto payment module failed to load. Please refresh the page.'));
+                }
+            }, 100);
+            
+            function cleanup() {
+                clearInterval(checkInterval);
+                document.removeEventListener('cryptoPaymentsReady', handleReady);
+            }
+        });
+    }
+
+    // ========================================
+    // 💳 HANDLE VOTE / PAYMENT (UPDATED)
     // ========================================
     async function handleVote(event) {
         event.preventDefault();
@@ -882,7 +1103,7 @@ console.log('📦 Vote.js Loading...');
             const voteCount = parseInt(document.querySelector('#voteCount')?.value || 
                                            document.querySelector('[name="vote_count"]')?.value || 1);
             const amount = parseFloat(document.querySelector('#voteAmount')?.value || 
-                                  document.querySelector('[name="amount"]')?.value || voteCount);
+                                  document.querySelector('[name="amount"]')?.value || voteCount * 2.0); // $2 per vote
             
             if (!participantId) {
                 throw new Error('No participant selected');
@@ -899,10 +1120,7 @@ console.log('📦 Vote.js Loading...');
             
             if (window.selectedPaymentMethod === 'paystack') {
                 // Process Paystack payment
-                if (typeof window.processPaystackPayment !== 'function') {
-                    throw new Error('Paystack payment not available. Please refresh the page.');
-                }
-                paymentResult = await window.processPaystackPayment();
+                paymentResult = await handlePaystackPayment(participantId, voteCount, amount);
             } else if (window.selectedPaymentMethod === 'crypto') {
                 // Process crypto payment
                 paymentResult = await handleCryptoPayment(participantId, voteCount, amount);
@@ -978,14 +1196,6 @@ console.log('📦 Vote.js Loading...');
             console.error('[Vote] Crypto payment error:', error);
             throw error;
         }
-    }
-
-    // Dedicated Paystack handler
-    async function handlePaystackPayment() {
-        if (typeof window.processPaystackPayment !== 'function') {
-            throw new Error('Paystack payment module not loaded. Please refresh.');
-        }
-        return await window.processPaystackPayment();
     }
 
     // ======================================================
@@ -1070,75 +1280,6 @@ console.log('📦 Vote.js Loading...');
     }
 
     // ======================================================
-    // 🔐 CRYPTO PAYMENT MODULE LOADER
-    // ======================================================
-
-    /**
-     * Wait for the crypto payments module to be ready
-     */
-    async function waitForCryptoPayments(timeout = 5000) {
-        return new Promise((resolve, reject) => {
-            if (window.initiateCryptoPayment && window.CryptoPaymentsReady) {
-                resolve(true);
-                return;
-            }
-            
-            const startTime = Date.now();
-            
-            const handleReady = () => {
-                cleanup();
-                resolve(true);
-            };
-            
-            document.addEventListener('cryptoPaymentsReady', handleReady);
-            
-            const checkInterval = setInterval(() => {
-                if (window.initiateCryptoPayment && window.CryptoPaymentsReady) {
-                    cleanup();
-                    resolve(true);
-                } else if (Date.now() - startTime > timeout) {
-                    cleanup();
-                    reject(new Error('Crypto payment module failed to load. Please refresh the page.'));
-                }
-            }, 100);
-            
-            function cleanup() {
-                clearInterval(checkInterval);
-                document.removeEventListener('cryptoPaymentsReady', handleReady);
-            }
-        });
-    }
-
-    // ======================================================
-    // 💳 HANDLE CRYPTO PAYMENT
-    // ======================================================
-
-    async function handleCryptoPayment(participantId, voteCount, amount) {
-        try {
-            await waitForCryptoPayments(5000);
-            
-            if (typeof window.initiateCryptoPayment !== 'function') {
-                throw new Error('Crypto payment module not loaded. Please refresh the page.');
-            }
-            
-            console.log('[Vote] Starting crypto payment:', { participantId, voteCount, amount });
-            
-            const result = await window.initiateCryptoPayment(
-                String(participantId), 
-                Number(voteCount), 
-                Number(amount)
-            );
-            
-            console.log('[Vote] Crypto payment result:', result);
-            return result;
-            
-        } catch (error) {
-            console.error('[Vote] Crypto payment error:', error);
-            throw error;
-        }
-    }
-
-    // ======================================================
     // 📝 RECORD VOTES AFTER PAYMENT
     // ======================================================
 
@@ -1194,6 +1335,10 @@ console.log('📦 Vote.js Loading...');
             const result = await response.json();
             console.log("✅ Vote recorded successfully:", result);
             showVoteAlert("✅ Vote recorded successfully! Thank you for voting.", "success");
+            
+            // Show success modal
+            showSuccessModal();
+            
             return result;
             
         } catch (err) {
@@ -1282,7 +1427,7 @@ console.log('📦 Vote.js Loading...');
     function isPaymentMethodAvailable(method) {
         if (!method) return false;
         if (method === 'paystack') {
-            return typeof window.processPaystackPayment === 'function' || typeof window.PaystackPop !== 'undefined';
+            return isPaystackAvailable();
         }
         if (method === 'crypto') {
             return typeof window.processCryptoPayment === 'function' || 
@@ -1324,7 +1469,11 @@ console.log('📦 Vote.js Loading...');
                 console.log('Payment method selected:', method, 'available:', isPaymentMethodAvailable(method));
                 if (!isPaymentMethodAvailable(method)) {
                   // Friendly non-blocking notice so user knows why a later attempt might fail
-                  window.appToast && window.appToast('Note: Selected payment method may be unavailable in this browser.', 4000);
+                  if (window.appToast) {
+                    window.appToast('Note: Selected payment method may be unavailable in this browser.', 4000);
+                  } else {
+                    console.warn('Selected payment method may be unavailable:', method);
+                  }
                 }
             });
             initializePaymentMethods.__wired = true;
@@ -1341,14 +1490,32 @@ console.log('📦 Vote.js Loading...');
     }
 
     function showSuccessModal() {
-        document.getElementById('successParticipantName').textContent = window.currentParticipant.name;
+        if (!window.currentParticipant) return;
+        const modal = document.getElementById('successModal');
+        if (!modal) return;
+        
+        document.getElementById('successParticipantName').textContent = window.currentParticipant.name || 'Participant';
         document.getElementById('successVoteCount').textContent = window.selectedVoteAmount;
         document.getElementById('successModal').classList.remove('hidden');
     }
 
     function closeSuccessModal() {
-        document.getElementById('successModal').classList.add('hidden');
+        const modal = document.getElementById('successModal');
+        if (modal) modal.classList.add('hidden');
         updateUI();
+    }
+
+    function refreshVoteCount() {
+        // This function would refresh the vote count from the server
+        // For now, we'll just reload the participant data
+        if (window.currentParticipant && window.fetchParticipantByUsername) {
+            window.fetchParticipantByUsername(window.currentParticipant.username)
+                .then(participant => {
+                    window.currentParticipant = participant;
+                    showParticipant();
+                })
+                .catch(err => console.error('Failed to refresh vote count:', err));
+        }
     }
 
     // ========================================
@@ -1356,6 +1523,7 @@ console.log('📦 Vote.js Loading...');
     // ========================================
     window.closeSuccessModal = closeSuccessModal;
     window.handleCryptoPayment = handleCryptoPayment;
+    window.handlePaystackPayment = handlePaystackPayment;
     window.ensureWalletConnectReady = ensureWalletConnectReady;
     window.showConnectingOverlay = showConnectingOverlay;
     window.hideConnectingOverlay = hideConnectingOverlay;
@@ -1365,6 +1533,8 @@ console.log('📦 Vote.js Loading...');
     window.showOverlaySuccess = showOverlaySuccess;
     window.showOverlayError = showOverlayError;
     window.completeAllSteps = completeAllSteps;
+    window.isPaystackAvailable = isPaystackAvailable;
+    window.generatePaystackReference = generatePaystackReference;
     window.WALLETCONNECT_PROJECT_ID = window.WALLETCONNECT_PROJECT_ID || '61d9b98f81731dffa9988c0422676fc5';
 
     console.log('✅ Vote.js initialization logic exported.');
