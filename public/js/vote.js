@@ -896,16 +896,18 @@ console.log('📦 Vote.js Loading...');
             
             // Route payment based on selected method
             let paymentResult;
-            const paymentMethod = window.selectedPaymentMethod || 'paystack'; // Default to paystack
             
-            console.log('[Vote] Processing with payment method:', paymentMethod);
-            
-            if (paymentMethod === 'crypto') {
+            if (window.selectedPaymentMethod === 'paystack') {
+                // Process Paystack payment
+                if (typeof window.processPaystackPayment !== 'function') {
+                    throw new Error('Paystack payment not available. Please refresh the page.');
+                }
+                paymentResult = await window.processPaystackPayment();
+            } else if (window.selectedPaymentMethod === 'crypto') {
                 // Process crypto payment
                 paymentResult = await handleCryptoPayment(participantId, voteCount, amount);
             } else {
-                // Process Paystack payment (default)
-                paymentResult = await handlePaystackPayment();
+                throw new Error('Please select a payment method');
             }
             
             // Remove processing alert
