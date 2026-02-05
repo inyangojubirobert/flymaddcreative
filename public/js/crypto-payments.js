@@ -899,49 +899,15 @@ function openWalletApp(walletType = 'metamask') {
     return deepLinks[walletType] || deepLinks.metamask;
 }
 
-function generateQRCanvas(text, size = 200) {
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f3f4f6';
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('QR Loading...', size/2, size/2 - 10);
-    ctx.fillText('Copy address below', size/2, size/2 + 10);
-    return canvas.toDataURL();
-}
-
 function generateQR(text, elementId) {
     const element = document.getElementById(elementId);
-    if (!element) return;
+    if (!element) {
+        console.warn('[QR] Element not found:', elementId);
+        return;
+    }
     
-    const img = document.createElement('img');
-    img.className = 'mx-auto rounded-lg';
-    img.alt = 'QR Code';
-    img.style.width = '200px';
-    img.style.height = '200px';
-    
-    const primaryUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(text)}`;
-    const secondaryUrl = `https://quickchart.io/qr?text=${encodeURIComponent(text)}&size=200`;
-    const canvasUrl = generateQRCanvas(text);
-    
-    let attempts = 0;
-    const urls = [primaryUrl, secondaryUrl, canvasUrl];
-    
-    img.onerror = () => {
-        attempts++;
-        if (attempts < urls.length) {
-            console.warn(`[QR] Fallback ${attempts}: trying next source`);
-            img.src = urls[attempts];
-        }
-    };
-    
-    img.src = urls[0];
-    element.innerHTML = '';
-    element.appendChild(img);
+    // Use Google Charts API - most reliable
+    element.innerHTML = `<img src="https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(text)}" alt="QR Code" class="mx-auto rounded-lg" style="width:200px;height:200px;" />`;
 }
 
 // ======================================================
