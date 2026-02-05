@@ -878,12 +878,7 @@ console.log('📦 Vote.js Loading...');
      * Check if Paystack is available
      */
     function isPaystackAvailable() {
-        // Check multiple ways Paystack might be available
-        return (
-            typeof window.processPaystackPayment === 'function' ||
-            typeof window.initiatePaystackPayment === 'function' ||
-            (window.PaystackPop && typeof window.PaystackPop.setup === 'function')
-        );
+        return typeof window.processPaystackPayment === 'function';
     }
 
     /**
@@ -1119,8 +1114,11 @@ console.log('📦 Vote.js Loading...');
             let paymentResult;
             
             if (window.selectedPaymentMethod === 'paystack') {
-                // Process Paystack payment
-                paymentResult = await handlePaystackPayment(participantId, voteCount, amount);
+                // Process Paystack payment using the dedicated module
+                if (typeof window.processPaystackPayment !== 'function') {
+                    throw new Error('Paystack payment not available. Please refresh the page.');
+                }
+                paymentResult = await window.processPaystackPayment();
             } else if (window.selectedPaymentMethod === 'crypto') {
                 // Process crypto payment
                 paymentResult = await handleCryptoPayment(participantId, voteCount, amount);
