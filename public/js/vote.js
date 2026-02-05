@@ -894,8 +894,19 @@ console.log('📦 Vote.js Loading...');
             
             showVoteAlert('🔄 Processing payment...', 'info', 0);
             
-            // Process crypto payment
-            const paymentResult = await handleCryptoPayment(participantId, voteCount, amount);
+            // Route payment based on selected method
+            let paymentResult;
+            const paymentMethod = window.selectedPaymentMethod || 'paystack'; // Default to paystack
+            
+            console.log('[Vote] Processing with payment method:', paymentMethod);
+            
+            if (paymentMethod === 'crypto') {
+                // Process crypto payment
+                paymentResult = await handleCryptoPayment(participantId, voteCount, amount);
+            } else {
+                // Process Paystack payment (default)
+                paymentResult = await handlePaystackPayment();
+            }
             
             // Remove processing alert
             document.getElementById('vote-alert')?.remove();
