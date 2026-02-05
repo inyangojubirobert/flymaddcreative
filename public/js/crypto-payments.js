@@ -1131,6 +1131,10 @@ function showNetworkSelectionModal(preferredNetwork) {
     });
 }
 
+// ======================================================
+// 🖥️  DESKTOP WALLET MODAL (UPDATED - removed browser wallet option)
+// ======================================================
+
 function showDesktopWalletModal() {
     return new Promise((resolve) => {
         const modal = createModal(`
@@ -1144,7 +1148,7 @@ function showDesktopWalletModal() {
                 <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
                     <span>📱</span> Pay via QR Code
                 </button>
-                <!-- Browser Wallet option moved to QR modal -->
+                <!-- Browser Wallet option REMOVED from here - now only in QR modal -->
                 <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded mt-2 transition-colors">← Back</button>
             </div>
         `);
@@ -1160,6 +1164,10 @@ function showDesktopWalletModal() {
         modal.querySelector('#goBack').onclick = () => { modal.remove(); resolve('back'); };
     });
 }
+
+// ======================================================
+// 🔄  UPDATED BSC MANUAL MODAL (Added browser wallet option)
+// ======================================================
 
 function showBSCManualModal(recipient, amount, isDesktop = false) {
     return new Promise((resolve) => {
@@ -1301,7 +1309,7 @@ function showTronManualModal(recipient, amount) {
 }
 
 // ======================================================
-// 🚀  MAIN ENTRY POINT
+// 🚀  MAIN ENTRY POINT (Updated for desktop flow)
 // ======================================================
 
 async function initiateCryptoPayment(participantId, voteCount, amount) {
@@ -1411,7 +1419,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 
                 // User chose "Other" - show manual payment
                 if (mobileResult.showManual) {
-                    const manualResult = await showBSCManualModal(recipient, amount);
+                    const manualResult = await showBSCManualModal(recipient, amount, false);
                     if (manualResult.success) {
                         return {
                             ...manualResult,
@@ -1436,7 +1444,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 return mobileResult;
             }
             
-            // Desktop - show payment method selection
+            // DESKTOP: Show payment method selection (WalletConnect or QR)
             const choice = await showDesktopWalletModal();
             
             if (choice === 'back') {
@@ -1444,12 +1452,12 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             }
             
             if (choice === 'qr') {
-                // Show manual payment modal with QR code (desktop mode with browser wallet option)
+                // Show manual payment modal with QR code AND browser wallet option
                 const manualResult = await showBSCManualModal(recipient, amount, true);
                 
                 // If user clicked "Connect MetaMask" button in QR modal
                 if (manualResult.connectBrowserWallet) {
-                    // Proceed to browser wallet payment
+                    // User chose to connect browser wallet - proceed with payment
                     modal = showPaymentStatusModal(selectedNetwork, amount);
                     updateStatus(modal, 'Connecting browser wallet...');
                     
@@ -1482,6 +1490,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                     }
                 }
                 
+                // User submitted manual payment confirmation
                 if (manualResult.success) {
                     return {
                         ...manualResult,
@@ -1490,6 +1499,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                         payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
                     };
                 }
+                
                 return manualResult;
             }
             
@@ -1531,7 +1541,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                     
                     // If user clicked "Connect MetaMask" button in QR modal
                     if (manualResult.connectBrowserWallet) {
-                        // Proceed to browser wallet payment
+                        // User chose to connect browser wallet - proceed with payment
                         modal = showPaymentStatusModal(selectedNetwork, amount);
                         updateStatus(modal, 'Connecting browser wallet...');
                         
@@ -1564,6 +1574,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                         }
                     }
                     
+                    // User submitted manual payment confirmation
                     if (manualResult.success) {
                         return {
                             ...manualResult,
@@ -1572,11 +1583,10 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                             payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
                         };
                     }
+                    
                     return manualResult;
                 }
             }
-            
-            // Browser wallet option now handled in QR modal
             
             return { success: false, cancelled: true };
         }
@@ -1682,7 +1692,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
         if (modal) {
             errorStatus(modal, error);
         } else {
-            alert(error.message || 'Payment failed. Please try again.');
+            showCryptoAlert(error.message || 'Payment failed. Please try again.', 'error');
         }
         
         trackEvent('payment_error', { 
