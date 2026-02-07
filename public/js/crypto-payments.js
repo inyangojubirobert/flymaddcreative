@@ -963,7 +963,7 @@ function openWalletApp(walletType = 'metamask') {
 }
 
 // ======================================================
-// 📱  QR CODE IMPLEMENTATION (UPDATED - FIXED FOR BSC)
+// 📱  QR CODE IMPLEMENTATION (UPDATED)
 // ======================================================
 
 /**
@@ -974,48 +974,18 @@ function openWalletApp(walletType = 'metamask') {
  * @returns {string} QR code content
  */
 function createPaymentQRContent(network, recipient, amount) {
+    // NOTE: Most mobile wallets don't properly parse EIP-681 with token transfers
+    // The most reliable approach is to encode just the address
+    // The amount is shown prominently in the UI instead
+    
     if (network === 'BSC') {
-        // CRITICAL FIX: Use BSC-specific format to avoid ETH confusion
-        // Most wallets don't handle EIP-681 well for BSC, so we use simple address
-        // with additional info in plain text format that wallets can parse
-        
-        const amountWei = (amount * 1e18).toString();
-        
-        // Option 1: BSC-specific format (works with Binance Wallet, Trust Wallet)
-        const bscFormat = `bsc:${recipient}?amount=${amount}&token=USDT&contract=${CONFIG.BSC.USDT_ADDRESS}`;
-        
-        // Option 2: Plain JSON with all details (for wallets that can parse JSON)
-        const jsonFormat = JSON.stringify({
-            type: "bsc_payment",
-            address: recipient,
-            amount: amount,
-            token: "USDT",
-            contract: CONFIG.BSC.USDT_ADDRESS,
-            chainId: 56,
-            network: "BSC"
-        });
-        
-        // Option 3: Simple text instructions (most compatible)
-        const textFormat = `Send ${amount} USDT (BSC/BEP-20)
-To: ${recipient}
-Token: USDT
-Contract: ${CONFIG.BSC.USDT_ADDRESS}
-Network: Binance Smart Chain (Chain ID: 56)
-Amount: ${amount} USDT`;
-        
-        // Use BSC format as primary
-        console.log('[BSC QR Options]', {
-            bscFormat,
-            jsonFormat: jsonFormat.substring(0, 100) + '...',
-            textFormat: textFormat.substring(0, 100) + '...'
-        });
-        
-        return bscFormat;
-        
+        // Just use the wallet address - most compatible
+        // Users will need to manually enter the amount in their wallet
+        // This avoids the ETH vs USDT confusion
+        return recipient;
     } else if (network === 'TRON') {
-        // TRON specific format for TronLink and other TRON wallets
-        const amountSun = (amount * 1e6).toString();
-        return `tron://pay?to=${recipient}&amount=${amountSun}&token=${CONFIG.TRON.USDT_ADDRESS}`;
+        // For TRON, also just use the address for maximum compatibility
+        return recipient;
     }
     
     // Fallback to plain address
@@ -1558,23 +1528,14 @@ function showPaymentStatusModal(network, amount) {
         <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[90vw] relative">
             <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
             <div class="flex justify-between items-center mb-3 pr-6">
-                <h3 class="font-bold text-lg">${network} USDT Payment</h3>
+                <h3 class="font-bold text-lg">${network} Payment</h3>
                 <span class="text-xs bg-gray-100 px-2 py-1 rounded">${network === 'BSC' ? 'BEP-20' : 'TRC-20'}</span>
             </div>
-            
-            <!-- Clear amount display -->
-            <div class="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg mb-4 border border-blue-200">
-                <div class="text-2xl font-bold text-gray-800">${amount} USDT</div>
-                <div class="text-sm text-gray-600 mt-1">on ${network === 'BSC' ? 'Binance Smart Chain' : 'TRON Network'}</div>
-            </div>
-            
-            <div id="statusText" class="min-h-6 mb-4 text-sm">Initializing payment...</div>
+            <div class="text-2xl font-bold mb-4">${amount} USDT</div>
+            <div id="statusText" class="min-h-6 mb-4">Initializing…</div>
             <div class="loading-spinner mx-auto mt-4"></div>
             <div id="txLink" class="mt-4 text-sm hidden">
-                <p class="text-xs text-gray-500 mb-1">Transaction confirmed!</p>
-                <a href="#" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline inline-flex items-center gap-1">
-                    <span>🔗</span> View on explorer →
-                </a>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">View on explorer →</a>
             </div>
             <button id="closeModal" class="mt-4 text-gray-500 hover:text-gray-700 text-sm transition-colors">Close</button>
         </div>
@@ -1642,21 +1603,15 @@ function showNetworkSelectionModal(preferredNetwork) {
             <div class="bg-white p-6 rounded-xl w-80 text-center relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
                 <h3 class="font-bold mb-4 pr-6">Choose Network</h3>
-                <div class="mb-4">
-                    <button id="bsc" class="w-full bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500 py-4 rounded-lg mb-3 flex flex-col items-center justify-center gap-1 transition-all shadow-md">
-                        <span class="text-lg">🟡</span>
-                        <span class="font-bold">BSC (BEP-20)</span>
-                        <span class="text-xs text-gray-700">USDT on Binance Smart Chain</span>
-                        ${preferredNetwork === 'BSC' ? '<span class="text-xs text-green-600 font-medium mt-1">✓ Network Detected</span>' : ''}
-                    </button>
-                    <button id="tron" class="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white py-4 rounded-lg flex flex-col items-center justify-center gap-1 transition-all shadow-md">
-                        <span class="text-lg">🔴</span>
-                        <span class="font-bold">TRON (TRC-20)</span>
-                        <span class="text-xs">USDT on TRON Network</span>
-                        ${preferredNetwork === 'TRON' ? '<span class="text-xs text-green-200 font-medium mt-1">✓ Network Detected</span>' : ''}
-                    </button>
-                </div>
-                <button id="cancel" class="mt-2 text-gray-500 hover:text-gray-700 text-sm transition-colors">Cancel</button>
+                <button id="bsc" class="w-full bg-yellow-400 hover:bg-yellow-500 py-3 rounded mb-3 flex items-center justify-center gap-2 transition-colors">
+                    <span>🟡</span> BSC (BEP-20)
+                    ${preferredNetwork === 'BSC' ? '<span class="text-xs">(Detected)</span>' : ''}
+                </button>
+                <button id="tron" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded flex items-center justify-center gap-2 transition-colors">
+                    <span>🔴</span> TRON (TRC-20)
+                    ${preferredNetwork === 'TRON' ? '<span class="text-xs">(Detected)</span>' : ''}
+                </button>
+                <button id="cancel" class="mt-4 text-gray-500 hover:text-gray-700 text-sm transition-colors">Cancel</button>
             </div>
         `);
 
@@ -1673,14 +1628,14 @@ function showNetworkSelectionModal(preferredNetwork) {
         if (preferredNetwork) {
             setTimeout(() => {
                 const el = modal.querySelector(`#${preferredNetwork.toLowerCase()}`);
-                if (el) el.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
+                if (el) el.classList.add('ring-2', 'ring-blue-500');
             }, 100);
         }
     });
 }
 
 // ======================================================
-// 🖥️  DESKTOP WALLET MODAL
+// 🖥️  DESKTOP WALLET MODAL (UPDATED - removed browser wallet option)
 // ======================================================
 
 function showDesktopWalletModal() {
@@ -1696,6 +1651,7 @@ function showDesktopWalletModal() {
                 <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
                     <span>📱</span> Pay via QR Code
                 </button>
+                <!-- Browser Wallet option REMOVED from here - now only in QR modal -->
                 <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded mt-2 transition-colors">← Back</button>
             </div>
         `);
@@ -1713,7 +1669,7 @@ function showDesktopWalletModal() {
 }
 
 // ======================================================
-// 🔄  UPDATED BSC MANUAL MODAL (FIXED - Clear BSC USDT display)
+// 🔄  UPDATED BSC MANUAL MODAL (Added browser wallet option with proper QR)
 // ======================================================
 
 async function showBSCManualModal(recipient, amount, isDesktop = false) {
@@ -1726,87 +1682,56 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
-                
-                <!-- Header with clear BSC indication -->
-                <div class="flex items-center justify-center gap-2 mb-3">
-                    <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold">BSC</div>
-                    <h3 class="font-bold text-lg">USDT Payment</h3>
-                </div>
+                <h3 class="font-bold mb-3 pr-6">BSC USDT Payment</h3>
                 
                 <!-- Prominent Amount Display -->
-                <div class="bg-gradient-to-r from-yellow-100 to-yellow-50 border-2 border-yellow-300 p-4 rounded-lg mb-4">
+                <div class="bg-gradient-to-r from-yellow-100 to-yellow-50 border-2 border-yellow-400 p-4 rounded-lg mb-4">
                     <div class="text-3xl font-bold text-gray-800">${amount} USDT</div>
-                    <div class="text-sm text-yellow-700 font-medium mt-1">BEP-20 on Binance Smart Chain</div>
+                    <div class="text-sm text-yellow-700 font-medium mt-1">BEP-20 on BSC Network</div>
                 </div>
                 
-                <!-- Clear payment address -->
-                <p class="text-sm font-medium mb-2">Send to this BSC address:</p>
-                <div class="bg-gray-100 p-3 rounded break-all text-xs mb-3 font-mono border border-gray-300 bg-yellow-50">${recipient}</div>
+                <p class="text-sm mb-2 font-medium">Send to this address:</p>
+                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono border border-gray-300">${recipient}</div>
                 
-                <!-- QR Code -->
-                <div id="bscQR" class="mx-auto mb-4"></div>
-                <p class="text-xs text-gray-500 mb-1">Scan QR with wallet app</p>
+                <div id="bscQR" class="mx-auto mb-3"></div>
                 
-                <!-- Clear instructions -->
                 <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-3 text-left">
-                    <p class="text-xs font-semibold text-blue-800 mb-2">📋 How to pay:</p>
+                    <p class="text-xs font-semibold text-blue-800 mb-2">📋 Payment Instructions:</p>
                     <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
-                        <li>Scan QR or copy address above</li>
-                        <li>Open your wallet (MetaMask, Trust, Binance, etc.)</li>
-                        <li><strong>Switch to BSC network</strong> if not already</li>
+                        <li>Scan QR or copy address</li>
+                        <li>Open your wallet (MetaMask, Trust, etc.)</li>
                         <li>Select <strong>USDT (BEP-20)</strong> token</li>
                         <li>Enter amount: <strong>${amount} USDT</strong></li>
-                        <li>Review and confirm transaction</li>
+                        <li>Ensure network is <strong>BSC</strong></li>
+                        <li>Confirm & send</li>
                     </ol>
                 </div>
                 
-                <!-- Warning -->
-                <div class="bg-red-50 border border-red-200 p-2 rounded mb-3">
-                    <p class="text-xs text-red-600 font-medium">⚠️ Only send USDT on BSC network (BEP-20)!</p>
-                    <p class="text-xs text-red-500">Do not send ETH or other tokens to this address.</p>
-                </div>
-                
-                <!-- Action buttons -->
-                <div class="grid grid-cols-2 gap-2 mb-4">
-                    <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-sm transition-colors flex items-center justify-center gap-1">
-                        <span>📋</span> Copy Address
-                    </button>
-                    <button id="viewOnBscScan" class="bg-gray-500 hover:bg-gray-600 text-white py-2 rounded text-sm transition-colors flex items-center justify-center gap-1">
-                        <span>🔍</span> Verify on BscScan
-                    </button>
-                </div>
+                <p class="text-xs text-red-600 font-medium mb-2">⚠️ Only send USDT on BSC network!</p>
+                <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm mb-3 transition-colors">📋 Copy Address</button>
                 
                 ${isDesktop && hasBrowserWallet ? `
                 <div class="border-t border-b py-3 my-3">
-                    <p class="text-sm font-medium mb-2">💻 Connect Browser Wallet:</p>
+                    <p class="text-sm font-medium mb-2">Or connect wallet directly:</p>
                     <button id="connectBrowserWallet" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
-                        <span>🦊</span> Connect MetaMask (Direct Payment)
+                        <span>🦊</span> Connect MetaMask
                     </button>
-                    <p class="text-xs text-gray-500">Use browser extension to pay directly without QR code</p>
                 </div>
                 ` : ''}
                 
-                <!-- Transaction hash input -->
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
                     <input type="text" id="txHashInput" placeholder="Paste transaction hash (0x...)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid ${amount} USDT</button>
+                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
                 </div>
                 <button id="closeBSC" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
             </div>
         `);
 
-        // Generate QR code with BSC-specific format
+        // Generate QR code with just the address (most compatible)
         const qrContent = createPaymentQRContent('BSC', recipient, amount);
-        console.log('[BSC QR] Content:', qrContent);
-        console.log('[BSC Payment Details]', {
-            amount: amount + ' USDT',
-            network: 'BSC (Binance Smart Chain)',
-            standard: 'BEP-20',
-            recipient: recipient,
-            contract: CONFIG.BSC.USDT_ADDRESS,
-            chainId: 56
-        });
+        console.log('[BSC QR] Address for QR:', qrContent);
+        console.log('[BSC Payment] Amount:', amount, 'USDT | Network: BSC (BEP-20)');
         generateQR(qrContent, 'bscQR');
 
         // ✅ FIX: Attach close handler
@@ -1818,13 +1743,11 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient)
                 .then(() => {
-                    showCryptoAlert('BSC address copied to clipboard!', 'success', 2000);
+                    const btn = modal.querySelector('#copyAddress');
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
                 })
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
-        };
-
-        modal.querySelector('#viewOnBscScan').onclick = () => {
-            window.open(`https://bscscan.com/address/${recipient}`, '_blank');
         };
 
         // Browser wallet connection (for desktop only)
@@ -1839,7 +1762,7 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             
             if (!txHash) {
-                if (!confirm(`No transaction hash entered. Are you sure you have already sent ${amount} USDT on BSC network?`)) {
+                if (!confirm('No transaction hash entered. Are you sure you have already sent the payment?')) {
                     return;
                 }
             }
@@ -1847,9 +1770,6 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
             modal.remove();
             if (txHash && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
                 resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` });
-            } else if (txHash) {
-                showCryptoAlert('Invalid transaction hash format (should start with 0x and be 64 characters)', 'error');
-                resolve({ success: false, error: 'Invalid transaction hash' });
             } else {
                 resolve({ success: false, manual: true, pendingConfirmation: true });
             }
@@ -1860,7 +1780,7 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
 }
 
 // ======================================================
-// 🔄  UPDATED TRON MANUAL MODAL
+// 🔄  UPDATED TRON MANUAL MODAL (with proper QR)
 // ======================================================
 
 async function showTronManualModal(recipient, amount) {
@@ -1871,55 +1791,17 @@ async function showTronManualModal(recipient, amount) {
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
-                
-                <!-- Header with clear TRON indication -->
-                <div class="flex items-center justify-center gap-2 mb-3">
-                    <div class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs font-bold">TRON</div>
-                    <h3 class="font-bold text-lg">USDT Payment</h3>
-                </div>
-                
-                <!-- Prominent Amount Display -->
-                <div class="bg-gradient-to-r from-red-100 to-red-50 border-2 border-red-300 p-4 rounded-lg mb-4">
-                    <div class="text-3xl font-bold text-gray-800">${amount} USDT</div>
-                    <div class="text-sm text-red-700 font-medium mt-1">TRC-20 on TRON Network</div>
-                </div>
-                
-                <!-- Clear payment address -->
-                <p class="text-sm font-medium mb-2">Send to this TRON address:</p>
-                <div class="bg-gray-100 p-3 rounded break-all text-xs mb-3 font-mono border border-gray-300 bg-red-50">${recipient}</div>
-                
-                <!-- QR Code -->
-                <div id="tronQR" class="mx-auto mb-4"></div>
-                <p class="text-xs text-gray-500 mb-1">Scan QR with Tron wallet</p>
-                
-                <!-- Clear instructions -->
-                <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-3 text-left">
-                    <p class="text-xs font-semibold text-blue-800 mb-2">📋 How to pay:</p>
-                    <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
-                        <li>Scan QR or copy address above</li>
-                        <li>Open TronLink or other TRON wallet</li>
-                        <li>Select <strong>USDT (TRC-20)</strong> token</li>
-                        <li>Enter amount: <strong>${amount} USDT</strong></li>
-                        <li>Review and confirm transaction</li>
-                    </ol>
-                </div>
-                
-                <!-- Warning -->
-                <div class="bg-red-50 border border-red-200 p-2 rounded mb-3">
-                    <p class="text-xs text-red-600 font-medium">⚠️ Only send USDT on TRON network (TRC-20)!</p>
-                    <p class="text-xs text-red-500">Do not send TRX or other tokens to this address.</p>
-                </div>
-                
-                <!-- Action buttons -->
-                <button id="copyAddress" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-sm mb-3 transition-colors flex items-center justify-center gap-1">
-                    <span>📋</span> Copy TRON Address
-                </button>
-                
-                <!-- Transaction hash input -->
+                <h3 class="font-bold mb-3 pr-6">TRON USDT Payment</h3>
+                <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (TRC-20) to:</p>
+                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
+                <div id="tronQR" class="mx-auto mb-3"></div>
+                <p class="text-xs text-gray-500 mb-1">Scan with Tron wallet to auto-fill payment details</p>
+                <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on TRON network</p>
+                <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
-                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (64 chars)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid ${amount} USDT</button>
+                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
                 </div>
                 <button id="closeTron" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
             </div>
@@ -1941,7 +1823,7 @@ async function showTronManualModal(recipient, amount) {
                 .then(() => {
                     const btn = modal.querySelector('#copyAddress');
                     btn.textContent = '✅ Copied!';
-                    setTimeout(() => { btn.textContent = '📋 Copy TRON Address'; }, 2000);
+                    setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
                 })
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
         };
@@ -1950,7 +1832,7 @@ async function showTronManualModal(recipient, amount) {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             
             if (!txHash) {
-                if (!confirm(`No transaction hash entered. Are you sure you have already sent ${amount} USDT on TRON network?`)) {
+                if (!confirm('No transaction hash entered. Are you sure you have already sent the payment?')) {
                     return;
                 }
             }
@@ -1958,9 +1840,6 @@ async function showTronManualModal(recipient, amount) {
             modal.remove();
             if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
                 resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` });
-            } else if (txHash) {
-                showCryptoAlert('Invalid transaction hash format (should be 64 characters)', 'error');
-                resolve({ success: false, error: 'Invalid transaction hash' });
             } else {
                 resolve({ success: false, manual: true, pendingConfirmation: true });
             }
@@ -1971,7 +1850,7 @@ async function showTronManualModal(recipient, amount) {
 }
 
 // ======================================================
-// 🚀  MAIN ENTRY POINT
+// 🚀  MAIN ENTRY POINT (Updated for desktop flow)
 // ======================================================
 
 async function initiateCryptoPayment(participantId, voteCount, amount) {
@@ -2106,6 +1985,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             }
             
             // DESKTOP: Go directly to QR modal with browser wallet option
+            // (No intermediate "Choose Payment Method" modal - user already selected BSC)
             const manualResult = await showBSCManualModal(recipient, amount, true);
             
             // User cancelled
@@ -2302,4 +2182,4 @@ window.CryptoPaymentsReady = true;
 // ✅ Dispatch custom event to notify listeners that module is loaded
 document.dispatchEvent(new CustomEvent('cryptoPaymentsReady'));
 
-console.log('✅ Crypto Payments module loaded with BSC USDT support (no ETH confusion)');
+console.log('✅ Crypto Payments module loaded with QR support');
