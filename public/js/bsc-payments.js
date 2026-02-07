@@ -493,74 +493,92 @@
             qrData: qrData
         });
         
-        try {
-            if (typeof QRCode !== 'undefined') {
-                QRCode.toCanvas(element, qrData, {
-                    width: 180,
-                    margin: 2,
-                    color: {
-                        dark: '#000000',
-                        light: '#FFFFFF'
-                    }
-                }, function(error) {
-                    if (error) {
-                        console.error('QR generation error:', error);
-                        showFallbackQR(element, recipient, amount);
-                    } else {
-                        // Add click to copy functionality
-                        element.title = 'Click to copy payment details';
-                        element.style.cursor = 'pointer';
-                        element.onclick = function() {
-                            const textToCopy = `Send ${amount} USDT (BEP-20) to: ${recipient}\nContract: ${CONFIG.BSC_USDT_ADDRESS}\nNetwork: BSC (Binance Smart Chain)`;
-                            navigator.clipboard.writeText(textToCopy)
-                                .then(() => showAlert('Payment details copied!', 'success', 2000))
-                                .catch(() => showAlert('Failed to copy', 'error'));
-                        };
-                    }
-                });
-            } else {
-                showFallbackQR(element, recipient, amount);
-            }
-        } catch (error) {
-            console.error('QR generation error:', error);
-            showFallbackQR(element, recipient, amount);
-        }
+        // Always use image-based QR for reliability
+        showFallbackQR(element, recipient, amount, qrData);
     }
 
-    function showFallbackQR(element, recipient, amount) {
-        // Clear canvas if it exists
+    function showFallbackQR(element, recipient, amount, qrData) {
+        // Get parent container
+        let container;
         if (element.tagName === 'CANVAS') {
-            const parent = element.parentNode;
-            const container = document.createElement('div');
-            container.style.textAlign = 'center';
-            parent.replaceChild(container, element);
-            element = container;
+            container = element.parentNode;
+            container.innerHTML = ''; // Clear the canvas
+        } else {
+            container = element;
+            container.innerHTML = '';
         }
         
-        const text = `Send ${amount} USDT (BEP-20) to ${recipient}`;
-        const encodedText = encodeURIComponent(text);
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodedText}`;
+        container.style.textAlign = 'center';
+        
+        // Use the EIP-681 data if provided, otherwise use simple text
+        const dataToEncode = qrData || `${recipient}`;
+        const encodedData = encodeURIComponent(dataToEncode);
+        
+        // Try multiple QR APIs for reliability
+        const qrApis = [
+            `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodedData}`,
+            `https://quickchart.io/qr?text=${encodedData}&size=180`,
+            `https://chart.googleapis.com/chart?chs=180x180&cht=qr&chl=${encodedData}`
+        ];
         
         const img = document.createElement('img');
-        img.src = qrUrl;
-        img.alt = 'QR Code';
+        img.alt = 'BSC USDT Payment QR Code';
         img.style.width = '180px';
         img.style.height = '180px';
+        img.style.borderRadius = '8px';
+        img.style.cursor = 'pointer';
+        img.title = 'Click to copy payment details';
         
-        img.onerror = function() {
-            element.innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">QR Code unavailable</div>
-                    <div style="font-size: 11px; background: #f3f4f6; padding: 12px; border-radius: 6px;">
-                        <strong>Send ${amount} USDT (BEP-20)</strong><br>
-                        To: ${recipient.substring(0, 20)}...${recipient.substring(recipient.length - 6)}<br>
-                        Network: BSC
-                    </div>
-                </div>
-            `;
+        let currentApiIndex = 0;
+        
+        function tryNextApi() {
+            if (currentApiIndex >= qrApis.length) {
+                // All APIs failed, show text fallback
+                showTextFallback(container, recipient, amount);
+                return;
+            }
+            
+            img.src = qrApis[currentApiIndex];
+            currentApiIndex++;
+        }
+        
+        img.onload = function() {
+            console.log('✅ QR code loaded successfully');
+            // Add click to copy
+            img.onclick = function() {
+                const textToCopy = `Send ${amount} USDT (BEP-20) to: ${recipient}\nNetwork: BSC (Binance Smart Chain)`;
+                navigator.clipboard.writeText(textToCopy)
+                    .then(() => showAlert('Payment details copied!', 'success', 2000))
+                    .catch(() => showAlert('Failed to copy', 'error'));
+            };
         };
         
-        element.appendChild(img);
+        img.onerror = function() {
+            console.warn(`QR API ${currentApiIndex} failed, trying next...`);
+            tryNextApi();
+        };
+        
+        container.appendChild(img);
+        tryNextApi();
+    }
+    
+    function showTextFallback(container, recipient, amount) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">📱 Scan QR unavailable</div>
+                <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                    <div style="font-size: 24px; font-weight: 700; color: #92400e;">${amount} USDT</div>
+                    <div style="font-size: 12px; color: #92400e;">BEP-20 (BSC Network)</div>
+                </div>
+                <div style="font-size: 11px; background: #f3f4f6; padding: 12px; border-radius: 6px; word-break: break-all; font-family: monospace;">
+                    ${recipient}
+                </div>
+                <button onclick="navigator.clipboard.writeText('${recipient}').then(() => alert('Address copied!'))" 
+                        style="margin-top: 12px; padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    📋 Copy Address
+                </button>
+            </div>
+        `;
     }
 
     // ✅ Check and switch to BSC network
@@ -714,8 +732,8 @@
                         <div class="bsc-address" id="bscAddress">${recipient}</div>
                     </div>
                     
-                    <div class="bsc-qr-container">
-                        <canvas id="bscQRCode" class="bsc-qr-canvas"></canvas>
+                    <div class="bsc-qr-container" id="bscQRCode">
+                        <!-- QR code will be inserted here -->
                     </div>
                     
                     <div style="text-align: center; margin-bottom: 24px;">
@@ -788,11 +806,13 @@
             
             // Generate QR code
             setTimeout(() => {
-                const qrCanvas = modal.querySelector('#bscQRCode');
-                if (qrCanvas) {
-                    generateBSCQR(recipient, amount, qrCanvas);
+                const qrContainer = modal.querySelector('#bscQRCode');
+                if (qrContainer) {
+                    generateBSCQR(recipient, amount, qrContainer);
+                } else {
+                    console.error('QR container not found');
                 }
-            }, 100);
+            }, 150);
             
             // Copy address button
             modal.querySelector('#copyAddressBtn').onclick = () => {
