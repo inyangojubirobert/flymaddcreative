@@ -480,15 +480,15 @@
 
     // ✅ Generate QR code for BSC USDT payment
     function generateBSCQR(recipient, amount, element) {
-        // Use plain address format - the "ethereum:" prefix confuses wallets into showing ETH
-        // The amount and network info are displayed prominently in the UI
+        // Use plain address format for wallet compatibility
         const qrData = recipient;
         
         console.log('[BSC QR] Generating QR code:', {
             recipient: recipient,
             amount: amount,
             network: 'BSC (BEP-20)',
-            token: 'USDT'
+            token: 'USDT',
+            chainId: CONFIG.BSC_CHAIN_ID
         });
         
         // Always use image-based QR for reliability
