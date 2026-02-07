@@ -974,14 +974,18 @@ function openWalletApp(walletType = 'metamask') {
  * @returns {string} QR code content
  */
 function createPaymentQRContent(network, recipient, amount) {
+    // NOTE: Most mobile wallets don't properly parse EIP-681 with token transfers
+    // The most reliable approach is to encode just the address
+    // The amount is shown prominently in the UI instead
+    
     if (network === 'BSC') {
-        // EIP-681 format for BSC (BEP-20) - Works with MetaMask, Trust Wallet, etc.
-        const amountWei = (amount * 1e18).toString();
-        return `ethereum:${CONFIG.BSC.USDT_ADDRESS}@56/transfer?address=${recipient}&uint256=${amountWei}`;
+        // Just use the wallet address - most compatible
+        // Users will need to manually enter the amount in their wallet
+        // This avoids the ETH vs USDT confusion
+        return recipient;
     } else if (network === 'TRON') {
-        // TRON specific format for TronLink and other TRON wallets
-        const amountSun = (amount * 1e6).toString();
-        return `tron://pay?to=${recipient}&amount=${amountSun}&token=${CONFIG.TRON.USDT_ADDRESS}`;
+        // For TRON, also just use the address for maximum compatibility
+        return recipient;
     }
     
     // Fallback to plain address
@@ -1679,35 +1683,55 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
                 <h3 class="font-bold mb-3 pr-6">BSC USDT Payment</h3>
-                <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (BEP-20) to:</p>
-                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
+                
+                <!-- Prominent Amount Display -->
+                <div class="bg-gradient-to-r from-yellow-100 to-yellow-50 border-2 border-yellow-400 p-4 rounded-lg mb-4">
+                    <div class="text-3xl font-bold text-gray-800">${amount} USDT</div>
+                    <div class="text-sm text-yellow-700 font-medium mt-1">BEP-20 on BSC Network</div>
+                </div>
+                
+                <p class="text-sm mb-2 font-medium">Send to this address:</p>
+                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono border border-gray-300">${recipient}</div>
+                
                 <div id="bscQR" class="mx-auto mb-3"></div>
-                <p class="text-xs text-gray-500 mb-1">Scan with wallet app to auto-fill payment details</p>
-                <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on BSC network</p>
-                <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
+                
+                <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-3 text-left">
+                    <p class="text-xs font-semibold text-blue-800 mb-2">📋 Payment Instructions:</p>
+                    <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
+                        <li>Scan QR or copy address</li>
+                        <li>Open your wallet (MetaMask, Trust, etc.)</li>
+                        <li>Select <strong>USDT (BEP-20)</strong> token</li>
+                        <li>Enter amount: <strong>${amount} USDT</strong></li>
+                        <li>Ensure network is <strong>BSC</strong></li>
+                        <li>Confirm & send</li>
+                    </ol>
+                </div>
+                
+                <p class="text-xs text-red-600 font-medium mb-2">⚠️ Only send USDT on BSC network!</p>
+                <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm mb-3 transition-colors">📋 Copy Address</button>
                 
                 ${isDesktop && hasBrowserWallet ? `
                 <div class="border-t border-b py-3 my-3">
-                    <p class="text-sm font-medium mb-2">Connect Browser Wallet:</p>
+                    <p class="text-sm font-medium mb-2">Or connect wallet directly:</p>
                     <button id="connectBrowserWallet" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
                         <span>🦊</span> Connect MetaMask
                     </button>
-                    <p class="text-xs text-gray-500">Use browser extension to pay directly</p>
                 </div>
                 ` : ''}
                 
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
-                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (0x...)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                     <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
                 </div>
                 <button id="closeBSC" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
             </div>
         `);
 
-        // Generate QR code with proper payment format
+        // Generate QR code with just the address (most compatible)
         const qrContent = createPaymentQRContent('BSC', recipient, amount);
-        console.log('[BSC QR] Content:', qrContent);
+        console.log('[BSC QR] Address for QR:', qrContent);
+        console.log('[BSC Payment] Amount:', amount, 'USDT | Network: BSC (BEP-20)');
         generateQR(qrContent, 'bscQR');
 
         // ✅ FIX: Attach close handler
@@ -1768,24 +1792,45 @@ async function showTronManualModal(recipient, amount) {
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
                 <h3 class="font-bold mb-3 pr-6">TRON USDT Payment</h3>
-                <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (TRC-20) to:</p>
-                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
+                
+                <!-- Prominent Amount Display -->
+                <div class="bg-gradient-to-r from-red-100 to-red-50 border-2 border-red-400 p-4 rounded-lg mb-4">
+                    <div class="text-3xl font-bold text-gray-800">${amount} USDT</div>
+                    <div class="text-sm text-red-700 font-medium mt-1">TRC-20 on TRON Network</div>
+                </div>
+                
+                <p class="text-sm mb-2 font-medium">Send to this address:</p>
+                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono border border-gray-300">${recipient}</div>
+                
                 <div id="tronQR" class="mx-auto mb-3"></div>
-                <p class="text-xs text-gray-500 mb-1">Scan with Tron wallet to auto-fill payment details</p>
-                <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on TRON network</p>
-                <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
+                
+                <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg mb-3 text-left">
+                    <p class="text-xs font-semibold text-blue-800 mb-2">📋 Payment Instructions:</p>
+                    <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
+                        <li>Scan QR or copy address</li>
+                        <li>Open TronLink or TRON wallet</li>
+                        <li>Select <strong>USDT (TRC-20)</strong> token</li>
+                        <li>Enter amount: <strong>${amount} USDT</strong></li>
+                        <li>Confirm & send</li>
+                    </ol>
+                </div>
+                
+                <p class="text-xs text-red-600 font-medium mb-2">⚠️ Only send USDT on TRON network!</p>
+                <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm mb-3 transition-colors">📋 Copy Address</button>
+                
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
-                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" id="txHashInput" placeholder="Paste transaction hash" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                     <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
                 </div>
                 <button id="closeTron" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
             </div>
         `);
 
-        // Generate QR code with proper TRON payment format
+        // Generate QR code with just the address (most compatible)
         const qrContent = createPaymentQRContent('TRON', recipient, amount);
-        console.log('[TRON QR] Content:', qrContent);
+        console.log('[TRON QR] Address for QR:', qrContent);
+        console.log('[TRON Payment] Amount:', amount, 'USDT | Network: TRON (TRC-20)');
         generateQR(qrContent, 'tronQR');
 
         // ✅ FIX: Attach close handler
