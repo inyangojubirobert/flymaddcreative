@@ -161,17 +161,21 @@ async function createCryptoPayment(amount, voteCount, participant) {
   // - CoinGate
   // - Custom wallet integration
 
+  const cryptoAddress = process.env.CRYPTO_WALLET_ADDRESS || '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
+  const btcAmount = (amount / 45000).toFixed(8);
+  const qrData = encodeURIComponent(`bitcoin:${cryptoAddress}?amount=${btcAmount}`);
+
   return {
     payment_intent_id: paymentRef,
-    crypto_address: process.env.CRYPTO_WALLET_ADDRESS || '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa', // Default Bitcoin address
+    crypto_address: cryptoAddress, // Default Bitcoin address
     amount_usd: amount,
-    amount_btc: (amount / 45000).toFixed(8), // Approximate BTC conversion (you'd get real rate from API)
+    amount_btc: btcAmount, // Approximate BTC conversion (you'd get real rate from API)
     amount_eth: (amount / 3000).toFixed(6),  // Approximate ETH conversion
-    qr_code_url: `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=bitcoin:${process.env.CRYPTO_WALLET_ADDRESS || '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa'}?amount=${(amount / 45000).toFixed(8)}`,
+    qr_code_url: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${qrData}`,
     provider_data: {
       crypto_reference: paymentRef,
       supported_currencies: ['BTC', 'ETH', 'USDT']
     },
-    instructions: `Send exactly ${(amount / 45000).toFixed(8)} BTC to the address above. Payment will be confirmed automatically.`
+    instructions: `Send exactly ${btcAmount} BTC to the address above. Payment will be confirmed automatically.`
   };
 }

@@ -906,8 +906,43 @@ function generateQR(text, elementId) {
         return;
     }
     
-    // Use Google Charts API - most reliable
-    element.innerHTML = `<img src="https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(text)}" alt="QR Code" class="mx-auto rounded-lg" style="width:200px;height:200px;" />`;
+    // Use multiple QR code APIs with fallback (Google Charts is deprecated)
+    const encodedText = encodeURIComponent(text);
+    const qrApis = [
+        `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodedText}`,
+        `https://quickchart.io/qr?text=${encodedText}&size=200&margin=2`,
+        `https://chart.apis.google.com/chart?chs=200x200&cht=qr&chl=${encodedText}`
+    ];
+    
+    const img = document.createElement('img');
+    img.className = 'mx-auto rounded-lg';
+    img.alt = 'QR Code';
+    img.style.width = '200px';
+    img.style.height = '200px';
+    
+    let currentIndex = 0;
+    
+    img.onerror = () => {
+        currentIndex++;
+        if (currentIndex < qrApis.length) {
+            console.warn(`[QR] API ${currentIndex} failed, trying next...`);
+            img.src = qrApis[currentIndex];
+        } else {
+            // All APIs failed - show fallback with copy button
+            console.error('[QR] All QR APIs failed');
+            element.innerHTML = `
+                <div class="bg-gray-100 p-4 rounded-lg text-center" style="width:200px;height:200px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;">
+                    <p class="text-xs text-gray-500 mb-2">QR unavailable</p>
+                    <p class="text-xs font-mono break-all">${text.substring(0, 20)}...</p>
+                    <p class="text-xs text-gray-400 mt-2">Copy address below</p>
+                </div>
+            `;
+        }
+    };
+    
+    img.src = qrApis[0];
+    element.innerHTML = '';
+    element.appendChild(img);
 }
 
 // ======================================================
