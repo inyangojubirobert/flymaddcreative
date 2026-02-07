@@ -974,18 +974,14 @@ function openWalletApp(walletType = 'metamask') {
  * @returns {string} QR code content
  */
 function createPaymentQRContent(network, recipient, amount) {
-    // NOTE: Most mobile wallets don't properly parse EIP-681 with token transfers
-    // The most reliable approach is to encode just the address
-    // The amount is shown prominently in the UI instead
-    
     if (network === 'BSC') {
-        // Just use the wallet address - most compatible
-        // Users will need to manually enter the amount in their wallet
-        // This avoids the ETH vs USDT confusion
-        return recipient;
+        // EIP-681 format for BSC (BEP-20) - Works with MetaMask, Trust Wallet, etc.
+        const amountWei = (amount * 1e18).toString();
+        return `ethereum:${CONFIG.BSC.USDT_ADDRESS}@56/transfer?address=${recipient}&uint256=${amountWei}`;
     } else if (network === 'TRON') {
-        // For TRON, also just use the address for maximum compatibility
-        return recipient;
+        // TRON specific format for TronLink and other TRON wallets
+        const amountSun = (amount * 1e6).toString();
+        return `tron://pay?to=${recipient}&amount=${amountSun}&token=${CONFIG.TRON.USDT_ADDRESS}`;
     }
     
     // Fallback to plain address
