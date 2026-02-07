@@ -732,8 +732,8 @@
                         <div class="bsc-address" id="bscAddress">${recipient}</div>
                     </div>
                     
-                    <div class="bsc-qr-container">
-                        <canvas id="bscQRCode" class="bsc-qr-canvas"></canvas>
+                    <div class="bsc-qr-container" id="bscQRCode">
+                        <!-- QR code will be loaded here -->
                     </div>
                     
                     <div style="text-align: center; margin-bottom: 24px;">
@@ -806,11 +806,14 @@
             
             // Generate QR code
             setTimeout(() => {
-                const qrCanvas = modal.querySelector('#bscQRCode');
-                if (qrCanvas) {
-                    generateBSCQR(recipient, amount, qrCanvas);
+                const qrContainer = modal.querySelector('#bscQRCode');
+                if (qrContainer) {
+                    console.log('[BSC] Generating QR code for:', recipient, amount);
+                    generateBSCQR(recipient, amount, qrContainer);
+                } else {
+                    console.error('[BSC] QR container not found!');
                 }
-            }, 100);
+            }, 200);
             
             // Copy address button
             modal.querySelector('#copyAddressBtn').onclick = () => {
