@@ -2044,8 +2044,54 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 return mobileResult;
             }
             
-            // DESKTOP: Go directly to QR modal with browser wallet option
-            // (No intermediate "Choose Payment Method" modal - user already selected BSC)
+            // DESKTOP: Use the dedicated BSC Payments module if available
+            // This provides better UX with proper BSC branding and MetaMask integration
+            if (window.BSCPaymentsReady && typeof window.initiateBSCPayment === 'function') {
+                console.log('[Payment] Using dedicated BSC Payments module for desktop');
+                
+                // Update recipient in BSC Payments config
+                if (window.BSCPayments && window.BSCPayments.setRecipient) {
+                    window.BSCPayments.setRecipient(recipient);
+                }
+                
+                const bscResult = await window.initiateBSCPayment(amount, {
+                    recipient: recipient,
+                    onSuccess: (result) => {
+                        console.log('[BSC Payment] Success:', result);
+                    },
+                    onError: (error) => {
+                        console.error('[BSC Payment] Error:', error);
+                    }
+                });
+                
+                if (bscResult.success) {
+                    // Finalize the payment
+                    try {
+                        await finalizePayment(bscResult.txHash, 'BSC');
+                    } catch (err) {
+                        console.warn('[BSC Payment] Finalize warning:', err);
+                    }
+                    
+                    return {
+                        success: true,
+                        txHash: bscResult.txHash,
+                        explorerUrl: bscResult.explorerUrl,
+                        participant_id: participantId,
+                        payment_amount: amount,
+                        payment_intent_id: bscResult.txHash,
+                        method: bscResult.method || 'bsc'
+                    };
+                }
+                
+                return {
+                    success: false,
+                    cancelled: bscResult.cancelled || false,
+                    pendingConfirmation: bscResult.pendingConfirmation || false
+                };
+            }
+            
+            // Fallback: Use old BSC manual modal if new module not available
+            console.log('[Payment] Falling back to old BSC modal');
             const manualResult = await showBSCManualModal(recipient, amount, true);
             
             // User cancelled
