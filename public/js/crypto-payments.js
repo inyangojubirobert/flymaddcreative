@@ -975,37 +975,22 @@ function openWalletApp(walletType = 'metamask') {
  */
 function createPaymentQRContent(network, recipient, amount) {
     if (network === 'BSC') {
-        // Use EIP-681 format but with BSC chain ID and explicit USDT contract
-        // Format: ethereum:<contract_address>@<chain_id>/transfer?address=<recipient>&uint256=<amount_in_wei>
-        const amountWei = (amount * 1e18).toString();
+        // Use plain address format for BSC - this is most compatible
+        // The "ethereum:" prefix confuses wallets into showing ETH
+        // Instead, we just encode the address and show amount in the UI
         
-        // Alternative format that works better with wallets:
-        // 1. EIP-681 format (most compatible)
-        const eip681Format = `ethereum:${CONFIG.BSC.USDT_ADDRESS}@56/transfer?address=${recipient}&uint256=${amountWei}`;
+        // Simple format that works with most wallet QR scanners
+        const simpleFormat = `${recipient}`;
         
-        // 2. Plain JSON format for compatibility
-        const jsonFormat = JSON.stringify({
-            type: "ERC20",
-            network: "bsc",
-            chainId: 56,
-            token: CONFIG.BSC.USDT_ADDRESS,
-            to: recipient,
-            value: amountWei,
-            symbol: "USDT",
-            decimals: 18
+        console.log('[BSC QR] Using simple address format:', {
+            recipient: recipient,
+            amount: amount,
+            network: 'BSC (BEP-20)',
+            token: 'USDT',
+            contract: CONFIG.BSC.USDT_ADDRESS
         });
         
-        // 3. Plain address with amount (simplest for scanning)
-        const plainFormat = `${recipient}?amount=${amount}&token=USDT&network=bsc`;
-        
-        // Return EIP-681 format as primary, but log others for debugging
-        console.log('[BSC QR Options]', {
-            eip681: eip681Format,
-            json: jsonFormat,
-            plain: plainFormat
-        });
-        
-        return eip681Format;
+        return simpleFormat;
         
     } else if (network === 'TRON') {
         // TRON specific format for TronLink and other TRON wallets
