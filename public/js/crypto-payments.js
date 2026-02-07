@@ -963,7 +963,7 @@ function openWalletApp(walletType = 'metamask') {
 }
 
 // ======================================================
-// 📱  QR CODE IMPLEMENTATION (UPDATED)
+// 📱  QR CODE IMPLEMENTATION (UPDATED - FIXED FOR BSC)
 // ======================================================
 
 /**
@@ -975,9 +975,38 @@ function openWalletApp(walletType = 'metamask') {
  */
 function createPaymentQRContent(network, recipient, amount) {
     if (network === 'BSC') {
-        // EIP-681 format for BSC (BEP-20) - Works with MetaMask, Trust Wallet, etc.
+        // Use EIP-681 format but with BSC chain ID and explicit USDT contract
+        // Format: ethereum:<contract_address>@<chain_id>/transfer?address=<recipient>&uint256=<amount_in_wei>
         const amountWei = (amount * 1e18).toString();
-        return `ethereum:${CONFIG.BSC.USDT_ADDRESS}@56/transfer?address=${recipient}&uint256=${amountWei}`;
+        
+        // Alternative format that works better with wallets:
+        // 1. EIP-681 format (most compatible)
+        const eip681Format = `ethereum:${CONFIG.BSC.USDT_ADDRESS}@56/transfer?address=${recipient}&uint256=${amountWei}`;
+        
+        // 2. Plain JSON format for compatibility
+        const jsonFormat = JSON.stringify({
+            type: "ERC20",
+            network: "bsc",
+            chainId: 56,
+            token: CONFIG.BSC.USDT_ADDRESS,
+            to: recipient,
+            value: amountWei,
+            symbol: "USDT",
+            decimals: 18
+        });
+        
+        // 3. Plain address with amount (simplest for scanning)
+        const plainFormat = `${recipient}?amount=${amount}&token=USDT&network=bsc`;
+        
+        // Return EIP-681 format as primary, but log others for debugging
+        console.log('[BSC QR Options]', {
+            eip681: eip681Format,
+            json: jsonFormat,
+            plain: plainFormat
+        });
+        
+        return eip681Format;
+        
     } else if (network === 'TRON') {
         // TRON specific format for TronLink and other TRON wallets
         const amountSun = (amount * 1e6).toString();
@@ -1004,19 +1033,37 @@ function generateQR(text, elementId) {
     element.innerHTML = '';
     element.className = 'qr-code-container';
     
+    // Create a wrapper for better display
+    const wrapper = document.createElement('div');
+    wrapper.className = 'text-center';
+    
+    const qrTitle = document.createElement('p');
+    qrTitle.className = 'text-xs text-gray-500 mb-2';
+    qrTitle.textContent = 'Scan with wallet app';
+    
+    const qrContainer = document.createElement('div');
+    qrContainer.id = elementId + '_container';
+    qrContainer.className = 'qr-code-container';
+    
+    wrapper.appendChild(qrTitle);
+    wrapper.appendChild(qrContainer);
+    element.appendChild(wrapper);
+    
+    const displayElement = document.getElementById(elementId + '_container');
+    
     try {
         // Try to use QRCode.js library if available
         if (typeof QRCode !== 'undefined') {
             const canvas = document.createElement('canvas');
             canvas.className = 'qr-code-canvas';
-            canvas.width = 200;
-            canvas.height = 200;
-            element.appendChild(canvas);
+            canvas.width = 180;
+            canvas.height = 180;
+            displayElement.appendChild(canvas);
             
             // Generate QR code
             QRCode.toCanvas(canvas, text, {
-                width: 180,
-                margin: 1,
+                width: 160,
+                margin: 2,
                 color: {
                     dark: '#000000',
                     light: '#FFFFFF'
@@ -1024,7 +1071,7 @@ function generateQR(text, elementId) {
             }, (error) => {
                 if (error) {
                     console.error('[QR] Canvas generation error:', error);
-                    showFallbackQR(element, text);
+                    showFallbackQR(displayElement, text);
                 } else {
                     // Add click to copy functionality
                     canvas.title = 'Click to copy payment details';
@@ -1037,11 +1084,11 @@ function generateQR(text, elementId) {
             });
         } else {
             // QRCode.js not loaded, use image API fallback
-            showFallbackQR(element, text);
+            showFallbackQR(displayElement, text);
         }
     } catch (error) {
         console.error('[QR] Generation error:', error);
-        showFallbackQR(element, text);
+        showFallbackQR(displayElement, text);
     }
 }
 
@@ -1679,16 +1726,40 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
                 <h3 class="font-bold mb-3 pr-6">BSC USDT Payment</h3>
-                <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (BEP-20) to:</p>
-                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
-                <div id="bscQR" class="mx-auto mb-3"></div>
-                <p class="text-xs text-gray-500 mb-1">Scan with wallet app to auto-fill payment details</p>
-                <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on BSC network</p>
-                <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
+                
+                <div class="bg-gradient-to-r from-yellow-100 to-yellow-50 p-4 rounded-lg mb-4">
+                    <div class="text-2xl font-bold text-gray-800 mb-1">${amount} USDT</div>
+                    <div class="text-sm text-gray-600">Amount to send</div>
+                    <div class="text-xs text-gray-500 mt-1">BEP-20 Network</div>
+                </div>
+                
+                <p class="text-sm mb-2">Send to this BSC address:</p>
+                <div class="bg-gray-100 p-3 rounded break-all text-xs mb-3 font-mono border border-gray-200">${recipient}</div>
+                
+                <div id="bscQR" class="mb-4"></div>
+                
+                <div class="bg-blue-50 p-3 rounded mb-3 text-left">
+                    <div class="text-xs font-medium text-blue-800 mb-1">📱 How to pay:</div>
+                    <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
+                        <li>Scan QR with wallet app</li>
+                        <li>Ensure you're on <strong>BSC (Binance Smart Chain)</strong></li>
+                        <li>Send <strong>${amount} USDT (BEP-20)</strong></li>
+                        <li>Confirm the transaction</li>
+                    </ol>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>📋</span> Copy Address
+                    </button>
+                    <button id="viewOnBscScan" class="bg-gray-500 hover:bg-gray-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>🔍</span> View on BscScan
+                    </button>
+                </div>
                 
                 ${isDesktop && hasBrowserWallet ? `
                 <div class="border-t border-b py-3 my-3">
-                    <p class="text-sm font-medium mb-2">Connect Browser Wallet:</p>
+                    <p class="text-sm font-medium mb-2">💻 Connect Browser Wallet:</p>
                     <button id="connectBrowserWallet" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
                         <span>🦊</span> Connect MetaMask
                     </button>
@@ -1698,7 +1769,7 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
                 
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
-                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (0x...)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                     <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
                 </div>
                 <button id="closeBSC" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
@@ -1708,6 +1779,14 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
         // Generate QR code with proper payment format
         const qrContent = createPaymentQRContent('BSC', recipient, amount);
         console.log('[BSC QR] Content:', qrContent);
+        console.log('[BSC Payment Details]', {
+            recipient: recipient,
+            amount: amount,
+            token: 'USDT',
+            network: 'BSC (BEP-20)',
+            chainId: 56,
+            contract: CONFIG.BSC.USDT_ADDRESS
+        });
         generateQR(qrContent, 'bscQR');
 
         // ✅ FIX: Attach close handler
@@ -1719,11 +1798,13 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient)
                 .then(() => {
-                    const btn = modal.querySelector('#copyAddress');
-                    btn.textContent = '✅ Copied!';
-                    setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
+                    showCryptoAlert('Address copied!', 'success', 2000);
                 })
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
+        };
+
+        modal.querySelector('#viewOnBscScan').onclick = () => {
+            window.open(`https://bscscan.com/address/${recipient}`, '_blank');
         };
 
         // Browser wallet connection (for desktop only)
@@ -1738,7 +1819,7 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             
             if (!txHash) {
-                if (!confirm('No transaction hash entered. Are you sure you have already sent the payment?')) {
+                if (!confirm(`No transaction hash entered. Are you sure you have already sent ${amount} USDT on BSC network?`)) {
                     return;
                 }
             }
@@ -1746,6 +1827,9 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
             modal.remove();
             if (txHash && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
                 resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` });
+            } else if (txHash) {
+                showCryptoAlert('Invalid transaction hash format (should start with 0x and be 64 chars)', 'error');
+                resolve({ success: false, error: 'Invalid transaction hash' });
             } else {
                 resolve({ success: false, manual: true, pendingConfirmation: true });
             }
@@ -2147,10 +2231,104 @@ window.CryptoPayments = {
     dismissAlert,                 // ✅ Export dismiss function
     generateQR,                   // ✅ Export QR function
     createPaymentQRContent,       // ✅ Export QR content creator
+    createAlternativeBSCQR,       // ✅ Add alternative QR creator
+    debugQRContent,               // ✅ Add debug function
     loadQRCodeLibrary,            // ✅ Export QR library loader
     CONFIG,
     ERROR_CODES
 };
+
+// ======================================================
+// 📝  ADDITIONAL HELPER FUNCTIONS FOR BSC PAYMENTS
+// ======================================================
+
+/**
+ * Alternative QR format that might work better with some wallets
+ */
+function createAlternativeBSCQR(recipient, amount) {
+    // Some wallets prefer this format
+    const amountWei = (amount * 1e18).toString();
+    
+    // Format 1: JSON-RPC style (works with some wallets)
+    const jsonRPC = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_sendTransaction",
+        params: [{
+            to: CONFIG.BSC.USDT_ADDRESS,
+            data: `0xa9059cbb000000000000000000000000${recipient.replace('0x', '')}${amountWei.replace('0x', '').padStart(64, '0')}`
+        }],
+        id: 1
+    });
+    
+    // Format 2: Web3 QR format
+    const web3Format = `web3://send?address=${recipient}&amount=${amount}&token=${CONFIG.BSC.USDT_ADDRESS}&network=bsc&chainId=56`;
+    
+    // Format 3: Simple text with all details
+    const simpleFormat = `Send ${amount} USDT (BEP-20)
+To: ${recipient}
+Network: BSC (Binance Smart Chain)
+Token: USDT (${CONFIG.BSC.USDT_ADDRESS})
+Amount: ${amount} USDT`;
+    
+    return {
+        jsonRPC,
+        web3Format,
+        simpleFormat
+    };
+}
+
+/**
+ * Debug function for QR content
+ */
+function debugQRContent(network, recipient, amount) {
+    const qrContent = createPaymentQRContent(network, recipient, amount);
+    const alternatives = network === 'BSC' ? createAlternativeBSCQR(recipient, amount) : null;
+    
+    console.group('QR Code Debug Info');
+    console.log('Network:', network);
+    console.log('Recipient:', recipient);
+    console.log('Amount:', amount, 'USDT');
+    console.log('Primary QR Content:', qrContent);
+    console.log('QR Content Length:', qrContent.length);
+    
+    if (network === 'BSC') {
+        console.log('BSC Contract:', CONFIG.BSC.USDT_ADDRESS);
+        console.log('Chain ID:', CONFIG.BSC.CHAIN_ID);
+        console.log('Amount in Wei:', (amount * 1e18).toString());
+        console.log('Alternative Formats:', alternatives);
+        
+        // Test if it's a valid EIP-681 format
+        if (qrContent.startsWith('ethereum:')) {
+            console.log('✅ Valid EIP-681 format detected');
+            const parts = qrContent.split('/');
+            console.log('Contract:', parts[0].split('@')[0].replace('ethereum:', ''));
+            console.log('Chain ID:', parts[0].split('@')[1]);
+            
+            if (parts[1]) {
+                const params = new URLSearchParams(parts[1].replace('transfer?', ''));
+                console.log('Recipient:', params.get('address'));
+                console.log('Amount (Wei):', params.get('uint256'));
+            }
+        }
+    }
+    
+    console.groupEnd();
+    
+    return {
+        primary: qrContent,
+        alternatives: alternatives
+    };
+}
+
+// Add keyboard shortcut for debugging
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        console.log('🔧 Crypto Payments Debug Mode');
+        console.log('Available functions:', Object.keys(window.CryptoPayments));
+        console.log('Config:', CONFIG);
+        showCryptoAlert('Debug mode enabled - check console', 'info', 3000);
+    }
+});
 
 // ✅ Set ready flag for external scripts to check
 window.CryptoPaymentsReady = true;
@@ -2158,4 +2336,4 @@ window.CryptoPaymentsReady = true;
 // ✅ Dispatch custom event to notify listeners that module is loaded
 document.dispatchEvent(new CustomEvent('cryptoPaymentsReady'));
 
-console.log('✅ Crypto Payments module loaded with QR support');
+console.log('✅ Crypto Payments module loaded with enhanced QR support');
