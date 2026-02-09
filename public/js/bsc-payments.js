@@ -1,6 +1,6 @@
 // ======================================================
 // 🚀 ENTERPRISE-GRADE BSC USDT PAYMENT SYSTEM
-// Version 2.1 - With WalletConnect Integration
+// Version 2.2 - Enhanced QR Codes with USDT Support
 // ======================================================
 
 (function() {
@@ -22,7 +22,7 @@
         TEST_MODE: false,
         DEFAULT_CURRENCY: 'USD',
         // WalletConnect Project ID (Get one from https://cloud.walletconnect.com/)
-        WALLETCONNECT_PROJECT_ID: "61d9b98f81731dffa9988c0422676fc5",
+        WALLETCONNECT_PROJECT_ID: "YOUR_WALLETCONNECT_PROJECT_ID",
         WALLETCONNECT_METADATA: {
             name: "BSC USDT Payment System",
             description: "Enterprise BSC USDT Payment Solution",
@@ -233,10 +233,66 @@
             });
         },
         
-        // Generate ERC681 URI for wallet apps
-        generateERC681URI: (recipient, amount) => {
+        // Generate USDT-specific QR code data
+        generateUSDTQRData: (recipient, amount) => {
+            // Calculate amount in wei (USDT has 18 decimals)
             const amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18)).toString();
-            return `ethereum:${CONFIG.BSC_USDT_ADDRESS}@56/transfer?address=${recipient}&uint256=${amountWei}`;
+            
+            // Method 1: ERC681 URI for USDT transfer (Most compatible)
+            const erc681URI = `ethereum:${CONFIG.BSC_USDT_ADDRESS}@${CONFIG.BSC_CHAIN_ID}/transfer?address=${recipient}&uint256=${amountWei}`;
+            
+            // Method 2: Enhanced format with metadata
+            const enhancedData = JSON.stringify({
+                type: 'USDT_PAYMENT',
+                network: 'BSC',
+                chainId: CONFIG.BSC_CHAIN_ID,
+                token: 'USDT',
+                tokenAddress: CONFIG.BSC_USDT_ADDRESS,
+                recipient: recipient,
+                amount: amount,
+                amountWei: amountWei,
+                decimals: CONFIG.DECIMALS,
+                timestamp: Date.now(),
+                version: '2.2'
+            });
+            
+            // Method 3: Simple address for basic wallets
+            const simpleAddress = recipient;
+            
+            // Return all formats for different wallet compatibility
+            return {
+                erc681: erc681URI,
+                enhanced: enhancedData,
+                simple: simpleAddress,
+                raw: `USDT Payment: ${amount} USDT to ${recipient} on BSC Network`
+            };
+        },
+        
+        // Generate USDT transaction data for manual sending
+        generateUSDTTransactionData: (recipient, amount) => {
+            const amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18)).toString();
+            
+            // USDT transfer function selector: transfer(address,uint256)
+            // Function signature: transfer(address,uint256)
+            // Keccak256: transfer(address,uint256) = 0xa9059cbb
+            
+            // Encode the parameters
+            // Remove '0x' from recipient and pad to 64 chars
+            const recipientPadded = recipient.toLowerCase().replace('0x', '').padStart(64, '0');
+            // Convert amountWei to hex and pad to 64 chars
+            const amountHex = BigInt(amountWei).toString(16).padStart(64, '0');
+            
+            // Construct the data
+            const data = '0xa9059cbb' + recipientPadded + amountHex;
+            
+            return {
+                to: CONFIG.BSC_USDT_ADDRESS,
+                value: '0x0', // No ETH sent
+                data: data,
+                chainId: CONFIG.BSC_CHAIN_ID,
+                gas: '0x186a0', // Default gas limit
+                gasPrice: '0x3b9aca00' // Default gas price (1 gwei)
+            };
         }
     };
 
@@ -995,6 +1051,28 @@
                 flex-shrink: 0;
             }
             
+            /* QR Code Overlay */
+            .bsc-qr-overlay {
+                position: absolute;
+                bottom: 10px;
+                left: 0;
+                right: 0;
+                text-align: center;
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 8px;
+                border-radius: 0 0 8px 8px;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            
+            .bsc-qr-label {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+            }
+            
             .mt-2 { margin-top: 8px; }
             .mt-4 { margin-top: 16px; }
             .mt-6 { margin-top: 24px; }
@@ -1049,6 +1127,11 @@
                 
                 .bsc-wc-instructions {
                     background: #1e293b;
+                    color: #cbd5e1;
+                }
+                
+                .bsc-qr-overlay {
+                    background: rgba(255, 255, 255, 0.1);
                     color: #cbd5e1;
                 }
             }
@@ -1533,14 +1616,15 @@
         }
     }
 
-    // ✅ Enhanced QR code generation with URI scheme for wallet apps
+    // ✅ Enhanced QR code generation with USDT support
     function generateBSCQR(recipient, amount, element) {
-        console.log('[BSC QR] Generating QR code:', {
+        console.log('[BSC QR] Generating USDT QR code:', {
             recipient: recipient,
             amount: amount,
             network: 'BSC (BEP-20)',
             token: 'USDT',
-            chainId: CONFIG.BSC_CHAIN_ID
+            chainId: CONFIG.BSC_CHAIN_ID,
+            contract: CONFIG.BSC_USDT_ADDRESS
         });
         
         if (!element) {
@@ -1551,21 +1635,30 @@
         // Clear the element first
         element.innerHTML = '';
         
-        // Generate ERC681 URI for better wallet compatibility
-        const erc681URI = Utils.generateERC681URI(recipient, amount);
+        // Generate USDT-specific QR data
+        const qrData = Utils.generateUSDTQRData(recipient, amount);
+        
+        // Use ERC681 URI for best wallet compatibility
+        const qrContent = qrData.erc681;
+        
+        // Create QR container
+        const qrContainer = document.createElement('div');
+        qrContainer.className = 'bsc-qr-container';
+        
+        // Create canvas for QR code
+        const canvas = document.createElement('canvas');
+        canvas.className = 'bsc-qr-canvas';
+        canvas.setAttribute('role', 'button');
+        canvas.setAttribute('tabindex', '0');
+        canvas.setAttribute('aria-label', `Scan to send ${amount} USDT to ${Utils.truncateAddress(recipient)}`);
+        canvas.title = `Click to copy payment details. Amount: ${amount} USDT`;
+        
+        qrContainer.appendChild(canvas);
+        element.appendChild(qrContainer);
         
         // Try QRCode.js library first
         if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
-            const canvas = document.createElement('canvas');
-            canvas.className = 'bsc-qr-canvas';
-            canvas.setAttribute('role', 'button');
-            canvas.setAttribute('tabindex', '0');
-            canvas.setAttribute('aria-label', 'Scan QR code for payment');
-            canvas.title = 'Click to copy payment details. Long press to save image.';
-            
-            element.appendChild(canvas);
-            
-            QRCode.toCanvas(canvas, erc681URI, {
+            QRCode.toCanvas(canvas, qrContent, {
                 width: 180,
                 margin: 2,
                 color: { 
@@ -1577,66 +1670,113 @@
             }, function(error) {
                 if (error) {
                     console.warn('[BSC QR] QRCode.js failed:', error);
-                    showImageBasedQR(element, erc681URI, recipient, amount);
+                    showImageBasedQR(element, qrContent, recipient, amount, qrContainer);
                 } else {
-                    console.log('[BSC QR] QR code generated with QRCode.js');
+                    console.log('[BSC QR] USDT QR code generated with QRCode.js');
+                    
+                    // Add USDT overlay
+                    const overlay = document.createElement('div');
+                    overlay.className = 'bsc-qr-overlay';
+                    overlay.innerHTML = `
+                        <div class="bsc-qr-label">
+                            <span>💰</span>
+                            <span>${amount} USDT</span>
+                        </div>
+                    `;
+                    qrContainer.appendChild(overlay);
                     
                     // Add click handler
-                    canvas.onclick = () => copyPaymentDetails(recipient, amount);
-                    canvas.onkeydown = (e) => {
+                    qrContainer.onclick = () => copyUSDTOaymentDetails(recipient, amount, qrData);
+                    qrContainer.onkeydown = (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            copyPaymentDetails(recipient, amount);
+                            copyUSDTOaymentDetails(recipient, amount, qrData);
                         }
                     };
                     
                     // Add context menu for saving
-                    canvas.oncontextmenu = (e) => {
+                    qrContainer.oncontextmenu = (e) => {
                         e.preventDefault();
                         const dataUrl = canvas.toDataURL('image/png');
                         const link = document.createElement('a');
-                        link.download = `bsc-payment-${amount}-usdt.png`;
+                        link.download = `usdt-payment-${amount}-${Date.now()}.png`;
                         link.href = dataUrl;
                         link.click();
-                        showAlert('QR code image saved!', 'success', 2000);
+                        showAlert('USDT QR code image saved!', 'success', 2000);
                     };
                 }
             });
         } else {
             console.log('[BSC QR] QRCode.js not available, using image API');
-            showImageBasedQR(element, erc681URI, recipient, amount);
+            showImageBasedQR(element, qrContent, recipient, amount, qrContainer);
         }
     }
 
-    function showImageBasedQR(element, qrData, recipient, amount) {
+    async function copyUSDTOaymentDetails(recipient, amount, qrData) {
+        const txData = Utils.generateUSDTTransactionData(recipient, amount);
+        
+        const textToCopy = `USDT Payment Details:
+        
+Amount: ${amount} USDT (BEP-20)
+Recipient: ${recipient}
+Contract: ${CONFIG.BSC_USDT_ADDRESS}
+Network: Binance Smart Chain (Chain ID: ${CONFIG.BSC_CHAIN_ID})
+
+Manual Transaction Data:
+To: ${txData.to}
+Value: ${txData.value}
+Data: ${txData.data}
+Chain ID: ${txData.chainId}
+
+Scan QR code or use ERC681 URI: ${qrData.erc681}`;
+        
+        const success = await Utils.copyToClipboard(textToCopy);
+        if (success) {
+            showAlert('USDT payment details copied to clipboard!', 'success', 2000);
+        } else {
+            showAlert('Failed to copy. Please copy manually.', 'error');
+        }
+    }
+
+    function showImageBasedQR(element, qrContent, recipient, amount, qrContainer) {
         if (!element) return;
         
-        element.innerHTML = '';
-        element.style.display = 'flex';
-        element.style.alignItems = 'center';
-        element.style.justifyContent = 'center';
-        
-        const encodedData = encodeURIComponent(qrData);
+        const encodedData = encodeURIComponent(qrContent);
         
         const img = document.createElement('img');
         img.className = 'bsc-qr-canvas';
-        img.alt = 'BSC USDT Payment QR Code';
+        img.alt = `USDT Payment QR: ${amount} USDT to ${Utils.truncateAddress(recipient)}`;
         img.setAttribute('role', 'button');
         img.setAttribute('tabindex', '0');
-        img.setAttribute('aria-label', 'Scan QR code for payment');
-        img.title = 'Click to copy payment details';
+        img.setAttribute('aria-label', `Scan to send ${amount} USDT`);
+        img.title = `Click to copy USDT payment details`;
         
         img.style.cssText = 'width: 180px; height: 180px; border-radius: 8px; cursor: pointer;';
-        img.onclick = () => copyPaymentDetails(recipient, amount);
+        
+        // Add USDT overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'bsc-qr-overlay';
+        overlay.innerHTML = `
+            <div class="bsc-qr-label">
+                <span>💰</span>
+                <span>${amount} USDT</span>
+            </div>
+        `;
+        
+        img.onclick = () => {
+            const qrData = Utils.generateUSDTQRData(recipient, amount);
+            copyUSDTOaymentDetails(recipient, amount, qrData);
+        };
         img.onkeydown = (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                copyPaymentDetails(recipient, amount);
+                const qrData = Utils.generateUSDTQRData(recipient, amount);
+                copyUSDTOaymentDetails(recipient, amount, qrData);
             }
         };
         
         // Try Google Charts API first (most reliable)
-        img.src = `https://chart.googleapis.com/chart?chs=180x180&cht=qr&chl=${encodedData}&choe=UTF-8&chld=H`;
+        img.src = `https://chart.googleapis.com/chart?chs=180x180&cht=qr&chl=${encodedData}&choe=UTF-8&chld=H&chof=png`;
         
         img.onerror = function() {
             console.warn('[BSC QR] Google Charts failed, trying qrserver.com');
@@ -1644,41 +1784,64 @@
                 console.warn('[BSC QR] All QR APIs failed, showing text fallback');
                 showTextFallback(element, recipient, amount);
             };
-            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodedData}&format=png&ecc=H`;
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodedData}&format=png&ecc=H&color=000&bgcolor=fff`;
         };
         
-        element.appendChild(img);
-    }
-    
-    async function copyPaymentDetails(recipient, amount) {
-        const textToCopy = `Send ${amount} USDT (BEP-20) to:\n${recipient}\n\nNetwork: Binance Smart Chain (BSC)\nToken: USDT\nChain ID: ${CONFIG.BSC_CHAIN_ID}\nContract: ${CONFIG.BSC_USDT_ADDRESS}`;
-        
-        const success = await Utils.copyToClipboard(textToCopy);
-        if (success) {
-            showAlert('Payment details copied to clipboard!', 'success', 2000);
+        if (qrContainer) {
+            qrContainer.innerHTML = '';
+            qrContainer.appendChild(img);
+            qrContainer.appendChild(overlay);
         } else {
-            showAlert('Failed to copy. Please copy manually.', 'error');
+            element.innerHTML = '';
+            element.appendChild(img);
         }
     }
     
     function showTextFallback(container, recipient, amount) {
         if (!container) return;
         
+        const qrData = Utils.generateUSDTQRData(recipient, amount);
+        const txData = Utils.generateUSDTTransactionData(recipient, amount);
+        
         container.innerHTML = `
             <div style="text-align: center; padding: 20px; width: 100%;">
                 <div style="font-size: 14px; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <span>📱</span>
-                    <span>QR unavailable</span>
+                    <span>QR Code Unavailable</span>
                 </div>
+                
                 <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 20px; border-radius: 12px; margin-bottom: 16px; border: 2px solid #fbbf24;">
-                    <div style="font-size: 28px; font-weight: 800; color: #92400e;">${amount} USDT</div>
-                    <div style="font-size: 13px; color: #b45309; font-weight: 600; margin-top: 4px;">BEP-20 (BSC NETWORK)</div>
+                    <div style="font-size: 28px; font-weight: 800; color: #92400e;">
+                        <span>💰</span> ${amount} USDT
+                    </div>
+                    <div style="font-size: 13px; color: #b45309; font-weight: 600; margin-top: 4px;">
+                        BEP-20 (BSC NETWORK)
+                    </div>
                 </div>
+                
+                <div style="background: #f8fafc; border-radius: 10px; padding: 16px; margin-bottom: 16px; border: 1px solid #e2e8f0;">
+                    <div style="font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 8px;">
+                        Manual Transaction Data:
+                    </div>
+                    <div style="font-family: monospace; font-size: 11px; color: #475569; word-break: break-all; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <div><strong>To:</strong> ${txData.to}</div>
+                        <div><strong>Value:</strong> ${txData.value}</div>
+                        <div><strong>Data:</strong> ${txData.data.substring(0, 40)}...</div>
+                    </div>
+                </div>
+                
                 <button onclick="window.BSCPayments.copyText('${recipient}')" 
-                        style="padding: 12px 24px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;"
+                        style="padding: 12px 24px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; margin-bottom: 12px;"
                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(245, 158, 11, 0.3)';"
                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
                     <span>📋</span> Copy Address
+                </button>
+                
+                <button onclick="window.BSCPayments.copyText('${qrData.erc681}')" 
+                        style="padding: 12px 24px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(59, 130, 246, 0.3)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                    <span>🔗</span> Copy ERC681 URI
                 </button>
             </div>
         `;
@@ -2009,6 +2172,9 @@
                     
                     <div class="bsc-network-info">
                         <strong>⚠️ Important:</strong> Send only USDT on <strong>BSC (BEP-20)</strong> network
+                        <div style="font-size: 13px; color: #92400e; margin-top: 8px; font-weight: normal;">
+                            Contract: ${Utils.truncateAddress(CONFIG.BSC_USDT_ADDRESS)}
+                        </div>
                     </div>
                     
                     <div class="bsc-address-card">
@@ -2020,38 +2186,38 @@
                     </div>
                     
                     <div class="bsc-qr-container" id="bscQRCode">
-                        <!-- QR code will be loaded here -->
+                        <!-- USDT QR code will be loaded here -->
                     </div>
                     
                     <div style="text-align: center; margin-bottom: 24px;">
                         <div style="font-size: 14px; color: #64748b; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                             <span>📱</span>
-                            <span>Scan with wallet app</span>
+                            <span>Scan QR with wallet app to send ${amount} USDT</span>
                         </div>
-                        <div style="font-size: 13px; color: #94a3b8; font-weight: 500;">OR</div>
+                        <div style="font-size: 13px; color: #94a3b8; font-weight: 500;">QR contains USDT payment data</div>
                     </div>
                     
                     <div class="bsc-step">
                         <div class="bsc-step-number">1</div>
-                        <div class="bsc-step-text">Copy the recipient address above</div>
+                        <div class="bsc-step-text">Scan QR code with your wallet app to auto-fill USDT payment</div>
                     </div>
                     
                     <div class="bsc-step">
                         <div class="bsc-step-number">2</div>
-                        <div class="bsc-step-text">Open your wallet (MetaMask, Trust Wallet, etc.)</div>
+                        <div class="bsc-step-text">Verify the amount is ${amount} USDT and recipient is correct</div>
                     </div>
                     
                     <div class="bsc-step">
                         <div class="bsc-step-number">3</div>
-                        <div class="bsc-step-text">Send <strong>${amount} USDT</strong> on <strong>BSC (BEP-20)</strong> network</div>
+                        <div class="bsc-step-text">Confirm the transaction in your wallet</div>
                     </div>
                     
                     <div class="bsc-action-buttons">
                         <button id="copyAddressBtn" class="bsc-btn bsc-btn-secondary" aria-label="Copy recipient address">
                             <span>📋</span> Copy Address
                         </button>
-                        <button id="viewExplorerBtn" class="bsc-btn bsc-btn-secondary" aria-label="View address on BscScan">
-                            <span>🔍</span> View on BscScan
+                        <button id="copyPaymentDataBtn" class="bsc-btn bsc-btn-secondary" aria-label="Copy payment data">
+                            <span>🔗</span> Copy Payment Data
                         </button>
                     </div>
                     
@@ -2116,13 +2282,13 @@
                 resolve({ success: false, cancelled: true });
             });
             
-            // Generate QR code
+            // Generate USDT QR code immediately
             setTimeout(() => {
                 const qrContainer = modal.querySelector('#bscQRCode');
                 if (qrContainer) {
                     generateBSCQR(recipient, amount, qrContainer);
                 }
-            }, 200);
+            }, 100);
             
             // Copy address button
             const copyBtn = modal.querySelector('#copyAddressBtn');
@@ -2135,10 +2301,14 @@
                 }
             });
             
-            // View on explorer button
-            const explorerBtn = modal.querySelector('#viewExplorerBtn');
-            addModalListener(explorerBtn, 'click', () => {
-                window.open(`https://bscscan.com/address/${recipient}`, '_blank');
+            // Copy payment data button
+            const copyDataBtn = modal.querySelector('#copyPaymentDataBtn');
+            addModalListener(copyDataBtn, 'click', async () => {
+                const qrData = Utils.generateUSDTQRData(recipient, amount);
+                const success = await Utils.copyToClipboard(qrData.raw);
+                if (success) {
+                    showAlert('USDT payment details copied!', 'success', 2000);
+                }
             });
             
             // Wallet selection
@@ -2254,12 +2424,12 @@
         return new Promise((resolve) => {
             const content = `
                 <div class="bsc-modal-header">
-                    <h2 class="bsc-modal-title">Confirm Payment</h2>
-                    <p class="bsc-modal-subtitle">Please verify payment details</p>
+                    <h2 class="bsc-modal-title">Confirm USDT Payment</h2>
+                    <p class="bsc-modal-subtitle">Please verify USDT payment details</p>
                 </div>
                 <div class="bsc-modal-body">
                     <div style="text-align: center; margin-bottom: 24px;">
-                        <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+                        <div style="font-size: 48px; margin-bottom: 16px;">💰</div>
                         <div style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">
                             Send ${amount} USDT
                         </div>
@@ -2275,12 +2445,23 @@
                         </div>
                     </div>
                     
+                    <div style="background: #fef3c7; border-radius: 12px; padding: 16px; margin-bottom: 24px; border: 1px solid #fbbf24;">
+                        <div style="font-size: 14px; color: #92400e; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span>⚠️</span>
+                            <span>Important Notice</span>
+                        </div>
+                        <div style="font-size: 13px; color: #b45309; line-height: 1.5;">
+                            You are sending <strong>${amount} USDT</strong> on <strong>BSC (BEP-20)</strong> network.
+                            Make sure you have enough USDT balance and are connected to BSC network.
+                        </div>
+                    </div>
+                    
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <button id="confirmCancelBtn" class="bsc-btn bsc-btn-secondary">
                             Cancel
                         </button>
                         <button id="confirmProceedBtn" class="bsc-btn bsc-btn-primary">
-                            Confirm & Proceed
+                            Confirm & Send USDT
                         </button>
                     </div>
                 </div>
@@ -2306,12 +2487,12 @@
     function createProcessingModal(paymentId) {
         const content = `
             <div class="bsc-modal-header">
-                <h2 class="bsc-modal-title">Processing Payment</h2>
+                <h2 class="bsc-modal-title">Processing USDT Payment</h2>
             </div>
             <div class="bsc-modal-body">
                 <div class="bsc-loading">
                     <div class="bsc-loading-spinner"></div>
-                    <div class="bsc-loading-text" id="processingStatus">Initializing payment...</div>
+                    <div class="bsc-loading-text" id="processingStatus">Initializing USDT payment...</div>
                     <div class="bsc-loading-subtext" id="processingSubtext">
                         Please do not close this window
                     </div>
@@ -2335,15 +2516,15 @@
         const content = `
             <div class="bsc-modal-header">
                 <button class="bsc-modal-close" id="successClose" aria-label="Close">×</button>
-                <h2 class="bsc-modal-title">Payment Successful! 🎉</h2>
+                <h2 class="bsc-modal-title">USDT Payment Successful! 🎉</h2>
                 <p class="bsc-modal-subtitle">${amount} USDT sent successfully</p>
             </div>
             <div class="bsc-modal-body">
                 <div class="bsc-success">
-                    <div class="bsc-success-icon">✅</div>
-                    <div class="bsc-success-text">Payment Confirmed</div>
+                    <div class="bsc-success-icon">💰</div>
+                    <div class="bsc-success-text">USDT Payment Confirmed</div>
                     <div class="bsc-success-subtext">
-                        Your transaction has been processed on the BSC network.
+                        Your ${amount} USDT transaction has been processed on the BSC network.
                         <br>
                         Transaction ID: ${Utils.truncateAddress(txHash, 10, 8)}
                     </div>
@@ -2392,7 +2573,7 @@
         const content = `
             <div class="bsc-modal-header">
                 <button class="bsc-modal-close" id="errorClose" aria-label="Close">×</button>
-                <h2 class="bsc-modal-title">Payment Failed</h2>
+                <h2 class="bsc-modal-title">USDT Payment Failed</h2>
                 <p class="bsc-modal-subtitle">Please try again</p>
             </div>
             <div class="bsc-modal-body">
@@ -2405,12 +2586,13 @@
                 </div>
                 
                 <div style="margin: 24px 0; padding: 16px; background: #f8fafc; border-radius: 12px; border-left: 4px solid #3b82f6;">
-                    <div style="font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">💡 Tips:</div>
+                    <div style="font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">💡 USDT Payment Tips:</div>
                     <div style="font-size: 13px; color: #475569; line-height: 1.6;">
-                        • Ensure you have enough USDT balance<br>
-                        • Make sure you're on BSC network<br>
-                        • Try increasing gas price if stuck<br>
-                        • Check network connection
+                        • Ensure you have enough USDT balance (not just BNB)<br>
+                        • Make sure you're on BSC network (Chain ID: 56)<br>
+                        • Verify you're sending USDT (BEP-20), not other tokens<br>
+                        • Check that you have BNB for gas fees<br>
+                        • Try increasing gas price if transaction is stuck
                     </div>
                 </div>
                 
@@ -2499,7 +2681,7 @@
             
             if (result.success) {
                 // Show success notification
-                showAlert(`Payment successful! ${amount} USDT sent.`, 'success', 5000, 'top-right');
+                showAlert(`USDT payment successful! ${amount} USDT sent.`, 'success', 5000, 'top-right');
                 
                 // Call success callback if provided
                 if (typeof options.onSuccess === 'function') {
@@ -2511,7 +2693,7 @@
                     detail: {
                         ...result,
                         timestamp: Date.now(),
-                        version: '2.1'
+                        version: '2.2'
                     }
                 }));
                 
@@ -2519,7 +2701,7 @@
                 if (options.trackAnalytics !== false) {
                     try {
                         console.log('Payment Analytics:', {
-                            event: 'payment_success',
+                            event: 'usdt_payment_success',
                             amount: amount,
                             method: result.method,
                             paymentId: result.paymentId,
@@ -2532,7 +2714,7 @@
                 
             } else if (result.cancelled) {
                 console.log('Payment cancelled by user');
-                showAlert('Payment cancelled', 'info', 3000);
+                showAlert('USDT payment cancelled', 'info', 3000);
             } else if (result.pendingConfirmation) {
                 console.log('Payment pending manual confirmation');
                 showAlert('Please confirm payment manually with transaction hash', 'warning', 5000);
@@ -2542,7 +2724,7 @@
             
         } catch (error) {
             console.error('Payment initiation error:', error);
-            showAlert(`Payment failed: ${error.message}`, 'error', 5000, 'top-right');
+            showAlert(`USDT payment failed: ${error.message}`, 'error', 5000, 'top-right');
             
             // Call error callback if provided
             if (typeof options.onError === 'function') {
@@ -2623,6 +2805,11 @@
         };
     }
 
+    // ✅ Generate USDT transaction data for manual sending
+    function generateUSDTTransaction(recipient, amount) {
+        return Utils.generateUSDTTransactionData(recipient, amount);
+    }
+
     // ✅ Initialize and expose to global scope
     function initialize() {
         // Inject styles
@@ -2658,6 +2845,12 @@
             truncateAddress: Utils.truncateAddress,
             validateAddress: Utils.validateAddress,
             
+            // USDT Specific Functions
+            generateUSDTQR: (recipient, amount, element) => {
+                generateBSCQR(recipient, amount, element);
+            },
+            generateUSDTTransaction: generateUSDTTransaction,
+            
             // Transaction management
             getHistory: getTransactionHistory,
             clearHistory: clearTransactionHistory,
@@ -2667,7 +2860,7 @@
             
             // State information
             isReady: true,
-            version: '2.1.0',
+            version: '2.2.0',
             state: () => ({
                 isProcessing: STATE.isProcessing,
                 currentPaymentId: STATE.currentPaymentId,
@@ -2687,11 +2880,11 @@
         // Mark as ready
         window.BSCPaymentsReady = true;
         document.dispatchEvent(new CustomEvent('bscPaymentsReady', {
-            detail: { version: '2.1.0', timestamp: Date.now() }
+            detail: { version: '2.2.0', timestamp: Date.now() }
         }));
         
         // Log initialization
-        console.log('🚀 BSC USDT Payment System v2.1 Ready');
+        console.log('🚀 BSC USDT Payment System v2.2 Ready');
         console.log('📋 Available methods:', Object.keys(window.BSCPayments).join(', '));
         
         // Check for default recipient warning
