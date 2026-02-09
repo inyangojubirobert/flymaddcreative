@@ -1635,58 +1635,83 @@
         // Clear the element first
         element.innerHTML = '';
         
-        // Generate USDT-specific QR data - use simple address for best compatibility
-        const qrContent = recipient;
+        // Calculate amount in wei (USDT has 18 decimals on BSC)
+        let amountWei;
+        try {
+            // Use BigInt for precision
+            const amountFloat = parseFloat(amount);
+            const amountInSmallestUnit = amountFloat * 1e18;
+            amountWei = BigInt(Math.floor(amountInSmallestUnit)).toString();
+        } catch (e) {
+            console.warn('[BSC QR] Amount conversion error, using simple format');
+            amountWei = (parseFloat(amount) * 1e18).toFixed(0);
+        }
+        
+        // EIP-681 URI format for BSC USDT transfer
+        // Format: ethereum:<contract>@<chainId>/transfer?address=<recipient>&uint256=<amount>
+        const eip681URI = `ethereum:${CONFIG.BSC_USDT_ADDRESS}@${CONFIG.BSC_CHAIN_ID}/transfer?address=${recipient}&uint256=${amountWei}`;
+        
+        console.log('[BSC QR] EIP-681 URI:', eip681URI);
         
         // Create canvas for QR code
         const canvas = document.createElement('canvas');
         canvas.className = 'bsc-qr-canvas';
         canvas.setAttribute('role', 'button');
         canvas.setAttribute('tabindex', '0');
-        canvas.setAttribute('aria-label', `Scan to send ${amount} USDT to ${Utils.truncateAddress(recipient)}`);
-        canvas.title = `Click to copy payment details. Amount: ${amount} USDT`;
+        canvas.setAttribute('aria-label', `Scan to send ${amount} USDT on BSC to ${Utils.truncateAddress(recipient)}`);
+        canvas.title = `Click to copy payment details. Amount: ${amount} USDT on BSC Network`;
         
         element.appendChild(canvas);
         
         // Try QRCode.js library first
         if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
-            QRCode.toCanvas(canvas, qrContent, {
+            QRCode.toCanvas(canvas, eip681URI, {
                 width: 180,
                 margin: 2,
                 color: { 
                     dark: '#000000', 
                     light: '#FFFFFF'
                 },
-                errorCorrectionLevel: 'H'
+                errorCorrectionLevel: 'M' // Medium error correction for longer URIs
             }, function(error) {
                 if (error) {
                     console.warn('[BSC QR] QRCode.js failed:', error);
-                    showImageBasedQR(element, qrContent, recipient, amount);
+                    showImageBasedQR(element, eip681URI, recipient, amount);
                 } else {
-                    console.log('[BSC QR] USDT QR code generated with QRCode.js');
+                    console.log('[BSC QR] BSC USDT QR code generated successfully');
                     
                     // Add click handler to canvas
-                    canvas.onclick = () => copySimplePaymentDetails(recipient, amount);
+                    canvas.onclick = () => copyBSCPaymentDetails(recipient, amount, eip681URI);
                     canvas.onkeydown = (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            copySimplePaymentDetails(recipient, amount);
+                            copyBSCPaymentDetails(recipient, amount, eip681URI);
                         }
                     };
                 }
             });
         } else {
             console.log('[BSC QR] QRCode.js not available, using image API');
-            showImageBasedQR(element, qrContent, recipient, amount);
+            showImageBasedQR(element, eip681URI, recipient, amount);
         }
     }
 
-    async function copySimplePaymentDetails(recipient, amount) {
-        const textToCopy = `Send ${amount} USDT (BEP-20) to: ${recipient}\nNetwork: BSC (Binance Smart Chain)\nContract: ${CONFIG.BSC_USDT_ADDRESS}`;
+    async function copyBSCPaymentDetails(recipient, amount, eip681URI) {
+        const textToCopy = `BSC USDT Payment Details:
+
+Amount: ${amount} USDT
+Network: BSC (Binance Smart Chain) - Chain ID: ${CONFIG.BSC_CHAIN_ID}
+Token: USDT (BEP-20)
+Contract: ${CONFIG.BSC_USDT_ADDRESS}
+Recipient: ${recipient}
+
+Scan URI: ${eip681URI}
+
+⚠️ IMPORTANT: Send ONLY on BSC network, NOT Ethereum!`;
         
         const success = await Utils.copyToClipboard(textToCopy);
         if (success) {
-            showAlert('Payment details copied to clipboard!', 'success', 2000);
+            showAlert('BSC USDT payment details copied!', 'success', 2000);
         } else {
             showAlert('Failed to copy. Please copy manually.', 'error');
         }
@@ -1701,38 +1726,38 @@
         
         const img = document.createElement('img');
         img.className = 'bsc-qr-canvas';
-        img.alt = `USDT Payment QR: ${amount} USDT to ${Utils.truncateAddress(recipient)}`;
+        img.alt = `BSC USDT Payment QR: ${amount} USDT to ${Utils.truncateAddress(recipient)}`;
         img.setAttribute('role', 'button');
         img.setAttribute('tabindex', '0');
-        img.setAttribute('aria-label', `Scan to send ${amount} USDT`);
-        img.title = `Click to copy USDT payment details`;
+        img.setAttribute('aria-label', `Scan to send ${amount} USDT on BSC`);
+        img.title = `Click to copy BSC USDT payment details`;
         
         img.style.cssText = 'width: 180px; height: 180px; border-radius: 8px; cursor: pointer;';
         
-        img.onclick = () => copySimplePaymentDetails(recipient, amount);
+        img.onclick = () => copyBSCPaymentDetails(recipient, amount, qrContent);
         img.onkeydown = (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                copySimplePaymentDetails(recipient, amount);
+                copyBSCPaymentDetails(recipient, amount, qrContent);
             }
         };
         
         // Try Google Charts API first (most reliable)
-        img.src = `https://chart.googleapis.com/chart?chs=180x180&cht=qr&chl=${encodedData}&choe=UTF-8&chld=H`;
+        img.src = `https://chart.googleapis.com/chart?chs=180x180&cht=qr&chl=${encodedData}&choe=UTF-8&chld=M`;
         
         img.onerror = function() {
             console.warn('[BSC QR] Google Charts failed, trying qrserver.com');
             img.onerror = function() {
                 console.warn('[BSC QR] All QR APIs failed, showing text fallback');
-                showTextFallback(element, recipient, amount);
+                showTextFallback(element, recipient, amount, qrContent);
             };
-            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodedData}&format=png&ecc=H`;
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodedData}&format=png&ecc=M`;
         };
         
         element.appendChild(img);
     }
     
-    function showTextFallback(container, recipient, amount) {
+    function showTextFallback(container, recipient, amount, eip681URI) {
         if (!container) return;
         
         container.innerHTML = `
@@ -1740,12 +1765,18 @@
                 <div style="font-size: 13px; color: #64748b; margin-bottom: 8px;">
                     📱 QR Code Unavailable
                 </div>
-                <div style="font-family: monospace; font-size: 11px; color: #475569; word-break: break-all; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 12px;">
+                <div style="background: #fef3c7; padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 11px; color: #92400e;">
+                    ⚠️ BSC Network Only - NOT Ethereum
+                </div>
+                <div style="font-family: monospace; font-size: 10px; color: #475569; word-break: break-all; background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 8px;">
                     ${recipient}
                 </div>
-                <button onclick="window.BSCPayments.copyText('${recipient}')" 
-                        style="padding: 10px 20px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;">
-                    📋 Copy Address
+                <div style="font-size: 12px; color: #92400e; font-weight: 600; margin-bottom: 8px;">
+                    ${amount} USDT (BEP-20)
+                </div>
+                <button onclick="window.BSCPayments.copyText('${eip681URI}')" 
+                        style="padding: 8px 16px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px;">
+                    📋 Copy Payment URI
                 </button>
             </div>
         `;
@@ -1792,7 +1823,7 @@
         } catch (error) {
             console.error('Network switch error:', error);
             
-            if (error.code === 4001) {
+            if (error.code === 4001 ) {
                 throw new Error('Network switch was rejected. Please switch to BSC network manually.');
             }
             
