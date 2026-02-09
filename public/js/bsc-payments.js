@@ -1,6 +1,6 @@
 // ======================================================
 // 🚀 ENTERPRISE-GRADE BSC USDT PAYMENT SYSTEM
-// Version 2.0 - Production Ready
+// Version 2.1 - With WalletConnect Integration
 // ======================================================
 
 (function() {
@@ -20,7 +20,15 @@
         GAS_BUFFER: 20, // 20% buffer
         CONFIRMATION_TIMEOUT: 60000, // 60 seconds
         TEST_MODE: false,
-        DEFAULT_CURRENCY: 'USD'
+        DEFAULT_CURRENCY: 'USD',
+        // WalletConnect Project ID (Get one from https://cloud.walletconnect.com/)
+        WALLETCONNECT_PROJECT_ID: "61d9b98f81731dffa9988c0422676fc5",
+        WALLETCONNECT_METADATA: {
+            name: "BSC USDT Payment System",
+            description: "Enterprise BSC USDT Payment Solution",
+            url: window.location.origin,
+            icons: ["https://bscscan.com/favicon.ico"]
+        }
     };
 
     // ✅ State management
@@ -30,7 +38,9 @@
         transactionHistory: [],
         lastPaymentAmount: null,
         isProcessing: false,
-        exchangeRates: {}
+        exchangeRates: {},
+        walletConnect: null,
+        walletConnectProvider: null
     };
 
     // ✅ Cache for performance
@@ -40,7 +50,8 @@
         contract: null,
         qrCode: null,
         exchangeRate: null,
-        lastRateUpdate: 0
+        lastRateUpdate: 0,
+        walletConnectQR: null
     };
 
     // ✅ Enhanced error types for better handling
@@ -194,6 +205,38 @@
                     }
                 }, 2000);
             });
+        },
+        
+        // Load WalletConnect library dynamically
+        loadWalletConnect: () => {
+            return new Promise((resolve, reject) => {
+                if (typeof WalletConnect !== 'undefined') {
+                    resolve(window.WalletConnect);
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/@walletconnect/client@1.8.0/dist/umd/index.min.js';
+                script.integrity = 'sha256-pd2aT7GQ3jFFwZq5kpO2QNl+mtQ6+EkVV3T0xwfyNvQ=';
+                script.crossOrigin = 'anonymous';
+                
+                script.onload = () => {
+                    console.log('✅ WalletConnect loaded');
+                    resolve(window.WalletConnect);
+                };
+                
+                script.onerror = () => {
+                    reject(new Error('Failed to load WalletConnect library'));
+                };
+                
+                document.head.appendChild(script);
+            });
+        },
+        
+        // Generate ERC681 URI for wallet apps
+        generateERC681URI: (recipient, amount) => {
+            const amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18)).toString();
+            return `ethereum:${CONFIG.BSC_USDT_ADDRESS}@56/transfer?address=${recipient}&uint256=${amountWei}`;
         }
     };
 
@@ -882,6 +925,76 @@
                 color: #475569;
             }
             
+            /* WalletConnect Modal Styles */
+            .bsc-wc-modal {
+                background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+                border-radius: 20px;
+                width: 420px;
+                max-width: 95vw;
+                max-height: 90vh;
+                overflow-y: auto;
+                position: relative;
+                animation: slideUp 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            
+            .bsc-wc-qr-container {
+                width: 280px;
+                height: 280px;
+                margin: 0 auto 24px;
+                background: white;
+                border-radius: 16px;
+                padding: 20px;
+                border: 1px solid #e2e8f0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+            }
+            
+            .bsc-wc-qr-canvas {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+            }
+            
+            .bsc-wc-instructions {
+                background: #f8fafc;
+                border-radius: 12px;
+                padding: 20px;
+                margin: 20px 0;
+                border-left: 4px solid #3b82f6;
+            }
+            
+            .bsc-wc-instruction-step {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 12px;
+                font-size: 14px;
+                color: #475569;
+            }
+            
+            .bsc-wc-instruction-step:last-child {
+                margin-bottom: 0;
+            }
+            
+            .bsc-wc-instruction-number {
+                background: #3b82f6;
+                color: white;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: 700;
+                flex-shrink: 0;
+            }
+            
             .mt-2 { margin-top: 8px; }
             .mt-4 { margin-top: 16px; }
             .mt-6 { margin-top: 24px; }
@@ -905,7 +1018,8 @@
                 }
                 
                 .bsc-address-card,
-                .bsc-qr-container {
+                .bsc-qr-container,
+                .bsc-wc-qr-container {
                     background: #1e293b;
                     border-color: #334155;
                 }
@@ -931,6 +1045,11 @@
                     background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
                     color: #cbd5e1;
                     border-color: #475569;
+                }
+                
+                .bsc-wc-instructions {
+                    background: #1e293b;
+                    color: #cbd5e1;
                 }
             }
             
@@ -963,6 +1082,11 @@
                 .bsc-qr-container {
                     width: 200px;
                     height: 200px;
+                }
+                
+                .bsc-wc-qr-container {
+                    width: 240px;
+                    height: 240px;
                 }
             }
             
@@ -1150,6 +1274,265 @@
         };
     }
 
+    // ✅ WalletConnect Implementation
+    async function initializeWalletConnect() {
+        try {
+            await Utils.loadWalletConnect();
+            
+            if (!CONFIG.WALLETCONNECT_PROJECT_ID || CONFIG.WALLETCONNECT_PROJECT_ID === "YOUR_WALLETCONNECT_PROJECT_ID") {
+                throw new Error('Please set your WalletConnect Project ID in CONFIG.WALLETCONNECT_PROJECT_ID');
+            }
+            
+            // Initialize WalletConnect
+            const connector = new WalletConnect.default({
+                bridge: "https://bridge.walletconnect.org",
+                qrcodeModal: {
+                    open: (uri, cb) => {
+                        // We'll handle QR display ourselves
+                        STATE.walletConnectURI = uri;
+                        if (typeof cb === 'function') cb();
+                    },
+                    close: () => {
+                        // We'll handle closing ourselves
+                    }
+                },
+                clientMeta: CONFIG.WALLETCONNECT_METADATA,
+                chainId: CONFIG.BSC_CHAIN_ID
+            });
+            
+            STATE.walletConnect = connector;
+            
+            // Check if connection is already established
+            if (connector.connected) {
+                STATE.walletConnectProvider = connector;
+                console.log('WalletConnect already connected');
+                return connector;
+            }
+            
+            return connector;
+        } catch (error) {
+            console.error('WalletConnect initialization failed:', error);
+            throw new Error(`WalletConnect initialization failed: ${error.message}`);
+        }
+    }
+
+    // ✅ Generate QR code for WalletConnect
+    function generateWalletConnectQR(uri, element) {
+        if (!element) return;
+        
+        element.innerHTML = '';
+        
+        if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'bsc-wc-qr-canvas';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            
+            element.appendChild(canvas);
+            
+            QRCode.toCanvas(canvas, uri, {
+                width: 240,
+                margin: 2,
+                color: { 
+                    dark: '#000000', 
+                    light: '#FFFFFF',
+                    background: '#FFFFFF'
+                },
+                errorCorrectionLevel: 'H'
+            }, function(error) {
+                if (error) {
+                    console.warn('WalletConnect QR generation failed:', error);
+                    // Fallback to image
+                    const img = document.createElement('img');
+                    img.className = 'bsc-wc-qr-canvas';
+                    img.src = `https://chart.googleapis.com/chart?chs=240x240&cht=qr&chl=${encodeURIComponent(uri)}&choe=UTF-8&chld=H`;
+                    element.innerHTML = '';
+                    element.appendChild(img);
+                }
+            });
+        } else {
+            // Fallback to image
+            const img = document.createElement('img');
+            img.className = 'bsc-wc-qr-canvas';
+            img.src = `https://chart.googleapis.com/chart?chs=240x240&cht=qr&chl=${encodeURIComponent(uri)}&choe=UTF-8&chld=H`;
+            element.appendChild(img);
+        }
+    }
+
+    // ✅ Show WalletConnect modal
+    async function showWalletConnectModal(amount, recipient, paymentId) {
+        return new Promise((resolve, reject) => {
+            try {
+                const modalContent = `
+                    <div class="bsc-modal-header">
+                        <button class="bsc-modal-close" id="wcClose" aria-label="Close">×</button>
+                        <h2 class="bsc-modal-title">Connect with WalletConnect</h2>
+                        <p class="bsc-modal-subtitle">Scan QR code with your wallet app</p>
+                    </div>
+                    <div class="bsc-modal-body">
+                        <div class="bsc-wc-qr-container" id="wcQrCode">
+                            <!-- QR code will be loaded here -->
+                        </div>
+                        
+                        <div class="bsc-wc-instructions">
+                            <div class="bsc-wc-instruction-step">
+                                <div class="bsc-wc-instruction-number">1</div>
+                                <div>Open your wallet app (MetaMask, Trust Wallet, etc.)</div>
+                            </div>
+                            <div class="bsc-wc-instruction-step">
+                                <div class="bsc-wc-instruction-number">2</div>
+                                <div>Tap "Scan QR Code" or "Connect Wallet"</div>
+                            </div>
+                            <div class="bsc-wc-instruction-step">
+                                <div class="bsc-wc-instruction-number">3</div>
+                                <div>Scan the QR code above</div>
+                            </div>
+                            <div class="bsc-wc-instruction-step">
+                                <div class="bsc-wc-instruction-number">4</div>
+                                <div>Approve the connection request</div>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 24px 0;">
+                            <button id="wcCopyUri" class="bsc-btn bsc-btn-secondary">
+                                📋 Copy Connection URI
+                            </button>
+                        </div>
+                        
+                        <div style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+                            Supported by 100+ wallets including MetaMask, Trust Wallet, Rainbow, Argent, and more
+                        </div>
+                        
+                        <div id="wcError" style="display: none; margin-top: 20px;">
+                            <div class="bsc-error">
+                                <div class="bsc-error-title" id="wcErrorTitle">Connection Error</div>
+                                <div id="wcErrorMessage">Unable to connect. Please try again.</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const { overlay, modal, cleanup, addModalListener } = createModal(modalContent, () => {
+                    cleanup();
+                    reject(new Error('WalletConnect modal closed'));
+                });
+                
+                // Close button
+                const closeBtn = modal.querySelector('#wcClose');
+                addModalListener(closeBtn, 'click', () => {
+                    cleanup();
+                    overlay.remove();
+                    reject(new Error('WalletConnect cancelled'));
+                });
+                
+                // Copy URI button
+                const copyBtn = modal.querySelector('#wcCopyUri');
+                addModalListener(copyBtn, 'click', async () => {
+                    if (STATE.walletConnectURI) {
+                        const success = await Utils.copyToClipboard(STATE.walletConnectURI);
+                        if (success) {
+                            showAlert('Connection URI copied to clipboard!', 'success', 2000);
+                        }
+                    }
+                });
+                
+                // Initialize WalletConnect and generate QR
+                setTimeout(async () => {
+                    try {
+                        const connector = await initializeWalletConnect();
+                        
+                        if (connector.connected) {
+                            // Already connected
+                            cleanup();
+                            overlay.remove();
+                            resolve(connector);
+                            return;
+                        }
+                        
+                        // Create new session
+                        await connector.createSession();
+                        
+                        // Get URI and generate QR
+                        const uri = connector.uri;
+                        STATE.walletConnectURI = uri;
+                        
+                        const qrContainer = modal.querySelector('#wcQrCode');
+                        if (qrContainer) {
+                            generateWalletConnectQR(uri, qrContainer);
+                        }
+                        
+                        // Listen for connection
+                        connector.on("connect", (error, payload) => {
+                            if (error) {
+                                console.error('WalletConnect connection error:', error);
+                                showErrorInModal(modal, 'Connection failed. Please try again.');
+                                return;
+                            }
+                            
+                            console.log('WalletConnect connected:', payload);
+                            cleanup();
+                            overlay.remove();
+                            
+                            // Store provider
+                            STATE.walletConnectProvider = connector;
+                            
+                            resolve(connector);
+                        });
+                        
+                        // Listen for disconnect
+                        connector.on("disconnect", (error, payload) => {
+                            if (error) {
+                                console.error('WalletConnect disconnect error:', error);
+                            }
+                            console.log('WalletConnect disconnected');
+                            STATE.walletConnectProvider = null;
+                        });
+                        
+                        // Listen for session update
+                        connector.on("session_update", (error, payload) => {
+                            if (error) {
+                                console.error('WalletConnect session update error:', error);
+                            }
+                            console.log('WalletConnect session updated:', payload);
+                        });
+                        
+                        // Timeout after 5 minutes
+                        setTimeout(() => {
+                            if (connector && !connector.connected) {
+                                cleanup();
+                                overlay.remove();
+                                reject(new Error('Connection timeout. Please try again.'));
+                            }
+                        }, 5 * 60 * 1000);
+                        
+                    } catch (error) {
+                        console.error('WalletConnect error:', error);
+                        showErrorInModal(modal, error.message);
+                        setTimeout(() => {
+                            cleanup();
+                            overlay.remove();
+                            reject(error);
+                        }, 3000);
+                    }
+                }, 100);
+                
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+    
+    function showErrorInModal(modal, message) {
+        const errorDiv = modal.querySelector('#wcError');
+        const errorTitle = modal.querySelector('#wcErrorTitle');
+        const errorMessage = modal.querySelector('#wcErrorMessage');
+        
+        if (errorDiv && errorTitle && errorMessage) {
+            errorDiv.style.display = 'block';
+            errorMessage.textContent = message;
+        }
+    }
+
     // ✅ Enhanced QR code generation with URI scheme for wallet apps
     function generateBSCQR(recipient, amount, element) {
         console.log('[BSC QR] Generating QR code:', {
@@ -1168,24 +1551,8 @@
         // Clear the element first
         element.innerHTML = '';
         
-        // Calculate amount in wei safely
-        let amountWei;
-        try {
-            if (CACHE.ethers && CACHE.ethers.utils) {
-                amountWei = CACHE.ethers.utils.parseUnits(amount.toString(), 18).toString();
-            } else if (typeof ethers !== 'undefined') {
-                amountWei = ethers.utils.parseUnits(amount.toString(), 18).toString();
-            } else {
-                // Fallback: manually calculate (amount * 10^18)
-                amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18)).toString();
-            }
-        } catch (e) {
-            console.warn('[BSC QR] Failed to parse amount, using simple format');
-            amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18)).toString();
-        }
-        
-        // Use plain address for QR - most compatible with wallet apps
-        const qrData = recipient;
+        // Generate ERC681 URI for better wallet compatibility
+        const erc681URI = Utils.generateERC681URI(recipient, amount);
         
         // Try QRCode.js library first
         if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
@@ -1198,7 +1565,7 @@
             
             element.appendChild(canvas);
             
-            QRCode.toCanvas(canvas, qrData, {
+            QRCode.toCanvas(canvas, erc681URI, {
                 width: 180,
                 margin: 2,
                 color: { 
@@ -1210,7 +1577,7 @@
             }, function(error) {
                 if (error) {
                     console.warn('[BSC QR] QRCode.js failed:', error);
-                    showImageBasedQR(element, qrData, recipient, amount);
+                    showImageBasedQR(element, erc681URI, recipient, amount);
                 } else {
                     console.log('[BSC QR] QR code generated with QRCode.js');
                     
@@ -1237,7 +1604,7 @@
             });
         } else {
             console.log('[BSC QR] QRCode.js not available, using image API');
-            showImageBasedQR(element, qrData, recipient, amount);
+            showImageBasedQR(element, erc681URI, recipient, amount);
         }
     }
 
@@ -1318,34 +1685,24 @@
     }
 
     // ✅ Enhanced network switching with EIP-6963 support
-    async function ensureBSCNetwork() {
-        // Check for EIP-6963 multi-injector support
-        let ethereumProvider = window.ethereum;
-        
-        if (window.ethereum?.providers) {
-            // Multiple wallet providers detected
-            const providers = window.ethereum.providers;
-            // Try to find MetaMask first, then any other provider
-            ethereumProvider = providers.find(p => p.isMetaMask) || providers[0];
-        }
-        
-        if (!ethereumProvider) {
-            throw new Error('No Ethereum wallet detected. Please install MetaMask, Trust Wallet, or another Web3 wallet.');
+    async function ensureBSCNetwork(provider) {
+        if (!provider) {
+            throw new Error('No wallet provider available');
         }
         
         try {
-            const chainId = await ethereumProvider.request({ method: 'eth_chainId' });
+            const chainId = await provider.request({ method: 'eth_chainId' });
             
             if (chainId !== '0x38') { // BSC mainnet chainId in hex
                 try {
-                    await ethereumProvider.request({
+                    await provider.request({
                         method: 'wallet_switchEthereumChain',
                         params: [{ chainId: '0x38' }]
                     });
                 } catch (switchError) {
                     // If chain is not added, add it
                     if (switchError.code === 4902) {
-                        await ethereumProvider.request({
+                        await provider.request({
                             method: 'wallet_addEthereumChain',
                             params: [{
                                 chainId: '0x38',
@@ -1364,7 +1721,7 @@
                     }
                 }
             }
-            return ethereumProvider;
+            return provider;
         } catch (error) {
             console.error('Network switch error:', error);
             
@@ -1378,7 +1735,7 @@
 
     // ✅ Enhanced USDT transaction with retry logic and better error handling
     async function sendUSDTTransaction(recipient, amount, fromAddress, provider) {
-        if (!provider && !window.ethereum) {
+        if (!provider) {
             throw new Error('No wallet provider available');
         }
         
@@ -1388,9 +1745,18 @@
         
         const executeTransaction = async () => {
             try {
-                const ethersProvider = provider ? 
-                    new CACHE.ethers.providers.Web3Provider(provider) : 
-                    new CACHE.ethers.providers.Web3Provider(window.ethereum);
+                let ethersProvider;
+                
+                // Handle different provider types
+                if (provider.isWalletConnect) {
+                    // WalletConnect provider
+                    ethersProvider = new CACHE.ethers.providers.Web3Provider(provider);
+                } else {
+                    // Standard Web3 provider
+                    ethersProvider = provider instanceof CACHE.ethers.providers.Web3Provider 
+                        ? provider 
+                        : new CACHE.ethers.providers.Web3Provider(provider);
+                }
                 
                 const signer = ethersProvider.getSigner();
                 
@@ -1545,6 +1911,73 @@
             // Fallback rate
             return 1.0;
         }
+    }
+
+    // ✅ Handle wallet connection based on selected type
+    async function handleWalletConnection(selectedWallet, amount, recipient, paymentId) {
+        let provider;
+        let fromAddress;
+        
+        if (selectedWallet === 'walletconnect') {
+            // WalletConnect flow
+            try {
+                // Show WalletConnect modal
+                const connector = await showWalletConnectModal(amount, recipient, paymentId);
+                
+                // Get accounts
+                const accounts = connector.accounts;
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('No accounts found in wallet.');
+                }
+                
+                fromAddress = accounts[0];
+                provider = connector;
+                
+            } catch (error) {
+                throw new Error(`WalletConnect failed: ${error.message}`);
+            }
+        } else {
+            // Standard wallet flow (MetaMask, Trust Wallet, etc.)
+            let ethereumProvider = window.ethereum;
+            
+            // Check for EIP-6963 multi-injector support
+            if (window.ethereum?.providers) {
+                const providers = window.ethereum.providers;
+                if (selectedWallet === 'metamask') {
+                    ethereumProvider = providers.find(p => p.isMetaMask) || providers[0];
+                } else if (selectedWallet === 'trust') {
+                    ethereumProvider = providers.find(p => p.isTrust) || providers[0];
+                } else {
+                    ethereumProvider = providers[0];
+                }
+            }
+            
+            if (!ethereumProvider) {
+                throw new Error('No Web3 wallet detected. Please install a Web3 wallet.');
+            }
+            
+            // Request account access
+            let accounts;
+            try {
+                accounts = await ethereumProvider.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+            } catch (connectError) {
+                if (connectError.code === 4001) {
+                    throw new Error('Wallet connection rejected. Please connect to proceed.');
+                }
+                throw connectError;
+            }
+            
+            if (!accounts || accounts.length === 0) {
+                throw new Error('No accounts found in wallet.');
+            }
+            
+            fromAddress = accounts[0];
+            provider = ethereumProvider;
+        }
+        
+        return { provider, fromAddress };
     }
 
     // ✅ Enhanced payment modal with wallet selection
@@ -1712,6 +2145,9 @@
             const walletButtons = modal.querySelectorAll('.bsc-wallet-btn');
             let selectedWallet = 'metamask';
             
+            // Set default active
+            walletButtons[0]?.classList.add('active');
+            
             walletButtons.forEach(btn => {
                 addModalListener(btn, 'click', () => {
                     walletButtons.forEach(b => b.classList.remove('active'));
@@ -1733,55 +2169,11 @@
                 try {
                     updateProcessingStatus(processingModal.modal, 'Connecting to wallet...');
                     
-                    // Check for wallet
-                    let provider;
-                    
-                    if (selectedWallet === 'metamask') {
-                        if (!window.ethereum) {
-                            throw new Error('MetaMask not detected. Please install MetaMask extension or use another wallet.');
-                        }
-                        provider = window.ethereum;
-                    } else if (selectedWallet === 'trust') {
-                        // Trust Wallet detection
-                        if (window.trustwallet) {
-                            provider = window.trustwallet;
-                        } else if (window.ethereum?.isTrust) {
-                            provider = window.ethereum;
-                        } else {
-                            throw new Error('Trust Wallet not detected. Please open in Trust Wallet browser.');
-                        }
-                    } else {
-                        // For other wallets, try window.ethereum
-                        if (!window.ethereum) {
-                            throw new Error('No Web3 wallet detected. Please install a Web3 wallet.');
-                        }
-                        provider = window.ethereum;
-                    }
-                    
-                    // Request account access
-                    updateProcessingStatus(processingModal.modal, 'Requesting account access...');
-                    
-                    let accounts;
-                    try {
-                        accounts = await provider.request({ 
-                            method: 'eth_requestAccounts' 
-                        });
-                    } catch (connectError) {
-                        if (connectError.code === 4001) {
-                            throw new Error('Wallet connection rejected. Please connect to proceed.');
-                        }
-                        throw connectError;
-                    }
-                    
-                    if (!accounts || accounts.length === 0) {
-                        throw new Error('No accounts found in wallet.');
-                    }
-                    
-                    const fromAddress = accounts[0];
+                    // Handle wallet connection
+                    const { provider, fromAddress } = await handleWalletConnection(selectedWallet, amount, recipient, paymentId);
                     
                     // Show recipient confirmation
                     updateProcessingStatus(processingModal.modal, 'Verifying details...');
-                    
                     const confirmed = await showRecipientConfirmation(recipient, amount, fromAddress);
                     if (!confirmed) {
                         throw new Error('Payment cancelled by user');
@@ -1789,7 +2181,7 @@
                     
                     // Switch to BSC network
                     updateProcessingStatus(processingModal.modal, 'Switching to BSC network...');
-                    const bscProvider = await ensureBSCNetwork();
+                    const bscProvider = await ensureBSCNetwork(provider);
                     
                     // Send transaction
                     updateProcessingStatus(processingModal.modal, 'Confirm transaction in your wallet...');
@@ -2119,7 +2511,7 @@
                     detail: {
                         ...result,
                         timestamp: Date.now(),
-                        version: '2.0'
+                        version: '2.1'
                     }
                 }));
                 
@@ -2275,7 +2667,7 @@
             
             // State information
             isReady: true,
-            version: '2.0.0',
+            version: '2.1.0',
             state: () => ({
                 isProcessing: STATE.isProcessing,
                 currentPaymentId: STATE.currentPaymentId,
@@ -2295,16 +2687,22 @@
         // Mark as ready
         window.BSCPaymentsReady = true;
         document.dispatchEvent(new CustomEvent('bscPaymentsReady', {
-            detail: { version: '2.0.0', timestamp: Date.now() }
+            detail: { version: '2.1.0', timestamp: Date.now() }
         }));
         
         // Log initialization
-        console.log('🚀 BSC USDT Payment System v2.0 Ready');
+        console.log('🚀 BSC USDT Payment System v2.1 Ready');
         console.log('📋 Available methods:', Object.keys(window.BSCPayments).join(', '));
         
         // Check for default recipient warning
         if (CONFIG.RECIPIENT_ADDRESS === "0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d") {
             console.warn('⚠️  USING DEFAULT RECIPIENT ADDRESS - UPDATE BEFORE PRODUCTION!');
+        }
+        
+        // Check for WalletConnect Project ID warning
+        if (CONFIG.WALLETCONNECT_PROJECT_ID === "YOUR_WALLETCONNECT_PROJECT_ID") {
+            console.warn('⚠️  Please set your WalletConnect Project ID from https://cloud.walletconnect.com/');
+            console.warn('⚠️  Update CONFIG.WALLETCONNECT_PROJECT_ID with your actual project ID');
         }
     }
 
