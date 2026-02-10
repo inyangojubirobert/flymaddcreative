@@ -13,7 +13,7 @@
         BSC_RPC: "https://bsc-dataseed.binance.org/",
         EXPLORER_URL: "https://bscscan.com/tx/",
         RECIPIENT_ADDRESS: "0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d", // Replace with your address
-        DECIMALS: 18,
+        DECIMALS: 18,  // BSC USDT uses 18 decimals
         // Enhanced config
         MAX_RETRIES: 3,
         RETRY_DELAY: 1000,
@@ -83,35 +83,26 @@
         },
         
         // Format currency
-        formatCurrency: (amount, currency = 'USD') => {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: currency,
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(amount);
-        },
-        
-        // Truncate address
-        truncateAddress: (address, start = 6, end = 4) => {
-            if (!address) return '';
-            return `${address.substring(0, start)}...${address.substring(address.length - end)}`;
-        },
-        
-        // Validate Ethereum address with checksum
-        validateAddress: (address) => {
-            if (!address || typeof address !== 'string') return false;
-            if (!/^0x[a-fA-F0-9]{40}$/.test(address)) return false;
-            
-            // Try checksum validation if ethers is available
-            if (typeof ethers !== 'undefined') {
-                try {
-                    return ethers.utils.isAddress(address);
-                } catch (e) {
-                    return true; // Basic validation passed
-                }
-            }
-            return true;
+        // Enhanced BSC USDT QR data generator
+        generateBSCUSDTQRData: (recipient, amount) => {
+            const amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18)).toString();
+            // Option 1: Standard EIP-681 with BSC chain ID
+            const erc681URI = `ethereum:${CONFIG.BSC_USDT_ADDRESS}@${CONFIG.BSC_CHAIN_ID}/transfer?address=${recipient}&uint256=${amountWei}`;
+            // Option 2: With explicit chainId param
+            const withChainParam = `ethereum:${CONFIG.BSC_USDT_ADDRESS}/transfer?address=${recipient}&uint256=${amountWei}&chainId=${CONFIG.BSC_CHAIN_ID}`;
+            // Option 3: BSC-specific URI
+            const bscSpecific = `bsc:${CONFIG.BSC_USDT_ADDRESS}/transfer?to=${recipient}&value=${amountWei}`;
+            return {
+                primary: erc681URI,
+                withChainParam: withChainParam,
+                bscSpecific: bscSpecific,
+                recipient: recipient,
+                amount: amount,
+                amountWei: amountWei,
+                network: 'BSC',
+                token: 'USDT',
+                decimals: 18
+            };
         },
         
         // Sanitize amount to prevent exponential notation attacks
@@ -235,7 +226,7 @@
         
         // Generate USDT-specific QR code data
         generateUSDTQRData: (recipient, amount) => {
-            // Calculate amount in wei (USDT has 18 decimals)
+            // Calculate amount in wei (USDT has 18 decimals)for USDT)
             const amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18)).toString();
             
             // Method 1: ERC681 URI for USDT transfer (Most compatible)
@@ -1663,7 +1654,7 @@
         // Clear the element first
         element.innerHTML = '';
         
-        // Calculate amount in wei (USDT has 18 decimals on BSC)
+        // Calculate amount in wei (USDT has 18 decimals on BSC)T)
         let amountWei;
         try {
             const amountFloat = parseFloat(amount);
@@ -1703,11 +1694,51 @@
         
         wrapper.appendChild(canvas);
         
-        // Add network badge below QR
-        const badge = document.createElement('div');
-        badge.style.cssText = 'margin-top: 12px; padding: 6px 12px; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;';
-        badge.textContent = `${amount} USDT • BSC Network`;
-        wrapper.appendChild(badge);
+        // Add BSC badge overlay on QR
+        const overlay = document.createElement('div');
+        overlay.className = 'bsc-qr-overlay';
+        overlay.innerHTML = `
+            <div class="bsc-qr-label">
+                <span style="background: #f0b90b; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; margin-right: 6px;">
+                    BSC
+                </span>
+                <span style="font-weight: 600;">${amount} USDT</span>
+            </div>
+        `;
+        wrapper.appendChild(overlay);
+            // Wallet-specific instructions
+            function getWalletSpecificInstructions(walletType, amount) {
+                const instructions = {
+                    metamask: {
+                        title: "MetaMask Instructions",
+                        steps: [
+                            "Scan QR code or paste URI",
+                            "MetaMask will prompt to switch to BSC",
+                            `Verify amount is ${amount} BSC USDT`,
+                            "Confirm transaction"
+                        ]
+                    },
+                    trustwallet: {
+                        title: "Trust Wallet Instructions",
+                        steps: [
+                            "Scan QR code",
+                            "Trust Wallet opens BSC USDT transfer",
+                            "Verify recipient and amount",
+                            "Confirm and send"
+                        ]
+                    },
+                    default: {
+                        title: "General Instructions",
+                        steps: [
+                            "Scan QR with any BSC-compatible wallet",
+                            "Make sure you're on BSC network (Chain ID: 56)",
+                            "Verify you're sending BSC USDT (BEP-20)",
+                            "Confirm transaction"
+                        ]
+                    }
+                };
+                return instructions[walletType] || instructions.default;
+            }
         
         element.appendChild(wrapper);
         
@@ -1746,7 +1777,7 @@
     }
 
     async function copyBSCPaymentDetails(recipient, amount, eip681URI) {
-        // Calculate amount in wei for reference
+        // Calculate amount in wei for reference reference
         const amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18)).toString();
         
         const textToCopy = `═══════════════════════════════════
@@ -1842,7 +1873,7 @@ ${eip681URI}
         
         container.innerHTML = `
             <div style="text-align: center; padding: 15px; width: 100%;">
-                <div style="font-size: 14px; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <div style="font-size: 14px; color: #64748b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                     <span>📱</span>
                     <span>QR Code Unavailable</span>
                 </div>
@@ -2195,21 +2226,40 @@ ${eip681URI}
                     <h2 class="bsc-modal-title">Pay with USDT (BSC)</h2>
                     <p class="bsc-modal-subtitle">Send ${amount} USDT on Binance Smart Chain</p>
                 </div>
-                
                 <div class="bsc-modal-body">
+                    <div class="bsc-network-alert">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <div style="background: #f0b90b; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 700;">
+                                BSC ONLY
+                            </div>
+                            <div style="font-size: 13px; color: #f0b90b; font-weight: 600;">
+                                ⚠️ Send on BSC (Binance Smart Chain)
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 11px; color: #666;">
+                            <div style="background: #f8f9fa; padding: 8px; border-radius: 6px;">
+                                <div style="font-weight: 600; color: #333;">Network</div>
+                                <div>Binance Smart Chain</div>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 8px; border-radius: 6px;">
+                                <div style="font-weight: 600; color: #333;">Chain ID</div>
+                                <div>56</div>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 8px; border-radius: 6px;">
+                                <div style="font-weight: 600; color: #333;">Token Type</div>
+                                <div>USDT (BEP-20)</div>
+                            </div>
+                            <div style="background: #f8f9fa; padding: 8px; border-radius: 6px;">
+                                <div style="font-weight: 600; color: #333;">Decimals</div>
+                                <div>18</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="bsc-amount-card">
                         <div class="bsc-amount">${amount} USDT</div>
                         <div class="bsc-amount-usd">≈ ${Utils.formatCurrency(usdAmount)}</div>
                         <div class="bsc-amount-label">Amount to pay</div>
                     </div>
-                    
-                    <div class="bsc-network-info">
-                        <strong>⚠️ Important:</strong> Send only USDT on <strong>BSC (BEP-20)</strong> network
-                        <div style="font-size: 13px; color: #92400e; margin-top: 8px; font-weight: normal;">
-                            Contract: ${Utils.truncateAddress(CONFIG.BSC_USDT_ADDRESS)}
-                        </div>
-                    </div>
-                    
                     <div class="bsc-address-card">
                         <div class="bsc-address-header">
                             <div class="bsc-address-label">Recipient Address</div>
@@ -2217,11 +2267,7 @@ ${eip681URI}
                         </div>
                         <div class="bsc-address" id="bscAddress" aria-label="Recipient address">${recipient}</div>
                     </div>
-                    
-                    <div class="bsc-qr-container" id="bscQRCode">
-                        <!-- USDT QR code will be loaded here -->
-                    </div>
-                    
+                    <div class="bsc-qr-container" id="bscQRCode"></div>
                     <div style="text-align: center; margin-bottom: 24px;">
                         <div style="font-size: 14px; color: #64748b; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
                             <span>📱</span>
@@ -2229,17 +2275,14 @@ ${eip681URI}
                         </div>
                         <div style="font-size: 13px; color: #94a3b8; font-weight: 500;">QR contains USDT payment data</div>
                     </div>
-                    
                     <div class="bsc-step">
                         <div class="bsc-step-number">1</div>
                         <div class="bsc-step-text">Scan QR code with your wallet app to auto-fill USDT payment</div>
                     </div>
-                    
                     <div class="bsc-step">
                         <div class="bsc-step-number">2</div>
                         <div class="bsc-step-text">Verify the amount is ${amount} USDT and recipient is correct</div>
                     </div>
-                    
                     <div class="bsc-step">
                         <div class="bsc-step-number">3</div>
                         <div class="bsc-step-text">Confirm the transaction in your wallet</div>
