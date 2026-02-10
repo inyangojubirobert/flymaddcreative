@@ -22,7 +22,7 @@
         TEST_MODE: false,
         DEFAULT_CURRENCY: 'USD',
         // WalletConnect Project ID (Get one from https://cloud.walletconnect.com/)
-        WALLETCONNECT_PROJECT_ID: "YOUR_WALLETCONNECT_PROJECT_ID", // REPLACE WITH YOUR ACTUAL ID
+        WALLETCONNECT_PROJECT_ID: "61d9b98f81731dffa9988c0422676fc5", // REPLACE WITH YOUR ACTUAL ID
         WALLETCONNECT_METADATA: {
             name: "BSC USDT Payment System",
             description: "Enterprise BSC USDT Payment Solution",
