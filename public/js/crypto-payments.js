@@ -1896,6 +1896,10 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
 // 🔄 REPLACE THIS ENTIRE FUNCTION WITH THE CODE BELOW
 // ======================================================
 
+// ======================================================
+// 🔄  FIXED: TRON MANUAL MODAL - USDT TRC-20 FOR BOTH MOBILE & DESKTOP
+// ======================================================
+
 async function showTronManualModal(recipient, amount) {
     await loadQRCodeLibrary();
     
@@ -1905,16 +1909,18 @@ async function showTronManualModal(recipient, amount) {
         // ✅ TRON USDT uses 6 decimals
         const amountSun = BigInt(Math.round(parseFloat(amount) * 10 ** 6)).toString();
         
-        // ✅ THIS WORKS - Native TRON URI (supports all TRON wallets)
+        // ✅ Mobile: Native TRON URI (works with TronLink, Trust Wallet mobile)
         const tronURI = `tron://${CONFIG.TRON.USDT_ADDRESS}/transfer?address=${recipient}&amount=${amountSun}`;
         
-        // ✅ Use TRON URI for BOTH mobile AND desktop
-        // This works with TronLink, Trust Wallet, TokenPocket, etc.
-        const qrContent = tronURI;
+        // ✅ Desktop: Show plain address - user must manually select TRON & USDT
+        // This is the ONLY reliable way for desktop users
+        const qrContent = isMobile ? tronURI : recipient;
         
-        console.log('[TRON] Using TRON URI:', {
-            mode: isMobile ? 'Mobile' : 'Desktop',
-            uri: tronURI
+        console.log('[TRON] Using QR strategy:', {
+            mode: isMobile ? 'Mobile - TRON URI' : 'Desktop - Plain Address',
+            message: isMobile ? 'Opens wallet with pre-filled USDT' : 'User must select TRON network and USDT token',
+            recipient,
+            amount
         });
         
         const modal = createModal(`
@@ -1935,13 +1941,26 @@ async function showTronManualModal(recipient, amount) {
                 
                 <div id="tronQR" class="mx-auto mb-4"></div>
                 
+                ${!isMobile ? `
+                <div class="bg-yellow-50 p-3 rounded mb-3 text-left border border-yellow-300">
+                    <div class="text-xs font-medium text-yellow-800 mb-1">⚠️ Desktop Payment Instructions</div>
+                    <p class="text-xs text-yellow-700">
+                        1. Scan QR code to copy address<br>
+                        2. Open Trust Wallet on your phone<br>
+                        3. Select <strong>TRON network</strong><br>
+                        4. Select <strong>USDT (TRC-20)</strong> token<br>
+                        5. Paste the address and send <strong>${amount} USDT</strong>
+                    </p>
+                </div>
+                ` : `
                 <div class="bg-blue-50 p-3 rounded mb-3 text-left">
-                    <div class="text-xs font-medium text-blue-800 mb-1">📱 Scan with any TRON wallet</div>
+                    <div class="text-xs font-medium text-blue-800 mb-1">📱 Mobile Payment</div>
                     <p class="text-xs text-blue-700">
-                        Scan this QR code with TronLink, Trust Wallet, or TokenPocket.
+                        Scan this QR code with TronLink or Trust Wallet.
                         <br><strong>Amount and recipient are pre-filled automatically.</strong>
                     </p>
                 </div>
+                `}
                 
                 <div class="grid grid-cols-2 gap-2 mb-3">
                     <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
@@ -1951,6 +1970,14 @@ async function showTronManualModal(recipient, amount) {
                         <span>🔍</span> View on Tronscan
                     </button>
                 </div>
+                
+                ${!isMobile ? `
+                <div class="mt-2 mb-2">
+                    <button id="copyAmountBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>💰</span> Copy Amount (${amount} USDT)
+                    </button>
+                </div>
+                ` : ''}
                 
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
@@ -1962,7 +1989,7 @@ async function showTronManualModal(recipient, amount) {
             </div>
         `);
 
-        // Generate QR code with TRON URI
+        // Generate QR code
         setTimeout(() => {
             const qrContainer = modal.querySelector('#tronQR');
             if (qrContainer) {
@@ -2005,9 +2032,28 @@ async function showTronManualModal(recipient, amount) {
                     const btn = modal.querySelector('#copyAddress');
                     btn.textContent = '✅ Copied!';
                     setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
+                    showCryptoAlert('TRON address copied!', 'success', 2000);
                 })
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
         };
+
+        // Copy amount (desktop only)
+        if (!isMobile) {
+            const copyAmountBtn = modal.querySelector('#copyAmountBtn');
+            if (copyAmountBtn) {
+                copyAmountBtn.onclick = () => {
+                    navigator.clipboard.writeText(amount.toString())
+                        .then(() => {
+                            copyAmountBtn.textContent = '✅ Copied!';
+                            setTimeout(() => { 
+                                copyAmountBtn.innerHTML = '<span>💰</span> Copy Amount (${amount} USDT)'; 
+                            }, 2000);
+                            showCryptoAlert('Amount copied!', 'success', 2000);
+                        })
+                        .catch(() => showCryptoAlert('Failed to copy amount', 'error'));
+                };
+            }
+        }
 
         // View on Tronscan
         modal.querySelector('#viewOnTronscan').onclick = () => {
