@@ -770,39 +770,27 @@ function createBSCModal(content, onClose = null) {
 function generateBSCUSDTQR(recipient, amount, element) {
     if (!element) return;
     element.innerHTML = '';
-    
+
     try {
-        // ✅ USDT on BSC uses 6 decimals, NOT 18
-        const USDT_DECIMALS = 6;
-        const amountUnits = BigInt(
-            Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
-        ).toString();
+        // ✅ SOLUTION 1: Plain BSC address only (100% reliable)
+        // No ethereum: prefix, no chainId, just the address
+        const qrContent = recipient;
 
-        // ✅ CORRECT EIP-681 URI for BSC USDT
-        const eip681URI =
-            `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer` +
-            `?address=${recipient}` +
-            `&uint256=${amountUnits}` +
-            `&chainId=56`;
-
-        console.log('[BSC QR] Correct EIP-681 URI:', {
+        console.log('[BSC QR] Using address-only format:', {
             recipient,
             amount,
-            amountUnits,
-            contract: BSC_CONFIG.USDT_ADDRESS,
-            chainId: 56,
-            uri: eip681URI
+            network: 'BSC',
+            method: 'User will enter amount manually'
         });
 
-        // Generate QR code with QRCode.js
+        // Generate QR code with just the address
         if (window.QRCode) {
             try {
                 if (typeof window.QRCode.toCanvas === 'function') {
-                    // Using newer QRCode.js API
                     const canvas = document.createElement('canvas');
                     element.appendChild(canvas);
 
-                    window.QRCode.toCanvas(canvas, eip681URI, {
+                    window.QRCode.toCanvas(canvas, qrContent, {
                         width: 200,
                         margin: 2,
                         color: { dark: '#000000', light: '#FFFFFF' },
@@ -810,58 +798,55 @@ function generateBSCUSDTQR(recipient, amount, element) {
                     }, (error) => {
                         if (error) {
                             console.warn('QR canvas error:', error);
-                            generateFallbackQR(element, eip681URI);
-                        } else {
-                            // Add click to copy
-                            canvas.style.cursor = 'pointer';
-                            canvas.title = 'Click to copy BSC USDT payment URI';
-                            canvas.addEventListener('click', () => {
-                                BSC_UTILS.copyToClipboard(eip681URI);
-                                showBSCAlert('BSC USDT payment URI copied!', 'success');
-                            });
+                            generateFallbackQR(element, qrContent);
                         }
                     });
                 } else if (typeof window.QRCode === 'function') {
-                    // Using older QRCode.js
                     new window.QRCode(element, {
-                        text: eip681URI,
+                        text: qrContent,
                         width: 200,
                         height: 200,
                         colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: window.QRCode.CorrectLevel?.M || 0
+                        colorLight: "#ffffff"
                     });
-                    
-                    // Add click to copy
-                    setTimeout(() => {
-                        const img = element.querySelector('img') || element.querySelector('canvas');
-                        if (img) {
-                            img.style.cursor = 'pointer';
-                            img.title = 'Click to copy BSC USDT payment URI';
-                            img.addEventListener('click', () => {
-                                BSC_UTILS.copyToClipboard(eip681URI);
-                                showBSCAlert('BSC USDT payment URI copied!', 'success');
-                            });
-                        }
-                    }, 100);
                 } else {
-                    generateFallbackQR(element, eip681URI);
+                    generateFallbackQR(element, qrContent);
                 }
             } catch (error) {
                 console.error('QR generation error:', error);
-                generateFallbackQR(element, eip681URI);
+                generateFallbackQR(element, qrContent);
             }
         } else {
-            generateFallbackQR(element, eip681URI);
+            generateFallbackQR(element, qrContent);
         }
-        
+
+        // ✅ Add CLEAR BSC instructions in the UI (not in QR)
+        const instructionDiv = document.createElement('div');
+        instructionDiv.style.marginTop = '16px';
+        instructionDiv.style.padding = '16px';
+        instructionDiv.style.background = 'rgba(240, 185, 11, 0.1)';
+        instructionDiv.style.borderRadius = '12px';
+        instructionDiv.style.border = '1px solid rgba(240, 185, 11, 0.3)';
+        instructionDiv.innerHTML = `
+            <div style="color: var(--bsc-yellow); font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <span>🟡</span> BSC USDT PAYMENT INSTRUCTIONS
+            </div>
+            <div style="color: white; font-size: 14px; line-height: 1.6;">
+                1. Scan QR to copy BSC address<br>
+                2. Open your BSC wallet (MetaMask/Trust Wallet)<br>
+                3. Switch network to <strong style="color: var(--bsc-yellow);">Binance Smart Chain (BSC)</strong><br>
+                4. Send <strong style="color: var(--bsc-yellow);">${amount} USDT (BEP-20)</strong> to the scanned address<br>
+                5. Confirm transaction
+            </div>
+        `;
+        element.appendChild(instructionDiv);
+
     } catch (error) {
         console.error('QR generation failed:', error);
         element.innerHTML = `
             <div style="text-align: center; color: var(--bsc-error); padding: 20px;">
                 <div style="font-size: 48px;">❌</div>
                 <div>QR Generation Failed</div>
-                <div style="font-size: 12px; margin-top: 10px;">${error.message}</div>
             </div>
         `;
     }
