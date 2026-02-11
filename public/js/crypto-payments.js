@@ -130,6 +130,372 @@ if (typeof window === 'undefined') {
             color: #374151;
         }
         
+        /* Additional styles for modals */
+        .hidden {
+            display: none !important;
+        }
+        
+        .flex {
+            display: flex;
+        }
+        
+        .items-center {
+            align-items: center;
+        }
+        
+        .justify-center {
+            justify-content: center;
+        }
+        
+        .mx-auto {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .rounded-xl {
+            border-radius: 0.75rem;
+        }
+        
+        .rounded-lg {
+            border-radius: 0.5rem;
+        }
+        
+        .rounded {
+            border-radius: 0.25rem;
+        }
+        
+        .bg-black\\/80 {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        .bg-white {
+            background-color: #fff;
+        }
+        
+        .bg-gray-100 {
+            background-color: #f3f4f6;
+        }
+        
+        .bg-gray-200 {
+            background-color: #e5e7eb;
+        }
+        
+        .bg-gray-800 {
+            background-color: #1f2937;
+        }
+        
+        .bg-blue-600 {
+            background-color: #2563eb;
+        }
+        
+        .bg-green-600 {
+            background-color: #059669;
+        }
+        
+        .bg-red-600 {
+            background-color: #dc2626;
+        }
+        
+        .bg-yellow-400 {
+            background-color: #fbbf24;
+        }
+        
+        .bg-orange-500 {
+            background-color: #f97316;
+        }
+        
+        .bg-purple-500 {
+            background-color: #8b5cf6;
+        }
+        
+        .bg-gradient-to-r {
+            background-image: linear-gradient(to right, var(--tw-gradient-stops));
+        }
+        
+        .from-blue-600 {
+            --tw-gradient-from: #2563eb;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(37, 99, 235, 0));
+        }
+        
+        .to-purple-600 {
+            --tw-gradient-to: #7c3aed;
+        }
+        
+        .hover\\:from-blue-700:hover {
+            --tw-gradient-from: #1d4ed8;
+        }
+        
+        .hover\\:to-purple-700:hover {
+            --tw-gradient-to: #6d28d9;
+        }
+        
+        .hover\\:bg-blue-700:hover {
+            background-color: #1d4ed8;
+        }
+        
+        .hover\\:bg-gray-300:hover {
+            background-color: #d1d5db;
+        }
+        
+        .hover\\:bg-gray-900:hover {
+            background-color: #111827;
+        }
+        
+        .hover\\:bg-green-700:hover {
+            background-color: #047857;
+        }
+        
+        .hover\\:bg-red-700:hover {
+            background-color: #b91c1c;
+        }
+        
+        .hover\\:bg-yellow-500:hover {
+            background-color: #f59e0b;
+        }
+        
+        .hover\\:bg-orange-600:hover {
+            background-color: #ea580c;
+        }
+        
+        .hover\\:bg-purple-600:hover {
+            background-color: #7c3aed;
+        }
+        
+        .text-white {
+            color: #fff;
+        }
+        
+        .text-gray-500 {
+            color: #6b7280;
+        }
+        
+        .text-gray-600 {
+            color: #4b5563;
+        }
+        
+        .text-gray-700 {
+            color: #374151;
+        }
+        
+        .text-blue-500 {
+            color: #3b82f6;
+        }
+        
+        .text-red-500 {
+            color: #ef4444;
+        }
+        
+        .text-sm {
+            font-size: 0.875rem;
+        }
+        
+        .text-xs {
+            font-size: 0.75rem;
+        }
+        
+        .text-lg {
+            font-size: 1.125rem;
+        }
+        
+        .text-2xl {
+            font-size: 1.5rem;
+        }
+        
+        .font-bold {
+            font-weight: 700;
+        }
+        
+        .font-medium {
+            font-weight: 500;
+        }
+        
+        .font-semibold {
+            font-weight: 600;
+        }
+        
+        .font-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+        
+        .p-2 {
+            padding: 0.5rem;
+        }
+        
+        .p-3 {
+            padding: 0.75rem;
+        }
+        
+        .p-6 {
+            padding: 1.5rem;
+        }
+        
+        .py-2 {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        
+        .py-3 {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        
+        .px-3 {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        
+        .pr-6 {
+            padding-right: 1.5rem;
+        }
+        
+        .mb-2 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .mb-3 {
+            margin-bottom: 0.75rem;
+        }
+        
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+        
+        .mt-2 {
+            margin-top: 0.5rem;
+        }
+        
+        .mt-3 {
+            margin-top: 0.75rem;
+        }
+        
+        .mt-4 {
+            margin-top: 1rem;
+        }
+        
+        .mt-6 {
+            margin-top: 1.5rem;
+        }
+        
+        .my-3 {
+            margin-top: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .w-full {
+            width: 100%;
+        }
+        
+        .w-80 {
+            width: 20rem;
+        }
+        
+        .max-w-\\[90vw\\] {
+            max-width: 90vw;
+        }
+        
+        .max-w-\\[95vw\\] {
+            max-width: 95vw;
+        }
+        
+        .gap-1 {
+            gap: 0.25rem;
+        }
+        
+        .gap-2 {
+            gap: 0.5rem;
+        }
+        
+        .grid {
+            display: grid;
+        }
+        
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        
+        .break-all {
+            word-break: break-all;
+        }
+        
+        .border {
+            border-width: 1px;
+            border-color: #d1d5db;
+        }
+        
+        .border-t {
+            border-top-width: 1px;
+            border-top-color: #d1d5db;
+        }
+        
+        .border-b {
+            border-bottom-width: 1px;
+            border-bottom-color: #d1d5db;
+        }
+        
+        .shadow-md {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .focus\\:ring-2:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        .focus\\:ring-blue-500:focus {
+            --tw-ring-color: #3b82f6;
+        }
+        
+        .focus\\:ring-red-500:focus {
+            --tw-ring-color: #ef4444;
+        }
+        
+        .focus\\:border-blue-500:focus {
+            border-color: #3b82f6;
+        }
+        
+        .outline-none {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+        }
+        
+        .transition-colors {
+            transition-property: color, background-color, border-color;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+        
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+        
+        .z-50 {
+            z-index: 50;
+        }
+        
+        .fixed {
+            position: fixed;
+        }
+        
+        .inset-0 {
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+        
+        .relative {
+            position: relative;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .min-h-6 {
+            min-height: 1.5rem;
+        }
+        
         /* QR Code specific styles */
         .qr-code-container {
             width: 200px;
@@ -160,6 +526,14 @@ if (typeof window === 'undefined') {
             justify-content: center;
             text-align: center;
         }
+        
+        .ring-2 {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        .ring-blue-500 {
+            --tw-ring-color: #3b82f6;
+        }
     `;
     document.head.appendChild(style);
 })();
@@ -188,6 +562,15 @@ function loadQRCodeLibrary() {
     });
 }
 
+// ✅ Ensure Paystack fallback exists
+if (typeof window.initiatePaystackPayment !== 'function') {
+    window.initiatePaystackPayment = function() {
+        console.warn('[Paystack] initiatePaystackPayment not defined - showing fallback');
+        alert('Card payments are being set up. Please use crypto payment or QR code for now.');
+        return false;
+    };
+}
+
 // ✅ Config uses data attributes or hardcoded values
 const scriptTag = document.currentScript || document.querySelector('script[src*="crypto-payments"]');
 
@@ -204,8 +587,13 @@ const CONFIG = {
         EXPLORER: "https://tronscan.org/#/transaction/",
         WALLET_ADDRESS: scriptTag?.dataset?.tronWallet || "TVuPgEs4hSLSwPf8NMirVxeYse1vrmEtXL"
     },
+    WALLETCONNECT: {
+        SRC: "https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js",
+        PROJECT_ID: scriptTag?.dataset?.wcProjectId || "61d9b98f81731dffa9988c0422676fc5"
+    },
     LIMITS: {
         MAX_RETRIES: 3,
+        TIMEOUT_MS: 300000,
         ATTEMPT_TIMEOUT: 5 * 60 * 1000
     }
 };
@@ -216,7 +604,11 @@ const ERROR_CODES = {
     NETWORK_ERROR: 'NETWORK_ERROR',
     WALLET_ERROR: 'WALLET_ERROR',
     TRANSACTION_ERROR: 'TRANSACTION_ERROR',
-    PROVIDER_ERROR: 'PROVIDER_ERROR'
+    TIMEOUT: 'TIMEOUT',
+    PROVIDER_ERROR: 'PROVIDER_ERROR',
+    INITIALIZATION_ERROR: 'INITIALIZATION_ERROR',
+    DEPENDENCY_ERROR: 'DEPENDENCY_ERROR',
+    UNKNOWN_ERROR: 'UNKNOWN_ERROR'
 };
 
 // ======================================================
@@ -229,6 +621,9 @@ class PaymentError extends Error {
         this.name = 'PaymentError';
         this.code = code;
         this.metadata = metadata;
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, PaymentError);
+        }
     }
 }
 
@@ -279,13 +674,26 @@ function checkRateLimit(participantId) {
     setAttempts(participantId, attempts);
 }
 
+function trackEvent(name, metadata = {}) {
+    try {
+        if (window.analytics) {
+            window.analytics.track(name, metadata);
+        }
+        console.log(`[Analytics] ${name}`, metadata);
+    } catch (e) {
+        console.error('Tracking error:', e);
+    }
+}
+
 function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
 function isInAppBrowser() {
+    // Check if we're inside a wallet's in-app browser (MOBILE ONLY)
+    // This should NOT match desktop browser extensions like MetaMask
     if (!isMobileDevice()) {
-        return false;
+        return false; // Desktop browsers with wallet extensions are NOT in-app browsers
     }
     
     const ua = navigator.userAgent.toLowerCase();
@@ -294,103 +702,39 @@ function isInAppBrowser() {
            ua.includes('tokenpocket') ||
            ua.includes('imtoken') ||
            ua.includes('coinbase');
+    // Note: Removed window.ethereum checks since those match desktop extensions too
 }
 
 function getWalletDeepLinks(network, recipient, amount) {
-    if (network === 'BSC') {
-        return {
-            metamask: `https://metamask.app.link/send/${CONFIG.BSC.USDT_ADDRESS}@56/transfer?address=${recipient}&uint256=${amount * 1e6}`,
-            trust: `https://link.trustwallet.com/send?address=${CONFIG.BSC.USDT_ADDRESS}&amount=${amount}&token_id=${CONFIG.BSC.USDT_ADDRESS}&chain_id=56&asset=USDT`,
-            tokenpocket: `tpoutside://pull.activity?param=${encodeURIComponent(JSON.stringify({
-                action: 'transfer',
-                chain: 'BSC',
-                contract: CONFIG.BSC.USDT_ADDRESS,
-                to: recipient,
-                amount: amount.toString()
-            }))}`
-        };
-    } else {
-        return {
-            tronlink: `tronlinkoutside://pull.activity?param=${encodeURIComponent(JSON.stringify({
-                action: 'transfer',
-                contract: CONFIG.TRON.USDT_ADDRESS,
-                to: recipient,
-                amount: (amount * 1e6).toString()
-            }))}`,
-            trust: `trust://send?asset=c195_t${CONFIG.TRON.USDT_ADDRESS}&address=${recipient}&amount=${amount}`
-        };
-    }
-}
-
-// ======================================================
-// 🔔 DISMISSIBLE ALERT SYSTEM
-// ======================================================
-
-function showCryptoAlert(message, type = "info", duration = 5000) {
-    const existingAlert = document.getElementById("crypto-alert");
-    if (existingAlert) existingAlert.remove();
+    // Deep links for popular mobile wallets
+    const chainId = network === 'BSC' ? 56 : 1;
+    const usdtAddress = network === 'BSC' ? CONFIG.BSC.USDT_ADDRESS : '';
     
-    const alertBox = document.createElement("div");
-    alertBox.id = "crypto-alert";
-    alertBox.className = `crypto-alert ${type}`;
-    
-    alertBox.innerHTML = `
-        <span>${message}</span>
-        <button class="crypto-alert-close">×</button>
-    `;
-    
-    document.body.appendChild(alertBox);
-    
-    alertBox.querySelector('.crypto-alert-close').onclick = () => {
-        alertBox.style.animation = "crypto-slide-up 0.3s ease-out forwards";
-        setTimeout(() => alertBox.remove(), 300);
+    return {
+        metamask: `https://metamask.app.link/send/${usdtAddress}@${chainId}/transfer?address=${recipient}&uint256=${amount}e18`,
+        trust: `trust://send?asset=c20000714_t${usdtAddress}&address=${recipient}&amount=${amount}`,
+        tokenpocket: `tpoutside://pull.activity?param=${encodeURIComponent(JSON.stringify({
+            action: 'transfer',
+            chain: 'BSC',
+            contract: usdtAddress,
+            to: recipient,
+            amount: amount.toString()
+        }))}`,
+        // Generic WalletConnect deep link
+        walletconnect: `wc:`
     };
-    
-    if (duration > 0) {
-        setTimeout(() => {
-            if (alertBox.parentNode) {
-                alertBox.style.animation = "crypto-slide-up 0.3s ease-out forwards";
-                setTimeout(() => alertBox.remove(), 300);
-            }
-        }, duration);
-    }
-    
-    return alertBox;
 }
 
-// ======================================================
-// 🧩  UI COMPONENTS (Mobile Only)
-// ======================================================
-
-function createModal(content) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50';
-    modal.innerHTML = content;
-    document.body.appendChild(modal);
-    
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-        }
-    });
-    
-    return modal;
-}
-
-// ======================================================
-// 📱  MOBILE BSC WALLET MODAL
-// ======================================================
-
-function showMobileBSCWalletModal(recipient, amount) {
+function showMobileWalletModal(network, recipient, amount) {
     return new Promise((resolve) => {
         const hasInjectedWallet = window.ethereum || window.BinanceChain;
-        const deepLinks = getWalletDeepLinks('BSC', recipient, amount);
+        const deepLinks = getWalletDeepLinks(network, recipient, amount);
         
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
-                <button class="crypto-modal-close" id="modalCloseX">×</button>
-                <h3 class="font-bold mb-3 text-lg pr-6">💳 BSC USDT Payment</h3>
-                <p class="text-sm text-gray-600 mb-4">Pay <strong>${amount} USDT</strong> (BEP-20)</p>
+                <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
+                <h3 class="font-bold mb-3 text-lg pr-6">💳 Connect Wallet</h3>
+                <p class="text-sm text-gray-600 mb-4">Choose your wallet to pay <strong>${amount} USDT</strong></p>
                 
                 ${hasInjectedWallet ? `
                 <button id="useInjectedWallet" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-lg mb-3 flex items-center justify-center gap-2 font-semibold transition-all shadow-md">
@@ -409,6 +753,9 @@ function showMobileBSCWalletModal(recipient, amount) {
                     <button id="openTokenPocket" class="bg-purple-500 hover:bg-purple-600 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
                         <span>💰</span> TokenPocket
                     </button>
+                    <button id="openOther" class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
+                        <span>📱</span> Other
+                    </button>
                 </div>
                 
                 <div class="border-t pt-3 mt-2">
@@ -421,9 +768,11 @@ function showMobileBSCWalletModal(recipient, amount) {
             </div>
         `);
 
+        // Close handlers
         modal.querySelector('#modalCloseX').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
         modal.querySelector('#cancelPayment').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
 
+        // Use injected wallet (if in wallet browser)
         if (hasInjectedWallet) {
             modal.querySelector('#useInjectedWallet').onclick = () => { 
                 modal.remove(); 
@@ -431,16 +780,38 @@ function showMobileBSCWalletModal(recipient, amount) {
             };
         }
 
-        modal.querySelector('#openMetaMask').onclick = () => window.location.href = deepLinks.metamask;
-        modal.querySelector('#openTrust').onclick = () => window.location.href = deepLinks.trust;
-        modal.querySelector('#openTokenPocket').onclick = () => window.location.href = deepLinks.tokenpocket;
+        // Open wallet apps via deep links
+        modal.querySelector('#openMetaMask').onclick = () => {
+            window.location.href = deepLinks.metamask;
+            // Keep modal open - user will return after wallet interaction
+        };
+        
+        modal.querySelector('#openTrust').onclick = () => {
+            window.location.href = deepLinks.trust;
+        };
+        
+        modal.querySelector('#openTokenPocket').onclick = () => {
+            window.location.href = deepLinks.tokenpocket;
+        };
+        
+        modal.querySelector('#openOther').onclick = () => {
+            // Show address and amount for manual sending
+            modal.remove();
+            resolve({ success: false, showManual: true });
+        };
 
+        // Confirm payment with tx hash
         modal.querySelector('#confirmPayment').onclick = () => {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             modal.remove();
             
             if (txHash && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
-                resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` });
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` 
+                });
             } else if (txHash) {
                 showCryptoAlert('Invalid transaction hash format', 'error');
                 resolve({ success: false, error: 'Invalid transaction hash' });
@@ -451,19 +822,14 @@ function showMobileBSCWalletModal(recipient, amount) {
     });
 }
 
-// ======================================================
-// 📱  MOBILE TRON WALLET MODAL
-// ======================================================
-
-function showMobileTRONWalletModal(recipient, amount) {
+function showMobileTronWalletModal(recipient, amount) {
     return new Promise((resolve) => {
         const hasTronLink = window.tronWeb && window.tronWeb.ready;
-        const deepLinks = getWalletDeepLinks('TRON', recipient, amount);
         
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
-                <button class="crypto-modal-close" id="modalCloseX">×</button>
-                <h3 class="font-bold mb-3 text-lg pr-6">💳 TRON USDT Payment</h3>
+                <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
+                <h3 class="font-bold mb-3 text-lg pr-6">💳 TRON Payment</h3>
                 <p class="text-sm text-gray-600 mb-4">Pay <strong>${amount} USDT</strong> (TRC-20)</p>
                 
                 ${hasTronLink ? `
@@ -476,12 +842,18 @@ function showMobileTRONWalletModal(recipient, amount) {
                     <button id="openTronLink" class="bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
                         <span>🔴</span> TronLink
                     </button>
-                    <button id="openTrust" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
+                    <button id="openTrustTron" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded flex items-center justify-center gap-1 text-sm transition-colors">
                         <span>🛡️</span> Trust
                     </button>
                 </div>
                 
-                <div class="border-t pt-3 mt-2">
+                <div class="bg-gray-100 p-3 rounded mb-3">
+                    <p class="text-xs text-gray-500 mb-1">Send to this address:</p>
+                    <div class="text-xs font-mono break-all text-gray-700">${recipient}</div>
+                    <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mt-2 transition-colors">📋 Copy Address</button>
+                </div>
+                
+                <div class="border-t pt-3">
                     <p class="text-xs text-gray-500 mb-2">Already paid? Enter transaction hash:</p>
                     <input type="text" id="txHashInput" placeholder="Transaction hash..." class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-red-500 outline-none" />
                     <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm transition-colors">✅ Confirm Payment</button>
@@ -491,9 +863,11 @@ function showMobileTRONWalletModal(recipient, amount) {
             </div>
         `);
 
+        // Close handlers
         modal.querySelector('#modalCloseX').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
         modal.querySelector('#cancelPayment').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
 
+        // Use TronLink directly
         if (hasTronLink) {
             modal.querySelector('#useTronLink').onclick = () => { 
                 modal.remove(); 
@@ -501,15 +875,43 @@ function showMobileTRONWalletModal(recipient, amount) {
             };
         }
 
-        modal.querySelector('#openTronLink').onclick = () => window.location.href = deepLinks.tronlink;
-        modal.querySelector('#openTrust').onclick = () => window.location.href = deepLinks.trust;
+        // Open wallet apps
+        modal.querySelector('#openTronLink').onclick = () => {
+            window.location.href = `tronlinkoutside://pull.activity?param=${encodeURIComponent(JSON.stringify({
+                action: 'transfer',
+                contract: CONFIG.TRON.USDT_ADDRESS,
+                to: recipient,
+                amount: (amount * 1e6).toString()
+            }))}`;
+        };
+        
+        modal.querySelector('#openTrustTron').onclick = () => {
+            window.location.href = `trust://send?asset=c195_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&address=${recipient}&amount=${amount}`;
+        };
 
+        // Copy address
+        modal.querySelector('#copyAddress').onclick = () => {
+            navigator.clipboard.writeText(recipient)
+                .then(() => {
+                    const btn = modal.querySelector('#copyAddress');
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
+                })
+                .catch(() => showCryptoAlert('Failed to copy address', 'error'));
+        };
+
+        // Confirm payment
         modal.querySelector('#confirmPayment').onclick = () => {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             modal.remove();
             
             if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
-                resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` });
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` 
+                });
             } else if (txHash) {
                 showCryptoAlert('Invalid transaction hash format', 'error');
                 resolve({ success: false, error: 'Invalid transaction hash' });
@@ -520,45 +922,1007 @@ function showMobileTRONWalletModal(recipient, amount) {
     });
 }
 
+async function waitForWalletProvider(timeout = 3000) {
+    return new Promise((resolve) => {
+        if (window.ethereum) {
+            resolve(true);
+            return;
+        }
+        const startTime = Date.now();
+        const checkInterval = setInterval(() => {
+            if (window.ethereum) {
+                clearInterval(checkInterval);
+                resolve(true);
+            } else if (Date.now() - startTime > timeout) {
+                clearInterval(checkInterval);
+                resolve(false);
+            }
+        }, 100);
+    });
+}
+
+async function requestWalletConnection() {
+    if (!window.ethereum) return false;
+    try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        return accounts && accounts.length > 0;
+    } catch (error) {
+        console.warn('[Wallet] Connection request failed:', error.message);
+        return false;
+    }
+}
+
+function openWalletApp(walletType = 'metamask') {
+    const currentUrl = encodeURIComponent(window.location.href);
+    const deepLinks = {
+        metamask: `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`,
+        trustwallet: `https://link.trustwallet.com/open_url?coin_id=60&url=${currentUrl}`,
+        tokenpocket: `tpoutside://open?params=${currentUrl}`,
+    };
+    return deepLinks[walletType] || deepLinks.metamask;
+}
+
 // ======================================================
-// 📱  MOBILE NETWORK SELECTION MODAL
+// 📱  QR CODE IMPLEMENTATION (UPDATED - FIXED FOR BSC)
 // ======================================================
 
-function showMobileNetworkSelectionModal() {
+/**
+ * Create payment QR code content in proper format for wallets
+ * @param {string} network - 'BSC' or 'TRON'
+ * @param {string} recipient - Wallet address
+ * @param {number} amount - Amount in USDT
+ * @returns {string} QR code content
+ */
+function createPaymentQRContent(network, recipient, amount) {
+    if (network === 'BSC') {
+        // Use plain address format for BSC - this is most compatible
+        // The "ethereum:" prefix confuses wallets into showing ETH
+        // Instead, we just encode the address and show amount in the UI
+        
+        // Simple format that works with most wallet QR scanners
+        const simpleFormat = `${recipient}`;
+        
+        console.log('[BSC QR] Using simple address format:', {
+            recipient: recipient,
+            amount: amount,
+            network: 'BSC (BEP-20)',
+            token: 'USDT',
+            contract: CONFIG.BSC.USDT_ADDRESS
+        });
+        
+        return simpleFormat;
+        
+    } else if (network === 'TRON') {
+        // TRON specific format for TronLink and other TRON wallets
+        const amountSun = (amount * 1e6).toString();
+        return `tron://pay?to=${recipient}&amount=${amountSun}&token=${CONFIG.TRON.USDT_ADDRESS}`;
+    }
+    
+    // Fallback to plain address
+    return recipient;
+}
+
+/**
+ * Generate QR code for payment
+ * @param {string} text - Text to encode in QR
+ * @param {string} elementId - ID of element to render QR in
+ */
+function generateQR(text, elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        console.warn('[QR] Element not found:', elementId);
+        return;
+    }
+    
+    // Clear element
+    element.innerHTML = '';
+    element.className = 'qr-code-container';
+    
+    // Create a wrapper for better display
+    const wrapper = document.createElement('div');
+    wrapper.className = 'text-center';
+    
+    const qrTitle = document.createElement('p');
+    qrTitle.className = 'text-xs text-gray-500 mb-2';
+    qrTitle.textContent = 'Scan with wallet app';
+    
+    const qrContainer = document.createElement('div');
+    qrContainer.id = elementId + '_container';
+    qrContainer.className = 'qr-code-container';
+    
+    wrapper.appendChild(qrTitle);
+    wrapper.appendChild(qrContainer);
+    element.appendChild(wrapper);
+    
+    const displayElement = document.getElementById(elementId + '_container');
+    
+    try {
+        // Try to use QRCode.js library if available
+        if (typeof QRCode !== 'undefined') {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'qr-code-canvas';
+            canvas.width = 180;
+            canvas.height = 180;
+            displayElement.appendChild(canvas);
+            
+            // Generate QR code
+            QRCode.toCanvas(canvas, text, {
+                width: 160,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, (error) => {
+                if (error) {
+                    console.error('[QR] Canvas generation error:', error);
+                    showFallbackQR(displayElement, text);
+                } else {
+                    // Add click to copy functionality
+                    canvas.title = 'Click to copy payment details';
+                    canvas.onclick = () => {
+                        navigator.clipboard.writeText(text)
+                            .then(() => showCryptoAlert('Payment details copied to clipboard!', 'success', 2000))
+                            .catch(() => showCryptoAlert('Failed to copy', 'error'));
+                    };
+                }
+            });
+        } else {
+            // QRCode.js not loaded, use image API fallback
+            showFallbackQR(displayElement, text);
+        }
+    } catch (error) {
+        console.error('[QR] Generation error:', error);
+        showFallbackQR(displayElement, text);
+    }
+}
+
+/**
+ * Show fallback QR code using external API
+ * @param {HTMLElement} element - Element to render in
+ * @param {string} text - Text to encode
+ */
+function showFallbackQR(element, text) {
+    const encodedText = encodeURIComponent(text);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${encodedText}`;
+    
+    const img = document.createElement('img');
+    img.src = qrUrl;
+    img.alt = 'QR Code';
+    img.style.width = '180px';
+    img.style.height = '180px';
+    img.className = 'rounded-lg';
+    
+    img.onerror = () => {
+        // Final fallback - show text
+        element.innerHTML = `
+            <div class="qr-fallback">
+                <div class="text-xs text-gray-500 mb-2">QR Code unavailable</div>
+                <div class="text-xs font-mono break-all bg-gray-100 p-2 rounded">${text.substring(0, 30)}...</div>
+                <button onclick="navigator.clipboard.writeText('${text}').then(() => showCryptoAlert('Copied!', 'success'))" class="text-blue-500 hover:text-blue-700 text-xs mt-2">
+                    📋 Copy Payment Details
+                </button>
+            </div>
+        `;
+    };
+    
+    element.appendChild(img);
+}
+
+// ======================================================
+// 🔔 DISMISSIBLE ALERT SYSTEM
+// ======================================================
+
+/**
+ * Show a dismissible alert message
+ * @param {string} message - The message to display
+ * @param {string} type - Alert type: 'success', 'error', 'info', 'warning'
+ * @param {number} duration - Auto-dismiss after ms (0 = manual dismiss only)
+ * @returns {HTMLElement} The alert element
+ */
+function showCryptoAlert(message, type = "info", duration = 5000) {
+    // Remove any existing alert
+    const existingAlert = document.getElementById("crypto-alert");
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // Create alert container
+    const alertBox = document.createElement("div");
+    alertBox.id = "crypto-alert";
+    alertBox.className = `crypto-alert ${type}`;
+    
+    // Create message span
+    const messageSpan = document.createElement("span");
+    messageSpan.textContent = message;
+    alertBox.appendChild(messageSpan);
+    
+    // Create close button
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "crypto-alert-close";
+    closeBtn.innerHTML = "×";
+    closeBtn.setAttribute("aria-label", "Close alert");
+    closeBtn.onclick = () => dismissAlert(alertBox);
+    alertBox.appendChild(closeBtn);
+    
+    document.body.appendChild(alertBox);
+    
+    // Auto-dismiss after duration
+    if (duration > 0) {
+        setTimeout(() => dismissAlert(alertBox), duration);
+    }
+    
+    return alertBox;
+}
+
+/**
+ * Dismiss an alert with animation
+ * @param {HTMLElement} alertBox - The alert element to dismiss
+ */
+function dismissAlert(alertBox) {
+    if (!alertBox || !alertBox.parentNode) return;
+    
+    alertBox.style.animation = "crypto-slide-up 0.3s ease-out forwards";
+    setTimeout(() => {
+        if (alertBox.parentNode) {
+            alertBox.remove();
+        }
+    }, 300);
+}
+
+// ======================================================
+// 🌐  NETWORK & WALLET MANAGEMENT
+// ======================================================
+
+async function detectPreferredNetwork() {
+    try {
+        if (window.tronWeb && window.tronWeb.ready) {
+            try {
+                const tronNetwork = await window.tronWeb.trx.getNodeInfo();
+                if (tronNetwork && tronNetwork.net) return 'TRON';
+            } catch (e) {
+                console.debug('TRON detection error:', e);
+            }
+        }
+        
+        if (window.ethereum) {
+            try {
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (chainId === '0x38') return 'BSC';
+            } catch (e) {
+                console.debug('BSC detection error:', e);
+            }
+        }
+    } catch (error) {
+        console.warn('Network detection error:', error);
+    }
+    return null;
+}
+
+async function loadWalletConnect() {
+    try {
+        if (window.EthereumProvider) return window.EthereumProvider;
+        
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = CONFIG.WALLETCONNECT.SRC;
+            script.crossOrigin = 'anonymous';
+            
+            // Set a timeout in case script hangs
+            const timeout = setTimeout(() => {
+                reject(new PaymentError(
+                    'WalletConnect loading timed out. Your browser may be blocking external scripts. Please try the QR code option instead.',
+                    ERROR_CODES.PROVIDER_ERROR
+                ));
+            }, 15000);
+            
+            script.onload = () => {
+                clearTimeout(timeout);
+                // Give it a moment for the module to initialize
+                setTimeout(() => {
+                    if (!window.EthereumProvider) {
+                        reject(new PaymentError(
+                            'WalletConnect blocked by browser. Please try the QR code option or disable tracking prevention.',
+                            ERROR_CODES.PROVIDER_ERROR
+                        ));
+                        return;
+                    }
+                    console.log('✅ WalletConnect SDK loaded');
+                    resolve(window.EthereumProvider);
+                }, 500);
+            };
+            
+            script.onerror = () => {
+                clearTimeout(timeout);
+                reject(new PaymentError(
+                    'Failed to load WalletConnect. Please try the QR code option instead.',
+                    ERROR_CODES.PROVIDER_ERROR
+                ));
+            };
+            
+            document.head.appendChild(script);
+        });
+    } catch (error) {
+        console.error('WalletConnect loading error:', error);
+        throw new PaymentError(
+            'WalletConnect unavailable. Please use QR code payment instead.',
+            ERROR_CODES.PROVIDER_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+function normalizeProvider(provider) {
+    if (provider && typeof provider.request === 'function') {
+        return provider;
+    }
+    if (provider && provider.provider && typeof provider.provider.request === 'function') {
+        return provider.provider;
+    }
+    if (window.ethereum) {
+        return window.ethereum;
+    }
+    throw new PaymentError('No valid provider found', ERROR_CODES.PROVIDER_ERROR);
+}
+
+function createEthersProvider(eip1193Provider) {
+    if (typeof ethers === 'undefined') {
+        throw new PaymentError('Ethers.js not loaded', ERROR_CODES.DEPENDENCY_ERROR);
+    }
+    return new ethers.providers.Web3Provider(eip1193Provider);
+}
+
+async function connectWalletMobile() {
+    try {
+        console.debug('[WalletConnect] Loading SDK...');
+        const EthereumProvider = await loadWalletConnect();
+        
+        console.debug('[WalletConnect] Initializing provider...');
+        const provider = await EthereumProvider.init({
+            projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
+            chains: [CONFIG.BSC.CHAIN_ID],
+            showQrModal: true,
+            qrModalOptions: { 
+                themeMode: 'dark',
+                enableExplorer: true 
+            },
+            metadata: {
+                name: "OneDream Voting",
+                description: "Secure USDT Payment",
+                url: window.location.origin,
+                icons: [
+                    `${window.location.origin}/images/logo.png`,
+                    `${window.location.origin}/favicon.ico`
+                ].filter(Boolean)
+            }
+        });
+        
+        console.debug('[WalletConnect] Connecting...');
+        await provider.connect();
+        
+        // ✅ FIX #6: Verify chain after connection
+        const chainId = await provider.request({ method: 'eth_chainId' });
+        if (chainId !== `0x${CONFIG.BSC.CHAIN_ID.toString(16)}`) {
+            console.warn('[WalletConnect] Wrong chain detected:', chainId);
+            // Try to switch chain
+            try {
+                await provider.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: `0x${CONFIG.BSC.CHAIN_ID.toString(16)}` }]
+                });
+            } catch (switchError) {
+                throw new PaymentError(
+                    'Please switch to BSC network in your wallet',
+                    ERROR_CODES.NETWORK_ERROR,
+                    { currentChain: chainId, requiredChain: '0x38' }
+                );
+            }
+        }
+        
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        if (!accounts || accounts.length === 0) {
+            throw new Error('No accounts returned from WalletConnect');
+        }
+        
+        console.debug('[WalletConnect] Connected:', accounts[0]);
+        return provider;
+    } catch (error) {
+        console.error('[WalletConnect] Error:', error);
+        throw new PaymentError(
+            error.message || 'Failed to connect via WalletConnect',
+            ERROR_CODES.WALLET_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function ensureBSCNetworkDesktop(eip1193Provider) {
+    if (isMobileDevice()) {
+        console.debug('[Network] Skipping network switch on mobile');
+        return;
+    }
+    
+    try {
+        const chainId = await eip1193Provider.request({ method: 'eth_chainId' });
+        const targetChainId = `0x${CONFIG.BSC.CHAIN_ID.toString(16)}`;
+        
+        if (chainId !== targetChainId) {
+            try {
+                await eip1193Provider.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: targetChainId }]
+                });
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    await eip1193Provider.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: targetChainId,
+                            chainName: 'Binance Smart Chain',
+                            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                            rpcUrls: [CONFIG.BSC.RPC_URL],
+                            blockExplorerUrls: ['https://bscscan.com/']
+                        }]
+                    });
+                } else {
+                    throw switchError;
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('[Network] Switch failed:', error.message);
+    }
+}
+
+// ======================================================
+// 🏦  PAYMENT PROCESSING
+// ======================================================
+
+async function initializeCryptoPayment(participantId, voteCount, network) {
+    try {
+        trackEvent('payment_initiated', { participantId, voteCount, network });
+        
+        const response = await fetch('/api/onedream/init-crypto-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                participant_id: participantId,
+                vote_count: voteCount,
+                network: network.toLowerCase()
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new PaymentError(
+                errorData.message || 'Backend initialization failed',
+                ERROR_CODES.NETWORK_ERROR,
+                { status: response.status, ...errorData }
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'Payment initialization failed',
+            ERROR_CODES.NETWORK_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function executeBSCTransferUnified(eip1193Provider, recipient, amount) {
+    try {
+        console.debug('[BSC Transfer] Starting unified transfer');
+        
+        const accounts = await eip1193Provider.request({ method: 'eth_accounts' });
+        const from = accounts[0];
+        
+        if (!from) {
+            throw new PaymentError('No wallet account connected', ERROR_CODES.WALLET_ERROR);
+        }
+        
+        console.debug('[BSC Transfer] From:', from);
+        
+        if (typeof ethers === 'undefined') {
+            throw new PaymentError('Ethers.js not loaded', ERROR_CODES.DEPENDENCY_ERROR);
+        }
+        
+        const BSC_USDT_DECIMALS = 18;
+        const amountWei = ethers.utils.parseUnits(amount.toString(), BSC_USDT_DECIMALS);
+        
+        const iface = new ethers.utils.Interface([
+            "function transfer(address to, uint256 amount) returns (bool)"
+        ]);
+        const data = iface.encodeFunctionData("transfer", [recipient, amountWei]);
+        
+        console.debug('[BSC Transfer] Sending transaction...');
+        
+        const txHash = await eip1193Provider.request({
+            method: 'eth_sendTransaction',
+            params: [{
+                from: from,
+                to: CONFIG.BSC.USDT_ADDRESS,
+                data: data
+            }]
+        });
+        
+        console.debug('[BSC Transfer] TX Hash:', txHash);
+        
+        return {
+            txHash: txHash,
+            network: 'BSC',
+            explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}`
+        };
+    } catch (error) {
+        console.error('[BSC Transfer] Error:', error);
+        
+        if (error.code === 4001 || error.code === 'ACTION_REJECTED') {
+            throw new PaymentError('Transaction rejected by user', ERROR_CODES.WALLET_ERROR);
+        }
+        
+        throw new PaymentError(
+            error.message || 'BSC transfer failed',
+            ERROR_CODES.TRANSACTION_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function executeTronTransfer(recipient, amount) {
+    try {
+        if (!window.tronWeb || !window.tronWeb.ready) {
+            throw new PaymentError('TronWeb not available', ERROR_CODES.PROVIDER_ERROR);
+        }
+
+        const contract = await window.tronWeb.contract().at(CONFIG.TRON.USDT_ADDRESS);
+        
+        const TRON_USDT_DECIMALS = 6;
+        const amountSun = Math.floor(amount * Math.pow(10, TRON_USDT_DECIMALS));
+        
+        const tx = await contract.transfer(recipient, amountSun).send();
+
+        if (!tx || !tx.transaction || !tx.transaction.txID) {
+            throw new PaymentError('TRON transaction failed', ERROR_CODES.TRANSACTION_ERROR);
+        }
+
+        return {
+            txHash: tx.transaction.txID,
+            network: 'TRON',
+            explorerUrl: `${CONFIG.TRON.EXPLORER}${tx.transaction.txID}`
+        };
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'TRON transfer failed',
+            ERROR_CODES.TRANSACTION_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+async function finalizePayment(txHash, network) {
+    try {
+        const response = await fetch('/api/onedream/finalize-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                transaction_hash: txHash,
+                network: network.toLowerCase()
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new PaymentError(
+                errorData.message || 'Payment finalization failed',
+                ERROR_CODES.NETWORK_ERROR,
+                { status: response.status, ...errorData }
+            );
+        }
+
+        return await response.json();
+    } catch (error) {
+        throw new PaymentError(
+            error.message || 'Payment finalization failed',
+            ERROR_CODES.NETWORK_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+// ======================================================
+// 🧩  UI COMPONENTS (Updated with proper close handlers)
+// ======================================================
+
+function createModal(content, className = '') {
+    const modal = document.createElement('div');
+    modal.className = `fixed inset-0 bg-black/80 flex items-center justify-center z-50 ${className}`;
+    modal.innerHTML = content;
+    document.body.appendChild(modal);
+    
+    // ✅ FIX: Add click-outside-to-close functionality
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            // Clicking the backdrop closes the modal
+            modal.remove();
+        }
+    });
+    
+    return modal;
+}
+
+function showPaymentStatusModal(network, amount) {
+    const modal = createModal(`
+        <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[90vw] relative">
+            <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
+            <div class="flex justify-between items-center mb-3 pr-6">
+                <h3 class="font-bold text-lg">${network} Payment</h3>
+                <span class="text-xs bg-gray-100 px-2 py-1 rounded">${network === 'BSC' ? 'BEP-20' : 'TRC-20'}</span>
+            </div>
+            <div class="text-2xl font-bold mb-4">${amount} USDT</div>
+            <div id="statusText" class="min-h-6 mb-4">Initializing…</div>
+            <div class="loading-spinner mx-auto mt-4"></div>
+            <div id="txLink" class="mt-4 text-sm hidden">
+                <a href="#" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">View on explorer →</a>
+            </div>
+            <button id="closeModal" class="mt-4 text-gray-500 hover:text-gray-700 text-sm transition-colors">Close</button>
+        </div>
+    `);
+    
+    // ✅ FIX: Attach close handlers
+    const closeX = modal.querySelector('#modalCloseX');
+    const closeBtn = modal.querySelector('#closeModal');
+    
+    if (closeX) {
+        closeX.onclick = () => { modal.remove(); resolve(null); };
+    }
+    if (closeBtn) {
+        closeBtn.onclick = () => { modal.remove(); resolve(null); };
+    }
+    
+    return modal;
+}
+
+// ======================================================
+// 📊  MODAL STATUS HELPER FUNCTIONS
+// ======================================================
+
+function updateStatus(modal, text) {
+    const element = modal.querySelector('#statusText');
+    if (element) element.textContent = text;
+}
+
+function successStatus(modal, txHash, explorerUrl) {
+    updateStatus(modal, '✅ Payment confirmed');
+    const spinner = modal.querySelector('.loading-spinner');
+    if (spinner) spinner.remove();
+    
+    const txLink = modal.querySelector('#txLink');
+    if (txLink) {
+        const link = txLink.querySelector('a');
+        if (link) link.href = explorerUrl;
+        txLink.classList.remove('hidden');
+    }
+    
+    // Auto-close after 5 seconds
+    setTimeout(() => modal.remove(), 5000);
+}
+
+function errorStatus(modal, error) {
+    let message = error.message || 'Payment failed';
+    
+    // Provide user-friendly message for common errors
+    if (error.message && error.message.includes('ethers.BrowserProvider')) {
+        message = 'Wallet connection error - please refresh and try again';
+    }
+    
+    updateStatus(modal, `❌ ${message}`);
+    
+    const spinner = modal.querySelector('.loading-spinner');
+    if (spinner) spinner.remove();
+    
+    const closeBtn = modal.querySelector('#closeModal');
+    if (closeBtn) closeBtn.classList.remove('hidden');
+}
+
+function showNetworkSelectionModal(preferredNetwork) {
     return new Promise((resolve) => {
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl w-80 text-center relative">
-                <button class="crypto-modal-close" id="modalCloseX">×</button>
+                <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
                 <h3 class="font-bold mb-4 pr-6">Choose Network</h3>
                 <button id="bsc" class="w-full bg-yellow-400 hover:bg-yellow-500 py-3 rounded mb-3 flex items-center justify-center gap-2 transition-colors">
                     <span>🟡</span> BSC (BEP-20)
+                    ${preferredNetwork === 'BSC' ? '<span class="text-xs">(Detected)</span>' : ''}
                 </button>
                 <button id="tron" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded flex items-center justify-center gap-2 transition-colors">
                     <span>🔴</span> TRON (TRC-20)
+                    ${preferredNetwork === 'TRON' ? '<span class="text-xs">(Detected)</span>' : ''}
                 </button>
                 <button id="cancel" class="mt-4 text-gray-500 hover:text-gray-700 text-sm transition-colors">Cancel</button>
             </div>
         `);
 
-        modal.querySelector('#modalCloseX').onclick = () => { modal.remove(); resolve(null); };
+        // ✅ FIX: Attach all close/cancel handlers
+        const closeX = modal.querySelector('#modalCloseX');
+        if (closeX) {
+            closeX.onclick = () => { modal.remove(); resolve(null); };
+        }
+        
         modal.querySelector('#bsc').onclick = () => { modal.remove(); resolve('BSC'); };
         modal.querySelector('#tron').onclick = () => { modal.remove(); resolve('TRON'); };
         modal.querySelector('#cancel').onclick = () => { modal.remove(); resolve(null); };
+
+        if (preferredNetwork) {
+            setTimeout(() => {
+                const el = modal.querySelector(`#${preferredNetwork.toLowerCase()}`);
+                if (el) el.classList.add('ring-2', 'ring-blue-500');
+            }, 100);
+        }
     });
 }
 
 // ======================================================
-// 🚀  MAIN ENTRY POINT (MOBILE ONLY)
+// 🖥️  DESKTOP WALLET MODAL (UPDATED - removed browser wallet option)
 // ======================================================
 
-async function initiateMobileCryptoPayment(participantId, voteCount, amount) {
+function showDesktopWalletModal() {
+    return new Promise((resolve) => {
+        const modal = createModal(`
+            <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[90vw] relative">
+                <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
+                <h3 class="font-bold mb-3 text-lg pr-6">📱 Choose Payment Method</h3>
+                <p class="text-sm text-gray-600 mb-4">How would you like to pay?</p>
+                <button id="useWalletConnect" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
+                    <span>🔗</span> WalletConnect (Recommended)
+                </button>
+                <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
+                    <span>📱</span> Pay via QR Code
+                </button>
+                <!-- Browser Wallet option REMOVED from here - now only in QR modal -->
+                <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded mt-2 transition-colors">← Back</button>
+            </div>
+        `);
+
+        // ✅ FIX: Attach close handler
+        const closeX = modal.querySelector('#modalCloseX');
+        if (closeX) {
+            closeX.onclick = () => { modal.remove(); resolve(null); };
+        }
+
+        modal.querySelector('#useWalletConnect').onclick = () => { modal.remove(); resolve('walletconnect'); };
+        modal.querySelector('#useQR').onclick = () => { modal.remove(); resolve('qr'); };
+        modal.querySelector('#goBack').onclick = () => { modal.remove(); resolve('back'); };
+    });
+}
+
+// ======================================================
+// 🔄  UPDATED BSC MANUAL MODAL (Added browser wallet option with proper QR)
+// ======================================================
+
+async function showBSCManualModal(recipient, amount, isDesktop = false) {
+    // Load QR code library first
+    await loadQRCodeLibrary();
+    
+    return new Promise((resolve) => {
+        const hasBrowserWallet = window.ethereum || window.BinanceChain;
+        
+        const modal = createModal(`
+            <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
+                <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
+                <h3 class="font-bold mb-3 pr-6">BSC USDT Payment</h3>
+                
+                <div class="bg-gradient-to-r from-yellow-100 to-yellow-50 p-4 rounded-lg mb-4">
+                    <div class="text-2xl font-bold text-gray-800 mb-1">${amount} USDT</div>
+                    <div class="text-sm text-gray-600">Amount to send</div>
+                    <div class="text-xs text-gray-500 mt-1">BEP-20 Network</div>
+                </div>
+                
+                <p class="text-sm mb-2">Send to this BSC address:</p>
+                <div class="bg-gray-100 p-3 rounded break-all text-xs mb-3 font-mono border border-gray-200">${recipient}</div>
+                
+                <div id="bscQR" class="mb-4"></div>
+                
+                <div class="bg-blue-50 p-3 rounded mb-3 text-left">
+                    <div class="text-xs font-medium text-blue-800 mb-1">📱 How to pay:</div>
+                    <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
+                        <li>Scan QR with wallet app</li>
+                        <li>Ensure you're on <strong>BSC (Binance Smart Chain)</strong></li>
+                        <li>Send <strong>${amount} USDT (BEP-20)</strong></li>
+                        <li>Confirm the transaction</li>
+                    </ol>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>📋</span> Copy Address
+                    </button>
+                    <button id="viewOnBscScan" class="bg-gray-500 hover:bg-gray-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>🔍</span> View on BscScan
+                    </button>
+                </div>
+                
+                ${isDesktop && hasBrowserWallet ? `
+                <div class="border-t border-b py-3 my-3">
+                    <p class="text-sm font-medium mb-2">💻 Connect Browser Wallet:</p>
+                    <button id="connectBrowserWallet" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
+                        <span>🦊</span> Connect MetaMask
+                    </button>
+                    <p class="text-xs text-gray-500">Use browser extension to pay directly</p>
+                </div>
+                ` : ''}
+                
+                <div class="border-t pt-3 mt-3">
+                    <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
+                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (0x...)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
+                </div>
+                <button id="closeBSC" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
+            </div>
+        `);
+
+        // Generate QR code with proper payment format
+        const qrContent = createPaymentQRContent('BSC', recipient, amount);
+        console.log('[BSC QR] Content:', qrContent);
+        console.log('[BSC Payment Details]', {
+            recipient: recipient,
+            amount: amount,
+            token: 'USDT',
+            network: 'BSC (BEP-20)',
+            chainId: 56,
+            contract: CONFIG.BSC.USDT_ADDRESS
+        });
+        generateQR(qrContent, 'bscQR');
+
+        // ✅ FIX: Attach close handler
+        const closeX = modal.querySelector('#modalCloseX');
+        if (closeX) {
+            closeX.onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+        }
+
+        modal.querySelector('#copyAddress').onclick = () => {
+            navigator.clipboard.writeText(recipient)
+                .then(() => {
+                    const btn = modal.querySelector('#copyAddress');
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
+                })
+                .catch(() => showCryptoAlert('Failed to copy address', 'error'));
+        };
+
+        modal.querySelector('#viewOnBscScan').onclick = () => {
+            window.open(`https://bscscan.com/address/${recipient}`, '_blank');
+        };
+
+        // Browser wallet connection (for desktop only)
+        if (isDesktop && hasBrowserWallet) {
+            modal.querySelector('#connectBrowserWallet').onclick = () => {
+                modal.remove();
+                resolve({ success: false, connectBrowserWallet: true });
+            };
+        }
+
+        modal.querySelector('#confirmPayment').onclick = () => {
+            const txHash = modal.querySelector('#txHashInput').value.trim();
+            
+            if (!txHash) {
+                if (!confirm(`No transaction hash entered. Are you sure you have already sent ${amount} USDT on BSC network?`)) {
+                    return;
+                }
+            }
+            
+            modal.remove();
+            if (txHash && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` 
+                });
+            } else if (txHash) {
+                showCryptoAlert('Invalid transaction hash format (should start with 0x and be 64 chars)', 'error');
+                resolve({ success: false, error: 'Invalid transaction hash' });
+            } else {
+                resolve({ success: false, manual: true, pendingConfirmation: true });
+            }
+        };
+
+        modal.querySelector('#closeBSC').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+    });
+}
+
+// ======================================================
+// 🔄  UPDATED TRON MANUAL MODAL (with proper QR)
+// ======================================================
+
+async function showTronManualModal(recipient, amount) {
+    // Load QR code library first
+    await loadQRCodeLibrary();
+    
+    return new Promise((resolve) => {
+        const modal = createModal(`
+            <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
+                <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
+                <h3 class="font-bold mb-3 pr-6">TRON USDT Payment</h3>
+                <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (TRC-20) to:</p>
+                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
+                <div id="tronQR" class="mx-auto mb-3"></div>
+                <p class="text-xs text-gray-500 mb-1">Scan with Tron wallet to auto-fill payment details</p>
+                <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on TRON network</p>
+                <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
+                <div class="border-t pt-3 mt-3">
+                    <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
+                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
+                </div>
+                <button id="closeTron" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
+            </div>
+        `);
+
+        // Generate QR code with proper TRON payment format
+        const qrContent = createPaymentQRContent('TRON', recipient, amount);
+        console.log('[TRON QR] Content:', qrContent);
+        generateQR(qrContent, 'tronQR');
+
+        // ✅ FIX: Attach close handler
+        const closeX = modal.querySelector('#modalCloseX');
+        if (closeX) {
+            closeX.onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+        }
+
+        modal.querySelector('#copyAddress').onclick = () => {
+            navigator.clipboard.writeText(recipient)
+                .then(() => {
+                    const btn = modal.querySelector('#copyAddress');
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
+                })
+                .catch(() => showCryptoAlert('Failed to copy address', 'error'));
+        };
+
+        modal.querySelector('#confirmPayment').onclick = () => {
+            const txHash = modal.querySelector('#txHashInput').value.trim();
+            
+            if (!txHash) {
+                if (!confirm('No transaction hash entered. Are you sure you have already sent the payment?')) {
+                    return;
+                }
+            }
+            
+            modal.remove();
+            if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` 
+                });
+            } else {
+                resolve({ success: false, manual: true, pendingConfirmation: true });
+            }
+        };
+
+        modal.querySelector('#closeTron').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+    });
+}
+
+// ======================================================
+// 🚀  MAIN ENTRY POINT (Updated for desktop flow)
+// ======================================================
+
+async function initiateCryptoPayment(participantId, voteCount, amount) {
+    let modal = null;
+    
     try {
         // Validate inputs
         validateInputs(participantId, voteCount);
         checkRateLimit(participantId);
         
+        // Detect preferred network
+        const preferredNetwork = await detectPreferredNetwork();
+        
         // Show network selection
-        const selectedNetwork = await showMobileNetworkSelectionModal();
+        const selectedNetwork = await showNetworkSelectionModal(preferredNetwork);
         if (!selectedNetwork) {
             return { success: false, cancelled: true };
         }
@@ -568,132 +1932,225 @@ async function initiateMobileCryptoPayment(participantId, voteCount, amount) {
             ? CONFIG.BSC.WALLET_ADDRESS 
             : CONFIG.TRON.WALLET_ADDRESS;
         
-        const isInWalletBrowser = isInAppBrowser();
-        
-        // Handle BSC payment
+        // For BSC: Show different options for mobile vs desktop
         if (selectedNetwork === 'BSC') {
-            // If we're inside a wallet's browser, use the injected provider
+            const isMobile = isMobileDevice();
+            const isInWalletBrowser = isInAppBrowser();
+            
+            // If we're inside a wallet's browser, use the injected provider directly
             if (isInWalletBrowser && window.ethereum) {
+                console.log('[Payment] Detected in-app wallet browser, using injected provider');
+                modal = showPaymentStatusModal(selectedNetwork, amount);
+                updateStatus(modal, 'Connecting wallet...');
+                
                 try {
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    if (!accounts || accounts.length === 0) {
-                        throw new Error('Failed to connect wallet');
+                    const connected = await requestWalletConnection();
+                    if (!connected) {
+                        throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
                     }
                     
-                    return {
-                        success: true,
-                        txHash: 'injected_wallet_tx',
-                        explorerUrl: CONFIG.BSC.EXPLORER,
+                    await ensureBSCNetworkDesktop(window.ethereum);
+                    
+                    updateStatus(modal, 'Confirm in wallet...');
+                    const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
+                    
+                    updateStatus(modal, 'Finalizing...');
+                    await finalizePayment(result.txHash, selectedNetwork);
+                    
+                    successStatus(modal, result.txHash, result.explorerUrl);
+                    
+                    return { 
+                        success: true, 
+                        ...result,
                         participant_id: participantId,
                         payment_amount: amount,
-                        payment_intent_id: `mobile_${Date.now()}`
+                        payment_intent_id: result.txHash
                     };
-                } catch (error) {
-                    console.error('Injected wallet error:', error);
-                    // Fall back to mobile wallet modal
-                    const mobileResult = await showMobileBSCWalletModal(recipient, amount);
-                    if (mobileResult.success) {
-                        return {
-                            ...mobileResult,
-                            participant_id: participantId,
-                            payment_amount: amount
-                        };
-                    }
-                    return mobileResult;
+                } catch (walletError) {
+                    if (modal) modal.remove();
+                    throw walletError;
                 }
             }
             
-            // Show mobile BSC wallet modal
-            const mobileResult = await showMobileBSCWalletModal(recipient, amount);
-            if (mobileResult.useInjected && window.ethereum) {
-                // Handle injected wallet connection
-                try {
-                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    if (!accounts || accounts.length === 0) {
-                        throw new Error('Failed to connect wallet');
-                    }
-                    
-                    return {
-                        success: true,
-                        txHash: 'injected_wallet_tx',
-                        explorerUrl: CONFIG.BSC.EXPLORER,
-                        participant_id: participantId,
-                        payment_amount: amount
-                    };
-                } catch (error) {
-                    showCryptoAlert('Failed to connect wallet', 'error');
-                    return { success: false, error: error.message };
+            // Mobile device - show mobile wallet modal with deep links
+            if (isMobile) {
+                const mobileResult = await showMobileWalletModal(selectedNetwork, recipient, amount);
+                
+                if (mobileResult.cancelled) {
+                    return { success: false, cancelled: true };
                 }
+                
+                // User wants to use injected wallet
+                if (mobileResult.useInjected && window.ethereum) {
+                    modal = showPaymentStatusModal(selectedNetwork, amount);
+                    updateStatus(modal, 'Connecting wallet...');
+                    
+                    try {
+                        const connected = await requestWalletConnection();
+                        if (!connected) {
+                            throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
+                        }
+                        
+                        await ensureBSCNetworkDesktop(window.ethereum);
+                        
+                        updateStatus(modal, 'Confirm in wallet...');
+                        const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
+                        
+                        updateStatus(modal, 'Finalizing...');
+                        await finalizePayment(result.txHash, selectedNetwork);
+                        
+                        successStatus(modal, result.txHash, result.explorerUrl);
+                        
+                        return { 
+                            success: true, 
+                            ...result,
+                            participant_id: participantId,
+                            payment_amount: amount,
+                            payment_intent_id: result.txHash
+                        };
+                    } catch (walletError) {
+                        if (modal) modal.remove();
+                        throw walletError;
+                    }
+                }
+                
+                // User chose "Other" - show manual payment
+                if (mobileResult.showManual) {
+                    const manualResult = await showBSCManualModal(recipient, amount, false);
+                    if (manualResult.success) {
+                        return {
+                            ...manualResult,
+                            participant_id: participantId,
+                            payment_amount: amount,
+                            payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+                        };
+                    }
+                    return manualResult;
+                }
+                
+                // User confirmed payment with tx hash
+                if (mobileResult.success) {
+                    return {
+                        ...mobileResult,
+                        participant_id: participantId,
+                        payment_amount: amount,
+                        payment_intent_id: mobileResult.txHash || `manual_${Date.now()}`
+                    };
+                }
+                
+                return mobileResult;
+            }
+            
+            // 🚫 Desktop logic removed: No BSCPayments module, no desktop fallback, no browser wallet connect
+            // Always show manual modal for desktop (as fallback)
+            const manualResult = await showBSCManualModal(recipient, amount, false);
+
+            // User cancelled
+            if (manualResult.cancelled) {
+                return { success: false, cancelled: true };
+            }
+
+            // User submitted manual payment confirmation
+            if (manualResult.success) {
+                return {
+                    ...manualResult,
+                    participant_id: participantId,
+                    payment_amount: amount,
+                    payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+                };
+            }
+
+            return manualResult;
+        }
+        
+        // TRON network handling
+        const hasTronWallet = window.tronWeb && window.tronWeb.ready;
+        const isMobileTron = isMobileDevice();
+        
+        // Mobile TRON handling
+        if (isMobileTron) {
+            // Check if in TronLink app browser
+            if (hasTronWallet) {
+                modal = showPaymentStatusModal(selectedNetwork, amount);
+                updateStatus(modal, 'Confirm in TronLink...');
+                const result = await executeTronTransfer(recipient, amount);
+                
+                updateStatus(modal, 'Finalizing...');
+                await finalizePayment(result.txHash, selectedNetwork);
+                
+                successStatus(modal, result.txHash, result.explorerUrl);
+                
+                return { 
+                    success: true, 
+                    ...result,
+                    participant_id: participantId,
+                    payment_amount: amount,
+                    payment_intent_id: result.txHash
+                };
+            }
+            
+            // Show mobile TRON wallet modal with deep links
+            const mobileResult = await showMobileTronWalletModal(recipient, amount);
+            
+            if (mobileResult.useTronLink) {
+                // User chose to use TronLink (in-app browser)
+                modal = showPaymentStatusModal(selectedNetwork, amount);
+                updateStatus(modal, 'Confirm in TronLink...');
+                const result = await executeTronTransfer(recipient, amount);
+                
+                updateStatus(modal, 'Finalizing...');
+                await finalizePayment(result.txHash, selectedNetwork);
+                
+                successStatus(modal, result.txHash, result.explorerUrl);
+                
+                return { 
+                    success: true, 
+                    ...result,
+                    participant_id: participantId,
+                    payment_amount: amount,
+                    payment_intent_id: result.txHash
+                };
             }
             
             if (mobileResult.success) {
                 return {
                     ...mobileResult,
                     participant_id: participantId,
-                    payment_amount: amount
+                    payment_amount: amount,
+                    payment_intent_id: mobileResult.txHash || `manual_${Date.now()}`
                 };
             }
             
             return mobileResult;
         }
         
-        // Handle TRON payment
-        if (selectedNetwork === 'TRON') {
-            // If we're inside TronLink browser
-            if (isInWalletBrowser && window.tronWeb && window.tronWeb.ready) {
-                try {
-                    return {
-                        success: true,
-                        txHash: 'tronlink_tx',
-                        explorerUrl: CONFIG.TRON.EXPLORER,
-                        participant_id: participantId,
-                        payment_amount: amount
-                    };
-                } catch (error) {
-                    console.error('TronLink error:', error);
-                    const mobileResult = await showMobileTRONWalletModal(recipient, amount);
-                    if (mobileResult.success) {
-                        return {
-                            ...mobileResult,
-                            participant_id: participantId,
-                            payment_amount: amount
-                        };
-                    }
-                    return mobileResult;
-                }
-            }
-            
-            // Show mobile TRON wallet modal
-            const mobileResult = await showMobileTRONWalletModal(recipient, amount);
-            if (mobileResult.useTronLink && window.tronWeb && window.tronWeb.ready) {
-                try {
-                    return {
-                        success: true,
-                        txHash: 'tronlink_tx',
-                        explorerUrl: CONFIG.TRON.EXPLORER,
-                        participant_id: participantId,
-                        payment_amount: amount
-                    };
-                } catch (error) {
-                    showCryptoAlert('Failed to connect TronLink', 'error');
-                    return { success: false, error: error.message };
-                }
-            }
-            
-            if (mobileResult.success) {
-                return {
-                    ...mobileResult,
-                    participant_id: participantId,
-                    payment_amount: amount
-                };
-            }
-            
-            return mobileResult;
+        // Desktop TRON handling: always show manual modal (no desktop TronLink)
+        const manualResult = await showTronManualModal(recipient, amount);
+        if (manualResult.success) {
+            return {
+                ...manualResult,
+                participant_id: participantId,
+                payment_amount: amount,
+                payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+            };
         }
+        return manualResult;
         
     } catch (error) {
-        console.error('[MobilePayment] Error:', error);
-        showCryptoAlert(error.message || 'Payment failed', 'error');
+        console.error('[CryptoPayment] Error:', error);
+        
+        if (modal) {
+            errorStatus(modal, error);
+        } else {
+            showCryptoAlert(error.message || 'Payment failed. Please try again.', 'error');
+        }
+        
+        trackEvent('payment_error', { 
+            error: error.message, 
+            code: error.code,
+            participantId 
+        });
+        
         return { success: false, error: error.message };
     }
 }
@@ -702,23 +2159,121 @@ async function initiateMobileCryptoPayment(participantId, voteCount, amount) {
 // 🌍  GLOBAL EXPORTS
 // ======================================================
 
-window.initiateMobileCryptoPayment = initiateMobileCryptoPayment;
-window.MobileCryptoPayments = {
-    initiate: initiateMobileCryptoPayment,
-    showBSCWallet: showMobileBSCWalletModal,
-    showTRONWallet: showMobileTRONWalletModal,
-    showNetworkSelection: showMobileNetworkSelectionModal,
-    showAlert: showCryptoAlert,
-    loadQRCodeLibrary,
+window.initiateCryptoPayment = initiateCryptoPayment;
+window.processCryptoPayment = initiateCryptoPayment; // ✅ Alias for vote-payments.js compatibility
+window.CryptoPayments = {
+    initiate: initiateCryptoPayment,
+    process: initiateCryptoPayment, // ✅ Alias
+    showBSCManualModal,
+    showTronManualModal,
+    showNetworkSelectionModal,
+    showAlert: showCryptoAlert,  // ✅ Export alert function
+    dismissAlert,                 // ✅ Export dismiss function
+    generateQR,                   // ✅ Export QR function
+    createPaymentQRContent,       // ✅ Export QR content creator
+    createAlternativeBSCQR,       // ✅ Add alternative QR creator
+    debugQRContent,               // ✅ Add debug function
+    loadQRCodeLibrary,            // ✅ Export QR library loader
     CONFIG,
     ERROR_CODES
 };
 
-// ✅ Set ready flag
-window.MobileCryptoPaymentsReady = true;
+// ======================================================
+// 📝  ADDITIONAL HELPER FUNCTIONS FOR BSC PAYMENTS
+// ======================================================
 
-// ✅ Dispatch ready event
-document.dispatchEvent(new CustomEvent('mobileCryptoPaymentsReady'));
+/**
+ * Alternative QR format that might work better with some wallets
+ */
+function createAlternativeBSCQR(recipient, amount) {
+    // Some wallets prefer this format
+    const amountWei = (amount * 1e18).toString();
+    
+    // Format 1: JSON-RPC style (works with some wallets)
+    const jsonRPC = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_sendTransaction",
+        params: [{
+            to: CONFIG.BSC.USDT_ADDRESS,
+            data: `0xa9059cbb000000000000000000000000${recipient.replace('0x', '')}${amountWei.replace('0x', '').padStart(64, '0')}`
+        }],
+        id: 1
+    });
+    
+    // Format 2: Web3 QR format
+    const web3Format = `web3://send?address=${recipient}&amount=${amount}&token=${CONFIG.BSC.USDT_ADDRESS}&network=bsc&chainId=56`;
+    
+    // Format 3: Simple text with all details
+    const simpleFormat = `Send ${amount} USDT (BEP-20)
+To: ${recipient}
+Network: BSC (Binance Smart Chain)
+Token: USDT (${CONFIG.BSC.USDT_ADDRESS})
+Amount: ${amount} USDT`;
+    
+    return {
+        jsonRPC,
+        web3Format,
+        simpleFormat
+    };
+}
 
-console.log('✅ Mobile Crypto Payments module loaded (BSC + TRON)');
-console.log('📱 Mobile devices only - desktop payments disabled');
+/**
+ * Debug function for QR content
+ */
+function debugQRContent(network, recipient, amount) {
+    const qrContent = createPaymentQRContent(network, recipient, amount);
+    const alternatives = network === 'BSC' ? createAlternativeBSCQR(recipient, amount) : null;
+    
+    console.group('QR Code Debug Info');
+    console.log('Network:', network);
+    console.log('Recipient:', recipient);
+    console.log('Amount:', amount, 'USDT');
+    console.log('Primary QR Content:', qrContent);
+    console.log('QR Content Length:', qrContent.length);
+    
+    if (network === 'BSC') {
+        console.log('BSC Contract:', CONFIG.BSC.USDT_ADDRESS);
+        console.log('Chain ID:', CONFIG.BSC.CHAIN_ID);
+        console.log('Amount in Wei:', (amount * 1e18).toString());
+        console.log('Alternative Formats:', alternatives);
+        
+        // Test if it's a valid EIP-681 format
+        if (qrContent.startsWith('ethereum:')) {
+            console.log('✅ Valid EIP-681 format detected');
+            const parts = qrContent.split('/');
+            console.log('Contract:', parts[0].split('@')[0].replace('ethereum:', ''));
+            console.log('Chain ID:', parts[0].split('@')[1]);
+            
+            if (parts[1]) {
+                const params = new URLSearchParams(parts[1].replace('transfer?', ''));
+                console.log('Recipient:', params.get('address'));
+                console.log('Amount (Wei):', params.get('uint256'));
+            }
+        }
+    }
+    
+    console.groupEnd();
+    
+    return {
+        primary: qrContent,
+        alternatives: alternatives
+    };
+}
+
+// Add keyboard shortcut for debugging
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        console.log('🔧 Crypto Payments Debug Mode');
+        console.log('Available functions:', Object.keys(window.CryptoPayments));
+        console.log('Config:', CONFIG);
+        showCryptoAlert('Debug mode enabled - check console', 'info', 3000);
+    }
+});
+
+// ✅ Set ready flag for external scripts to check
+window.CryptoPaymentsReady = true;
+
+// ✅ Dispatch custom event to notify listeners that module is loaded
+document.dispatchEvent(new CustomEvent('cryptoPaymentsReady'));
+
+console.log('✅ Crypto Payments module loaded with enhanced QR support');
