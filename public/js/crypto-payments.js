@@ -929,51 +929,51 @@ function showMobileTronWalletModal(recipient, amount) {
  * Generate WalletConnect URI for TRON USDT payment
  * This is the ONLY reliable way to pre-fill recipient, amount, and token
  */
-async function generateTronWalletConnectURI(recipient, amount) {
-    try {
-        // Load WalletConnect if not available
-        if (typeof window.EthereumProvider === 'undefined') {
-            await loadWalletConnect();
-        }
+// async function generateTronWalletConnectURI(recipient, amount) {
+//     try {
+//         // Load WalletConnect if not available
+//         if (typeof window.EthereumProvider === 'undefined') {
+//             await loadWalletConnect();
+//         }
         
-        if (!window.EthereumProvider) {
-            throw new Error('WalletConnect not available');
-        }
+//         if (!window.EthereumProvider) {
+//             throw new Error('WalletConnect not available');
+//         }
         
-        // Initialize WalletConnect provider
-        const provider = await window.EthereumProvider.init({
-            projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
-            chains: [1], // Not actually used for TRON, but required
-            showQrModal: false, // We'll show our own QR
-            metadata: {
-                name: "OneDream Voting",
-                description: "Secure USDT Payment on TRON",
-                url: window.location.origin,
-                icons: [`${window.location.origin}/favicon.ico`]
-            }
-        });
+//         // Initialize WalletConnect provider
+//         const provider = await window.EthereumProvider.init({
+//             projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
+//             chains: [1], // Not actually used for TRON, but required
+//             showQrModal: false, // We'll show our own QR
+//             metadata: {
+//                 name: "OneDream Voting",
+//                 description: "Secure USDT Payment on TRON",
+//                 url: window.location.origin,
+//                 icons: [`${window.location.origin}/favicon.ico`]
+//             }
+//         });
         
-        // Create a session with TRON-specific parameters
-        const wcURI = await provider.connect({
-            method: 'tron_signTransaction',
-            params: [{
-                to: CONFIG.TRON.USDT_ADDRESS,
-                function: 'transfer(address,uint256)',
-                parameters: [recipient, (amount * 1e6).toString()],
-                network: 'tron',
-                contract: CONFIG.TRON.USDT_ADDRESS,
-                amount: amount,
-                token: 'USDT'
-            }]
-        });
+//         // Create a session with TRON-specific parameters
+//         const wcURI = await provider.connect({
+//             method: 'tron_signTransaction',
+//             params: [{
+//                 to: CONFIG.TRON.USDT_ADDRESS,
+//                 function: 'transfer(address,uint256)',
+//                 parameters: [recipient, (amount * 1e6).toString()],
+//                 network: 'tron',
+//                 contract: CONFIG.TRON.USDT_ADDRESS,
+//                 amount: amount,
+//                 token: 'USDT'
+//             }]
+//         });
         
-        return wcURI;
+//         return wcURI;
         
-    } catch (error) {
-        console.error('[WalletConnect] Failed to generate TRON URI:', error);
-        throw error;
-    }
-}
+//     } catch (error) {
+//         console.error('[WalletConnect] Failed to generate TRON URI:', error);
+//         throw error;
+//     }
+// }
 async function waitForWalletProvider(timeout = 3000) {
     return new Promise((resolve) => {
         if (window.ethereum) {
@@ -1252,6 +1252,7 @@ async function detectPreferredNetwork() {
 }
 
 async function loadWalletConnect() {
+    
     try {
         if (window.EthereumProvider) return window.EthereumProvider;
         
@@ -1896,7 +1897,6 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
 // ======================================================
 
 async function showTronManualModal(recipient, amount) {
-    // Load QR code library first
     await loadQRCodeLibrary();
     
     return new Promise((resolve) => {
@@ -1905,8 +1905,18 @@ async function showTronManualModal(recipient, amount) {
         // ✅ TRON USDT uses 6 decimals
         const amountSun = BigInt(Math.round(parseFloat(amount) * 10 ** 6)).toString();
         
-        // ✅ Mobile: Native TRON URI (works with TronLink)
+        // ✅ THIS WORKS - Native TRON URI (supports all TRON wallets)
         const tronURI = `tron://${CONFIG.TRON.USDT_ADDRESS}/transfer?address=${recipient}&amount=${amountSun}`;
+        
+        // ✅ Use TRON URI for BOTH mobile AND desktop
+        // This works with TronLink, Trust Wallet, TokenPocket, etc.
+        const qrContent = tronURI;
+        
+        console.log('[TRON] Using TRON URI:', {
+            mode: isMobile ? 'Mobile' : 'Desktop',
+            uri: tronURI
+        });
+        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
@@ -1923,26 +1933,15 @@ async function showTronManualModal(recipient, amount) {
                     ${recipient}
                 </div>
                 
-                <div id="tronQR" class="mx-auto mb-4">
-                    ${!isMobile ? '<div class="text-sm text-gray-500">Generating WalletConnect QR...</div>' : ''}
-                </div>
+                <div id="tronQR" class="mx-auto mb-4"></div>
                 
-                ${!isMobile ? `
-                <div class="bg-green-50 p-3 rounded mb-3 text-left">
-                    <div class="text-xs font-medium text-green-800 mb-1">✅ WalletConnect QR</div>
-                    <p class="text-xs text-green-700">
-                        Scan this QR code with Trust Wallet or any WalletConnect-compatible wallet.
+                <div class="bg-blue-50 p-3 rounded mb-3 text-left">
+                    <div class="text-xs font-medium text-blue-800 mb-1">📱 Scan with any TRON wallet</div>
+                    <p class="text-xs text-blue-700">
+                        Scan this QR code with TronLink, Trust Wallet, or TokenPocket.
                         <br><strong>Amount and recipient are pre-filled automatically.</strong>
                     </p>
                 </div>
-                ` : `
-                <div class="bg-blue-50 p-3 rounded mb-3 text-left">
-                    <div class="text-xs font-medium text-blue-800 mb-1">📱 Mobile Payment</div>
-                    <p class="text-xs text-blue-700">
-                        Scan this QR code with TronLink or Trust Wallet.
-                    </p>
-                </div>
-                `}
                 
                 <div class="grid grid-cols-2 gap-2 mb-3">
                     <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
@@ -1962,6 +1961,36 @@ async function showTronManualModal(recipient, amount) {
                 <button id="closeTron" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
             </div>
         `);
+
+        // Generate QR code with TRON URI
+        setTimeout(() => {
+            const qrContainer = modal.querySelector('#tronQR');
+            if (qrContainer) {
+                if (window.QRCode) {
+                    if (typeof window.QRCode.toCanvas === 'function') {
+                        const canvas = document.createElement('canvas');
+                        qrContainer.appendChild(canvas);
+                        
+                        window.QRCode.toCanvas(canvas, qrContent, {
+                            width: 180,
+                            margin: 2
+                        }, (error) => {
+                            if (error) {
+                                generateFallbackQR(qrContainer, qrContent);
+                            }
+                        });
+                    } else {
+                        new window.QRCode(qrContainer, {
+                            text: qrContent,
+                            width: 180,
+                            height: 180
+                        });
+                    }
+                } else {
+                    generateFallbackQR(qrContainer, qrContent);
+                }
+            }
+        }, 100);
 
         // Close handler
         const closeX = modal.querySelector('#modalCloseX');
@@ -1984,66 +2013,6 @@ async function showTronManualModal(recipient, amount) {
         modal.querySelector('#viewOnTronscan').onclick = () => {
             window.open(`https://tronscan.org/#/address/${recipient}`, '_blank');
         };
-
-        // ✅ Generate QR code based on device
-        setTimeout(async () => {
-            const qrContainer = modal.querySelector('#tronQR');
-            if (!qrContainer) return;
-            
-            qrContainer.innerHTML = '';
-            
-            try {
-                let qrText;
-                
-                if (isMobile) {
-                    // Mobile: Use native TRON URI
-                    qrText = tronURI;
-                    console.log('[TRON Mobile] Using TronLink URI');
-                } else {
-                    // Desktop: Use WalletConnect
-                    try {
-                        showCryptoAlert('Generating WalletConnect QR...', 'info', 2000);
-                        qrText = await generateTronWalletConnectURI(recipient, amount);
-                        console.log('[TRON Desktop] WalletConnect URI generated');
-                    } catch (wcError) {
-                        console.error('[TRON Desktop] WalletConnect failed, falling back to address:', wcError);
-                        showCryptoAlert('WalletConnect unavailable, using address QR', 'warning', 3000);
-                        qrText = recipient;
-                    }
-                }
-                
-                // Generate QR code
-                if (window.QRCode) {
-                    if (typeof window.QRCode.toCanvas === 'function') {
-                        const canvas = document.createElement('canvas');
-                        qrContainer.appendChild(canvas);
-                        
-                        window.QRCode.toCanvas(canvas, qrText, {
-                            width: 180,
-                            margin: 2,
-                            color: { dark: '#000000', light: '#FFFFFF' }
-                        }, (error) => {
-                            if (error) {
-                                console.warn('QR error:', error);
-                                generateFallbackQR(qrContainer, qrText);
-                            }
-                        });
-                    } else {
-                        new window.QRCode(qrContainer, {
-                            text: qrText,
-                            width: 180,
-                            height: 180
-                        });
-                    }
-                } else {
-                    generateFallbackQR(qrContainer, qrText);
-                }
-                
-            } catch (error) {
-                console.error('[TRON QR] Generation failed:', error);
-                generateFallbackQR(qrContainer, recipient);
-            }
-        }, 100);
 
         // Confirm payment
         modal.querySelector('#confirmPayment').onclick = () => {
