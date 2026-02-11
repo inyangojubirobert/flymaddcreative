@@ -767,99 +767,40 @@ function createBSCModal(content, onClose = null) {
 
 // ✅ Enhanced QR Generation for BSC USDT
 // ✅ CORRECT BSC USDT QR Code Generation
-function generateBSCUSDTQR(recipient, amount, element) {
-    if (!element) return;
-    element.innerHTML = '';
+function getBestQRFormat(recipient, amount) {
+    const USDT_DECIMALS = 6;
+    const amountUnits = BigInt(
+        Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
+    ).toString();
     
-    try {
-        const USDT_DECIMALS = 6;
-        const amountUnits = BigInt(
-            Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
-        ).toString();
-
-        // ✅ OPTION 1: Create BOTH formats
-        const formats = {
-            // Format 1: EIP-681 (for wallets that support it)
-            eip681: `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer?address=${recipient}&uint256=${amountUnits}&chainId=56`,
-            
-            // Format 2: Simple text format (shows BSC)
-            simple: `BSC Payment: ${amount} USDT
-To: ${recipient}
-Network: Binance Smart Chain (BSC)
-Token: USDT (BEP-20)
-Contract: ${BSC_CONFIG.USDT_ADDRESS}
-Amount: ${amount} USDT`,
-            
-            // Format 3: URL format (some wallets scan URLs)
-            url: `https://bsc.express/pay?to=${recipient}&amount=${amount}&token=USDT&network=bsc`,
-            
-            // Format 4: Just address + amount (most compatible)
-            addressOnly: `${recipient}?amount=${amount}&token=USDT`
-        };
-
-        console.log('[BSC QR] Generated formats:', formats);
-
-        // Choose which format to use in QR
-        // Option A: Use simple text (shows BSC to users)
-        const qrContent = formats.simple;
+    // Detect user's wallet
+    const wallet = BSC_UTILS.detectWallet();
+    
+    // Format based on wallet
+    switch(wallet) {
+        case 'metamask':
+            // MetaMask supports EIP-681 but shows "Ethereum"
+            return `Send ${amount} USDT on BSC to ${recipient}\n\nethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer?address=${recipient}&uint256=${amountUnits}&chainId=56`;
         
-        // Option B: Combine both (separated by newline)
-        // const qrContent = `${formats.simple}\n\n${formats.eip681}`;
+        case 'trustwallet':
+            // Trust Wallet may support custom formats
+            return `trust://bsc_pay?to=${recipient}&amount=${amount}&token=USDT`;
         
-        // Generate QR code
-        if (window.QRCode) {
-            try {
-                if (typeof window.QRCode.toCanvas === 'function') {
-                    const canvas = document.createElement('canvas');
-                    element.appendChild(canvas);
+        case 'binance':
+            // Binance Wallet
+            return `bnblink://bsc/pay?to=${recipient}&amount=${amount}&token=USDT`;
+        
+        default:
+            // Default: Clear BSC message + EIP-681
+            return `BINANCE SMART CHAIN PAYMENT
+🔗 Network: BSC (BEP-20)
+💰 Amount: ${amount} USDT
+📬 To: ${recipient}
+📝 Token: USDT
 
-                    window.QRCode.toCanvas(canvas, qrContent, {
-                        width: 200,
-                        margin: 2,
-                        color: { dark: '#000000', light: '#FFFFFF' },
-                        errorCorrectionLevel: 'M'
-                    }, (error) => {
-                        if (error) {
-                            console.warn('QR canvas error:', error);
-                            generateFallbackQR(element, qrContent);
-                        }
-                    });
-                } else {
-                    new window.QRCode(element, {
-                        text: qrContent,
-                        width: 200,
-                        height: 200,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: window.QRCode.CorrectLevel?.M || 0
-                    });
-                }
-                
-                // Add label below QR
-                const label = document.createElement('div');
-                label.style.textAlign = 'center';
-                label.style.marginTop = '10px';
-                label.style.fontSize = '14px';
-                label.style.color = 'rgba(255,255,255,0.8)';
-                label.innerHTML = `🟡 <strong>BSC USDT Payment</strong><br>${amount} USDT on Binance Smart Chain`;
-                element.appendChild(label);
-                
-            } catch (error) {
-                console.error('QR generation error:', error);
-                generateFallbackQR(element, qrContent);
-            }
-        } else {
-            generateFallbackQR(element, qrContent);
-        }
-        
-    } catch (error) {
-        console.error('QR generation failed:', error);
-        element.innerHTML = `
-            <div style="text-align: center; color: var(--bsc-error); padding: 20px;">
-                <div style="font-size: 48px;">❌</div>
-                <div>QR Generation Failed</div>
-            </div>
-        `;
+Scan with BSC wallet
+
+${BSC_CONFIG.USDT_ADDRESS}/transfer?address=${recipient}&uint256=${amountUnits}&chainId=56`;
     }
 }
 function generateFallbackQR(element, data) {
