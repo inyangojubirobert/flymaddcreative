@@ -767,42 +767,106 @@ function createBSCModal(content, onClose = null) {
 
 // ✅ Enhanced QR Generation for BSC USDT
 // ✅ CORRECT BSC USDT QR Code Generation
-function getBestQRFormat(recipient, amount) {
-    const USDT_DECIMALS = 6;
-    const amountUnits = BigInt(
-        Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
-    ).toString();
+function generateBSCUSDTQR(recipient, amount, element) {
+    if (!element) return;
+    element.innerHTML = '';
     
-    // Detect user's wallet
-    const wallet = BSC_UTILS.detectWallet();
-    
-    // Format based on wallet
-    switch(wallet) {
-        case 'metamask':
-            // MetaMask supports EIP-681 but shows "Ethereum"
-            return `Send ${amount} USDT on BSC to ${recipient}\n\nethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer?address=${recipient}&uint256=${amountUnits}&chainId=56`;
-        
-        case 'trustwallet':
-            // Trust Wallet may support custom formats
-            return `trust://bsc_pay?to=${recipient}&amount=${amount}&token=USDT`;
-        
-        case 'binance':
-            // Binance Wallet
-            return `bnblink://bsc/pay?to=${recipient}&amount=${amount}&token=USDT`;
-        
-        default:
-            // Default: Clear BSC message + EIP-681
-            return `BINANCE SMART CHAIN PAYMENT
-🔗 Network: BSC (BEP-20)
-💰 Amount: ${amount} USDT
-📬 To: ${recipient}
-📝 Token: USDT
+    try {
+        // ✅ USDT on BSC uses 6 decimals, NOT 18
+        const USDT_DECIMALS = 6;
+        const amountUnits = BigInt(
+            Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
+        ).toString();
 
-Scan with BSC wallet
+        // ✅ CORRECT EIP-681 URI for BSC USDT
+        const eip681URI =
+            `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer` +
+            `?address=${recipient}` +
+            `&uint256=${amountUnits}` +
+            `&chainId=56`;
 
-${BSC_CONFIG.USDT_ADDRESS}/transfer?address=${recipient}&uint256=${amountUnits}&chainId=56`;
+        console.log('[BSC QR] Correct EIP-681 URI:', {
+            recipient,
+            amount,
+            amountUnits,
+            contract: BSC_CONFIG.USDT_ADDRESS,
+            chainId: 56,
+            uri: eip681URI
+        });
+
+        // Generate QR code with QRCode.js
+        if (window.QRCode) {
+            try {
+                if (typeof window.QRCode.toCanvas === 'function') {
+                    // Using newer QRCode.js API
+                    const canvas = document.createElement('canvas');
+                    element.appendChild(canvas);
+
+                    window.QRCode.toCanvas(canvas, eip681URI, {
+                        width: 200,
+                        margin: 2,
+                        color: { dark: '#000000', light: '#FFFFFF' },
+                        errorCorrectionLevel: 'M'
+                    }, (error) => {
+                        if (error) {
+                            console.warn('QR canvas error:', error);
+                            generateFallbackQR(element, eip681URI);
+                        } else {
+                            // Add click to copy
+                            canvas.style.cursor = 'pointer';
+                            canvas.title = 'Click to copy BSC USDT payment URI';
+                            canvas.addEventListener('click', () => {
+                                BSC_UTILS.copyToClipboard(eip681URI);
+                                showBSCAlert('BSC USDT payment URI copied!', 'success');
+                            });
+                        }
+                    });
+                } else if (typeof window.QRCode === 'function') {
+                    // Using older QRCode.js
+                    new window.QRCode(element, {
+                        text: eip681URI,
+                        width: 200,
+                        height: 200,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: window.QRCode.CorrectLevel?.M || 0
+                    });
+                    
+                    // Add click to copy
+                    setTimeout(() => {
+                        const img = element.querySelector('img') || element.querySelector('canvas');
+                        if (img) {
+                            img.style.cursor = 'pointer';
+                            img.title = 'Click to copy BSC USDT payment URI';
+                            img.addEventListener('click', () => {
+                                BSC_UTILS.copyToClipboard(eip681URI);
+                                showBSCAlert('BSC USDT payment URI copied!', 'success');
+                            });
+                        }
+                    }, 100);
+                } else {
+                    generateFallbackQR(element, eip681URI);
+                }
+            } catch (error) {
+                console.error('QR generation error:', error);
+                generateFallbackQR(element, eip681URI);
+            }
+        } else {
+            generateFallbackQR(element, eip681URI);
+        }
+        
+    } catch (error) {
+        console.error('QR generation failed:', error);
+        element.innerHTML = `
+            <div style="text-align: center; color: var(--bsc-error); padding: 20px;">
+                <div style="font-size: 48px;">❌</div>
+                <div>QR Generation Failed</div>
+                <div style="font-size: 12px; margin-top: 10px;">${error.message}</div>
+            </div>
+        `;
     }
 }
+
 function generateFallbackQR(element, data) {
     const encodedData = encodeURIComponent(data);
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedData}`;
