@@ -1835,41 +1835,139 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
 // 🔄  UPDATED TRON MANUAL MODAL (with proper QR)
 // ======================================================
 
+// ======================================================
+// 🔄  FIXED: TRON DESKTOP MANUAL MODAL (USDT TRC-20)
+// ======================================================
+
 async function showTronManualModal(recipient, amount) {
     // Load QR code library first
     await loadQRCodeLibrary();
     
     return new Promise((resolve) => {
+        const isMobile = isMobileDevice();
+        
+        // ✅ TRON USDT uses 6 decimals
+        const amountSun = BigInt(Math.round(parseFloat(amount) * 10 ** 6)).toString();
+        
+        // ✅ Native TRON USDT payment URI format - WORKS WITH TRONLINK
+        const tronURI = `tron://${CONFIG.TRON.USDT_ADDRESS}/transfer?address=${recipient}&amount=${amountSun}`;
+        
+        // ✅ Trust Wallet deep link for TRON USDT (for desktop QR)
+        const trustWalletDeepLink = 
+            `https://link.trustwallet.com/send` +
+            `?address=${CONFIG.TRON.USDT_ADDRESS}` +
+            `&amount=${amount}` +
+            `&token_id=${CONFIG.TRON.USDT_ADDRESS}` +
+            `&chain_id=tron` +
+            `&asset=USDT`;
+        
+        // ✅ Determine QR content based on device
+        // Mobile: Plain address (works with camera)
+        // Desktop: Trust Wallet deep link (scan with phone)
+        const qrContent = isMobile ? recipient : trustWalletDeepLink;
+        
+        console.log('[TRON Desktop] Using QR format:', {
+            mode: isMobile ? 'Mobile - Address' : 'Desktop - Trust Wallet Deep Link',
+            recipient,
+            amount,
+            amountSun,
+            qrContent: qrContent.substring(0, 50) + '...'
+        });
+        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
-                <h3 class="font-bold mb-3 pr-6">TRON USDT Payment</h3>
-                <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (TRC-20) to:</p>
-                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
-                <div id="tronQR" class="mx-auto mb-3"></div>
-                <p class="text-xs text-gray-500 mb-1">Scan with Tron wallet to auto-fill payment details</p>
-                <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on TRON network</p>
-                <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
+                <h3 class="font-bold mb-3 pr-6">🔴 TRON USDT Payment</h3>
+                
+                <div class="bg-gradient-to-r from-red-100 to-red-50 p-4 rounded-lg mb-4">
+                    <div class="text-2xl font-bold text-red-800 mb-1">${amount} USDT</div>
+                    <div class="text-sm text-red-600">Amount to send</div>
+                    <div class="text-xs text-red-500 mt-1">TRC-20 Network</div>
+                </div>
+                
+                <p class="text-sm mb-2 text-gray-700">Send USDT (TRC-20) to:</p>
+                <div class="bg-gray-100 p-3 rounded break-all text-xs mb-3 font-mono border border-gray-200">
+                    ${recipient}
+                </div>
+                
+                <div id="tronQR" class="mx-auto mb-4"></div>
+                
+                ${!isMobile ? `
+                <div class="bg-blue-50 p-3 rounded mb-3 text-left">
+                    <div class="text-xs font-medium text-blue-800 mb-1">📱 Scan with mobile:</div>
+                    <p class="text-xs text-blue-700">
+                        Scan this QR code with your phone camera - opens Trust Wallet with ${amount} USDT pre-filled on TRON network
+                    </p>
+                </div>
+                ` : ''}
+                
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>📋</span> Copy Address
+                    </button>
+                    <button id="viewOnTronscan" class="bg-gray-500 hover:bg-gray-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>🔍</span> View on Tronscan
+                    </button>
+                </div>
+                
+                ${!isMobile ? `
+                <div class="mb-3">
+                    <button id="openTrustWalletLink" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors">
+                        <span>🛡️</span> Open in Trust Wallet (Mobile)
+                    </button>
+                    <p class="text-xs text-gray-500 mt-1">Click to open Trust Wallet on your connected mobile device</p>
+                </div>
+                ` : ''}
+                
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
-                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (64 characters)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" />
                     <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
                 </div>
+                
                 <button id="closeTron" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
             </div>
         `);
 
-        // Generate QR code with proper TRON payment format
-        const qrContent = createPaymentQRContent('TRON', recipient, amount);
-        console.log('[TRON QR] Content:', qrContent);
-        generateQR(qrContent, 'tronQR');
+        // Generate QR code with appropriate content
+        setTimeout(() => {
+            const qrContainer = modal.querySelector('#tronQR');
+            if (qrContainer) {
+                if (window.QRCode) {
+                    if (typeof window.QRCode.toCanvas === 'function') {
+                        const canvas = document.createElement('canvas');
+                        qrContainer.appendChild(canvas);
+                        
+                        window.QRCode.toCanvas(canvas, qrContent, {
+                            width: 180,
+                            margin: 2,
+                            color: { dark: '#000000', light: '#FFFFFF' }
+                        }, (error) => {
+                            if (error) {
+                                console.warn('QR error:', error);
+                                generateFallbackQR(qrContainer, qrContent);
+                            }
+                        });
+                    } else {
+                        new window.QRCode(qrContainer, {
+                            text: qrContent,
+                            width: 180,
+                            height: 180
+                        });
+                    }
+                } else {
+                    generateFallbackQR(qrContainer, qrContent);
+                }
+            }
+        }, 100);
 
-        // ✅ FIX: Attach close handler
+        // Close handler
         const closeX = modal.querySelector('#modalCloseX');
         if (closeX) {
             closeX.onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
         }
 
+        // Copy address
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient)
                 .then(() => {
@@ -1880,16 +1978,35 @@ async function showTronManualModal(recipient, amount) {
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
         };
 
+        // View on Tronscan
+        modal.querySelector('#viewOnTronscan').onclick = () => {
+            window.open(`https://tronscan.org/#/address/${recipient}`, '_blank');
+        };
+
+        // Trust Wallet deep link (desktop only)
+        if (!isMobile) {
+            const trustBtn = modal.querySelector('#openTrustWalletLink');
+            if (trustBtn) {
+                trustBtn.onclick = () => {
+                    window.open(trustWalletDeepLink, '_blank');
+                    showCryptoAlert('Opening Trust Wallet on mobile device...', 'info', 3000);
+                };
+            }
+        }
+
+        // Confirm payment
         modal.querySelector('#confirmPayment').onclick = () => {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             
             if (!txHash) {
-                if (!confirm('No transaction hash entered. Are you sure you have already sent the payment?')) {
+                if (!confirm(`No transaction hash entered. Are you sure you have already sent ${amount} USDT on TRON network?`)) {
                     return;
                 }
             }
             
             modal.remove();
+            
+            // TRON transaction hashes are 64 hex chars (no 0x prefix)
             if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
                 resolve({ 
                     success: true, 
@@ -1897,15 +2014,26 @@ async function showTronManualModal(recipient, amount) {
                     txHash, 
                     explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` 
                 });
+            } else if (txHash) {
+                showCryptoAlert('Invalid transaction hash format (64 hex characters)', 'error');
+                resolve({ success: false, error: 'Invalid transaction hash' });
             } else {
                 resolve({ success: false, manual: true, pendingConfirmation: true });
             }
         };
 
-        modal.querySelector('#closeTron').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
+        modal.querySelector('#closeTron').onclick = () => { 
+            modal.remove(); 
+            resolve({ success: false, cancelled: true }); 
+        };
     });
 }
 
+// ======================================================
+// 🚀  FIXED: MAIN ENTRY POINT - TRON DESKTOP FLOW
+// ======================================================
+
+// (Removed orphaned else-if block; TRON handling is implemented in initiateCryptoPayment)
 // ======================================================
 // 🚀  MAIN ENTRY POINT (Updated for desktop flow)
 // ======================================================
