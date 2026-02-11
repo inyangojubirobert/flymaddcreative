@@ -491,15 +491,6 @@ function generateTRONUSDTQR(recipient, amount, element) {
         // ✅ Alternative format that also works
         const simpleURI = `${recipient}?amount=${amount}&token=USDT`;
         
-        // ✅ Trust Wallet deep link for TRON USDT
-        const trustWalletDeepLink = 
-            `https://link.trustwallet.com/send` +
-            `?address=${TRON_CONFIG.USDT_ADDRESS}` +
-            `&amount=${amount}` +
-            `&token_id=${TRON_CONFIG.USDT_ADDRESS}` +
-            `&chain_id=tron` +
-            `&asset=USDT`;
-        
         // Determine QR content based on device
         const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const qrContent = isMobile ? recipient : tronURI;
