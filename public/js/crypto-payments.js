@@ -1574,10 +1574,10 @@ function showPaymentStatusModal(network, amount) {
     const closeBtn = modal.querySelector('#closeModal');
     
     if (closeX) {
-        closeX.onclick = () => modal.remove();
+        closeX.onclick = () => { modal.remove(); resolve(null); };
     }
     if (closeBtn) {
-        closeBtn.onclick = () => modal.remove();
+        closeBtn.onclick = () => { modal.remove(); resolve(null); };
     }
     
     return modal;
@@ -1783,7 +1783,9 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient)
                 .then(() => {
-                    showCryptoAlert('Address copied!', 'success', 2000);
+                    const btn = modal.querySelector('#copyAddress');
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
                 })
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
         };
@@ -1811,7 +1813,12 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
             
             modal.remove();
             if (txHash && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
-                resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` });
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` 
+                });
             } else if (txHash) {
                 showCryptoAlert('Invalid transaction hash format (should start with 0x and be 64 chars)', 'error');
                 resolve({ success: false, error: 'Invalid transaction hash' });
@@ -1884,7 +1891,12 @@ async function showTronManualModal(recipient, amount) {
             
             modal.remove();
             if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
-                resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` });
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` 
+                });
             } else {
                 resolve({ success: false, manual: true, pendingConfirmation: true });
             }
@@ -2029,96 +2041,15 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 return mobileResult;
             }
             
-            // DESKTOP: Use the dedicated BSC Payments module if available
-            // This provides better UX with proper BSC branding and MetaMask integration
-            if (window.BSCPaymentsReady && typeof window.initiateBSCPayment === 'function') {
-                console.log('[Payment] Using dedicated BSC Payments module for desktop');
-                
-                // Update recipient in BSC Payments config
-                if (window.BSCPayments && window.BSCPayments.setRecipient) {
-                    window.BSCPayments.setRecipient(recipient);
-                }
-                
-                const bscResult = await window.initiateBSCPayment(amount, {
-                    recipient: recipient,
-                    onSuccess: (result) => {
-                        console.log('[BSC Payment] Success:', result);
-                    },
-                    onError: (error) => {
-                        console.error('[BSC Payment] Error:', error);
-                    }
-                });
-                
-                if (bscResult.success) {
-                    // Finalize the payment
-                    try {
-                        await finalizePayment(bscResult.txHash, 'BSC');
-                    } catch (err) {
-                        console.warn('[BSC Payment] Finalize warning:', err);
-                    }
-                    
-                    return {
-                        success: true,
-                        txHash: bscResult.txHash,
-                        explorerUrl: bscResult.explorerUrl,
-                        participant_id: participantId,
-                        payment_amount: amount,
-                        payment_intent_id: bscResult.txHash,
-                        method: bscResult.method || 'bsc'
-                    };
-                }
-                
-                return {
-                    success: false,
-                    cancelled: bscResult.cancelled || false,
-                    pendingConfirmation: bscResult.pendingConfirmation || false
-                };
-            }
-            
-            // Fallback: Use old BSC manual modal if new module not available
-            console.log('[Payment] Falling back to old BSC modal');
-            const manualResult = await showBSCManualModal(recipient, amount, true);
-            
+            // 🚫 Desktop logic removed: No BSCPayments module, no desktop fallback, no browser wallet connect
+            // Always show manual modal for desktop (as fallback)
+            const manualResult = await showBSCManualModal(recipient, amount, false);
+
             // User cancelled
             if (manualResult.cancelled) {
                 return { success: false, cancelled: true };
             }
-            
-            // If user clicked "Connect MetaMask" button in QR modal
-            if (manualResult.connectBrowserWallet) {
-                // User chose to connect browser wallet - proceed with payment
-                modal = showPaymentStatusModal(selectedNetwork, amount);
-                updateStatus(modal, 'Connecting browser wallet...');
-                
-                try {
-                    const connected = await requestWalletConnection();
-                    if (!connected) {
-                        throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
-                    }
-                    
-                    await ensureBSCNetworkDesktop(window.ethereum);
-                    
-                    updateStatus(modal, 'Confirm in wallet...');
-                    const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
-                    
-                    updateStatus(modal, 'Finalizing...');
-                    await finalizePayment(result.txHash, selectedNetwork);
-                    
-                    successStatus(modal, result.txHash, result.explorerUrl);
-                    
-                    return { 
-                        success: true, 
-                        ...result,
-                        participant_id: participantId,
-                        payment_amount: amount,
-                        payment_intent_id: result.txHash
-                    };
-                } catch (walletError) {
-                    if (modal) modal.remove();
-                    throw walletError;
-                }
-            }
-            
+
             // User submitted manual payment confirmation
             if (manualResult.success) {
                 return {
@@ -2128,7 +2059,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                     payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
                 };
             }
-            
+
             return manualResult;
         }
         
@@ -2193,39 +2124,17 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             return mobileResult;
         }
         
-        // Desktop TRON handling
-        if (!hasTronWallet) {
-            // No TronLink - show manual QR modal
-            const manualResult = await showTronManualModal(recipient, amount);
-            
-            if (manualResult.success) {
-                return {
-                    ...manualResult,
-                    participant_id: participantId,
-                    payment_amount: amount,
-                    payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
-                };
-            }
-            return manualResult;
+        // Desktop TRON handling: always show manual modal (no desktop TronLink)
+        const manualResult = await showTronManualModal(recipient, amount);
+        if (manualResult.success) {
+            return {
+                ...manualResult,
+                participant_id: participantId,
+                payment_amount: amount,
+                payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+            };
         }
-        
-        // TronLink is available - proceed with transaction
-        modal = showPaymentStatusModal(selectedNetwork, amount);
-        updateStatus(modal, 'Confirm in TronLink...');
-        const result = await executeTronTransfer(recipient, amount);
-        
-        updateStatus(modal, 'Finalizing...');
-        await finalizePayment(result.txHash, selectedNetwork);
-        
-        successStatus(modal, result.txHash, result.explorerUrl);
-        
-        return { 
-            success: true, 
-            ...result,
-            participant_id: participantId,
-            payment_amount: amount,
-            payment_intent_id: result.txHash
-        };
+        return manualResult;
         
     } catch (error) {
         console.error('[CryptoPayment] Error:', error);
