@@ -767,134 +767,159 @@ function createBSCModal(content, onClose = null) {
 
 // ✅ Enhanced QR Generation for BSC USDT
 // ✅ CORRECT BSC USDT QR Code Generation
-async function generateWalletSpecificQR(recipient, amount, element) {
+function generateBSCPaymentUI(recipient, amount, element) {
     if (!element) return;
     element.innerHTML = '';
 
-    try {
-        const USDT_DECIMALS = 6;
-        const amountUnits = BigInt(
-            Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
-        ).toString();
-
-        // Detect wallet
-        const wallet = BSC_UTILS.detectWallet();
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        
-        let qrContent = recipient; // Default fallback
-        
-        // Trust Wallet deep link (WORKS 100%)
-        if (wallet === 'trustwallet' || isMobile) {
-            qrContent = `https://link.trustwallet.com/send` +
-                `?address=${recipient}` +
-                `&amount=${amount}` +
-                `&token_id=${BSC_CONFIG.USDT_ADDRESS}` +
-                `&chain_id=56` +
-                `&asset=USDT`;
-        }
-        
-        // MetaMask deep link (mobile only)
-        else if (wallet === 'metamask' && isMobile) {
-            qrContent = `https://metamask.app.link/send` +
-                `?address=${BSC_CONFIG.USDT_ADDRESS}` +
-                `&value=0` +
-                `&chainId=56` +
-                `&asset=${BSC_CONFIG.USDT_ADDRESS}`;
-        }
-        
-        // Binance Chain Wallet
-        else if (wallet === 'binance') {
-            qrContent = `bnblink://bsc/pay` +
-                `?to=${recipient}` +
-                `&amount=${amount}` +
-                `&token=USDT`;
-        }
-
-        console.log('[BSC QR] Using wallet-specific format:', {
-            wallet,
-            isMobile,
-            qrContent
-        });
-
-        // Generate QR
-        if (window.QRCode) {
-            if (typeof window.QRCode.toCanvas === 'function') {
-                const canvas = document.createElement('canvas');
-                element.appendChild(canvas);
+    // Create tabbed interface
+    element.innerHTML = `
+        <div style="background: var(--bsc-gray-light); border-radius: 16px; overflow: hidden;">
+            <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <button id="tabQR" style="flex: 1; padding: 16px; background: rgba(240,185,11,0.1); color: var(--bsc-yellow); border: none; border-bottom: 3px solid var(--bsc-yellow); font-weight: 600; cursor: pointer;">
+                    📱 Scan Address
+                </button>
+                <button id="tabWallet" style="flex: 1; padding: 16px; background: transparent; color: white; border: none; font-weight: 600; cursor: pointer;">
+                    🔗 Direct Wallet
+                </button>
+                <button id="tabManual" style="flex: 1; padding: 16px; background: transparent; color: white; border: none; font-weight: 600; cursor: pointer;">
+                    📋 Manual
+                </button>
+            </div>
+            
+            <div id="qrPanel" style="padding: 24px; text-align: center;">
+                <div id="bscQRContainer" style="width: 200px; height: 200px; margin: 0 auto;"></div>
+                <div style="margin-top: 16px; color: white; font-size: 14px;">
+                    <strong style="color: var(--bsc-yellow);">${amount} USDT</strong> on BSC (BEP-20)
+                </div>
+            </div>
+            
+            <div id="walletPanel" style="padding: 24px; display: none;">
+                <div style="display: grid; gap: 12px;">
+                    <button id="payTrustWallet" style="padding: 16px; background: #0B4F6C; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        🛡️ Pay with Trust Wallet
+                    </button>
+                    <button id="payMetaMask" style="padding: 16px; background: #F6851B; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        🦊 Pay with MetaMask
+                    </button>
+                    <button id="payBinance" style="padding: 16px; background: #F0B90B; color: black; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        🅱️ Pay with Binance Wallet
+                    </button>
+                </div>
+            </div>
+            
+            <div id="manualPanel" style="padding: 24px; display: none;">
+                <div style="background: rgba(240,185,11,0.1); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                    <div style="font-size: 14px; color: rgba(255,255,255,0.8); margin-bottom: 8px;">Recipient Address:</div>
+                    <div style="font-family: monospace; word-break: break-all; color: white; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;">
+                        ${recipient}
+                    </div>
+                    <button id="copyManualAddress" style="width: 100%; margin-top: 12px; padding: 12px; background: var(--bsc-yellow); color: black; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        📋 Copy Address
+                    </button>
+                </div>
                 
-                window.QRCode.toCanvas(canvas, qrContent, {
-                    width: 200,
-                    margin: 2
-                });
-            } else {
-                new window.QRCode(element, {
-                    text: qrContent,
-                    width: 200,
-                    height: 200
-                });
-            }
+                <input type="text" 
+                       id="manualTxHash" 
+                       placeholder="Enter transaction hash to confirm" 
+                       style="width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; margin-bottom: 12px;">
+                
+                <button id="confirmManualPayment" style="width: 100%; padding: 12px; background: var(--bsc-success); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    ✅ Confirm Payment
+                </button>
+            </div>
+        </div>
+    `;
+
+    // Generate QR with plain address
+    const qrContainer = element.querySelector('#bscQRContainer');
+    if (qrContainer) {
+        if (window.QRCode) {
+            new window.QRCode(qrContainer, {
+                text: recipient,
+                width: 180,
+                height: 180
+            });
+        }
+    }
+
+    // Tab switching
+    const tabQR = element.querySelector('#tabQR');
+    const tabWallet = element.querySelector('#tabWallet');
+    const tabManual = element.querySelector('#tabManual');
+    const qrPanel = element.querySelector('#qrPanel');
+    const walletPanel = element.querySelector('#walletPanel');
+    const manualPanel = element.querySelector('#manualPanel');
+
+    tabQR.onclick = () => {
+        tabQR.style.background = 'rgba(240,185,11,0.1)';
+        tabQR.style.borderBottom = '3px solid var(--bsc-yellow)';
+        tabWallet.style.background = 'transparent';
+        tabWallet.style.borderBottom = 'none';
+        tabManual.style.background = 'transparent';
+        tabManual.style.borderBottom = 'none';
+        qrPanel.style.display = 'block';
+        walletPanel.style.display = 'none';
+        manualPanel.style.display = 'none';
+    };
+
+    tabWallet.onclick = () => {
+        tabWallet.style.background = 'rgba(240,185,11,0.1)';
+        tabWallet.style.borderBottom = '3px solid var(--bsc-yellow)';
+        tabQR.style.background = 'transparent';
+        tabQR.style.borderBottom = 'none';
+        tabManual.style.background = 'transparent';
+        tabManual.style.borderBottom = 'none';
+        qrPanel.style.display = 'none';
+        walletPanel.style.display = 'block';
+        manualPanel.style.display = 'none';
+    };
+
+    tabManual.onclick = () => {
+        tabManual.style.background = 'rgba(240,185,11,0.1)';
+        tabManual.style.borderBottom = '3px solid var(--bsc-yellow)';
+        tabQR.style.background = 'transparent';
+        tabQR.style.borderBottom = 'none';
+        tabWallet.style.background = 'transparent';
+        tabWallet.style.borderBottom = 'none';
+        qrPanel.style.display = 'none';
+        walletPanel.style.display = 'none';
+        manualPanel.style.display = 'block';
+    };
+
+    // Wallet buttons
+    setTimeout(() => {
+        const trustBtn = element.querySelector('#payTrustWallet');
+        if (trustBtn) {
+            trustBtn.onclick = () => {
+                const url = `https://link.trustwallet.com/send` +
+                    `?address=${recipient}` +
+                    `&amount=${amount}` +
+                    `&token_id=${BSC_CONFIG.USDT_ADDRESS}` +
+                    `&chain_id=56`;
+                window.open(url, '_blank');
+            };
         }
 
-        // Add wallet selector
-        const walletSelector = document.createElement('div');
-        walletSelector.style.marginTop = '16px';
-        walletSelector.style.display = 'grid';
-        walletSelector.style.gridTemplateColumns = 'repeat(2, 1fr)';
-        walletSelector.style.gap = '12px';
-        walletSelector.innerHTML = `
-            <button id="trustWalletBtn" style="padding: 12px; background: #0B4F6C; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
-                🛡️ Trust Wallet
-            </button>
-            <button id="metaMaskBtn" style="padding: 12px; background: #F6851B; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
-                🦊 MetaMask
-            </button>
-            <button id="binanceBtn" style="padding: 12px; background: #F0B90B; color: black; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
-                🅱️ Binance
-            </button>
-            <button id="copyAddressBtn" style="padding: 12px; background: #4A5568; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
-                📋 Copy Address
-            </button>
-        `;
-        element.appendChild(walletSelector);
+        const metaBtn = element.querySelector('#payMetaMask');
+        if (metaBtn) {
+            metaBtn.onclick = () => {
+                if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                    window.open(`https://metamask.app.link/send?address=${BSC_CONFIG.USDT_ADDRESS}&value=0&chainId=56&asset=${BSC_CONFIG.USDT_ADDRESS}`, '_blank');
+                } else {
+                    BSC_UTILS.copyToClipboard(recipient);
+                    showBSCAlert('Address copied! Open MetaMask extension', 'info');
+                }
+            };
+        }
 
-        // Attach event listeners
-        setTimeout(() => {
-            const trustBtn = element.querySelector('#trustWalletBtn');
-            if (trustBtn) {
-                trustBtn.onclick = () => {
-                    const url = `https://link.trustwallet.com/send` +
-                        `?address=${recipient}` +
-                        `&amount=${amount}` +
-                        `&token_id=${BSC_CONFIG.USDT_ADDRESS}` +
-                        `&chain_id=56`;
-                    window.open(url, '_blank');
-                };
-            }
-
-            const metaBtn = element.querySelector('#metaMaskBtn');
-            if (metaBtn) {
-                metaBtn.onclick = () => {
-                    if (isMobile) {
-                        window.open(`https://metamask.app.link/send?address=${BSC_CONFIG.USDT_ADDRESS}&value=0&chainId=56&asset=${BSC_CONFIG.USDT_ADDRESS}`, '_blank');
-                    } else {
-                        BSC_UTILS.copyToClipboard(recipient);
-                        showBSCAlert('Address copied! Open MetaMask extension', 'info');
-                    }
-                };
-            }
-
-            const copyBtn = element.querySelector('#copyAddressBtn');
-            if (copyBtn) {
-                copyBtn.onclick = async () => {
-                    await BSC_UTILS.copyToClipboard(recipient);
-                    showBSCAlert('BSC address copied!', 'success');
-                };
-            }
-        }, 100);
-
-    } catch (error) {
-        console.error('QR generation failed:', error);
-    }
+        const copyBtn = element.querySelector('#copyManualAddress');
+        if (copyBtn) {
+            copyBtn.onclick = async () => {
+                await BSC_UTILS.copyToClipboard(recipient);
+                showBSCAlert('BSC address copied!', 'success');
+            };
+        }
+    }, 100);
 }
 
 function generateFallbackQR(element, data) {
