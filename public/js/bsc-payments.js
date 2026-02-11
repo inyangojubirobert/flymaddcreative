@@ -23,7 +23,7 @@ const BSC_CONFIG = {
     
     // Payment defaults
     DEFAULT_AMOUNT: 2, // 2 USDT as requested
-    USDT_DECIMALS: 18, // BSC USDT uses 18 decimals
+    USDT_DECIMALS: 6, // BSC USDT uses 6 decimals
     
     // Wallet options
     WALLET_OPTIONS: [
@@ -48,6 +48,7 @@ const BSC_STATE = {
     rateLimitWindow: 5000 // 5 seconds between attempts
 };
 
+// ✅ Enhanced Utilities
 // ✅ Enhanced Utilities
 const BSC_UTILS = {
     // Generate unique ID
@@ -177,6 +178,42 @@ const BSC_UTILS = {
         }
         BSC_STATE.lastPaymentAttempt = now;
         return true;
+    },
+
+    // ✅ ADD THIS FUNCTION to validate QR content
+    validateQRContent: (recipient, amount) => {
+        const USDT_DECIMALS = 6;
+        const amountUnits = BigInt(
+            Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
+        ).toString();
+
+        const eip681URI =
+            `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer` +
+            `?address=${recipient}` +
+            `&uint256=${amountUnits}` +
+            `&chainId=56`;
+        
+        return {
+            uri: eip681URI,
+            components: {
+                scheme: 'ethereum',
+                contract: BSC_CONFIG.USDT_ADDRESS,
+                function: 'transfer',
+                recipient: recipient,
+                amountUnits: amountUnits,
+                amount: amount,
+                chainId: 56,
+                network: 'BSC',
+                token: 'USDT',
+                decimals: 6
+            },
+            validation: {
+                isEIP681: true,
+                hasChainId: true,
+                hasContract: true,
+                hasFunction: true
+            }
+        };
     }
 };
 
@@ -729,35 +766,42 @@ function createBSCModal(content, onClose = null) {
 }
 
 // ✅ Enhanced QR Generation for BSC USDT
+// ✅ CORRECT BSC USDT QR Code Generation
 function generateBSCUSDTQR(recipient, amount, element) {
     if (!element) return;
     element.innerHTML = '';
     
     try {
-        // Simple BSC USDT payment format
-        const amountWei = BigInt(Math.round(amount * 10 ** BSC_CONFIG.USDT_DECIMALS)).toString();
-        
-        // Create EIP-681 URI for BSC USDT
-        const eip681URI = `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer?address=${recipient}&uint256=${amountWei}&chainId=56`;
-        
-        // Alternative simple format (just address)
-        const simpleFormat = recipient;
-        
-        console.log('[BSC QR] Generating QR for:', {
+        // ✅ USDT on BSC uses 6 decimals, NOT 18
+        const USDT_DECIMALS = 6;
+        const amountUnits = BigInt(
+            Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
+        ).toString();
+
+        // ✅ CORRECT EIP-681 URI for BSC USDT
+        const eip681URI =
+            `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer` +
+            `?address=${recipient}` +
+            `&uint256=${amountUnits}` +
+            `&chainId=56`;
+
+        console.log('[BSC QR] Correct EIP-681 URI:', {
             recipient,
             amount,
-            format: 'EIP-681',
+            amountUnits,
+            contract: BSC_CONFIG.USDT_ADDRESS,
+            chainId: 56,
             uri: eip681URI
         });
-        
-        // Try to generate QR with QRCode.js
+
+        // Generate QR code with QRCode.js
         if (window.QRCode) {
             try {
                 if (typeof window.QRCode.toCanvas === 'function') {
                     // Using newer QRCode.js API
                     const canvas = document.createElement('canvas');
                     element.appendChild(canvas);
-                    
+
                     window.QRCode.toCanvas(canvas, eip681URI, {
                         width: 200,
                         margin: 2,
@@ -770,10 +814,10 @@ function generateBSCUSDTQR(recipient, amount, element) {
                         } else {
                             // Add click to copy
                             canvas.style.cursor = 'pointer';
-                            canvas.title = 'Click to copy payment details';
+                            canvas.title = 'Click to copy BSC USDT payment URI';
                             canvas.addEventListener('click', () => {
                                 BSC_UTILS.copyToClipboard(eip681URI);
-                                showBSCAlert('Payment URI copied!', 'success');
+                                showBSCAlert('BSC USDT payment URI copied!', 'success');
                             });
                         }
                     });
@@ -789,15 +833,17 @@ function generateBSCUSDTQR(recipient, amount, element) {
                     });
                     
                     // Add click to copy
-                    const img = element.querySelector('img') || element.querySelector('canvas');
-                    if (img) {
-                        img.style.cursor = 'pointer';
-                        img.title = 'Click to copy payment details';
-                        img.addEventListener('click', () => {
-                            BSC_UTILS.copyToClipboard(eip681URI);
-                            showBSCAlert('Payment URI copied!', 'success');
-                        });
-                    }
+                    setTimeout(() => {
+                        const img = element.querySelector('img') || element.querySelector('canvas');
+                        if (img) {
+                            img.style.cursor = 'pointer';
+                            img.title = 'Click to copy BSC USDT payment URI';
+                            img.addEventListener('click', () => {
+                                BSC_UTILS.copyToClipboard(eip681URI);
+                                showBSCAlert('BSC USDT payment URI copied!', 'success');
+                            });
+                        }
+                    }, 100);
                 } else {
                     generateFallbackQR(element, eip681URI);
                 }
@@ -815,10 +861,7 @@ function generateBSCUSDTQR(recipient, amount, element) {
             <div style="text-align: center; color: var(--bsc-error); padding: 20px;">
                 <div style="font-size: 48px;">❌</div>
                 <div>QR Generation Failed</div>
-                <button onclick="window.BSCPayments.copyText('${recipient}')" 
-                        style="margin-top: 10px; padding: 8px 16px; background: var(--bsc-yellow); color: black; border: none; border-radius: 8px; cursor: pointer;">
-                    📋 Copy Address
-                </button>
+                <div style="font-size: 12px; margin-top: 10px;">${error.message}</div>
             </div>
         `;
     }
@@ -912,7 +955,7 @@ async function sendBSCUSDTTransaction(recipient, amount, fromAddress, provider =
         
         const usdtContract = new window.ethers.Contract(BSC_CONFIG.USDT_ADDRESS, usdtAbi, signer);
         
-        // Get decimals (should be 18 for BSC USDT)
+        // ✅ Get ACTUAL decimals from contract (should be 6)
         const decimals = await usdtContract.decimals();
         const amountWei = window.ethers.utils.parseUnits(amount.toString(), decimals);
         
