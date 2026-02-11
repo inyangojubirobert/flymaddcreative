@@ -767,45 +767,34 @@ function createBSCModal(content, onClose = null) {
 
 // ✅ Enhanced QR Generation for BSC USDT
 // ✅ CORRECT BSC USDT QR Code Generation
-// ✅ BSC USDT QR Code Generation using Trust Wallet Deep Link
 function generateBSCUSDTQR(recipient, amount, element) {
     if (!element) return;
     element.innerHTML = '';
     
     try {
-        // ✅ Detect if user is on mobile device
-        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        // ✅ Build Trust Wallet deep link URL (works 100% for BSC USDT)
-        const trustWalletDeepLink = 
-            `https://link.trustwallet.com/send` +
-            `?address=${BSC_CONFIG.USDT_ADDRESS}` +
-            `&amount=${amount}` +
-            `&token_id=${BSC_CONFIG.USDT_ADDRESS}` +
-            `&chain_id=56` +
-            `&asset=USDT`;
+        // ✅ USDT on BSC uses 6 decimals, NOT 18
+        const USDT_DECIMALS = 6;
+        const amountUnits = BigInt(
+            Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
+        ).toString();
 
-        console.log('[BSC QR] Using Trust Wallet Deep Link:', {
+        // ✅ CORRECT EIP-681 URI for BSC USDT
+        const eip681URI =
+            `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer` +
+            `?address=${recipient}` +
+            `&uint256=${amountUnits}` +
+            `&chainId=56`;
+
+        console.log('[BSC QR] Correct EIP-681 URI:', {
             recipient,
             amount,
+            amountUnits,
             contract: BSC_CONFIG.USDT_ADDRESS,
             chainId: 56,
-            deepLink: trustWalletDeepLink,
-            isMobile: isMobile
+            uri: eip681URI
         });
 
-        // ✅ Determine what to put in the QR code
-        let qrContent;
-        
-        if (isMobile) {
-            // Mobile users: Trust Wallet deep link
-            qrContent = trustWalletDeepLink;
-        } else {
-            // Desktop users: Just the address (they'll copy/paste)
-            qrContent = recipient;
-        }
-
-        // Generate QR code
+        // Generate QR code with QRCode.js
         if (window.QRCode) {
             try {
                 if (typeof window.QRCode.toCanvas === 'function') {
@@ -813,7 +802,7 @@ function generateBSCUSDTQR(recipient, amount, element) {
                     const canvas = document.createElement('canvas');
                     element.appendChild(canvas);
 
-                    window.QRCode.toCanvas(canvas, qrContent, {
+                    window.QRCode.toCanvas(canvas, eip681URI, {
                         width: 200,
                         margin: 2,
                         color: { dark: '#000000', light: '#FFFFFF' },
@@ -821,25 +810,21 @@ function generateBSCUSDTQR(recipient, amount, element) {
                     }, (error) => {
                         if (error) {
                             console.warn('QR canvas error:', error);
-                            generateFallbackQR(element, qrContent);
+                            generateFallbackQR(element, eip681URI);
                         } else {
                             // Add click to copy
                             canvas.style.cursor = 'pointer';
-                            canvas.title = isMobile ? 'Open in Trust Wallet' : 'Copy BSC address';
+                            canvas.title = 'Click to copy BSC USDT payment URI';
                             canvas.addEventListener('click', () => {
-                                if (isMobile) {
-                                    window.open(qrContent, '_blank');
-                                } else {
-                                    BSC_UTILS.copyToClipboard(recipient);
-                                    showBSCAlert('BSC address copied!', 'success');
-                                }
+                                BSC_UTILS.copyToClipboard(eip681URI);
+                                showBSCAlert('BSC USDT payment URI copied!', 'success');
                             });
                         }
                     });
                 } else if (typeof window.QRCode === 'function') {
                     // Using older QRCode.js
                     new window.QRCode(element, {
-                        text: qrContent,
+                        text: eip681URI,
                         width: 200,
                         height: 200,
                         colorDark: "#000000",
@@ -847,190 +832,27 @@ function generateBSCUSDTQR(recipient, amount, element) {
                         correctLevel: window.QRCode.CorrectLevel?.M || 0
                     });
                     
-                    // Add click to copy/open
+                    // Add click to copy
                     setTimeout(() => {
                         const img = element.querySelector('img') || element.querySelector('canvas');
                         if (img) {
                             img.style.cursor = 'pointer';
-                            img.title = isMobile ? 'Open in Trust Wallet' : 'Copy BSC address';
+                            img.title = 'Click to copy BSC USDT payment URI';
                             img.addEventListener('click', () => {
-                                if (isMobile) {
-                                    window.open(qrContent, '_blank');
-                                } else {
-                                    BSC_UTILS.copyToClipboard(recipient);
-                                    showBSCAlert('BSC address copied!', 'success');
-                                }
+                                BSC_UTILS.copyToClipboard(eip681URI);
+                                showBSCAlert('BSC USDT payment URI copied!', 'success');
                             });
                         }
                     }, 100);
                 } else {
-                    generateFallbackQR(element, qrContent);
+                    generateFallbackQR(element, eip681URI);
                 }
             } catch (error) {
                 console.error('QR generation error:', error);
-                generateFallbackQR(element, qrContent);
+                generateFallbackQR(element, eip681URI);
             }
         } else {
-            generateFallbackQR(element, qrContent);
-        }
-
-        // ✅ Add BSC payment instructions with Trust Wallet option
-        const instructionDiv = document.createElement('div');
-        instructionDiv.style.marginTop = '20px';
-        instructionDiv.style.padding = '16px';
-        instructionDiv.style.background = 'rgba(240, 185, 11, 0.1)';
-        instructionDiv.style.borderRadius = '12px';
-        instructionDiv.style.border = '1px solid rgba(240, 185, 11, 0.3)';
-        
-        if (isMobile) {
-            instructionDiv.innerHTML = `
-                <div style="color: var(--bsc-yellow); font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <span>🟡</span> BSC USDT PAYMENT - TRUST WALLET
-                </div>
-                <div style="color: white; font-size: 14px; line-height: 1.6;">
-                    1. <strong>Scan QR code</strong> with your phone camera<br>
-                    2. <strong style="color: var(--bsc-yellow);">Trust Wallet</strong> will open automatically<br>
-                    3. Verify: <strong>${amount} USDT</strong> on <strong>BSC (BEP-20)</strong><br>
-                    4. Tap <strong style="color: var(--bsc-yellow);">Send</strong> to complete payment
-                </div>
-                <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
-                    <button id="openTrustWalletBtn" style="
-                        padding: 12px 24px;
-                        background: #0B4F6C;
-                        color: white;
-                        border: none;
-                        border-radius: 8px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                    ">
-                        🛡️ Open Trust Wallet
-                    </button>
-                    <button id="copyAddressMobileBtn" style="
-                        padding: 12px 24px;
-                        background: rgba(255,255,255,0.1);
-                        color: white;
-                        border: 1px solid rgba(255,255,255,0.2);
-                        border-radius: 8px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                    ">
-                        📋 Copy Address
-                    </button>
-                </div>
-            `;
-        } else {
-            instructionDiv.innerHTML = `
-                <div style="color: var(--bsc-yellow); font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                    <span>🟡</span> BSC USDT PAYMENT - DESKTOP
-                </div>
-                <div style="color: white; font-size: 14px; line-height: 1.6;">
-                    1. <strong>Copy the BSC address</strong> below<br>
-                    2. Open your wallet (MetaMask/Trust Wallet)<br>
-                    3. Switch network to <strong style="color: var(--bsc-yellow);">Binance Smart Chain (BSC)</strong><br>
-                    4. Send <strong style="color: var(--bsc-yellow);">${amount} USDT (BEP-20)</strong><br>
-                    5. Paste the transaction hash to confirm
-                </div>
-                <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
-                    <button id="copyAddressDesktopBtn" style="
-                        padding: 12px 24px;
-                        background: var(--bsc-yellow);
-                        color: black;
-                        border: none;
-                        border-radius: 8px;
-                        font-weight: 600;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                    ">
-                        📋 Copy BSC Address
-                    </button>
-                </div>
-            `;
-        }
-        
-        element.appendChild(instructionDiv);
-
-        // ✅ Add button event listeners
-        setTimeout(() => {
-            if (isMobile) {
-                const trustBtn = element.querySelector('#openTrustWalletBtn');
-                if (trustBtn) {
-                    trustBtn.addEventListener('click', () => {
-                        window.open(trustWalletDeepLink, '_blank');
-                    });
-                }
-                
-                const copyBtn = element.querySelector('#copyAddressMobileBtn');
-                if (copyBtn) {
-                    copyBtn.addEventListener('click', async () => {
-                        await BSC_UTILS.copyToClipboard(recipient);
-                        showBSCAlert('BSC address copied! Open Trust Wallet', 'success');
-                    });
-                }
-            } else {
-                const copyBtn = element.querySelector('#copyAddressDesktopBtn');
-                if (copyBtn) {
-                    copyBtn.addEventListener('click', async () => {
-                        await BSC_UTILS.copyToClipboard(recipient);
-                        showBSCAlert('BSC address copied!', 'success');
-                    });
-                }
-            }
-        }, 100);
-
-        // ✅ Add alternative option for MetaMask users
-        const altDiv = document.createElement('div');
-        altDiv.style.marginTop = '12px';
-        altDiv.style.textAlign = 'center';
-        altDiv.style.fontSize = '13px';
-        altDiv.style.color = 'rgba(255,255,255,0.6)';
-        
-        if (isMobile) {
-            altDiv.innerHTML = `
-                <span>Using MetaMask? </span>
-                <button id="openMetaMaskBtn" style="
-                    background: none;
-                    border: none;
-                    color: #F6851B;
-                    text-decoration: underline;
-                    cursor: pointer;
-                    font-size: 13px;
-                ">Open in MetaMask</button>
-            `;
-        } else {
-            altDiv.innerHTML = `
-                <span>💰 Need USDT on BSC? </span>
-                <a href="https://pancakeswap.finance/swap" target="_blank" style="color: var(--bsc-yellow);">
-                    Buy on PancakeSwap
-                </a>
-            `;
-        }
-        
-        element.appendChild(altDiv);
-
-        // ✅ Add MetaMask handler for mobile
-        if (isMobile) {
-            setTimeout(() => {
-                const metaMaskBtn = element.querySelector('#openMetaMaskBtn');
-                if (metaMaskBtn) {
-                    metaMaskBtn.addEventListener('click', () => {
-                        const metaMaskDeepLink = 
-                            `https://metamask.app.link/send` +
-                            `?address=${BSC_CONFIG.USDT_ADDRESS}` +
-                            `&value=0` +
-                            `&chainId=56` +
-                            `&asset=${BSC_CONFIG.USDT_ADDRESS}`;
-                        window.open(metaMaskDeepLink, '_blank');
-                    });
-                }
-            }, 100);
+            generateFallbackQR(element, eip681URI);
         }
         
     } catch (error) {
@@ -1043,36 +865,6 @@ function generateBSCUSDTQR(recipient, amount, element) {
             </div>
         `;
     }
-}
-
-// ✅ Fallback QR generator
-function generateFallbackQR(element, data) {
-    const encodedData = encodeURIComponent(data);
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedData}`;
-    
-    const img = document.createElement('img');
-    img.src = qrUrl;
-    img.alt = 'BSC USDT Payment QR';
-    img.style.width = '200px';
-    img.style.height = '200px';
-    img.style.borderRadius = '8px';
-    
-    img.onerror = () => {
-        element.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <div style="color: var(--bsc-error); margin-bottom: 10px;">📱 QR Code Unavailable</div>
-                <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; color: white; word-break: break-all;">
-                    ${data}
-                </div>
-                <button onclick="BSC_UTILS.copyToClipboard('${data}')" 
-                        style="margin-top: 12px; padding: 8px 16px; background: var(--bsc-yellow); color: black; border: none; border-radius: 8px; cursor: pointer;">
-                    📋 Copy
-                </button>
-            </div>
-        `;
-    };
-    
-    element.appendChild(img);
 }
 
 function generateFallbackQR(element, data) {
