@@ -540,20 +540,21 @@ function createModal(content, onClose = null) {
     return { overlay, modal };
 }
 
-// ✅ Generate QR code - COMPLETE
+// ✅ Generate QR code - UPDATED for qrcodejs/qrcode compatibility
 function generateBSCQR(recipient, amount, element) {
     if (!element) return;
-    
+
     element.innerHTML = '';
-    
+
     try {
         const amountWei = BigInt(Math.floor(parseFloat(amount) * 1e18)).toString();
         const eip681URI = `ethereum:${CONFIG.BSC_USDT_ADDRESS}@${CONFIG.BSC_CHAIN_ID}/transfer?address=${recipient}&uint256=${amountWei}`;
-        
-        if (window.QRCode && window.QRCode.toCanvas) {
+
+        // qrcode (npm/CDN) API
+        if (window.QRCode && typeof window.QRCode.toCanvas === 'function') {
             const canvas = document.createElement('canvas');
             element.appendChild(canvas);
-            
+
             window.QRCode.toCanvas(canvas, eip681URI, {
                 width: 180,
                 margin: 2,
@@ -565,7 +566,22 @@ function generateBSCQR(recipient, amount, element) {
                     generateImageQR(element, eip681URI);
                 }
             });
-        } else {
+        }
+        // qrcodejs API
+        else if (window.QRCode && typeof window.QRCode === 'function') {
+            // Remove any existing QRCode instance
+            element.innerHTML = '';
+            new window.QRCode(element, {
+                text: eip681URI,
+                width: 180,
+                height: 180,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.M : 0
+            });
+        }
+        // Fallback to Google Chart API
+        else {
             generateImageQR(element, eip681URI);
         }
     } catch (error) {
@@ -608,9 +624,9 @@ ${eip681URI}
     
     const success = await Utils.copyToClipboard(textToCopy);
     if (success) {
-        showAlert(`BSC USDT payment details copied!`, 'success');
+        showAlert('BSC USDT payment details copied!');
     } else {
-        showAlert('Failed to copy. Please copy manually.', 'error');
+        showAlert('Failed to copy. Please copy manually.');
     }
 }
 
