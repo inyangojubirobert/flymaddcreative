@@ -772,37 +772,48 @@ function generateBSCUSDTQR(recipient, amount, element) {
     element.innerHTML = '';
     
     try {
-        // ✅ USDT on BSC uses 6 decimals, NOT 18
         const USDT_DECIMALS = 6;
         const amountUnits = BigInt(
             Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
         ).toString();
 
-        // ✅ CORRECT EIP-681 URI for BSC USDT
-        const eip681URI =
-            `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer` +
-            `?address=${recipient}` +
-            `&uint256=${amountUnits}` +
-            `&chainId=56`;
+        // ✅ OPTION 1: Create BOTH formats
+        const formats = {
+            // Format 1: EIP-681 (for wallets that support it)
+            eip681: `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer?address=${recipient}&uint256=${amountUnits}&chainId=56`,
+            
+            // Format 2: Simple text format (shows BSC)
+            simple: `BSC Payment: ${amount} USDT
+To: ${recipient}
+Network: Binance Smart Chain (BSC)
+Token: USDT (BEP-20)
+Contract: ${BSC_CONFIG.USDT_ADDRESS}
+Amount: ${amount} USDT`,
+            
+            // Format 3: URL format (some wallets scan URLs)
+            url: `https://bsc.express/pay?to=${recipient}&amount=${amount}&token=USDT&network=bsc`,
+            
+            // Format 4: Just address + amount (most compatible)
+            addressOnly: `${recipient}?amount=${amount}&token=USDT`
+        };
 
-        console.log('[BSC QR] Correct EIP-681 URI:', {
-            recipient,
-            amount,
-            amountUnits,
-            contract: BSC_CONFIG.USDT_ADDRESS,
-            chainId: 56,
-            uri: eip681URI
-        });
+        console.log('[BSC QR] Generated formats:', formats);
 
-        // Generate QR code with QRCode.js
+        // Choose which format to use in QR
+        // Option A: Use simple text (shows BSC to users)
+        const qrContent = formats.simple;
+        
+        // Option B: Combine both (separated by newline)
+        // const qrContent = `${formats.simple}\n\n${formats.eip681}`;
+        
+        // Generate QR code
         if (window.QRCode) {
             try {
                 if (typeof window.QRCode.toCanvas === 'function') {
-                    // Using newer QRCode.js API
                     const canvas = document.createElement('canvas');
                     element.appendChild(canvas);
 
-                    window.QRCode.toCanvas(canvas, eip681URI, {
+                    window.QRCode.toCanvas(canvas, qrContent, {
                         width: 200,
                         margin: 2,
                         color: { dark: '#000000', light: '#FFFFFF' },
@@ -810,49 +821,35 @@ function generateBSCUSDTQR(recipient, amount, element) {
                     }, (error) => {
                         if (error) {
                             console.warn('QR canvas error:', error);
-                            generateFallbackQR(element, eip681URI);
-                        } else {
-                            // Add click to copy
-                            canvas.style.cursor = 'pointer';
-                            canvas.title = 'Click to copy BSC USDT payment URI';
-                            canvas.addEventListener('click', () => {
-                                BSC_UTILS.copyToClipboard(eip681URI);
-                                showBSCAlert('BSC USDT payment URI copied!', 'success');
-                            });
+                            generateFallbackQR(element, qrContent);
                         }
                     });
-                } else if (typeof window.QRCode === 'function') {
-                    // Using older QRCode.js
+                } else {
                     new window.QRCode(element, {
-                        text: eip681URI,
+                        text: qrContent,
                         width: 200,
                         height: 200,
                         colorDark: "#000000",
                         colorLight: "#ffffff",
                         correctLevel: window.QRCode.CorrectLevel?.M || 0
                     });
-                    
-                    // Add click to copy
-                    setTimeout(() => {
-                        const img = element.querySelector('img') || element.querySelector('canvas');
-                        if (img) {
-                            img.style.cursor = 'pointer';
-                            img.title = 'Click to copy BSC USDT payment URI';
-                            img.addEventListener('click', () => {
-                                BSC_UTILS.copyToClipboard(eip681URI);
-                                showBSCAlert('BSC USDT payment URI copied!', 'success');
-                            });
-                        }
-                    }, 100);
-                } else {
-                    generateFallbackQR(element, eip681URI);
                 }
+                
+                // Add label below QR
+                const label = document.createElement('div');
+                label.style.textAlign = 'center';
+                label.style.marginTop = '10px';
+                label.style.fontSize = '14px';
+                label.style.color = 'rgba(255,255,255,0.8)';
+                label.innerHTML = `🟡 <strong>BSC USDT Payment</strong><br>${amount} USDT on Binance Smart Chain`;
+                element.appendChild(label);
+                
             } catch (error) {
                 console.error('QR generation error:', error);
-                generateFallbackQR(element, eip681URI);
+                generateFallbackQR(element, qrContent);
             }
         } else {
-            generateFallbackQR(element, eip681URI);
+            generateFallbackQR(element, qrContent);
         }
         
     } catch (error) {
@@ -861,12 +858,10 @@ function generateBSCUSDTQR(recipient, amount, element) {
             <div style="text-align: center; color: var(--bsc-error); padding: 20px;">
                 <div style="font-size: 48px;">❌</div>
                 <div>QR Generation Failed</div>
-                <div style="font-size: 12px; margin-top: 10px;">${error.message}</div>
             </div>
         `;
     }
 }
-
 function generateFallbackQR(element, data) {
     const encodedData = encodeURIComponent(data);
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedData}`;
