@@ -1909,6 +1909,9 @@ async function showTronManualModal(recipient, amount) {
 // ======================================================
 // 🚀  MAIN ENTRY POINT (Updated for desktop flow)
 // ======================================================
+// ======================================================
+// 🚀  MAIN ENTRY POINT (UPDATED - WITH DESKTOP NETWORK SELECTION)
+// ======================================================
 
 async function initiateCryptoPayment(participantId, voteCount, amount) {
     let modal = null;
@@ -1921,6 +1924,127 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
         // Detect preferred network
         const preferredNetwork = await detectPreferredNetwork();
         
+        // FOR DESKTOP: Show network selection modal FIRST
+        if (!isMobileDevice()) {
+            console.log('[CryptoPayment] Desktop detected - showing network selection');
+            
+            // Show network selection modal
+            const selectedNetwork = await showNetworkSelectionModal(preferredNetwork);
+            if (!selectedNetwork) {
+                return { success: false, cancelled: true };
+            }
+            
+            // Get wallet address based on selected network
+            const recipient = selectedNetwork === 'BSC' 
+                ? CONFIG.BSC.WALLET_ADDRESS 
+                : CONFIG.TRON.WALLET_ADDRESS;
+            
+            // Route based on network selection
+            if (selectedNetwork === 'BSC') {
+                console.log('[CryptoPayment] Desktop - BSC selected');
+                
+                // Check if BSCPayments module exists (from bsc-payments.js)
+                if (window.BSCPayments && typeof window.BSCPayments.pay === 'function') {
+                    console.log('[CryptoPayment] Using BSCPayments module');
+                    
+                    // Hide any loading modals
+                    hideCryptoModal();
+                    
+                    // Call BSCPayments
+                    const result = await window.BSCPayments.pay(amount, {
+                        recipient: recipient,
+                        onSuccess: (data) => {
+                            console.log('[CryptoPayment] BSC payment success:', data);
+                        },
+                        onError: (error) => {
+                            console.error('[CryptoPayment] BSC payment error:', error);
+                        }
+                    });
+                    
+                    // Format result
+                    return {
+                        success: result.success || false,
+                        cancelled: result.cancelled || false,
+                        txHash: result.txHash,
+                        payment_intent_id: result.txHash || `bsc_${Date.now()}`,
+                        payment_amount: amount,
+                        participant_id: participantId,
+                        ...result
+                    };
+                } else {
+                    console.log('[CryptoPayment] BSCPayments not available, using fallback');
+                    
+                    // Fallback to manual BSC modal
+                    const manualResult = await showBSCManualModal(recipient, amount, true);
+                    
+                    if (manualResult.cancelled) {
+                        return { success: false, cancelled: true };
+                    }
+                    
+                    if (manualResult.success) {
+                        return {
+                            ...manualResult,
+                            participant_id: participantId,
+                            payment_amount: amount,
+                            payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+                        };
+                    }
+                    
+                    return manualResult;
+                }
+            } else {
+                // TRON selected on desktop
+                console.log('[CryptoPayment] Desktop - TRON selected');
+                
+                const hasTronWallet = window.tronWeb && window.tronWeb.ready;
+                
+                if (hasTronWallet) {
+                    // Use TronLink directly
+                    modal = showPaymentStatusModal('TRON', amount);
+                    updateStatus(modal, 'Confirm in TronLink...');
+                    
+                    try {
+                        const result = await executeTronTransfer(recipient, amount);
+                        
+                        updateStatus(modal, 'Finalizing...');
+                        await finalizePayment(result.txHash, 'TRON');
+                        
+                        successStatus(modal, result.txHash, result.explorerUrl);
+                        
+                        return { 
+                            success: true, 
+                            ...result,
+                            participant_id: participantId,
+                            payment_amount: amount,
+                            payment_intent_id: result.txHash
+                        };
+                    } catch (error) {
+                        if (modal) modal.remove();
+                        throw error;
+                    }
+                } else {
+                    // No TronLink - show manual QR modal
+                    const manualResult = await showTronManualModal(recipient, amount);
+                    
+                    if (manualResult.cancelled) {
+                        return { success: false, cancelled: true };
+                    }
+                    
+                    if (manualResult.success) {
+                        return {
+                            ...manualResult,
+                            participant_id: participantId,
+                            payment_amount: amount,
+                            payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+                        };
+                    }
+                    
+                    return manualResult;
+                }
+            }
+        }
+        
+        // FOR MOBILE: Original flow continues here
         // Show network selection
         const selectedNetwork = await showNetworkSelectionModal(preferredNetwork);
         if (!selectedNetwork) {
@@ -1932,7 +2056,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             ? CONFIG.BSC.WALLET_ADDRESS 
             : CONFIG.TRON.WALLET_ADDRESS;
         
-        // For BSC: Show different options for mobile vs desktop
+        // For BSC: Show different options for mobile
         if (selectedNetwork === 'BSC') {
             const isMobile = isMobileDevice();
             const isInWalletBrowser = isInAppBrowser();
@@ -2040,30 +2164,9 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 
                 return mobileResult;
             }
-            
-            // 🚫 Desktop logic removed: No BSCPayments module, no desktop fallback, no browser wallet connect
-            // Always show manual modal for desktop (as fallback)
-            const manualResult = await showBSCManualModal(recipient, amount, false);
-
-            // User cancelled
-            if (manualResult.cancelled) {
-                return { success: false, cancelled: true };
-            }
-
-            // User submitted manual payment confirmation
-            if (manualResult.success) {
-                return {
-                    ...manualResult,
-                    participant_id: participantId,
-                    payment_amount: amount,
-                    payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
-                };
-            }
-
-            return manualResult;
         }
         
-        // TRON network handling
+        // TRON network handling (mobile)
         const hasTronWallet = window.tronWeb && window.tronWeb.ready;
         const isMobileTron = isMobileDevice();
         
@@ -2124,7 +2227,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             return mobileResult;
         }
         
-        // Desktop TRON handling
+        // Desktop TRON handling (if we somehow got here)
         if (!hasTronWallet) {
             // No TronLink - show manual QR modal
             const manualResult = await showTronManualModal(recipient, amount);
@@ -2175,6 +2278,12 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
         
         return { success: false, error: error.message };
     }
+}
+
+// Helper function to hide crypto modal
+function hideCryptoModal() {
+    const modal = document.querySelector('.crypto-modal-overlay');
+    if (modal) modal.remove();
 }
 
 // ======================================================
