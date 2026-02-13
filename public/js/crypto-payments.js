@@ -371,54 +371,54 @@ function createPaymentQRContent(network, recipient, amount) {
     return recipient;
 }
 
-// ✅ TRON Desktop Modal
+// ✅ TRON Desktop Modal - FIXED
 async function showTronDesktopModal(amount) {
     await loadCryptoDependencies();
     
     const recipient = CRYPTO_CONFIG.TRON.RECIPIENT;
     
-    const content = `
-        <div class="crypto-modal-header">
-            <h2 class="crypto-modal-title tron">🔷 TRON USDT (TRC-20)</h2>
-            <button class="crypto-modal-close">×</button>
-        </div>
-        <div class="crypto-modal-body">
-            <div class="crypto-amount-card">
-                <div class="crypto-amount tron">${amount} USDT</div>
-                <div style="color: rgba(255,255,255,0.6);">Amount</div>
-            </div>
-            
-            <div class="crypto-address-card">
-                <div style="margin-bottom: 8px; color: rgba(255,255,255,0.7);">📬 Recipient</div>
-                <div class="crypto-address">${recipient}</div>
-            </div>
-            
-            <button id="copyAddress" class="crypto-btn tron">
-                📋 Copy Address
-            </button>
-            
-            <div style="background: rgba(255,75,75,0.1); border-radius: 12px; padding: 16px; margin: 16px 0;">
-                <strong>⚠️ Instructions:</strong>
-                <ol style="margin-top: 10px; font-size: 14px; color: rgba(255,255,255,0.8);">
-                    <li>Open TronLink extension</li>
-                    <li>Send ${amount} USDT (TRC-20)</li>
-                    <li>Use address above</li>
-                </ol>
-            </div>
-            
-            <div style="margin-top: 16px;">
-                <p style="color: rgba(255,255,255,0.6); margin-bottom: 8px;">Already paid?</p>
-                <input type="text" id="txHashInput" class="crypto-input" placeholder="Transaction hash (optional)">
-                <button id="confirmPayment" class="crypto-btn success">✅ I've Paid</button>
-            </div>
-        </div>
-    `;
-    
-    const modal = createCryptoModal(content, () => {
-        resolve({ success: false, cancelled: true });
-    });
-    
     return new Promise((resolve) => {
+        const content = `
+            <div class="crypto-modal-header">
+                <h2 class="crypto-modal-title tron">🔷 TRON USDT (TRC-20)</h2>
+                <button class="crypto-modal-close">×</button>
+            </div>
+            <div class="crypto-modal-body">
+                <div class="crypto-amount-card">
+                    <div class="crypto-amount tron">${amount} USDT</div>
+                    <div style="color: rgba(255,255,255,0.6);">Amount</div>
+                </div>
+                
+                <div class="crypto-address-card">
+                    <div style="margin-bottom: 8px; color: rgba(255,255,255,0.7);">📬 Recipient</div>
+                    <div class="crypto-address">${recipient}</div>
+                </div>
+                
+                <button id="copyAddress" class="crypto-btn tron">
+                    📋 Copy Address
+                </button>
+                
+                <div style="background: rgba(255,75,75,0.1); border-radius: 12px; padding: 16px; margin: 16px 0;">
+                    <strong>⚠️ Instructions:</strong>
+                    <ol style="margin-top: 10px; font-size: 14px; color: rgba(255,255,255,0.8);">
+                        <li>Open TronLink extension</li>
+                        <li>Send ${amount} USDT (TRC-20)</li>
+                        <li>Use address above</li>
+                    </ol>
+                </div>
+                
+                <div style="margin-top: 16px;">
+                    <p style="color: rgba(255,255,255,0.6); margin-bottom: 8px;">Already paid?</p>
+                    <input type="text" id="txHashInput" class="crypto-input" placeholder="Transaction hash (optional)">
+                    <button id="confirmPayment" class="crypto-btn success">✅ I've Paid</button>
+                </div>
+            </div>
+        `;
+        
+        const modal = createCryptoModal(content, () => {
+            resolve({ success: false, cancelled: true });
+        });
+        
         modal.querySelector('#copyAddress').onclick = () => {
             navigator.clipboard.writeText(recipient);
             showCryptoAlert('Address copied!');
@@ -431,147 +431,169 @@ async function showTronDesktopModal(amount) {
             if (!txHash) {
                 resolve({ success: false, manual: true, pendingConfirmation: true });
             } else {
-                resolve({
-                    success: true,
-                    manual: true,
-                    txHash,
-                    explorerUrl: `${CRYPTO_CONFIG.TRON.EXPLORER}${txHash}`
-                });
+                // Validate TRON transaction hash (64 hex chars, no 0x prefix)
+                if (/^[a-fA-F0-9]{64}$/.test(txHash)) {
+                    resolve({
+                        success: true,
+                        manual: true,
+                        txHash: txHash,
+                        explorerUrl: `${CRYPTO_CONFIG.TRON.EXPLORER}${txHash}`
+                    });
+                } else {
+                    showCryptoAlert('Invalid transaction hash format', 'error');
+                    resolve({ success: false, error: 'Invalid transaction hash' });
+                }
             }
         };
     });
 }
 
-// ✅ Mobile Payment Modal
+// ✅ Mobile Payment Modal - FIXED
 async function showMobilePaymentModal(amount) {
     await loadCryptoDependencies();
     
     let selectedNetwork = 'bsc';
     
-    const content = `
-        <div class="crypto-modal-header">
-            <h2 class="crypto-modal-title">📱 Mobile Payment</h2>
-            <button class="crypto-modal-close">×</button>
-        </div>
-        <div class="crypto-modal-body">
-            <div class="crypto-amount-card">
-                <div class="crypto-amount bsc">${amount} USDT</div>
-                <div style="color: rgba(255,255,255,0.6);">Amount</div>
-            </div>
-            
-            <div class="crypto-network-selector">
-                <button class="crypto-network-btn bsc active" data-network="bsc">🟡 BSC</button>
-                <button class="crypto-network-btn tron" data-network="tron">🔷 TRON</button>
-            </div>
-            
-            <div class="crypto-address-card">
-                <div style="margin-bottom: 8px;">📬 Recipient</div>
-                <div class="crypto-address" id="mobileAddress"></div>
-            </div>
-            
-            <div id="mobileQR" class="crypto-qr-container"></div>
-            
-            <div style="text-align: center; margin: 16px 0;">
-                <button id="copyMobileAddress" class="crypto-btn bsc" style="width: auto; padding: 12px 24px; display: inline-block;">
-                    📋 Copy Address
-                </button>
-            </div>
-            
-            <div style="margin-top: 16px;">
-                <p style="color: rgba(255,255,255,0.6); margin-bottom: 8px;">Already paid?</p>
-                <input type="text" id="txHashInput" class="crypto-input" placeholder="Transaction hash (optional)">
-                <button id="confirmPayment" class="crypto-btn success">✅ I've Paid</button>
-            </div>
-        </div>
-    `;
-    
-    const modal = createCryptoModal(content, () => {
-        resolve({ success: false, cancelled: true });
-    });
-    
-    const getAddresses = (network) => {
-        if (network === 'bsc') {
-            return {
-                address: CRYPTO_CONFIG.BSC.RECIPIENT,
-                uri: CRYPTO_CONFIG.BSC.RECIPIENT
-            };
-        } else {
-            return {
-                address: CRYPTO_CONFIG.TRON.RECIPIENT,
-                uri: createPaymentQRContent('TRON', CRYPTO_CONFIG.TRON.RECIPIENT, amount)
-            };
-        }
-    };
-    
-    const updateDisplay = (network) => {
-        const addresses = getAddresses(network);
-        
-        const addressEl = modal.querySelector('#mobileAddress');
-        if (addressEl) addressEl.textContent = addresses.address;
-        
-        const qrEl = modal.querySelector('#mobileQR');
-        qrEl.innerHTML = '';
-        const qrDiv = document.createElement('div');
-        qrDiv.style.width = '180px';
-        qrDiv.style.height = '180px';
-        qrEl.appendChild(qrDiv);
-        
-        if (typeof QRCode !== 'undefined') {
-            new QRCode(qrDiv, {
-                text: addresses.uri,
-                width: 180,
-                height: 180
-            });
-        }
-        
-        const copyBtn = modal.querySelector('#copyMobileAddress');
-        copyBtn.className = `crypto-btn ${network}`;
-    };
-    
-    // Network switching
-    modal.querySelectorAll('.crypto-network-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            modal.querySelectorAll('.crypto-network-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            selectedNetwork = btn.dataset.network;
-            updateDisplay(selectedNetwork);
-        });
-    });
-    
-    // Copy address
-    modal.querySelector('#copyMobileAddress').onclick = () => {
-        const addresses = getAddresses(selectedNetwork);
-        navigator.clipboard.writeText(addresses.address);
-        showCryptoAlert('Address copied!');
-    };
-    
-    // Confirm payment
     return new Promise((resolve) => {
+        const content = `
+            <div class="crypto-modal-header">
+                <h2 class="crypto-modal-title">📱 Mobile Payment</h2>
+                <button class="crypto-modal-close">×</button>
+            </div>
+            <div class="crypto-modal-body">
+                <div class="crypto-amount-card">
+                    <div class="crypto-amount bsc">${amount} USDT</div>
+                    <div style="color: rgba(255,255,255,0.6);">Amount</div>
+                </div>
+                
+                <div class="crypto-network-selector">
+                    <button class="crypto-network-btn bsc active" data-network="bsc">🟡 BSC</button>
+                    <button class="crypto-network-btn tron" data-network="tron">🔷 TRON</button>
+                </div>
+                
+                <div class="crypto-address-card">
+                    <div style="margin-bottom: 8px;">📬 Recipient</div>
+                    <div class="crypto-address" id="mobileAddress"></div>
+                </div>
+                
+                <div id="mobileQR" class="crypto-qr-container"></div>
+                
+                <div style="text-align: center; margin: 16px 0;">
+                    <button id="copyMobileAddress" class="crypto-btn bsc" style="width: auto; padding: 12px 24px; display: inline-block;">
+                        📋 Copy Address
+                    </button>
+                </div>
+                
+                <div style="margin-top: 16px;">
+                    <p style="color: rgba(255,255,255,0.6); margin-bottom: 8px;">Already paid?</p>
+                    <input type="text" id="txHashInput" class="crypto-input" placeholder="Transaction hash (optional)">
+                    <button id="confirmPayment" class="crypto-btn success">✅ I've Paid</button>
+                </div>
+            </div>
+        `;
+        
+        const modal = createCryptoModal(content, () => {
+            resolve({ success: false, cancelled: true });
+        });
+        
+        const getAddresses = (network) => {
+            if (network === 'bsc') {
+                return {
+                    address: CRYPTO_CONFIG.BSC.RECIPIENT,
+                    uri: CRYPTO_CONFIG.BSC.RECIPIENT
+                };
+            } else {
+                return {
+                    address: CRYPTO_CONFIG.TRON.RECIPIENT,
+                    uri: createPaymentQRContent('TRON', CRYPTO_CONFIG.TRON.RECIPIENT, amount)
+                };
+            }
+        };
+        
+        const updateDisplay = (network) => {
+            const addresses = getAddresses(network);
+            
+            const addressEl = modal.querySelector('#mobileAddress');
+            if (addressEl) addressEl.textContent = addresses.address;
+            
+            const qrEl = modal.querySelector('#mobileQR');
+            qrEl.innerHTML = '';
+            const qrDiv = document.createElement('div');
+            qrDiv.style.width = '180px';
+            qrDiv.style.height = '180px';
+            qrEl.appendChild(qrDiv);
+            
+            if (typeof QRCode !== 'undefined') {
+                new QRCode(qrDiv, {
+                    text: addresses.uri,
+                    width: 180,
+                    height: 180
+                });
+            }
+            
+            const copyBtn = modal.querySelector('#copyMobileAddress');
+            copyBtn.className = `crypto-btn ${network}`;
+        };
+        
+        // Network switching
+        modal.querySelectorAll('.crypto-network-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.querySelectorAll('.crypto-network-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedNetwork = btn.dataset.network;
+                updateDisplay(selectedNetwork);
+            });
+        });
+        
+        // Copy address
+        modal.querySelector('#copyMobileAddress').onclick = () => {
+            const addresses = getAddresses(selectedNetwork);
+            navigator.clipboard.writeText(addresses.address);
+            showCryptoAlert('Address copied!');
+        };
+        
+        // Confirm payment
         modal.querySelector('#confirmPayment').onclick = () => {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             modal.remove();
             
             if (!txHash) {
                 resolve({
-                    success: true,
-                    network: selectedNetwork,
-                    amount: amount,
-                    method: 'mobile',
+                    success: false,
                     manual: true,
-                    pendingConfirmation: true
+                    pendingConfirmation: true,
+                    network: selectedNetwork,
+                    amount: amount
                 });
             } else {
-                resolve({
-                    success: true,
-                    network: selectedNetwork,
-                    amount: amount,
-                    txHash: txHash,
-                    explorerUrl: selectedNetwork === 'bsc' 
-                        ? `${CRYPTO_CONFIG.BSC.EXPLORER}${txHash}`
-                        : `${CRYPTO_CONFIG.TRON.EXPLORER}${txHash}`
-                });
+                // Validate based on network
+                let isValid = false;
+                if (selectedNetwork === 'bsc') {
+                    isValid = /^0x[a-fA-F0-9]{64}$/.test(txHash);
+                } else {
+                    isValid = /^[a-fA-F0-9]{64}$/.test(txHash);
+                }
+                
+                if (isValid) {
+                    resolve({
+                        success: true,
+                        manual: true,
+                        txHash: txHash,
+                        network: selectedNetwork,
+                        amount: amount,
+                        explorerUrl: selectedNetwork === 'bsc' 
+                            ? `${CRYPTO_CONFIG.BSC.EXPLORER}${txHash}`
+                            : `${CRYPTO_CONFIG.TRON.EXPLORER}${txHash}`
+                    });
+                } else {
+                    showCryptoAlert('Invalid transaction hash format', 'error');
+                    resolve({ success: false, error: 'Invalid transaction hash' });
+                }
             }
         };
+        
+        // Initial display
+        updateDisplay('bsc');
     });
 }
 
@@ -599,9 +621,11 @@ async function initiateCryptoPayment(amount = CRYPTO_CONFIG.DEFAULT_AMOUNT, opti
             result = await showTronDesktopModal(amount);
         }
         
-        if (result.success) {
+        if (result && result.success) {
             showCryptoAlert(`✅ Payment initiated`, 'success');
             if (options.onSuccess) options.onSuccess(result);
+        } else if (result && result.cancelled) {
+            showCryptoAlert('Payment cancelled', 'info');
         }
         
         return result;
@@ -627,11 +651,10 @@ window.CryptoPayments = {
 };
 
 console.log('✅ Crypto Payments Ready');
+
 // ========================================
 // 🔌 COMPATIBILITY LAYER
 // ========================================
-
-// Add at the VERY BOTTOM after console.log('✅ Crypto Payments Ready')
 
 // Also expose as initiateCryptoPayment for vote.js compatibility
 if (!window.initiateCryptoPayment) {
