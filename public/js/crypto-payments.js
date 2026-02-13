@@ -627,3 +627,44 @@ window.CryptoPayments = {
 };
 
 console.log('✅ Crypto Payments Ready');
+// ========================================
+// 🔌 COMPATIBILITY LAYER
+// ========================================
+
+// Add at the VERY BOTTOM after console.log('✅ Crypto Payments Ready')
+
+// Also expose as initiateCryptoPayment for vote.js compatibility
+if (!window.initiateCryptoPayment) {
+    window.initiateCryptoPayment = async function(participantId, voteCount, amount) {
+        console.log('[Crypto] Using CryptoPayments via initiateCryptoPayment fallback');
+        
+        // Use the appropriate method based on device
+        let result;
+        if (isMobileDevice()) {
+            result = await showMobilePaymentModal(amount);
+        } else {
+            result = await showTronDesktopModal(amount);
+        }
+        
+        // Format to match expected structure
+        return {
+            success: result.success || false,
+            cancelled: result.cancelled || false,
+            txHash: result.txHash,
+            payment_intent_id: result.txHash || `crypto_${Date.now()}`,
+            payment_amount: amount,
+            participant_id: participantId,
+            ...result
+        };
+    };
+}
+
+// Also expose as processCryptoPayment for vote-payments.js compatibility
+if (!window.processCryptoPayment) {
+    window.processCryptoPayment = window.initiateCryptoPayment;
+}
+
+// Dispatch ready event
+document.dispatchEvent(new CustomEvent('cryptoPaymentsReady'));
+
+console.log('✅ Crypto Payments compatibility layer added');

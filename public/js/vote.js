@@ -1020,7 +1020,7 @@ console.log('📦 Vote.js Loading...');
     }
 
     // ========================================
-    // 💳 HANDLE VOTE / PAYMENT (UPDATED)
+    // 💳 HANDLE VOTE / PAYMENT
     // ========================================
     async function handleVote(event) {
         event.preventDefault();
@@ -1128,30 +1128,109 @@ console.log('📦 Vote.js Loading...');
         }
     }
 
-    // Dedicated crypto payment handler with detailed status updates
+    // ========================================
+    // 🔐 COMPLETE CRYPTO PAYMENT HANDLER
+    // ========================================
     async function handleCryptoPayment(participantId, voteCount, amount) {
         try {
-            await waitForCryptoPayments(5000);
-            
-            if (typeof window.initiateCryptoPayment !== 'function') {
-                throw new Error('Crypto payment module not loaded. Please refresh the page.');
-            }
-            
             console.log('[Vote] Starting crypto payment:', { participantId, voteCount, amount });
             
-            const result = await window.initiateCryptoPayment(
-                String(participantId), 
-                Number(voteCount), 
-                Number(amount)
-            );
+            // First, check if we have a unified payment interface
+            if (window.unifiedPayment) {
+                console.log('[Vote] Using unified payment interface');
+                
+                // Wait a moment for modules to be ready
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const result = await window.unifiedPayment.pay(amount, {
+                    network: 'auto',
+                    onSuccess: (data) => {
+                        console.log('[Vote] Payment success:', data);
+                    },
+                    onError: (error) => {
+                        console.error('[Vote] Payment error:', error);
+                    }
+                });
+                
+                // Format result
+                return formatPaymentResult(result, participantId, amount);
+            }
             
-            console.log('[Vote] Crypto payment result:', result);
-            return result;
+            // Try CryptoPayments module
+            if (window.CryptoPayments && typeof window.CryptoPayments.pay === 'function') {
+                console.log('[Vote] Using CryptoPayments module');
+                
+                // Determine if mobile or desktop
+                const isMobile = isMobileDevice();
+                
+                let result;
+                if (isMobile) {
+                    // Mobile - use combined mobile modal
+                    result = await window.CryptoPayments.payMobile(amount);
+                } else {
+                    // Desktop - use TRON desktop modal
+                    result = await window.CryptoPayments.payTronDesktop(amount);
+                }
+                
+                return formatPaymentResult(result, participantId, amount);
+            }
+            
+            // Try BSCPayments module
+            if (window.BSCPayments && typeof window.BSCPayments.pay === 'function') {
+                console.log('[Vote] Using BSCPayments module');
+                
+                const result = await window.BSCPayments.pay(amount, {
+                    participantId,
+                    voteCount
+                });
+                
+                return formatPaymentResult(result, participantId, amount);
+            }
+            
+            // Try initiateCryptoPayment function
+            if (window.initiateCryptoPayment && typeof window.initiateCryptoPayment === 'function') {
+                console.log('[Vote] Using initiateCryptoPayment function');
+                
+                const result = await window.initiateCryptoPayment(participantId, voteCount, amount);
+                
+                return formatPaymentResult(result, participantId, amount);
+            }
+            
+            // No payment method available
+            console.error('[Vote] No crypto payment method available');
+            console.log('Available globals:', {
+                unifiedPayment: !!window.unifiedPayment,
+                CryptoPayments: !!window.CryptoPayments,
+                BSCPayments: !!window.BSCPayments,
+                initiateCryptoPayment: !!window.initiateCryptoPayment
+            });
+            
+            throw new Error('Crypto payment module not available. Please refresh the page.');
             
         } catch (error) {
             console.error('[Vote] Crypto payment error:', error);
             throw error;
         }
+    }
+
+    // Helper to format payment result consistently
+    function formatPaymentResult(result, participantId, amount) {
+        if (!result) {
+            return { success: false, error: 'No result from payment module' };
+        }
+        
+        if (result.success) {
+            return {
+                success: true,
+                txHash: result.txHash,
+                payment_intent_id: result.txHash || result.payment_intent_id || `crypto_${Date.now()}`,
+                payment_amount: amount,
+                participant_id: participantId,
+                ...result
+            };
+        }
+        
+        return result;
     }
 
     // ======================================================
@@ -1491,6 +1570,8 @@ console.log('📦 Vote.js Loading...');
     window.completeAllSteps = completeAllSteps;
     window.isPaystackAvailable = isPaystackAvailable;
     window.WALLETCONNECT_PROJECT_ID = window.WALLETCONNECT_PROJECT_ID || '61d9b98f81731dffa9988c0422676fc5';
+    window.waitForCryptoPayments = waitForCryptoPayments;
+    window.formatPaymentResult = formatPaymentResult;
 
     console.log('✅ Vote.js initialization logic exported.');
 

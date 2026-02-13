@@ -775,5 +775,47 @@ window.BSCPayments = {
         );
     }
 };
+// At the VERY END of bsc-payments.js, add:
 
+// Ensure BSCPayments is available
+if (!window.BSCPayments) {
+    window.BSCPayments = {
+        pay: initiateBSCPayment,
+        pay2USDT: () => initiateBSCPayment(2),
+        payCustom: (amount) => initiateBSCPayment(amount)
+    };
+}
+
+// Dispatch event
+document.dispatchEvent(new CustomEvent('bscPaymentsReady'));
 console.log('✅ BSC Payments Ready');
+// Add at the VERY BOTTOM after console.log('✅ BSC Payments Ready')
+
+// Also expose as initiateCryptoPayment for compatibility
+if (!window.initiateCryptoPayment) {
+    window.initiateCryptoPayment = async function(participantId, voteCount, amount) {
+        console.log('[BSC] Using BSCPayments via initiateCryptoPayment fallback');
+        const result = await initiateBSCPayment(amount, {
+            participantId,
+            voteCount
+        });
+        
+        // Format to match expected structure
+        return {
+            success: result.success || false,
+            cancelled: result.cancelled || false,
+            txHash: result.txHash,
+            payment_intent_id: result.txHash || `bsc_${Date.now()}`,
+            payment_amount: amount,
+            participant_id: participantId,
+            ...result
+        };
+    };
+}
+
+// Also expose as processCryptoPayment for vote-payments.js compatibility
+if (!window.processCryptoPayment) {
+    window.processCryptoPayment = window.initiateCryptoPayment;
+}
+
+console.log('✅ BSC Payments compatibility layer added');
