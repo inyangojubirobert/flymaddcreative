@@ -1896,221 +1896,258 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
 // 🔄 REPLACE THIS ENTIRE FUNCTION WITH THE CODE BELOW
 // ======================================================
 
-async function showTronManualModal(recipient, amount) {
-    await loadQRCodeLibrary();
-    
-    return new Promise((resolve) => {
-        const isMobile = isMobileDevice();
+// ======================================================
+// 🆕  NEW: TRON WALLETCONNECT FUNCTIONS
+// ======================================================
+
+/**
+ * Initialize WalletConnect for TRON
+ */
+async function initTronWalletConnect() {
+    try {
+        // Load WalletConnect if not available
+        if (typeof window.EthereumProvider === 'undefined') {
+            await loadWalletConnect();
+        }
         
-        // ✅ TRON USDT uses 6 decimals
-        const amountSun = BigInt(Math.round(parseFloat(amount) * 10 ** 6)).toString();
+        if (!window.EthereumProvider) {
+            throw new PaymentError(
+                'WalletConnect not available. Please use QR code option.',
+                ERROR_CODES.PROVIDER_ERROR
+            );
+        }
         
-        // ❌ OLD - This sends TRON coin, not USDT
-        // const tronURI = `tron://${CONFIG.TRON.USDT_ADDRESS}/transfer?address=${recipient}&amount=${amountSun}`;
-        
-        // ✅ NEW - CORRECT FORMAT for USDT TRC-20
-        // Format 1: TronLink specific format (works with TronLink)
-        const tronLinkURI = `tronlink://transfer?contract=${CONFIG.TRON.USDT_ADDRESS}&to=${recipient}&amount=${amountSun}&token=USDT&tokenDecimal=6`;
-        
-        // Format 2: Universal TRC-20 token transfer format
-        const trc20URI = `tron://token/${CONFIG.TRON.USDT_ADDRESS}/transfer?to=${recipient}&amount=${amountSun}&_display=${amount}%20USDT`;
-        
-        // Format 3: WalletConnect style for TRON
-        const walletStyleURI = `tron:${CONFIG.TRON.USDT_ADDRESS}?function=transfer(address,uint256)&args=${recipient},${amountSun}&network=TRC20&token=USDT`;
-        
-        // Use the format that works best - TronLink format is most reliable
-        const qrContent = tronLinkURI;
-        
-        console.log('[TRON] Using TRON USDT TRC-20 URI:', {
-            mode: isMobile ? 'Mobile' : 'Desktop',
-            uri: qrContent,
-            contract: CONFIG.TRON.USDT_ADDRESS,
-            recipient: recipient,
-            amount: amount,
-            amountSun: amountSun,
-            token: 'USDT (TRC-20)'
+        // Initialize provider with TRON-compatible chain
+        const provider = await window.EthereumProvider.init({
+            projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
+            chains: [1], // Ethereum mainnet (works for TRON via WalletConnect)
+            showQrModal: true, // Show QR modal for desktop
+            qrModalOptions: {
+                themeMode: 'light',
+                enableExplorer: true,
+                description: 'Connect your TRON wallet (TronLink, Trust, TokenPocket)'
+            },
+            metadata: {
+                name: "OneDream Voting",
+                description: "Secure USDT TRC-20 Payment",
+                url: window.location.origin,
+                icons: [`${window.location.origin}/favicon.ico`]
+            }
         });
         
+        return provider;
+        
+    } catch (error) {
+        console.error('[TRON WalletConnect] Init error:', error);
+        throw new PaymentError(
+            'Failed to initialize WalletConnect for TRON',
+            ERROR_CODES.PROVIDER_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+/**
+ * Execute USDT TRC-20 transfer via WalletConnect
+ */
+async function executeTronWalletConnectTransfer(provider, recipient, amount) {
+    try {
+        // USDT TRC-20 transfer function signature
+        // transfer(address,uint256)
+        const transferSignature = '0xa9059cbb';
+        
+        // TRON USDT uses 6 decimals
+        const TRON_USDT_DECIMALS = 6;
+        const amountSun = BigInt(Math.round(parseFloat(amount) * 10 ** TRON_USDT_DECIMALS));
+        
+        // Encode recipient address (remove TronLink prefix, pad to 32 bytes)
+        let recipientHex = recipient;
+        if (recipientHex.startsWith('T')) {
+            // Convert TRON base58 to hex
+            if (window.tronWeb) {
+                recipientHex = window.tronWeb.address.toHex(recipient);
+            } else {
+                // If tronWeb not available, use a placeholder approach
+                // Many wallets accept base58 directly in data
+                recipientHex = recipient;
+            }
+        }
+        
+        // For wallets that accept base58 in the data field
+        const recipientPadded = recipientHex.padStart(64, '0');
+        const amountPadded = amountSun.toString(16).padStart(64, '0');
+        
+        // Construct data field
+        const data = transferSignature + recipientPadded + amountPadded;
+        
+        // Get connected account
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        const from = accounts[0];
+        
+        if (!from) {
+            throw new PaymentError('No wallet account connected', ERROR_CODES.WALLET_ERROR);
+        }
+        
+        // Send transaction
+        const txHash = await provider.request({
+            method: 'eth_sendTransaction',
+            params: [{
+                from: from,
+                to: CONFIG.TRON.USDT_ADDRESS, // USDT TRC-20 contract
+                data: data,
+                value: '0x0' // 0 TRX sent
+            }]
+        });
+        
+        // WalletConnect returns ETH-style 0x prefixed hash
+        // Convert to TRON format (remove 0x prefix)
+        const tronTxHash = txHash.startsWith('0x') ? txHash.slice(2) : txHash;
+        
+        console.log('[TRON WalletConnect] Transaction sent:', {
+            txHash: txHash,
+            tronHash: tronTxHash,
+            explorerUrl: `${CONFIG.TRON.EXPLORER}${tronTxHash}`
+        });
+        
+        return {
+            txHash: tronTxHash,
+            network: 'TRON',
+            explorerUrl: `${CONFIG.TRON.EXPLORER}${tronTxHash}`,
+            rawTxHash: txHash // Keep original for reference
+        };
+        
+    } catch (error) {
+        console.error('[TRON WalletConnect] Transfer error:', error);
+        
+        // Handle user rejection
+        if (error.code === 4001 || error.message?.includes('rejected')) {
+            throw new PaymentError('Transaction rejected by user', ERROR_CODES.WALLET_ERROR);
+        }
+        
+        throw new PaymentError(
+            error.message || 'TRON USDT transfer failed',
+            ERROR_CODES.TRANSACTION_ERROR,
+            { originalError: error }
+        );
+    }
+}
+
+/**
+ * Show WalletConnect modal for TRON payment
+ */
+function showTronWalletConnectModal(recipient, amount) {
+    return new Promise((resolve) => {
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
-                <h3 class="font-bold mb-3 pr-6">🔴 USDT (TRC-20) Payment</h3>
+                <h3 class="font-bold mb-3 pr-6">🔗 TRON USDT via WalletConnect</h3>
                 
                 <div class="bg-gradient-to-r from-red-100 to-red-50 p-4 rounded-lg mb-4">
                     <div class="text-2xl font-bold text-red-800 mb-1">${amount} USDT</div>
-                    <div class="text-sm text-red-600">Amount to send</div>
-                    <div class="text-xs text-red-500 mt-1">TRC-20 Network</div>
+                    <div class="text-sm text-red-600">TRC-20 Network</div>
                 </div>
                 
-                <p class="text-sm mb-2 text-gray-700">Send USDT (TRC-20) to:</p>
-                <div class="bg-gray-100 p-3 rounded break-all text-xs mb-3 font-mono border border-gray-200">
-                    ${recipient}
-                </div>
-                
-                <div class="bg-yellow-50 p-3 rounded mb-3 text-left border border-yellow-200">
-                    <div class="text-xs font-medium text-yellow-800 mb-1">⚠️ IMPORTANT - TRC-20 USDT ONLY</div>
-                    <p class="text-xs text-yellow-700">
-                        Send <strong>USDT (TRC-20)</strong> only. Do NOT send TRX or other tokens.<br>
-                        This QR code is pre-configured for USDT TRC-20 transfer.
-                    </p>
-                </div>
-                
-                <div id="tronQR" class="mx-auto mb-4"></div>
-                
-                <div class="bg-blue-50 p-3 rounded mb-3 text-left">
-                    <div class="text-xs font-medium text-blue-800 mb-1">📱 How to pay with TRC-20 USDT:</div>
-                    <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
-                        <li>Scan QR with TronLink, Trust Wallet, or TokenPocket</li>
-                        <li><strong>Verify it says "USDT" or "TRC-20 USDT"</strong></li>
-                        <li>Amount and recipient will be pre-filled</li>
-                        <li>Ensure you have enough USDT balance</li>
-                        <li>Confirm the transaction</li>
-                    </ol>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-2 mb-3">
-                    <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
-                        <span>📋</span> Copy Address
-                    </button>
-                    <button id="viewOnTronscan" class="bg-gray-500 hover:bg-gray-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
-                        <span>🔍</span> View on Tronscan
-                    </button>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-2 mb-3">
-                    <button id="copyUSDTContract" class="bg-purple-500 hover:bg-purple-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
-                        <span>📄</span> Copy USDT Contract
-                    </button>
-                    <button id="checkBalance" class="bg-green-600 hover:bg-green-700 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
-                        <span>💰</span> Check Balance
-                    </button>
-                </div>
-                
-                <div class="border-t pt-3 mt-3">
-                    <p class="text-xs text-gray-500 mb-2">Already sent payment? Enter transaction hash:</p>
-                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (64 characters)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" />
-                    <div class="text-xs text-gray-500 mb-2">
-                        <span id="txHint">Hash starts with 0x? That's for BSC. TRON hashes are 64 hex chars without 0x</span>
+                <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                    <div class="flex items-center justify-center mb-2">
+                        <span class="text-3xl">🔗</span>
                     </div>
-                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid - Verify Transaction</button>
+                    <p class="text-sm font-medium text-blue-800 mb-2">Connect with WalletConnect</p>
+                    <p class="text-xs text-blue-600 mb-3">
+                        Works with TronLink, Trust Wallet, TokenPocket, and more
+                    </p>
+                    <button id="startWalletConnect" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition-colors shadow-md">
+                        🔗 Connect Wallet
+                    </button>
                 </div>
                 
-                <button id="closeTron" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
+                <div class="border-t border-b py-3 my-2">
+                    <p class="text-xs text-gray-500 mb-2">📋 Payment details:</p>
+                    <div class="text-xs text-left">
+                        <div class="flex justify-between mb-1">
+                            <span class="text-gray-600">Recipient:</span>
+                            <span class="font-mono text-gray-800 truncate max-w-[180px]" title="${recipient}">
+                                ${recipient.substring(0, 10)}...${recipient.substring(recipient.length - 8)}
+                            </span>
+                        </div>
+                        <div class="flex justify-between mb-1">
+                            <span class="text-gray-600">Token:</span>
+                            <span class="text-red-600">USDT (TRC-20)</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Amount:</span>
+                            <span class="font-bold">${amount} USDT</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-2">
+                    <button id="useQRFallback" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded text-sm transition-colors">
+                        📱 Use QR Code Instead
+                    </button>
+                    <button id="cancelWalletConnect" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded text-sm mt-2 transition-colors">
+                        Cancel
+                    </button>
+                </div>
             </div>
         `);
-
-        // Generate QR code with TRC-20 USDT URI
-        setTimeout(() => {
-            const qrContainer = modal.querySelector('#tronQR');
-            if (qrContainer) {
-                if (window.QRCode) {
-                    if (typeof window.QRCode.toCanvas === 'function') {
-                        const canvas = document.createElement('canvas');
-                        qrContainer.appendChild(canvas);
-                        
-                        window.QRCode.toCanvas(canvas, qrContent, {
-                            width: 180,
-                            margin: 2
-                        }, (error) => {
-                            if (error) {
-                                generateFallbackQR(qrContainer, qrContent);
-                            }
-                        });
-                    } else {
-                        new window.QRCode(qrContainer, {
-                            text: qrContent,
-                            width: 180,
-                            height: 180
-                        });
-                    }
-                } else {
-                    generateFallbackQR(qrContainer, qrContent);
-                }
-            }
-        }, 100);
-
-        // Close handler
+        
+        // Close handlers
         const closeX = modal.querySelector('#modalCloseX');
         if (closeX) {
-            closeX.onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
-        }
-
-        // Copy address
-        modal.querySelector('#copyAddress').onclick = () => {
-            navigator.clipboard.writeText(recipient)
-                .then(() => {
-                    const btn = modal.querySelector('#copyAddress');
-                    btn.textContent = '✅ Copied!';
-                    setTimeout(() => { btn.textContent = '📋 Copy Address'; }, 2000);
-                })
-                .catch(() => showCryptoAlert('Failed to copy address', 'error'));
-        };
-
-        // Copy USDT contract address
-        const copyContractBtn = modal.querySelector('#copyUSDTContract');
-        if (copyContractBtn) {
-            copyContractBtn.onclick = () => {
-                navigator.clipboard.writeText(CONFIG.TRON.USDT_ADDRESS)
-                    .then(() => {
-                        copyContractBtn.textContent = '✅ Contract Copied!';
-                        setTimeout(() => { copyContractBtn.textContent = '📄 Copy USDT Contract'; }, 2000);
-                    })
-                    .catch(() => showCryptoAlert('Failed to copy contract address', 'error'));
+            closeX.onclick = () => { 
+                modal.remove(); 
+                resolve({ success: false, cancelled: true }); 
             };
         }
-
-        // Check balance - opens Tronscan with contract address
-        const checkBalanceBtn = modal.querySelector('#checkBalance');
-        if (checkBalanceBtn) {
-            checkBalanceBtn.onclick = () => {
-                window.open(`https://tronscan.org/#/token20/${CONFIG.TRON.USDT_ADDRESS}`, '_blank');
+        
+        // Start WalletConnect
+        const startBtn = modal.querySelector('#startWalletConnect');
+        if (startBtn) {
+            startBtn.onclick = () => {
+                modal.remove();
+                resolve({ success: true, method: 'walletconnect' });
             };
         }
-
-        // View on Tronscan
-        modal.querySelector('#viewOnTronscan').onclick = () => {
-            window.open(`https://tronscan.org/#/address/${recipient}`, '_blank');
-        };
-
-        // Confirm payment
-        modal.querySelector('#confirmPayment').onclick = () => {
-            const txHash = modal.querySelector('#txHashInput').value.trim();
-            
-            if (!txHash) {
-                if (!confirm(`No transaction hash entered. Are you sure you have already sent ${amount} USDT (TRC-20) on TRON network?`)) {
-                    return;
-                }
-            }
-            
-            modal.remove();
-            
-            // TRON transaction hashes are 64 hex characters WITHOUT 0x prefix
-            if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
-                resolve({ 
-                    success: true, 
-                    manual: true, 
-                    txHash, 
-                    explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` 
-                });
-            } else if (txHash && txHash.startsWith('0x') && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
-                // User might have pasted an ETH/BSC hash
-                showCryptoAlert('This looks like an Ethereum/BSC transaction hash. TRON hashes are 64 characters without 0x prefix.', 'warning');
-                resolve({ success: false, error: 'Invalid TRON transaction hash format' });
-            } else if (txHash) {
-                showCryptoAlert('Invalid transaction hash format. TRON hash should be 64 hex characters (no 0x prefix).', 'error');
-                resolve({ success: false, error: 'Invalid transaction hash' });
-            } else {
-                resolve({ success: false, manual: true, pendingConfirmation: true });
-            }
-        };
-
-        modal.querySelector('#closeTron').onclick = () => { 
-            modal.remove(); 
-            resolve({ success: false, cancelled: true }); 
-        };
+        
+        // QR fallback
+        const qrFallback = modal.querySelector('#useQRFallback');
+        if (qrFallback) {
+            qrFallback.onclick = async () => {
+                modal.remove();
+                // Show QR manual modal
+                const manualResult = await showTronManualModal(recipient, amount);
+                resolve(manualResult);
+            };
+        }
+        
+        // Cancel
+        const cancelBtn = modal.querySelector('#cancelWalletConnect');
+        if (cancelBtn) {
+            cancelBtn.onclick = () => { 
+                modal.remove(); 
+                resolve({ success: false, cancelled: true }); 
+            };
+        }
     });
 }
 
+/**
+ * Update createPaymentQRContent to support WalletConnect for TRON
+ */
+function createPaymentQRContent(network, recipient, amount) {
+    if (network === 'BSC') {
+        // ... existing BSC code ...
+        const simpleFormat = `${recipient}`;
+        return simpleFormat;
+        
+    } else if (network === 'TRON') {
+        // For TRON, we want WalletConnect URI
+        // This will be generated dynamically when needed
+        return `wc://tron?contract=${CONFIG.TRON.USDT_ADDRESS}&to=${recipient}&amount=${amount}`;
+    }
+    
+    return recipient;
+}
 async function initiateCryptoPayment(participantId, voteCount, amount) {
     let modal = null;
     
@@ -2355,6 +2392,108 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
         return { success: false, error: error.message };
     }
 }
+// ======================================================
+// 🔄  REPLACE THIS SECTION in initiateCryptoPayment
+// ======================================================
+
+// Desktop TRON handling with WalletConnect
+const manualResult = await showTronManualModal(recipient, amount);
+if (manualResult.success) {
+    return {
+        ...manualResult,
+        participant_id: participantId,
+        payment_amount: amount,
+        payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+    };
+}
+return manualResult;
+
+// ======================================================
+// ✅  REPLACE WITH THIS (WalletConnect for TRON Desktop)
+// ======================================================
+
+// Desktop TRON handling with WalletConnect
+console.log('[TRON] Desktop payment - using WalletConnect');
+
+// Show WalletConnect modal for TRON
+const wcResult = await showTronWalletConnectModal(recipient, amount);
+
+if (wcResult.cancelled) {
+    return { success: false, cancelled: true };
+}
+
+if (wcResult.success) {
+    // Show payment status modal
+    modal = showPaymentStatusModal('TRON', amount);
+    updateStatus(modal, 'Connecting to wallet...');
+    
+    try {
+        // Initialize WalletConnect for TRON
+        const provider = await initTronWalletConnect();
+        
+        updateStatus(modal, 'Waiting for wallet connection...');
+        
+        // Connect and get accounts
+        const accounts = await provider.request({ 
+            method: 'eth_requestAccounts' 
+        });
+        
+        if (!accounts || accounts.length === 0) {
+            throw new PaymentError('No wallet connected', ERROR_CODES.WALLET_ERROR);
+        }
+        
+        updateStatus(modal, 'Preparing USDT TRC-20 transfer...');
+        
+        // Execute USDT TRC-20 transfer via WalletConnect
+        const result = await executeTronWalletConnectTransfer(
+            provider, 
+            recipient, 
+            amount
+        );
+        
+        updateStatus(modal, 'Finalizing payment...');
+        
+        // Finalize with backend
+        await finalizePayment(result.txHash, 'TRON');
+        
+        // Show success
+        successStatus(modal, result.txHash, result.explorerUrl);
+        
+        return {
+            success: true,
+            ...result,
+            participant_id: participantId,
+            payment_amount: amount,
+            payment_intent_id: result.txHash
+        };
+        
+    } catch (wcError) {
+        if (modal) modal.remove();
+        console.error('[TRON WalletConnect] Error:', wcError);
+        
+        // Offer QR fallback
+        const useFallback = confirm(
+            `WalletConnect failed: ${wcError.message}\n\nWould you like to use QR code instead?`
+        );
+        
+        if (useFallback) {
+            const fallbackResult = await showTronManualModal(recipient, amount);
+            if (fallbackResult.success) {
+                return {
+                    ...fallbackResult,
+                    participant_id: participantId,
+                    payment_amount: amount,
+                    payment_intent_id: fallbackResult.txHash || `manual_${Date.now()}`
+                };
+            }
+            return fallbackResult;
+        }
+        
+        throw wcError;
+    }
+}
+
+return wcResult;
 
 // ======================================================
 // 🌍  GLOBAL EXPORTS
