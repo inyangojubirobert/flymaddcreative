@@ -129,9 +129,438 @@ if (typeof window === 'undefined') {
             background: #e5e7eb;
             color: #374151;
         }
+        
+        /* Additional styles for modals */
+        .hidden {
+            display: none !important;
+        }
+        
+        .flex {
+            display: flex;
+        }
+        
+        .items-center {
+            align-items: center;
+        }
+        
+        .justify-center {
+            justify-content: center;
+        }
+        
+        .mx-auto {
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .rounded-xl {
+            border-radius: 0.75rem;
+        }
+        
+        .rounded-lg {
+            border-radius: 0.5rem;
+        }
+        
+        .rounded {
+            border-radius: 0.25rem;
+        }
+        
+        .bg-black\\/80 {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        .bg-white {
+            background-color: #fff;
+        }
+        
+        .bg-gray-100 {
+            background-color: #f3f4f6;
+        }
+        
+        .bg-gray-200 {
+            background-color: #e5e7eb;
+        }
+        
+        .bg-gray-800 {
+            background-color: #1f2937;
+        }
+        
+        .bg-blue-600 {
+            background-color: #2563eb;
+        }
+        
+        .bg-green-600 {
+            background-color: #059669;
+        }
+        
+        .bg-red-600 {
+            background-color: #dc2626;
+        }
+        
+        .bg-yellow-400 {
+            background-color: #fbbf24;
+        }
+        
+        .bg-orange-500 {
+            background-color: #f97316;
+        }
+        
+        .bg-purple-500 {
+            background-color: #8b5cf6;
+        }
+        
+        .bg-gradient-to-r {
+            background-image: linear-gradient(to right, var(--tw-gradient-stops));
+        }
+        
+        .from-blue-600 {
+            --tw-gradient-from: #2563eb;
+            --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(37, 99, 235, 0));
+        }
+        
+        .to-purple-600 {
+            --tw-gradient-to: #7c3aed;
+        }
+        
+        .hover\\:from-blue-700:hover {
+            --tw-gradient-from: #1d4ed8;
+        }
+        
+        .hover\\:to-purple-700:hover {
+            --tw-gradient-to: #6d28d9;
+        }
+        
+        .hover\\:bg-blue-700:hover {
+            background-color: #1d4ed8;
+        }
+        
+        .hover\\:bg-gray-300:hover {
+            background-color: #d1d5db;
+        }
+        
+        .hover\\:bg-gray-900:hover {
+            background-color: #111827;
+        }
+        
+        .hover\\:bg-green-700:hover {
+            background-color: #047857;
+        }
+        
+        .hover\\:bg-red-700:hover {
+            background-color: #b91c1c;
+        }
+        
+        .hover\\:bg-yellow-500:hover {
+            background-color: #f59e0b;
+        }
+        
+        .hover\\:bg-orange-600:hover {
+            background-color: #ea580c;
+        }
+        
+        .hover\\:bg-purple-600:hover {
+            background-color: #7c3aed;
+        }
+        
+        .text-white {
+            color: #fff;
+        }
+        
+        .text-gray-500 {
+            color: #6b7280;
+        }
+        
+        .text-gray-600 {
+            color: #4b5563;
+        }
+        
+        .text-gray-700 {
+            color: #374151;
+        }
+        
+        .text-blue-500 {
+            color: #3b82f6;
+        }
+        
+        .text-red-500 {
+            color: #ef4444;
+        }
+        
+        .text-sm {
+            font-size: 0.875rem;
+        }
+        
+        .text-xs {
+            font-size: 0.75rem;
+        }
+        
+        .text-lg {
+            font-size: 1.125rem;
+        }
+        
+        .text-2xl {
+            font-size: 1.5rem;
+        }
+        
+        .font-bold {
+            font-weight: 700;
+        }
+        
+        .font-medium {
+            font-weight: 500;
+        }
+        
+        .font-semibold {
+            font-weight: 600;
+        }
+        
+        .font-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+        
+        .p-2 {
+            padding: 0.5rem;
+        }
+        
+        .p-3 {
+            padding: 0.75rem;
+        }
+        
+        .p-6 {
+            padding: 1.5rem;
+        }
+        
+        .py-2 {
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        
+        .py-3 {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        
+        .px-3 {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        
+        .pr-6 {
+            padding-right: 1.5rem;
+        }
+        
+        .mb-2 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .mb-3 {
+            margin-bottom: 0.75rem;
+        }
+        
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+        
+        .mt-2 {
+            margin-top: 0.5rem;
+        }
+        
+        .mt-3 {
+            margin-top: 0.75rem;
+        }
+        
+        .mt-4 {
+            margin-top: 1rem;
+        }
+        
+        .mt-6 {
+            margin-top: 1.5rem;
+        }
+        
+        .my-3 {
+            margin-top: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .w-full {
+            width: 100%;
+        }
+        
+        .w-80 {
+            width: 20rem;
+        }
+        
+        .max-w-\\[90vw\\] {
+            max-width: 90vw;
+        }
+        
+        .max-w-\\[95vw\\] {
+            max-width: 95vw;
+        }
+        
+        .gap-1 {
+            gap: 0.25rem;
+        }
+        
+        .gap-2 {
+            gap: 0.5rem;
+        }
+        
+        .grid {
+            display: grid;
+        }
+        
+        .grid-cols-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        
+        .break-all {
+            word-break: break-all;
+        }
+        
+        .border {
+            border-width: 1px;
+            border-color: #d1d5db;
+        }
+        
+        .border-t {
+            border-top-width: 1px;
+            border-top-color: #d1d5db;
+        }
+        
+        .border-b {
+            border-bottom-width: 1px;
+            border-bottom-color: #d1d5db;
+        }
+        
+        .shadow-md {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .focus\\:ring-2:focus {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        .focus\\:ring-blue-500:focus {
+            --tw-ring-color: #3b82f6;
+        }
+        
+        .focus\\:ring-red-500:focus {
+            --tw-ring-color: #ef4444;
+        }
+        
+        .focus\\:border-blue-500:focus {
+            border-color: #3b82f6;
+        }
+        
+        .outline-none {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+        }
+        
+        .transition-colors {
+            transition-property: color, background-color, border-color;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+        
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 150ms;
+        }
+        
+        .z-50 {
+            z-index: 50;
+        }
+        
+        .fixed {
+            position: fixed;
+        }
+        
+        .inset-0 {
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+        }
+        
+        .relative {
+            position: relative;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .min-h-6 {
+            min-height: 1.5rem;
+        }
+        
+        /* QR Code specific styles */
+        .qr-code-container {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .qr-code-canvas {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .qr-code-canvas:hover {
+            transform: scale(1.02);
+        }
+        
+        .qr-fallback {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .ring-2 {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        .ring-blue-500 {
+            --tw-ring-color: #3b82f6;
+        }
     `;
     document.head.appendChild(style);
 })();
+
+// ✅ Load QRCode.js library dynamically
+function loadQRCodeLibrary() {
+    return new Promise((resolve, reject) => {
+        if (typeof QRCode !== 'undefined') {
+            resolve();
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+        script.crossOrigin = 'anonymous';
+        script.onload = () => {
+            console.log('✅ QRCode.js library loaded');
+            resolve();
+        };
+        script.onerror = () => {
+            console.warn('Failed to load QRCode.js, using fallback');
+            resolve(); // Still resolve to use fallback
+        };
+        
+        document.head.appendChild(script);
+    });
+}
 
 // ✅ Ensure Paystack fallback exists
 if (typeof window.initiatePaystackPayment !== 'function') {
@@ -181,9 +610,6 @@ const ERROR_CODES = {
     DEPENDENCY_ERROR: 'DEPENDENCY_ERROR',
     UNKNOWN_ERROR: 'UNKNOWN_ERROR'
 };
-
-// Track payment attempts
-// const paymentAttempts = new Map(); // REMOVED
 
 // ======================================================
 // 🛡️  ERROR HANDLING CLASS
@@ -264,16 +690,19 @@ function isMobileDevice() {
 }
 
 function isInAppBrowser() {
-    // Check if we're inside a wallet's in-app browser
+    // Check if we're inside a wallet's in-app browser (MOBILE ONLY)
+    // This should NOT match desktop browser extensions like MetaMask
+    if (!isMobileDevice()) {
+        return false; // Desktop browsers with wallet extensions are NOT in-app browsers
+    }
+    
     const ua = navigator.userAgent.toLowerCase();
     return ua.includes('metamask') || 
            ua.includes('trust') || 
            ua.includes('tokenpocket') ||
            ua.includes('imtoken') ||
-           ua.includes('coinbase') ||
-           (window.ethereum && window.ethereum.isMetaMask) ||
-           (window.ethereum && window.ethereum.isTrust) ||
-           (window.ethereum && window.ethereum.isCoinbaseWallet);
+           ua.includes('coinbase');
+    // Note: Removed window.ethereum checks since those match desktop extensions too
 }
 
 function getWalletDeepLinks(network, recipient, amount) {
@@ -533,48 +962,150 @@ function openWalletApp(walletType = 'metamask') {
     return deepLinks[walletType] || deepLinks.metamask;
 }
 
-function generateQRCanvas(text, size = 200) {
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f3f4f6';
-    ctx.fillRect(0, 0, size, size);
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('QR Loading...', size/2, size/2 - 10);
-    ctx.fillText('Copy address below', size/2, size/2 + 10);
-    return canvas.toDataURL();
+// ======================================================
+// 📱  QR CODE IMPLEMENTATION (UPDATED - FIXED FOR BSC)
+// ======================================================
+
+/**
+ * Create payment QR code content in proper format for wallets
+ * @param {string} network - 'BSC' or 'TRON'
+ * @param {string} recipient - Wallet address
+ * @param {number} amount - Amount in USDT
+ * @returns {string} QR code content
+ */
+function createPaymentQRContent(network, recipient, amount) {
+    if (network === 'BSC') {
+        // Use plain address format for BSC - this is most compatible
+        // The "ethereum:" prefix confuses wallets into showing ETH
+        // Instead, we just encode the address and show amount in the UI
+        
+        // Simple format that works with most wallet QR scanners
+        const simpleFormat = `${recipient}`;
+        
+        console.log('[BSC QR] Using simple address format:', {
+            recipient: recipient,
+            amount: amount,
+            network: 'BSC (BEP-20)',
+            token: 'USDT',
+            contract: CONFIG.BSC.USDT_ADDRESS
+        });
+        
+        return simpleFormat;
+        
+    } else if (network === 'TRON') {
+        // TRON specific format for TronLink and other TRON wallets
+        const amountSun = (amount * 1e6).toString();
+        return `tron://pay?to=${recipient}&amount=${amountSun}&token=${CONFIG.TRON.USDT_ADDRESS}`;
+    }
+    
+    // Fallback to plain address
+    return recipient;
 }
 
+/**
+ * Generate QR code for payment
+ * @param {string} text - Text to encode in QR
+ * @param {string} elementId - ID of element to render QR in
+ */
 function generateQR(text, elementId) {
     const element = document.getElementById(elementId);
-    if (!element) return;
+    if (!element) {
+        console.warn('[QR] Element not found:', elementId);
+        return;
+    }
+    
+    // Clear element
+    element.innerHTML = '';
+    element.className = 'qr-code-container';
+    
+    // Create a wrapper for better display
+    const wrapper = document.createElement('div');
+    wrapper.className = 'text-center';
+    
+    const qrTitle = document.createElement('p');
+    qrTitle.className = 'text-xs text-gray-500 mb-2';
+    qrTitle.textContent = 'Scan with wallet app';
+    
+    const qrContainer = document.createElement('div');
+    qrContainer.id = elementId + '_container';
+    qrContainer.className = 'qr-code-container';
+    
+    wrapper.appendChild(qrTitle);
+    wrapper.appendChild(qrContainer);
+    element.appendChild(wrapper);
+    
+    const displayElement = document.getElementById(elementId + '_container');
+    
+    try {
+        // Try to use QRCode.js library if available
+        if (typeof QRCode !== 'undefined') {
+            const canvas = document.createElement('canvas');
+            canvas.className = 'qr-code-canvas';
+            canvas.width = 180;
+            canvas.height = 180;
+            displayElement.appendChild(canvas);
+            
+            // Generate QR code
+            QRCode.toCanvas(canvas, text, {
+                width: 160,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, (error) => {
+                if (error) {
+                    console.error('[QR] Canvas generation error:', error);
+                    showFallbackQR(displayElement, text);
+                } else {
+                    // Add click to copy functionality
+                    canvas.title = 'Click to copy payment details';
+                    canvas.onclick = () => {
+                        navigator.clipboard.writeText(text)
+                            .then(() => showCryptoAlert('Payment details copied to clipboard!', 'success', 2000))
+                            .catch(() => showCryptoAlert('Failed to copy', 'error'));
+                    };
+                }
+            });
+        } else {
+            // QRCode.js not loaded, use image API fallback
+            showFallbackQR(displayElement, text);
+        }
+    } catch (error) {
+        console.error('[QR] Generation error:', error);
+        showFallbackQR(displayElement, text);
+    }
+}
+
+/**
+ * Show fallback QR code using external API
+ * @param {HTMLElement} element - Element to render in
+ * @param {string} text - Text to encode
+ */
+function showFallbackQR(element, text) {
+    const encodedText = encodeURIComponent(text);
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${encodedText}`;
     
     const img = document.createElement('img');
-    img.className = 'mx-auto rounded-lg';
+    img.src = qrUrl;
     img.alt = 'QR Code';
-    img.style.width = '200px';
-    img.style.height = '200px';
-    
-    const primaryUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(text)}`;
-    const secondaryUrl = `https://quickchart.io/qr?text=${encodeURIComponent(text)}&size=200`;
-    const canvasUrl = generateQRCanvas(text);
-    
-    let attempts = 0;
-    const urls = [primaryUrl, secondaryUrl, canvasUrl];
+    img.style.width = '180px';
+    img.style.height = '180px';
+    img.className = 'rounded-lg';
     
     img.onerror = () => {
-        attempts++;
-        if (attempts < urls.length) {
-            console.warn(`[QR] Fallback ${attempts}: trying next source`);
-            img.src = urls[attempts];
-        }
+        // Final fallback - show text
+        element.innerHTML = `
+            <div class="qr-fallback">
+                <div class="text-xs text-gray-500 mb-2">QR Code unavailable</div>
+                <div class="text-xs font-mono break-all bg-gray-100 p-2 rounded">${text.substring(0, 30)}...</div>
+                <button onclick="navigator.clipboard.writeText('${text}').then(() => showCryptoAlert('Copied!', 'success'))" class="text-blue-500 hover:text-blue-700 text-xs mt-2">
+                    📋 Copy Payment Details
+                </button>
+            </div>
+        `;
     };
     
-    img.src = urls[0];
-    element.innerHTML = '';
     element.appendChild(img);
 }
 
@@ -1043,10 +1574,10 @@ function showPaymentStatusModal(network, amount) {
     const closeBtn = modal.querySelector('#closeModal');
     
     if (closeX) {
-        closeX.onclick = () => modal.remove();
+        closeX.onclick = () => { modal.remove(); resolve(null); };
     }
     if (closeBtn) {
-        closeBtn.onclick = () => modal.remove();
+        closeBtn.onclick = () => { modal.remove(); resolve(null); };
     }
     
     return modal;
@@ -1131,6 +1662,10 @@ function showNetworkSelectionModal(preferredNetwork) {
     });
 }
 
+// ======================================================
+// 🖥️  DESKTOP WALLET MODAL (UPDATED - removed browser wallet option)
+// ======================================================
+
 function showDesktopWalletModal() {
     return new Promise((resolve) => {
         const modal = createModal(`
@@ -1144,19 +1679,10 @@ function showDesktopWalletModal() {
                 <button id="useQR" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
                     <span>📱</span> Pay via QR Code
                 </button>
-                <button id="useBrowserWallet" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded mb-2 flex items-center justify-center gap-2 transition-colors hidden">
-                    <span>🦊</span> Browser Wallet (MetaMask)
-                </button>
+                <!-- Browser Wallet option REMOVED from here - now only in QR modal -->
                 <button id="goBack" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded mt-2 transition-colors">← Back</button>
             </div>
         `);
-
-        // Show browser wallet option if available
-        const hasBrowserWallet = window.ethereum || window.BinanceChain;
-        if (hasBrowserWallet) {
-            const browserBtn = modal.querySelector('#useBrowserWallet');
-            if (browserBtn) browserBtn.classList.remove('hidden');
-        }
 
         // ✅ FIX: Attach close handler
         const closeX = modal.querySelector('#modalCloseX');
@@ -1166,32 +1692,87 @@ function showDesktopWalletModal() {
 
         modal.querySelector('#useWalletConnect').onclick = () => { modal.remove(); resolve('walletconnect'); };
         modal.querySelector('#useQR').onclick = () => { modal.remove(); resolve('qr'); };
-        modal.querySelector('#useBrowserWallet')?.addEventListener('click', () => { modal.remove(); resolve('browser'); });
         modal.querySelector('#goBack').onclick = () => { modal.remove(); resolve('back'); };
     });
 }
 
-function showBSCManualModal(recipient, amount) {
+// ======================================================
+// 🔄  UPDATED BSC MANUAL MODAL (Added browser wallet option with proper QR)
+// ======================================================
+
+async function showBSCManualModal(recipient, amount, isDesktop = false) {
+    // Load QR code library first
+    await loadQRCodeLibrary();
+    
     return new Promise((resolve) => {
+        const hasBrowserWallet = window.ethereum || window.BinanceChain;
+        
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
                 <h3 class="font-bold mb-3 pr-6">BSC USDT Payment</h3>
-                <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (BEP-20) to:</p>
-                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
-                <div id="bscQR" class="mx-auto mb-3"></div>
-                <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on BSC network</p>
-                <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
+                
+                <div class="bg-gradient-to-r from-yellow-100 to-yellow-50 p-4 rounded-lg mb-4">
+                    <div class="text-2xl font-bold text-gray-800 mb-1">${amount} USDT</div>
+                    <div class="text-sm text-gray-600">Amount to send</div>
+                    <div class="text-xs text-gray-500 mt-1">BEP-20 Network</div>
+                </div>
+                
+                <p class="text-sm mb-2">Send to this BSC address:</p>
+                <div class="bg-gray-100 p-3 rounded break-all text-xs mb-3 font-mono border border-gray-200">${recipient}</div>
+                
+                <div id="bscQR" class="mb-4"></div>
+                
+                <div class="bg-blue-50 p-3 rounded mb-3 text-left">
+                    <div class="text-xs font-medium text-blue-800 mb-1">📱 How to pay:</div>
+                    <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
+                        <li>Scan QR with wallet app</li>
+                        <li>Ensure you're on <strong>BSC (Binance Smart Chain)</strong></li>
+                        <li>Send <strong>${amount} USDT (BEP-20)</strong></li>
+                        <li>Confirm the transaction</li>
+                    </ol>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button id="copyAddress" class="bg-blue-500 hover:bg-blue-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>📋</span> Copy Address
+                    </button>
+                    <button id="viewOnBscScan" class="bg-gray-500 hover:bg-gray-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>🔍</span> View on BscScan
+                    </button>
+                </div>
+                
+                ${isDesktop && hasBrowserWallet ? `
+                <div class="border-t border-b py-3 my-3">
+                    <p class="text-sm font-medium mb-2">💻 Connect Browser Wallet:</p>
+                    <button id="connectBrowserWallet" class="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded mb-2 flex items-center justify-center gap-2 transition-colors">
+                        <span>🦊</span> Connect MetaMask
+                    </button>
+                    <p class="text-xs text-gray-500">Use browser extension to pay directly</p>
+                </div>
+                ` : ''}
+                
                 <div class="border-t pt-3 mt-3">
                     <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
-                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (0x...)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
                     <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
                 </div>
                 <button id="closeBSC" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
             </div>
         `);
 
-        generateQR(recipient, 'bscQR');
+        // Generate QR code with proper payment format
+        const qrContent = createPaymentQRContent('BSC', recipient, amount);
+        console.log('[BSC QR] Content:', qrContent);
+        console.log('[BSC Payment Details]', {
+            recipient: recipient,
+            amount: amount,
+            token: 'USDT',
+            network: 'BSC (BEP-20)',
+            chainId: 56,
+            contract: CONFIG.BSC.USDT_ADDRESS
+        });
+        generateQR(qrContent, 'bscQR');
 
         // ✅ FIX: Attach close handler
         const closeX = modal.querySelector('#modalCloseX');
@@ -1209,18 +1790,38 @@ function showBSCManualModal(recipient, amount) {
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
         };
 
+        modal.querySelector('#viewOnBscScan').onclick = () => {
+            window.open(`https://bscscan.com/address/${recipient}`, '_blank');
+        };
+
+        // Browser wallet connection (for desktop only)
+        if (isDesktop && hasBrowserWallet) {
+            modal.querySelector('#connectBrowserWallet').onclick = () => {
+                modal.remove();
+                resolve({ success: false, connectBrowserWallet: true });
+            };
+        }
+
         modal.querySelector('#confirmPayment').onclick = () => {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             
             if (!txHash) {
-                if (!confirm('No transaction hash entered. Are you sure you have already sent the payment?')) {
+                if (!confirm(`No transaction hash entered. Are you sure you have already sent ${amount} USDT on BSC network?`)) {
                     return;
                 }
             }
             
             modal.remove();
             if (txHash && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
-                resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` });
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.BSC.EXPLORER}${txHash}` 
+                });
+            } else if (txHash) {
+                showCryptoAlert('Invalid transaction hash format (should start with 0x and be 64 chars)', 'error');
+                resolve({ success: false, error: 'Invalid transaction hash' });
             } else {
                 resolve({ success: false, manual: true, pendingConfirmation: true });
             }
@@ -1230,7 +1831,14 @@ function showBSCManualModal(recipient, amount) {
     });
 }
 
-function showTronManualModal(recipient, amount) {
+// ======================================================
+// 🔄  UPDATED TRON MANUAL MODAL (with proper QR)
+// ======================================================
+
+async function showTronManualModal(recipient, amount) {
+    // Load QR code library first
+    await loadQRCodeLibrary();
+    
     return new Promise((resolve) => {
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
@@ -1239,6 +1847,7 @@ function showTronManualModal(recipient, amount) {
                 <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (TRC-20) to:</p>
                 <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
                 <div id="tronQR" class="mx-auto mb-3"></div>
+                <p class="text-xs text-gray-500 mb-1">Scan with Tron wallet to auto-fill payment details</p>
                 <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on TRON network</p>
                 <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
                 <div class="border-t pt-3 mt-3">
@@ -1250,7 +1859,10 @@ function showTronManualModal(recipient, amount) {
             </div>
         `);
 
-        generateQR(recipient, 'tronQR');
+        // Generate QR code with proper TRON payment format
+        const qrContent = createPaymentQRContent('TRON', recipient, amount);
+        console.log('[TRON QR] Content:', qrContent);
+        generateQR(qrContent, 'tronQR');
 
         // ✅ FIX: Attach close handler
         const closeX = modal.querySelector('#modalCloseX');
@@ -1279,7 +1891,12 @@ function showTronManualModal(recipient, amount) {
             
             modal.remove();
             if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
-                resolve({ success: true, manual: true, txHash, explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` });
+                resolve({ 
+                    success: true, 
+                    manual: true, 
+                    txHash, 
+                    explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` 
+                });
             } else {
                 resolve({ success: false, manual: true, pendingConfirmation: true });
             }
@@ -1290,7 +1907,7 @@ function showTronManualModal(recipient, amount) {
 }
 
 // ======================================================
-// 🚀  MAIN ENTRY POINT
+// 🚀  MAIN ENTRY POINT (Updated for desktop flow)
 // ======================================================
 
 async function initiateCryptoPayment(participantId, voteCount, amount) {
@@ -1316,7 +1933,6 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             : CONFIG.TRON.WALLET_ADDRESS;
         
         // For BSC: Show different options for mobile vs desktop
-        // For TRON: Use TronLink if available, otherwise show manual QR
         if (selectedNetwork === 'BSC') {
             const isMobile = isMobileDevice();
             const isInWalletBrowser = isInAppBrowser();
@@ -1400,7 +2016,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 
                 // User chose "Other" - show manual payment
                 if (mobileResult.showManual) {
-                    const manualResult = await showBSCManualModal(recipient, amount);
+                    const manualResult = await showBSCManualModal(recipient, amount, false);
                     if (manualResult.success) {
                         return {
                             ...manualResult,
@@ -1425,106 +2041,26 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 return mobileResult;
             }
             
-            // Desktop - show payment method selection
-            const choice = await showDesktopWalletModal();
-            
-            if (choice === 'back') {
-                return initiateCryptoPayment(participantId, voteCount, amount);
+            // 🚫 Desktop logic removed: No BSCPayments module, no desktop fallback, no browser wallet connect
+            // Always show manual modal for desktop (as fallback)
+            const manualResult = await showBSCManualModal(recipient, amount, false);
+
+            // User cancelled
+            if (manualResult.cancelled) {
+                return { success: false, cancelled: true };
             }
-            
-            if (choice === 'qr') {
-                // Show manual payment modal with QR code
-                const manualResult = await showBSCManualModal(recipient, amount);
-                
-                if (manualResult.success) {
-                    return {
-                        ...manualResult,
-                        participant_id: participantId,
-                        payment_amount: amount,
-                        payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
-                    };
-                }
-                return manualResult;
-            }
-            
-            if (choice === 'walletconnect') {
-                // Use WalletConnect with fallback to QR code
-                try {
-                    modal = showPaymentStatusModal(selectedNetwork, amount);
-                    updateStatus(modal, 'Loading WalletConnect...');
-                    
-                    const provider = await connectWalletMobile();
-                    updateStatus(modal, 'Sending transaction...');
-                    
-                    const result = await executeBSCTransferUnified(provider, recipient, amount);
-                    
-                    updateStatus(modal, 'Finalizing...');
-                    await finalizePayment(result.txHash, selectedNetwork);
-                    
-                    successStatus(modal, result.txHash, result.explorerUrl);
-                    
-                    return { 
-                        success: true, 
-                        ...result,
-                        participant_id: participantId,
-                        payment_amount: amount,
-                        payment_intent_id: result.txHash
-                    };
-                } catch (wcError) {
-                    console.warn('[WalletConnect] Failed, falling back to QR:', wcError.message);
-                    
-                    // Close the status modal if open
-                    if (modal) modal.remove();
-                    modal = null;
-                    
-                    // Show user-friendly message and offer QR fallback
-                    showCryptoAlert('WalletConnect unavailable. Showing QR code instead.', 'warning', 4000);
-                    
-                    // Fall back to QR code payment
-                    const manualResult = await showBSCManualModal(recipient, amount);
-                    
-                    if (manualResult.success) {
-                        return {
-                            ...manualResult,
-                            participant_id: participantId,
-                            payment_amount: amount,
-                            payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
-                        };
-                    }
-                    return manualResult;
-                }
-            }
-            
-            if (choice === 'browser') {
-                // Use browser wallet (MetaMask, etc.)
-                modal = showPaymentStatusModal(selectedNetwork, amount);
-                updateStatus(modal, 'Connecting browser wallet...');
-                
-                const connected = await requestWalletConnection();
-                if (!connected) {
-                    throw new PaymentError('Failed to connect wallet', ERROR_CODES.WALLET_ERROR);
-                }
-                
-                await ensureBSCNetworkDesktop(window.ethereum);
-                
-                updateStatus(modal, 'Confirm in wallet...');
-                const result = await executeBSCTransferUnified(window.ethereum, recipient, amount);
-                
-                updateStatus(modal, 'Finalizing...');
-                await finalizePayment(result.txHash, selectedNetwork);
-                
-                successStatus(modal, result.txHash, result.explorerUrl);
-                
-                return { 
-                    success: true, 
-                    ...result,
+
+            // User submitted manual payment confirmation
+            if (manualResult.success) {
+                return {
+                    ...manualResult,
                     participant_id: participantId,
                     payment_amount: amount,
-                    payment_intent_id: result.txHash
+                    payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
                 };
             }
-            
-            return { success: false, cancelled: true };
+
+            return manualResult;
         }
         
         // TRON network handling
@@ -1628,7 +2164,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
         if (modal) {
             errorStatus(modal, error);
         } else {
-            alert(error.message || 'Payment failed. Please try again.');
+            showCryptoAlert(error.message || 'Payment failed. Please try again.', 'error');
         }
         
         trackEvent('payment_error', { 
@@ -1655,9 +2191,106 @@ window.CryptoPayments = {
     showNetworkSelectionModal,
     showAlert: showCryptoAlert,  // ✅ Export alert function
     dismissAlert,                 // ✅ Export dismiss function
+    generateQR,                   // ✅ Export QR function
+    createPaymentQRContent,       // ✅ Export QR content creator
+    createAlternativeBSCQR,       // ✅ Add alternative QR creator
+    debugQRContent,               // ✅ Add debug function
+    loadQRCodeLibrary,            // ✅ Export QR library loader
     CONFIG,
     ERROR_CODES
 };
+
+// ======================================================
+// 📝  ADDITIONAL HELPER FUNCTIONS FOR BSC PAYMENTS
+// ======================================================
+
+/**
+ * Alternative QR format that might work better with some wallets
+ */
+function createAlternativeBSCQR(recipient, amount) {
+    // Some wallets prefer this format
+    const amountWei = (amount * 1e18).toString();
+    
+    // Format 1: JSON-RPC style (works with some wallets)
+    const jsonRPC = JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_sendTransaction",
+        params: [{
+            to: CONFIG.BSC.USDT_ADDRESS,
+            data: `0xa9059cbb000000000000000000000000${recipient.replace('0x', '')}${amountWei.replace('0x', '').padStart(64, '0')}`
+        }],
+        id: 1
+    });
+    
+    // Format 2: Web3 QR format
+    const web3Format = `web3://send?address=${recipient}&amount=${amount}&token=${CONFIG.BSC.USDT_ADDRESS}&network=bsc&chainId=56`;
+    
+    // Format 3: Simple text with all details
+    const simpleFormat = `Send ${amount} USDT (BEP-20)
+To: ${recipient}
+Network: BSC (Binance Smart Chain)
+Token: USDT (${CONFIG.BSC.USDT_ADDRESS})
+Amount: ${amount} USDT`;
+    
+    return {
+        jsonRPC,
+        web3Format,
+        simpleFormat
+    };
+}
+
+/**
+ * Debug function for QR content
+ */
+function debugQRContent(network, recipient, amount) {
+    const qrContent = createPaymentQRContent(network, recipient, amount);
+    const alternatives = network === 'BSC' ? createAlternativeBSCQR(recipient, amount) : null;
+    
+    console.group('QR Code Debug Info');
+    console.log('Network:', network);
+    console.log('Recipient:', recipient);
+    console.log('Amount:', amount, 'USDT');
+    console.log('Primary QR Content:', qrContent);
+    console.log('QR Content Length:', qrContent.length);
+    
+    if (network === 'BSC') {
+        console.log('BSC Contract:', CONFIG.BSC.USDT_ADDRESS);
+        console.log('Chain ID:', CONFIG.BSC.CHAIN_ID);
+        console.log('Amount in Wei:', (amount * 1e18).toString());
+        console.log('Alternative Formats:', alternatives);
+        
+        // Test if it's a valid EIP-681 format
+        if (qrContent.startsWith('ethereum:')) {
+            console.log('✅ Valid EIP-681 format detected');
+            const parts = qrContent.split('/');
+            console.log('Contract:', parts[0].split('@')[0].replace('ethereum:', ''));
+            console.log('Chain ID:', parts[0].split('@')[1]);
+            
+            if (parts[1]) {
+                const params = new URLSearchParams(parts[1].replace('transfer?', ''));
+                console.log('Recipient:', params.get('address'));
+                console.log('Amount (Wei):', params.get('uint256'));
+            }
+        }
+    }
+    
+    console.groupEnd();
+    
+    return {
+        primary: qrContent,
+        alternatives: alternatives
+    };
+}
+
+// Add keyboard shortcut for debugging
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        console.log('🔧 Crypto Payments Debug Mode');
+        console.log('Available functions:', Object.keys(window.CryptoPayments));
+        console.log('Config:', CONFIG);
+        showCryptoAlert('Debug mode enabled - check console', 'info', 3000);
+    }
+});
 
 // ✅ Set ready flag for external scripts to check
 window.CryptoPaymentsReady = true;
@@ -1665,4 +2298,4 @@ window.CryptoPaymentsReady = true;
 // ✅ Dispatch custom event to notify listeners that module is loaded
 document.dispatchEvent(new CustomEvent('cryptoPaymentsReady'));
 
-console.log('✅ Crypto Payments module loaded');
+console.log('✅ Crypto Payments module loaded with enhanced QR support');
