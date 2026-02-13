@@ -539,15 +539,18 @@ if (typeof window === 'undefined') {
 })();
 
 // ✅ Load QRCode.js library dynamically
+// ✅ Load QRCode.js library dynamically - FIXED for qrcodejs
 function loadQRCodeLibrary() {
     return new Promise((resolve) => {
         if (typeof QRCode !== 'undefined') {
+            console.log('[QR] QRCode library already loaded');
             resolve();
             return;
         }
         
+        console.log('[QR] Loading QRCode library...');
         const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+        script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
         script.crossOrigin = 'anonymous';
         script.onload = () => {
             console.log('✅ QRCode.js library loaded');
@@ -561,7 +564,6 @@ function loadQRCodeLibrary() {
         document.head.appendChild(script);
     });
 }
-
 // ✅ Ensure Paystack fallback exists
 if (typeof window.initiatePaystackPayment !== 'function') {
     window.initiatePaystackPayment = function() {
@@ -880,6 +882,10 @@ function createPaymentQRContent(network, recipient, amount) {
     return recipient;
 }
 
+// ======================================================
+// 📱  QR CODE IMPLEMENTATION - FIXED for qrcodejs
+// ======================================================
+
 function generateQR(text, elementId) {
     const element = document.getElementById(elementId);
     if (!element) {
@@ -887,60 +893,55 @@ function generateQR(text, elementId) {
         return;
     }
     
+    // Clear element
     element.innerHTML = '';
-    element.className = 'qr-code-container';
     
-    const wrapper = document.createElement('div');
-    wrapper.className = 'text-center';
+    // Create container for QR
+    const qrDiv = document.createElement('div');
+    qrDiv.style.width = '180px';
+    qrDiv.style.height = '180px';
+    qrDiv.style.margin = '0 auto';
+    element.appendChild(qrDiv);
     
-    const qrTitle = document.createElement('p');
-    qrTitle.className = 'text-xs text-gray-500 mb-2';
-    qrTitle.textContent = 'Scan with wallet app';
-    
-    const qrContainer = document.createElement('div');
-    qrContainer.id = elementId + '_container';
-    qrContainer.className = 'qr-code-container';
-    
-    wrapper.appendChild(qrTitle);
-    wrapper.appendChild(qrContainer);
-    element.appendChild(wrapper);
-    
-    const displayElement = document.getElementById(elementId + '_container');
+    console.log('[QR] Generating for text:', text.substring(0, 50) + '...');
     
     try {
+        // Check if QRCode is available (qrcodejs library)
         if (typeof QRCode !== 'undefined') {
-            const canvas = document.createElement('canvas');
-            canvas.className = 'qr-code-canvas';
-            canvas.width = 180;
-            canvas.height = 180;
-            displayElement.appendChild(canvas);
+            // Use qrcodejs API (new QRCode(element, options))
+            new QRCode(qrDiv, {
+                text: text,
+                width: 180,
+                height: 180,
+                colorDark: "#000000",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel ? QRCode.CorrectLevel.H : undefined
+            });
             
-            QRCode.toCanvas(canvas, text, {
-                width: 160,
-                margin: 2,
-                color: { dark: '#000000', light: '#FFFFFF' }
-            }, (error) => {
-                if (error) {
-                    console.error('[QR] Canvas generation error:', error);
-                    showFallbackQR(displayElement, text);
-                } else {
-                    canvas.title = 'Click to copy payment details';
-                    canvas.onclick = () => {
+            console.log('[QR] QR code generated successfully with qrcodejs');
+            
+            // Add click to copy functionality
+            setTimeout(() => {
+                const img = qrDiv.querySelector('img');
+                if (img) {
+                    img.style.cursor = 'pointer';
+                    img.title = 'Click to copy payment details';
+                    img.addEventListener('click', () => {
                         navigator.clipboard.writeText(text)
                             .then(() => showCryptoAlert('Payment details copied!', 'success', 2000))
                             .catch(() => showCryptoAlert('Failed to copy', 'error'));
-                    };
+                    });
                 }
-            });
+            }, 100);
         } else {
-            showFallbackQR(displayElement, text);
+            console.warn('[QR] QRCode library not available, using fallback');
+            useQRServer(qrDiv, text);
         }
     } catch (error) {
         console.error('[QR] Generation error:', error);
-        showFallbackQR(displayElement, text);
+        useQRServer(qrDiv, text);
     }
 }
-
 function showFallbackQR(element, text) {
     const encodedText = encodeURIComponent(text);
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${encodedText}`;
@@ -1717,6 +1718,10 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
 // 🔄  NEW TRON DESKTOP QR MODAL (with recipient address)
 // ======================================================
 
+// ======================================================
+// 🔄  TRON DESKTOP QR MODAL (FIXED)
+// ======================================================
+
 async function showTronDesktopQRModal(recipient, amount) {
     await loadQRCodeLibrary();
     
@@ -1748,7 +1753,7 @@ async function showTronDesktopQRModal(recipient, amount) {
                     </div>
                 </div>
                 
-                <div id="tronQR" class="mx-auto mb-3"></div>
+                <div id="tronQR" class="mx-auto mb-3" style="width: 180px; height: 180px;"></div>
                 
                 <p class="text-xs text-gray-500 mb-2">Scan with TronLink or any TRON wallet</p>
                 
@@ -1780,21 +1785,22 @@ async function showTronDesktopQRModal(recipient, amount) {
             </div>
         `);
 
-        // Generate QR code with TRON payment format
-        const amountSun = (amount * 1e6).toString();
-        const qrContent = `tron://transfer?to=${recipient}&amount=${amountSun}&token=${CONFIG.TRON.USDT_ADDRESS}`;
+        // Generate QR code with simple address format (most compatible)
+        const qrContent = recipient;
         
         console.log('[TRON Desktop QR] Content:', qrContent);
         console.log('[TRON Desktop Payment Details]', {
             recipient: recipient,
             amount: amount,
-            amountSun: amountSun,
             token: 'USDT',
             network: 'TRON (TRC-20)',
             contract: CONFIG.TRON.USDT_ADDRESS
         });
         
-        generateQR(qrContent, 'tronQR');
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+            generateQR(qrContent, 'tronQR');
+        }, 100);
 
         const closeX = modal.querySelector('#modalCloseX');
         if (closeX) {
