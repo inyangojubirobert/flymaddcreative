@@ -1905,22 +1905,36 @@ async function showTronManualModal(recipient, amount) {
         // ✅ TRON USDT uses 6 decimals
         const amountSun = BigInt(Math.round(parseFloat(amount) * 10 ** 6)).toString();
         
-        // ✅ THIS WORKS - Native TRON URI (supports all TRON wallets)
-        const tronURI = `tron://${CONFIG.TRON.USDT_ADDRESS}/transfer?address=${recipient}&amount=${amountSun}`;
+        // ❌ OLD - This sends TRON coin, not USDT
+        // const tronURI = `tron://${CONFIG.TRON.USDT_ADDRESS}/transfer?address=${recipient}&amount=${amountSun}`;
         
-        // ✅ Use TRON URI for BOTH mobile AND desktop
-        // This works with TronLink, Trust Wallet, TokenPocket, etc.
-        const qrContent = tronURI;
+        // ✅ NEW - CORRECT FORMAT for USDT TRC-20
+        // Format 1: TronLink specific format (works with TronLink)
+        const tronLinkURI = `tronlink://transfer?contract=${CONFIG.TRON.USDT_ADDRESS}&to=${recipient}&amount=${amountSun}&token=USDT&tokenDecimal=6`;
         
-        console.log('[TRON] Using TRON URI:', {
+        // Format 2: Universal TRC-20 token transfer format
+        const trc20URI = `tron://token/${CONFIG.TRON.USDT_ADDRESS}/transfer?to=${recipient}&amount=${amountSun}&_display=${amount}%20USDT`;
+        
+        // Format 3: WalletConnect style for TRON
+        const walletStyleURI = `tron:${CONFIG.TRON.USDT_ADDRESS}?function=transfer(address,uint256)&args=${recipient},${amountSun}&network=TRC20&token=USDT`;
+        
+        // Use the format that works best - TronLink format is most reliable
+        const qrContent = tronLinkURI;
+        
+        console.log('[TRON] Using TRON USDT TRC-20 URI:', {
             mode: isMobile ? 'Mobile' : 'Desktop',
-            uri: tronURI
+            uri: qrContent,
+            contract: CONFIG.TRON.USDT_ADDRESS,
+            recipient: recipient,
+            amount: amount,
+            amountSun: amountSun,
+            token: 'USDT (TRC-20)'
         });
         
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
-                <h3 class="font-bold mb-3 pr-6">🔴 TRON USDT Payment</h3>
+                <h3 class="font-bold mb-3 pr-6">🔴 USDT (TRC-20) Payment</h3>
                 
                 <div class="bg-gradient-to-r from-red-100 to-red-50 p-4 rounded-lg mb-4">
                     <div class="text-2xl font-bold text-red-800 mb-1">${amount} USDT</div>
@@ -1933,14 +1947,25 @@ async function showTronManualModal(recipient, amount) {
                     ${recipient}
                 </div>
                 
+                <div class="bg-yellow-50 p-3 rounded mb-3 text-left border border-yellow-200">
+                    <div class="text-xs font-medium text-yellow-800 mb-1">⚠️ IMPORTANT - TRC-20 USDT ONLY</div>
+                    <p class="text-xs text-yellow-700">
+                        Send <strong>USDT (TRC-20)</strong> only. Do NOT send TRX or other tokens.<br>
+                        This QR code is pre-configured for USDT TRC-20 transfer.
+                    </p>
+                </div>
+                
                 <div id="tronQR" class="mx-auto mb-4"></div>
                 
                 <div class="bg-blue-50 p-3 rounded mb-3 text-left">
-                    <div class="text-xs font-medium text-blue-800 mb-1">📱 Scan with any TRON wallet</div>
-                    <p class="text-xs text-blue-700">
-                        Scan this QR code with TronLink, Trust Wallet, or TokenPocket.
-                        <br><strong>Amount and recipient are pre-filled automatically.</strong>
-                    </p>
+                    <div class="text-xs font-medium text-blue-800 mb-1">📱 How to pay with TRC-20 USDT:</div>
+                    <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
+                        <li>Scan QR with TronLink, Trust Wallet, or TokenPocket</li>
+                        <li><strong>Verify it says "USDT" or "TRC-20 USDT"</strong></li>
+                        <li>Amount and recipient will be pre-filled</li>
+                        <li>Ensure you have enough USDT balance</li>
+                        <li>Confirm the transaction</li>
+                    </ol>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-2 mb-3">
@@ -1952,17 +1977,29 @@ async function showTronManualModal(recipient, amount) {
                     </button>
                 </div>
                 
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button id="copyUSDTContract" class="bg-purple-500 hover:bg-purple-600 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>📄</span> Copy USDT Contract
+                    </button>
+                    <button id="checkBalance" class="bg-green-600 hover:bg-green-700 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>💰</span> Check Balance
+                    </button>
+                </div>
+                
                 <div class="border-t pt-3 mt-3">
-                    <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
+                    <p class="text-xs text-gray-500 mb-2">Already sent payment? Enter transaction hash:</p>
                     <input type="text" id="txHashInput" placeholder="Paste transaction hash (64 characters)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" />
-                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
+                    <div class="text-xs text-gray-500 mb-2">
+                        <span id="txHint">Hash starts with 0x? That's for BSC. TRON hashes are 64 hex chars without 0x</span>
+                    </div>
+                    <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid - Verify Transaction</button>
                 </div>
                 
                 <button id="closeTron" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
             </div>
         `);
 
-        // Generate QR code with TRON URI
+        // Generate QR code with TRC-20 USDT URI
         setTimeout(() => {
             const qrContainer = modal.querySelector('#tronQR');
             if (qrContainer) {
@@ -2009,6 +2046,27 @@ async function showTronManualModal(recipient, amount) {
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
         };
 
+        // Copy USDT contract address
+        const copyContractBtn = modal.querySelector('#copyUSDTContract');
+        if (copyContractBtn) {
+            copyContractBtn.onclick = () => {
+                navigator.clipboard.writeText(CONFIG.TRON.USDT_ADDRESS)
+                    .then(() => {
+                        copyContractBtn.textContent = '✅ Contract Copied!';
+                        setTimeout(() => { copyContractBtn.textContent = '📄 Copy USDT Contract'; }, 2000);
+                    })
+                    .catch(() => showCryptoAlert('Failed to copy contract address', 'error'));
+            };
+        }
+
+        // Check balance - opens Tronscan with contract address
+        const checkBalanceBtn = modal.querySelector('#checkBalance');
+        if (checkBalanceBtn) {
+            checkBalanceBtn.onclick = () => {
+                window.open(`https://tronscan.org/#/token20/${CONFIG.TRON.USDT_ADDRESS}`, '_blank');
+            };
+        }
+
         // View on Tronscan
         modal.querySelector('#viewOnTronscan').onclick = () => {
             window.open(`https://tronscan.org/#/address/${recipient}`, '_blank');
@@ -2019,13 +2077,14 @@ async function showTronManualModal(recipient, amount) {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             
             if (!txHash) {
-                if (!confirm(`No transaction hash entered. Are you sure you have already sent ${amount} USDT on TRON network?`)) {
+                if (!confirm(`No transaction hash entered. Are you sure you have already sent ${amount} USDT (TRC-20) on TRON network?`)) {
                     return;
                 }
             }
             
             modal.remove();
             
+            // TRON transaction hashes are 64 hex characters WITHOUT 0x prefix
             if (txHash && /^[a-fA-F0-9]{64}$/.test(txHash)) {
                 resolve({ 
                     success: true, 
@@ -2033,8 +2092,12 @@ async function showTronManualModal(recipient, amount) {
                     txHash, 
                     explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` 
                 });
+            } else if (txHash && txHash.startsWith('0x') && /^0x[a-fA-F0-9]{64}$/.test(txHash)) {
+                // User might have pasted an ETH/BSC hash
+                showCryptoAlert('This looks like an Ethereum/BSC transaction hash. TRON hashes are 64 characters without 0x prefix.', 'warning');
+                resolve({ success: false, error: 'Invalid TRON transaction hash format' });
             } else if (txHash) {
-                showCryptoAlert('Invalid transaction hash format (64 hex characters)', 'error');
+                showCryptoAlert('Invalid transaction hash format. TRON hash should be 64 hex characters (no 0x prefix).', 'error');
                 resolve({ success: false, error: 'Invalid transaction hash' });
             } else {
                 resolve({ success: false, manual: true, pendingConfirmation: true });
@@ -2047,14 +2110,6 @@ async function showTronManualModal(recipient, amount) {
         };
     });
 }
-// ======================================================
-// 🚀  FIXED: MAIN ENTRY POINT - TRON DESKTOP FLOW
-// ======================================================
-
-// (Removed orphaned else-if block; TRON handling is implemented in initiateCryptoPayment)
-// ======================================================
-// 🚀  MAIN ENTRY POINT (Updated for desktop flow)
-// ======================================================
 
 async function initiateCryptoPayment(participantId, voteCount, amount) {
     let modal = null;
