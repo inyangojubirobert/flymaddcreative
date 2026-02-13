@@ -1160,71 +1160,44 @@ async function waitForCryptoPayments(timeout = 5000) {
    // ========================================
 // 🔐 COMPLETE CRYPTO PAYMENT HANDLER (UPDATED)
 // ========================================
+// ========================================
+// 🔐 COMPLETE CRYPTO PAYMENT HANDLER (FIXED)
+// ========================================
 async function handleCryptoPayment(participantId, voteCount, amount) {
     try {
         console.log('[Vote] Starting crypto payment:', { participantId, voteCount, amount });
-        
-        // Detect if mobile or desktop
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        console.log('[Vote] Device detection:', isMobile ? '📱 Mobile' : '💻 Desktop');
         
         // Wait for crypto modules to be ready
         await waitForCryptoPayments(5000);
         
         let result;
         
-        // DESKTOP: Use BSC Payments (WalletConnect + Browser Wallet)
-        if (!isMobile) {
-            console.log('[Vote] Desktop detected - using BSC Payments');
+        // ON DESKTOP: Use crypto-payments.js which shows network selection modal
+        // ON MOBILE: Also use crypto-payments.js which handles mobile flow
+        console.log('[Vote] Using CryptoPayments module for network selection');
+        
+        if (!window.CryptoPayments || typeof window.CryptoPayments.pay !== 'function') {
+            console.warn('[Vote] CryptoPayments not available, trying fallbacks...');
             
-            if (!window.BSCPayments || typeof window.BSCPayments.pay !== 'function') {
-                console.warn('[Vote] BSCPayments not available, trying fallbacks...');
-                
-                // Try the compatibility layer
-                if (typeof window.initiateCryptoPayment === 'function') {
-                    console.log('[Vote] Using initiateCryptoPayment fallback');
-                    result = await window.initiateCryptoPayment(participantId, voteCount, amount);
-                } else {
-                    throw new Error('BSC payment module not available for desktop');
-                }
+            // Try the compatibility layer
+            if (typeof window.initiateCryptoPayment === 'function') {
+                console.log('[Vote] Using initiateCryptoPayment fallback');
+                result = await window.initiateCryptoPayment(participantId, voteCount, amount);
             } else {
-                // Use BSCPayments directly
-                result = await window.BSCPayments.pay(amount, {
-                    recipient: window.BSC_CONFIG?.RECIPIENT_ADDRESS,
-                    onSuccess: (data) => {
-                        console.log('[Vote] BSC payment success:', data);
-                    },
-                    onError: (error) => {
-                        console.error('[Vote] BSC payment error:', error);
-                    }
-                });
+                throw new Error('Crypto payment module not available');
             }
-        }
-        // MOBILE: Use CryptoPayments (TRON + BSC mobile)
-        else {
-            console.log('[Vote] Mobile detected - using Crypto Payments');
-            
-            if (!window.CryptoPayments || typeof window.CryptoPayments.pay !== 'function') {
-                console.warn('[Vote] CryptoPayments not available, trying fallbacks...');
-                
-                // Try the compatibility layer
-                if (typeof window.initiateCryptoPayment === 'function') {
-                    console.log('[Vote] Using initiateCryptoPayment fallback');
-                    result = await window.initiateCryptoPayment(participantId, voteCount, amount);
-                } else {
-                    throw new Error('Crypto payment module not available for mobile');
+        } else {
+            // Use CryptoPayments directly - THIS SHOWS NETWORK SELECTION MODAL
+            result = await window.CryptoPayments.pay(amount, {
+                participantId,
+                voteCount,
+                onSuccess: (data) => {
+                    console.log('[Vote] Crypto payment success:', data);
+                },
+                onError: (error) => {
+                    console.error('[Vote] Crypto payment error:', error);
                 }
-            } else {
-                // Use CryptoPayments directly
-                result = await window.CryptoPayments.pay(amount, {
-                    onSuccess: (data) => {
-                        console.log('[Vote] Mobile payment success:', data);
-                    },
-                    onError: (error) => {
-                        console.error('[Vote] Mobile payment error:', error);
-                    }
-                });
-            }
+            });
         }
         
         console.log('[Vote] Payment result:', result);
