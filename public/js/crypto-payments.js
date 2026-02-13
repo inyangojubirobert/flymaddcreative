@@ -724,6 +724,10 @@ function getWalletDeepLinks(network, recipient, amount) {
         walletconnect: `wc:`
     };
 }
+function hideCryptoModal() {
+    const modal = document.querySelector('.crypto-modal-overlay');
+    if (modal) modal.remove();
+}
 
 function showMobileWalletModal(network, recipient, amount) {
     return new Promise((resolve) => {
