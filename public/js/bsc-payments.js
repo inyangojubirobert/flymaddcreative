@@ -773,6 +773,7 @@ function generateBSCUSDTQR(recipient, amount, element) {
     
     try {
         // ✅ USDT on BSC uses 6 decimals, NOT 18
+        const USDT_DECIMALS = 6;
         const amountUnits = BigInt(
             Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
         ).toString();
