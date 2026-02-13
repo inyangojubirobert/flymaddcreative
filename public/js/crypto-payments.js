@@ -7,12 +7,26 @@ if (typeof window === 'undefined') {
     throw new Error('This script is designed to run in a browser environment');
 }
 
+// Add global flags to prevent duplicate WalletConnect initialization
+let walletConnectInitialized = false;
+let walletConnectProvider = null;
+
 // Check if ethers is available and load if needed
 if (typeof ethers === 'undefined') {
     console.warn('⚠️ Ethers.js not loaded - BSC transfers will fail');
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js';
+    script.crossOrigin = 'anonymous';
     document.head.appendChild(script);
+}
+
+// Clean up any existing Web3Modal instances
+if (window.Web3Modal) {
+    try {
+        delete window.Web3Modal;
+    } catch (e) {
+        // Ignore cleanup errors
+    }
 }
 
 // ✅ Inject required CSS for loading spinner and alerts
@@ -1088,24 +1102,123 @@ function showMobileTronWalletModal(recipient, amount) {
 }
 
 // ======================================================
-// 🆕  WALLETCONNECT FUNCTIONS (DESKTOP)
+// 🌐  NETWORK & WALLET MANAGEMENT - FIXED WALLETCONNECT
 // ======================================================
 
-// ============ BSC WALLETCONNECT ============
+async function loadWalletConnect() {
+    try {
+        // Return existing provider if already initialized
+        if (walletConnectProvider) return walletConnectProvider;
+        
+        // Check if already loaded but not initialized
+        if (window.EthereumProvider) {
+            walletConnectProvider = window.EthereumProvider;
+            return walletConnectProvider;
+        }
+        
+        // Try multiple CDNs
+        const cdnUrls = [
+            'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.min.js',
+            'https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js',
+            'https://esm.run/@walletconnect/ethereum-provider@2.10.1'
+        ];
+        
+        let lastError = null;
+        
+        for (const cdnUrl of cdnUrls) {
+            try {
+                console.log(`[WalletConnect] Trying CDN: ${cdnUrl}`);
+                const provider = await loadWalletConnectFromCDN(cdnUrl);
+                if (provider) {
+                    walletConnectProvider = provider;
+                    return provider;
+                }
+            } catch (error) {
+                lastError = error;
+                console.warn(`[WalletConnect] CDN failed:`, error.message);
+            }
+        }
+        
+        console.warn('[WalletConnect] All CDNs failed, using QR fallback only');
+        return null;
+        
+    } catch (error) {
+        console.error('[WalletConnect] Loading error:', error);
+        return null;
+    }
+}
+
+function loadWalletConnectFromCDN(cdnUrl) {
+    return new Promise((resolve, reject) => {
+        // Check if script already exists
+        const existingScript = document.querySelector(`script[src="${cdnUrl}"]`);
+        if (existingScript) {
+            // Script already loaded, check if provider exists
+            setTimeout(() => {
+                if (window.EthereumProvider) {
+                    resolve(window.EthereumProvider);
+                } else {
+                    reject(new Error('Provider not initialized'));
+                }
+            }, 100);
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = cdnUrl;
+        script.crossOrigin = 'anonymous';
+        script.async = true;
+        
+        const timeout = setTimeout(() => {
+            script.remove();
+            reject(new Error('Timeout loading WalletConnect'));
+        }, 10000);
+        
+        script.onload = () => {
+            clearTimeout(timeout);
+            // Give it time to initialize
+            setTimeout(() => {
+                if (window.EthereumProvider) {
+                    console.log('✅ WalletConnect SDK loaded and initialized');
+                    resolve(window.EthereumProvider);
+                } else {
+                    // Check if it's a module export
+                    if (window.walletconnect?.EthereumProvider) {
+                        window.EthereumProvider = window.walletconnect.EthereumProvider;
+                        resolve(window.EthereumProvider);
+                    } else {
+                        reject(new Error('WalletConnect loaded but not initialized'));
+                    }
+                }
+            }, 500);
+        };
+        
+        script.onerror = () => {
+            clearTimeout(timeout);
+            script.remove();
+            reject(new Error(`Failed to load from ${cdnUrl}`));
+        };
+        
+        document.head.appendChild(script);
+    });
+}
+
+// ============ BSC WALLETCONNECT - FIXED ============
 async function initBSCWalletConnect() {
     try {
-        if (typeof window.EthereumProvider === 'undefined') {
-            await loadWalletConnect();
+        const EthereumProvider = await loadWalletConnect();
+        
+        if (!EthereumProvider) {
+            console.log('[BSC WalletConnect] Not available, will use QR fallback');
+            return null;
         }
         
-        if (!window.EthereumProvider) {
-            throw new PaymentError(
-                'WalletConnect not available. Please refresh and try again.',
-                ERROR_CODES.PROVIDER_ERROR
-            );
+        // Check if already initialized to prevent duplicate
+        if (walletConnectInitialized) {
+            return walletConnectProvider;
         }
         
-        const provider = await window.EthereumProvider.init({
+        const provider = await EthereumProvider.init({
             projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
             chains: [CONFIG.BSC.CHAIN_ID],
             showQrModal: true,
@@ -1122,15 +1235,13 @@ async function initBSCWalletConnect() {
             }
         });
         
+        walletConnectInitialized = true;
+        walletConnectProvider = provider;
         return provider;
         
     } catch (error) {
         console.error('[BSC WalletConnect] Init error:', error);
-        throw new PaymentError(
-            'Failed to initialize WalletConnect for BSC',
-            ERROR_CODES.PROVIDER_ERROR,
-            { originalError: error }
-        );
+        return null;
     }
 }
 
@@ -1263,23 +1374,24 @@ function showBSCWalletConnectModal(recipient, amount) {
     });
 }
 
-// ============ TRON WALLETCONNECT ============
+// ============ TRON WALLETCONNECT - FIXED ============
 async function initTronWalletConnect() {
     try {
-        if (typeof window.EthereumProvider === 'undefined') {
-            await loadWalletConnect();
+        const EthereumProvider = await loadWalletConnect();
+        
+        if (!EthereumProvider) {
+            console.log('[TRON WalletConnect] Not available, will use QR fallback');
+            return null;
         }
         
-        if (!window.EthereumProvider) {
-            throw new PaymentError(
-                'WalletConnect not available. Please refresh and try again.',
-                ERROR_CODES.PROVIDER_ERROR
-            );
+        // Check if already initialized to prevent duplicate
+        if (walletConnectInitialized) {
+            return walletConnectProvider;
         }
         
-        const provider = await window.EthereumProvider.init({
+        const provider = await EthereumProvider.init({
             projectId: CONFIG.WALLETCONNECT.PROJECT_ID,
-            chains: [1],
+            chains: [1], // Ethereum mainnet
             showQrModal: true,
             qrModalOptions: {
                 themeMode: 'light',
@@ -1294,15 +1406,13 @@ async function initTronWalletConnect() {
             }
         });
         
+        walletConnectInitialized = true;
+        walletConnectProvider = provider;
         return provider;
         
     } catch (error) {
         console.error('[TRON WalletConnect] Init error:', error);
-        throw new PaymentError(
-            'Failed to initialize WalletConnect for TRON',
-            ERROR_CODES.PROVIDER_ERROR,
-            { originalError: error }
-        );
+        return null;
     }
 }
 
@@ -1454,6 +1564,7 @@ function showTronWalletConnectModal(recipient, amount) {
 // ======================================================
 
 async function showTronManualModal(recipient, amount) {
+    await loadQRCodeLibrary();
     const qrContent = createPaymentQRContent('TRON', recipient, amount);
     
     return new Promise((resolve) => {
@@ -1464,7 +1575,7 @@ async function showTronManualModal(recipient, amount) {
                 
                 <div class="bg-yellow-50 p-3 rounded mb-3 border border-yellow-200">
                     <p class="text-xs text-yellow-800">
-                        ⚠️ WalletConnect failed. Use QR code as fallback.
+                        ⚠️ WalletConnect unavailable. Use QR code to pay.
                     </p>
                 </div>
                 
@@ -1568,9 +1679,11 @@ async function showTronManualModal(recipient, amount) {
 // ======================================================
 
 async function showBSCManualModal(recipient, amount, isDesktop = false) {
+    await loadQRCodeLibrary();
+    const qrContent = createPaymentQRContent('BSC', recipient, amount);
+    
     return new Promise((resolve) => {
         const hasBrowserWallet = window.ethereum || window.BinanceChain;
-        const qrContent = createPaymentQRContent('BSC', recipient, amount);
         
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
@@ -1579,7 +1692,7 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
                 
                 <div class="bg-yellow-50 p-3 rounded mb-3 border border-yellow-200">
                     <p class="text-xs text-yellow-800">
-                        ⚠️ WalletConnect failed. Use QR code as fallback.
+                        ⚠️ WalletConnect unavailable. Use QR code to pay.
                     </p>
                 </div>
                 
@@ -1730,7 +1843,7 @@ function dismissAlert(alertBox) {
 }
 
 // ======================================================
-// 🌐  NETWORK & WALLET MANAGEMENT
+// 🌐  NETWORK & WALLET MANAGEMENT (OTHER)
 // ======================================================
 
 async function detectPreferredNetwork() {
@@ -1756,67 +1869,6 @@ async function detectPreferredNetwork() {
         console.warn('Network detection error:', error);
     }
     return null;
-}
-
-async function loadWalletConnect() {
-    try {
-        if (window.EthereumProvider) return window.EthereumProvider;
-        
-        const cdnUrls = [
-            CONFIG.WALLETCONNECT.SRC,
-            'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.min.js',
-            'https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js'
-        ];
-        
-        let lastError = null;
-        
-        for (const cdnUrl of cdnUrls) {
-            try {
-                console.log(`[WalletConnect] Trying CDN: ${cdnUrl}`);
-                const provider = await loadWalletConnectFromCDN(cdnUrl);
-                if (provider) return provider;
-            } catch (error) {
-                lastError = error;
-                console.warn(`[WalletConnect] CDN failed:`, error.message);
-            }
-        }
-        
-        throw lastError || new Error('All WalletConnect CDNs failed');
-        
-    } catch (error) {
-        console.error('[WalletConnect] Loading error:', error);
-        return null;
-    }
-}
-
-function loadWalletConnectFromCDN(cdnUrl) {
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = cdnUrl;
-        script.crossOrigin = 'anonymous';
-        
-        const timeout = setTimeout(() => {
-            reject(new Error('Timeout loading WalletConnect'));
-        }, 10000);
-        
-        script.onload = () => {
-            clearTimeout(timeout);
-            setTimeout(() => {
-                if (window.EthereumProvider) {
-                    resolve(window.EthereumProvider);
-                } else {
-                    reject(new Error('WalletConnect loaded but not initialized'));
-                }
-            }, 500);
-        };
-        
-        script.onerror = () => {
-            clearTimeout(timeout);
-            reject(new Error(`Failed to load from ${cdnUrl}`));
-        };
-        
-        document.head.appendChild(script);
-    });
 }
 
 async function requestWalletConnection() {
@@ -2138,7 +2190,7 @@ function showNetworkSelectionModal(preferredNetwork) {
 }
 
 // ======================================================
-// 🚀  MAIN ENTRY POINT (SINGLE VERSION)
+// 🚀  MAIN ENTRY POINT
 // ======================================================
 
 async function initiateCryptoPayment(participantId, voteCount, amount) {
@@ -2164,7 +2216,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             const isMobile = isMobileDevice();
             const isInWalletBrowser = isInAppBrowser();
             
-            // Mobile BSC flow (deep links - INTACT)
+            // Mobile BSC flow (deep links)
             if (isMobile) {
                 if (isInWalletBrowser && window.ethereum) {
                     console.log('[Payment] Detected in-app wallet browser');
@@ -2269,10 +2321,31 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             
             if (wcResult.success) {
                 modal = showPaymentStatusModal('BSC', amount);
-                updateStatus(modal, 'Connecting to wallet...');
+                updateStatus(modal, 'Loading WalletConnect...');
                 
                 try {
                     const provider = await initBSCWalletConnect();
+                    
+                    if (!provider) {
+                        // Provider not available - go straight to QR fallback
+                        const useQR = confirm(
+                            'WalletConnect unavailable. Would you like to use QR code instead?'
+                        );
+                        
+                        if (useQR) {
+                            const qrResult = await showBSCManualModal(recipient, amount, false);
+                            if (qrResult.success) {
+                                return {
+                                    ...qrResult,
+                                    participant_id: participantId,
+                                    payment_amount: amount,
+                                    payment_intent_id: qrResult.txHash || `manual_${Date.now()}`
+                                };
+                            }
+                            return qrResult;
+                        }
+                        return { success: false, cancelled: true };
+                    }
                     
                     updateStatus(modal, 'Waiting for wallet connection...');
                     
@@ -2323,7 +2396,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                         return fallbackResult;
                     }
                     
-                    throw wcError;
+                    return { success: false, cancelled: true };
                 }
             }
             
@@ -2335,7 +2408,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             const hasTronWallet = window.tronWeb && window.tronWeb.ready;
             const isMobileTron = isMobileDevice();
             
-            // Mobile TRON flow (deep links - INTACT)
+            // Mobile TRON flow (deep links)
             if (isMobileTron) {
                 if (hasTronWallet) {
                     modal = showPaymentStatusModal(selectedNetwork, amount);
@@ -2398,10 +2471,31 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
             
             if (wcResult.success) {
                 modal = showPaymentStatusModal('TRON', amount);
-                updateStatus(modal, 'Connecting to wallet...');
+                updateStatus(modal, 'Loading WalletConnect...');
                 
                 try {
                     const provider = await initTronWalletConnect();
+                    
+                    if (!provider) {
+                        // Provider not available - go straight to QR fallback
+                        const useQR = confirm(
+                            'WalletConnect unavailable. Would you like to use QR code instead?'
+                        );
+                        
+                        if (useQR) {
+                            const qrResult = await showTronManualModal(recipient, amount);
+                            if (qrResult.success) {
+                                return {
+                                    ...qrResult,
+                                    participant_id: participantId,
+                                    payment_amount: amount,
+                                    payment_intent_id: qrResult.txHash || `manual_${Date.now()}`
+                                };
+                            }
+                            return qrResult;
+                        }
+                        return { success: false, cancelled: true };
+                    }
                     
                     updateStatus(modal, 'Waiting for wallet connection...');
                     
@@ -2450,7 +2544,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                         return fallbackResult;
                     }
                     
-                    throw wcError;
+                    return { success: false, cancelled: true };
                 }
             }
             
@@ -2586,4 +2680,4 @@ document.addEventListener('keydown', (e) => {
 window.CryptoPaymentsReady = true;
 document.dispatchEvent(new CustomEvent('cryptoPaymentsReady'));
 
-console.log('✅ Crypto Payments module loaded - Desktop: WalletConnect QR, Mobile: Deep Links');
+console.log('✅ Crypto Payments module loaded - Desktop: WalletConnect (with QR fallback), Mobile: Deep Links');
