@@ -3,10 +3,18 @@
 // ======================================================
 
 // Check if we're in a browser environment
+// Check if ethers is available
+
 if (typeof window === 'undefined') {
     throw new Error('This script is designed to run in a browser environment');
 }
-
+if (typeof ethers === 'undefined') {
+    console.warn('⚠️ Ethers.js not loaded - BSC transfers will fail');
+    // Load ethers dynamically if needed
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js';
+    document.head.appendChild(script);
+}
 // ✅ Inject required CSS for loading spinner and alerts
 (function injectStyles() {
     if (document.getElementById('crypto-payments-styles')) return;
@@ -539,26 +547,51 @@ if (typeof window === 'undefined') {
 })();
 
 // ✅ Load QRCode.js library dynamically
+// ✅ FIXED: QRCode library loader
 function loadQRCodeLibrary() {
     return new Promise((resolve, reject) => {
+        // Check if already loaded
         if (typeof QRCode !== 'undefined') {
+            console.log('✅ QRCode library already loaded');
             resolve();
             return;
         }
         
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
-        script.crossOrigin = 'anonymous';
-        script.onload = () => {
-            console.log('✅ QRCode.js library loaded');
-            resolve();
-        };
-        script.onerror = () => {
-            console.warn('Failed to load QRCode.js, using fallback');
-            resolve(); // Still resolve to use fallback
-        };
+        // Try multiple CDNs
+        const cdnUrls = [
+            'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+            'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js'
+        ];
         
-        document.head.appendChild(script);
+        let currentIndex = 0;
+        
+        function tryLoadNext() {
+            if (currentIndex >= cdnUrls.length) {
+                console.warn('⚠️ All QR CDNs failed, using fallback');
+                resolve(); // Still resolve to use fallback
+                return;
+            }
+            
+            const script = document.createElement('script');
+            script.src = cdnUrls[currentIndex];
+            script.crossOrigin = 'anonymous';
+            
+            script.onload = () => {
+                console.log(`✅ QRCode loaded from CDN ${currentIndex + 1}`);
+                resolve();
+            };
+            
+            script.onerror = () => {
+                console.warn(`❌ CDN ${currentIndex + 1} failed, trying next...`);
+                currentIndex++;
+                tryLoadNext();
+            };
+            
+            document.head.appendChild(script);
+        }
+        
+        tryLoadNext();
     });
 }
 
@@ -1280,15 +1313,18 @@ function showTronWalletConnectModal(recipient, amount) {
 
 function createPaymentQRContent(network, recipient, amount) {
     if (network === 'BSC') {
-        const simpleFormat = `${recipient}`;
-        return simpleFormat;
-    } else if (network === 'TRON') {
-        const amountSun = (amount * 1e6).toString();
-        return `tron://pay?to=${recipient}&amount=${amountSun}&token=${CONFIG.TRON.USDT_ADDRESS}`;
+        return recipient; // Simple address for BSC
+    } 
+    else if (network === 'TRON') {
+        // ✅ CORRECT: USDT TRC-20 format
+        const amountSun = Math.floor(amount * 1e6).toString();
+        
+        // TronLink format (most compatible)
+        return `tron:${CONFIG.TRON.USDT_ADDRESS}?function=transfer(address,uint256)&args=${recipient},${amountSun}`;
     }
     return recipient;
 }
-
+// ✅ FIXED: QR code generator with fallback
 function generateQR(text, elementId) {
     const element = document.getElementById(elementId);
     if (!element) {
@@ -1316,44 +1352,53 @@ function generateQR(text, elementId) {
     
     const displayElement = document.getElementById(elementId + '_container');
     
-    try {
-        if (typeof QRCode !== 'undefined') {
-            const canvas = document.createElement('canvas');
-            canvas.className = 'qr-code-canvas';
-            canvas.width = 180;
-            canvas.height = 180;
-            displayElement.appendChild(canvas);
-            
-            QRCode.toCanvas(canvas, text, {
-                width: 160,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
-                }
-            }, (error) => {
-                if (error) {
-                    console.error('[QR] Canvas generation error:', error);
-                    showFallbackQR(displayElement, text);
-                } else {
-                    canvas.title = 'Click to copy payment details';
-                    canvas.onclick = () => {
-                        navigator.clipboard.writeText(text)
-                            .then(() => showCryptoAlert('Payment details copied to clipboard!', 'success', 2000))
-                            .catch(() => showCryptoAlert('Failed to copy', 'error'));
-                    };
-                }
-            });
-        } else {
-            showFallbackQR(displayElement, text);
+    // Try QRCode library first
+    if (typeof QRCode !== 'undefined') {
+        try {
+            // Check which API is available
+            if (typeof QRCode.toCanvas === 'function') {
+                const canvas = document.createElement('canvas');
+                canvas.className = 'qr-code-canvas';
+                canvas.width = 180;
+                canvas.height = 180;
+                displayElement.appendChild(canvas);
+                
+                QRCode.toCanvas(canvas, text, {
+                    width: 160,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                }, (error) => {
+                    if (error) {
+                        console.error('[QR] Canvas error:', error);
+                        useQRServerFallback(displayElement, text);
+                    } else {
+                        canvas.title = 'Click to copy';
+                        canvas.onclick = () => copyToClipboard(text);
+                    }
+                });
+            } 
+            else if (typeof QRCode.toString === 'function') {
+                // Alternative API
+                const qrImage = QRCode.toString(text, { type: 'svg' });
+                displayElement.innerHTML = qrImage;
+            }
+            else {
+                useQRServerFallback(displayElement, text);
+            }
+        } catch (error) {
+            console.error('[QR] Generation error:', error);
+            useQRServerFallback(displayElement, text);
         }
-    } catch (error) {
-        console.error('[QR] Generation error:', error);
-        showFallbackQR(displayElement, text);
+    } else {
+        useQRServerFallback(displayElement, text);
     }
 }
 
-function showFallbackQR(element, text) {
+// ✅ Helper: QR Server Fallback
+function useQRServerFallback(element, text) {
     const encodedText = encodeURIComponent(text);
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${encodedText}`;
     
@@ -1363,13 +1408,15 @@ function showFallbackQR(element, text) {
     img.style.width = '180px';
     img.style.height = '180px';
     img.className = 'rounded-lg';
+    img.crossOrigin = 'anonymous';
     
     img.onerror = () => {
+        // Final fallback - show text
         element.innerHTML = `
             <div class="qr-fallback">
                 <div class="text-xs text-gray-500 mb-2">QR Code unavailable</div>
                 <div class="text-xs font-mono break-all bg-gray-100 p-2 rounded">${text.substring(0, 30)}...</div>
-                <button onclick="navigator.clipboard.writeText('${text}').then(() => showCryptoAlert('Copied!', 'success'))" class="text-blue-500 hover:text-blue-700 text-xs mt-2">
+                <button onclick="copyToClipboard('${text}')" class="text-blue-500 hover:text-blue-700 text-xs mt-2">
                     📋 Copy Payment Details
                 </button>
             </div>
@@ -1378,6 +1425,38 @@ function showFallbackQR(element, text) {
     
     element.appendChild(img);
 }
+
+// ✅ Helper: Copy to clipboard
+// function copyToClipboard(text) {
+//     navigator.clipboard.writeText(text)
+//         .then(() => showCryptoAlert('Copied!', 'success', 2000))
+//         .catch(() => showCryptoAlert('Failed to copy', 'error'));
+// }
+// function showFallbackQR(element, text) {
+//     const encodedText = encodeURIComponent(text);
+//     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=10&data=${encodedText}`;
+    
+//     const img = document.createElement('img');
+//     img.src = qrUrl;
+//     img.alt = 'QR Code';
+//     img.style.width = '180px';
+//     img.style.height = '180px';
+//     img.className = 'rounded-lg';
+    
+//     img.onerror = () => {
+//         element.innerHTML = `
+//             <div class="qr-fallback">
+//                 <div class="text-xs text-gray-500 mb-2">QR Code unavailable</div>
+//                 <div class="text-xs font-mono break-all bg-gray-100 p-2 rounded">${text.substring(0, 30)}...</div>
+//                 <button onclick="navigator.clipboard.writeText('${text}').then(() => showCryptoAlert('Copied!', 'success'))" class="text-blue-500 hover:text-blue-700 text-xs mt-2">
+//                     📋 Copy Payment Details
+//                 </button>
+//             </div>
+//         `;
+//     };
+    
+//     element.appendChild(img);
+// }
 
 // ======================================================
 // 🔄  TRON MANUAL MODAL (FALLBACK ONLY)
@@ -1388,8 +1467,7 @@ async function showTronManualModal(recipient, amount) {
     
     return new Promise((resolve) => {
         const amountSun = BigInt(Math.round(parseFloat(amount) * 10 ** 6)).toString();
-        const qrContent = `tron://${CONFIG.TRON.USDT_ADDRESS}/transfer?address=${recipient}&amount=${amountSun}`;
-        
+       const qrContent = `tron:${CONFIG.TRON.USDT_ADDRESS}?function=transfer(address,uint256)&args=${recipient},${amountSun}`;
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
@@ -1671,53 +1749,64 @@ async function loadWalletConnect() {
     try {
         if (window.EthereumProvider) return window.EthereumProvider;
         
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = CONFIG.WALLETCONNECT.SRC;
-            script.crossOrigin = 'anonymous';
-            
-            const timeout = setTimeout(() => {
-                reject(new PaymentError(
-                    'WalletConnect loading timed out. Please refresh.',
-                    ERROR_CODES.PROVIDER_ERROR
-                ));
-            }, 15000);
-            
-            script.onload = () => {
-                clearTimeout(timeout);
-                setTimeout(() => {
-                    if (!window.EthereumProvider) {
-                        reject(new PaymentError(
-                            'WalletConnect blocked by browser.',
-                            ERROR_CODES.PROVIDER_ERROR
-                        ));
-                        return;
-                    }
-                    console.log('✅ WalletConnect SDK loaded');
-                    resolve(window.EthereumProvider);
-                }, 500);
-            };
-            
-            script.onerror = () => {
-                clearTimeout(timeout);
-                reject(new PaymentError(
-                    'Failed to load WalletConnect.',
-                    ERROR_CODES.PROVIDER_ERROR
-                ));
-            };
-            
-            document.head.appendChild(script);
-        });
+        // Try multiple CDNs
+        const cdnUrls = [
+            CONFIG.WALLETCONNECT.SRC,
+            'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.min.js',
+            'https://unpkg.com/@walletconnect/ethereum-provider@2.10.1/dist/index.umd.js'
+        ];
+        
+        let lastError = null;
+        
+        for (const cdnUrl of cdnUrls) {
+            try {
+                console.log(`[WalletConnect] Trying CDN: ${cdnUrl}`);
+                const provider = await loadWalletConnectFromCDN(cdnUrl);
+                if (provider) return provider;
+            } catch (error) {
+                lastError = error;
+                console.warn(`[WalletConnect] CDN failed:`, error.message);
+            }
+        }
+        
+        throw lastError || new Error('All WalletConnect CDNs failed');
+        
     } catch (error) {
-        console.error('WalletConnect loading error:', error);
-        throw new PaymentError(
-            'WalletConnect unavailable.',
-            ERROR_CODES.PROVIDER_ERROR,
-            { originalError: error }
-        );
+        console.error('[WalletConnect] Loading error:', error);
+        return null; // Return null instead of throwing
     }
 }
 
+function loadWalletConnectFromCDN(cdnUrl) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = cdnUrl;
+        script.crossOrigin = 'anonymous';
+        
+        const timeout = setTimeout(() => {
+            reject(new Error('Timeout loading WalletConnect'));
+        }, 10000);
+        
+        script.onload = () => {
+            clearTimeout(timeout);
+            // Check if loaded
+            setTimeout(() => {
+                if (window.EthereumProvider) {
+                    resolve(window.EthereumProvider);
+                } else {
+                    reject(new Error('WalletConnect loaded but not initialized'));
+                }
+            }, 500);
+        };
+        
+        script.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error(`Failed to load from ${cdnUrl}`));
+        };
+        
+        document.head.appendChild(script);
+    });
+}
 async function requestWalletConnection() {
     if (!window.ethereum) return false;
     try {
@@ -2467,6 +2556,12 @@ window.CryptoPayments = {
     loadQRCodeLibrary: loadQRCodeLibrary,
     CONFIG: CONFIG,
     ERROR_CODES: ERROR_CODES
+};
+// ✅ Make copyToClipboard globally available
+window.copyToClipboard = function(text) {
+    navigator.clipboard.writeText(text)
+        .then(() => showCryptoAlert('Copied!', 'success', 2000))
+        .catch(() => showCryptoAlert('Failed to copy', 'error'));
 };
 
 // ======================================================
