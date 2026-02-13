@@ -1839,6 +1839,10 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
 // 🔄  UPDATED TRON MANUAL MODAL (with proper QR)
 // ======================================================
 
+// ======================================================
+// 🔄  UPDATED TRON MANUAL MODAL (with proper QR and recipient)
+// ======================================================
+
 async function showTronManualModal(recipient, amount) {
     // Load QR code library first
     await loadQRCodeLibrary();
@@ -1847,16 +1851,42 @@ async function showTronManualModal(recipient, amount) {
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
-                <h3 class="font-bold mb-3 pr-6">TRON USDT Payment</h3>
-                <p class="text-sm mb-2">Send <strong>${amount} USDT</strong> (TRC-20) to:</p>
-                <div class="bg-gray-100 p-2 rounded break-all text-xs mb-3 font-mono">${recipient}</div>
+                <h3 class="font-bold mb-3 pr-6 text-red-600">🔷 TRON USDT (TRC-20)</h3>
+                
+                <div class="bg-gradient-to-r from-red-100 to-red-50 p-4 rounded-lg mb-4">
+                    <div class="text-2xl font-bold text-red-700 mb-1">${amount} USDT</div>
+                    <div class="text-sm text-red-600">Amount to send on TRON network</div>
+                    <div class="text-xs text-red-500 mt-1 font-bold">TRC-20 Token</div>
+                </div>
+                
+                <p class="text-sm mb-2 font-semibold">Send to this TRON address:</p>
+                <div class="bg-gray-100 p-3 rounded break-all text-xs mb-3 font-mono border border-red-200" style="word-break: break-all;">
+                    ${recipient}
+                </div>
+                
                 <div id="tronQR" class="mx-auto mb-3"></div>
-                <p class="text-xs text-gray-500 mb-1">Scan with Tron wallet to auto-fill payment details</p>
-                <p class="text-xs text-red-500 mb-2">⚠️ Send only USDT on TRON network</p>
-                <button id="copyAddress" class="text-blue-500 hover:text-blue-700 text-xs mb-3 transition-colors">📋 Copy Address</button>
+                
+                <div class="bg-red-50 p-3 rounded mb-3 text-left">
+                    <div class="text-xs font-medium text-red-800 mb-1">⚠️ Important:</div>
+                    <ol class="text-xs text-red-700 list-decimal pl-4 space-y-1">
+                        <li>Send <strong>ONLY USDT (TRC-20)</strong> on TRON network</li>
+                        <li>Double-check the recipient address above</li>
+                        <li>Minimum network fee: ~2-5 TRX</li>
+                    </ol>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button id="copyAddress" class="bg-red-600 hover:bg-red-700 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>📋</span> Copy Address
+                    </button>
+                    <button id="viewOnTronscan" class="bg-gray-600 hover:bg-gray-700 text-white py-2 rounded text-xs transition-colors flex items-center justify-center gap-1">
+                        <span>🔍</span> View on Tronscan
+                    </button>
+                </div>
+                
                 <div class="border-t pt-3 mt-3">
-                    <p class="text-xs text-gray-500 mb-2">Already sent payment?</p>
-                    <input type="text" id="txHashInput" placeholder="Paste transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                    <p class="text-xs text-gray-500 mb-2">Already sent payment? Enter transaction hash:</p>
+                    <input type="text" id="txHashInput" placeholder="Transaction hash (optional)" class="w-full text-xs p-2 border rounded mb-2 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none" />
                     <button id="confirmPayment" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm mb-2 transition-colors">✅ I've Paid</button>
                 </div>
                 <button id="closeTron" class="w-full bg-gray-200 hover:bg-gray-300 py-2 rounded text-sm transition-colors">Cancel</button>
@@ -1866,6 +1896,13 @@ async function showTronManualModal(recipient, amount) {
         // Generate QR code with proper TRON payment format
         const qrContent = createPaymentQRContent('TRON', recipient, amount);
         console.log('[TRON QR] Content:', qrContent);
+        console.log('[TRON Payment Details]', {
+            recipient: recipient,
+            amount: amount,
+            token: 'USDT',
+            network: 'TRON (TRC-20)',
+            contract: CONFIG.TRON.USDT_ADDRESS
+        });
         generateQR(qrContent, 'tronQR');
 
         // ✅ FIX: Attach close handler
@@ -1884,6 +1921,10 @@ async function showTronManualModal(recipient, amount) {
                 .catch(() => showCryptoAlert('Failed to copy address', 'error'));
         };
 
+        modal.querySelector('#viewOnTronscan').onclick = () => {
+            window.open(`https://tronscan.org/#/address/${recipient}`, '_blank');
+        };
+
         modal.querySelector('#confirmPayment').onclick = () => {
             const txHash = modal.querySelector('#txHashInput').value.trim();
             
@@ -1899,17 +1940,24 @@ async function showTronManualModal(recipient, amount) {
                     success: true, 
                     manual: true, 
                     txHash, 
-                    explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}` 
+                    explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}`,
+                    network: 'TRON',
+                    token: 'USDT (TRC-20)'
                 });
             } else {
-                resolve({ success: false, manual: true, pendingConfirmation: true });
+                resolve({ 
+                    success: false, 
+                    manual: true, 
+                    pendingConfirmation: true,
+                    network: 'TRON',
+                    token: 'USDT (TRC-20)'
+                });
             }
         };
 
         modal.querySelector('#closeTron').onclick = () => { modal.remove(); resolve({ success: false, cancelled: true }); };
     });
 }
-
 // ======================================================
 // 🚀  MAIN ENTRY POINT (Updated for desktop flow)
 // ======================================================
