@@ -1,5 +1,5 @@
 // ======================================================
-// 🚀 BSC USDT PAYMENT SYSTEM - STANDALONE v3.0
+// 🚀 BSC USDT PAYMENT SYSTEM - STANDALONE WITH WALLETCONNECT
 // ======================================================
 
 // ✅ Ensure we're in browser
@@ -12,7 +12,7 @@ const BSC_CONFIG = {
     // Default USDT contract on BSC
     USDT_ADDRESS: '0x55d398326f99059fF775485246999027B3197955',
     
-    // Default recipient (can be changed via setRecipient)
+    // Default recipient (can be changed)
     RECIPIENT_ADDRESS: '0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d',
     
     // BSC Network settings
@@ -22,18 +22,12 @@ const BSC_CONFIG = {
     EXPLORER_URL: 'https://bscscan.com/tx/',
     
     // Payment defaults
-    DEFAULT_AMOUNT: 2, // 2 USDT as requested
-    USDT_DECIMALS: 6, // BSC USDT uses 6 decimals
+    DEFAULT_AMOUNT: 2,
+    USDT_DECIMALS: 6,
     
-    // Wallet options
-    WALLET_OPTIONS: [
-        { id: 'metamask', name: 'MetaMask', icon: '🦊' },
-        { id: 'trustwallet', name: 'Trust', icon: '🛡️' },
-        { id: 'tokenpocket', name: 'TokenPocket', icon: '💰' },
-        { id: 'walletconnect', name: 'WalletConnect', icon: '🔗' },
-        { id: 'binance', name: 'Binance', icon: '🅱️' },
-        { id: 'safe', name: 'SafePal', icon: '🦅' }
-    ]
+    // WalletConnect Project ID (from WalletConnect Cloud)
+    WALLETCONNECT_PROJECT_ID: 'YOUR_PROJECT_ID', // Get from https://cloud.walletconnect.com
+    WALLETCONNECT_RELAY_URL: 'wss://relay.walletconnect.com'
 };
 
 // ✅ Application State
@@ -43,229 +37,62 @@ const BSC_STATE = {
     lastPaymentAmount: null,
     userAddress: null,
     transactionHistory: [],
-    paymentSessions: {},
+    walletConnectModal: null,
+    walletConnectProvider: null,
     lastPaymentAttempt: 0,
-    rateLimitWindow: 5000 // 5 seconds between attempts
+    rateLimitWindow: 5000
 };
 
-// ✅ Enhanced Utilities
-// ✅ Enhanced Utilities
-const BSC_UTILS = {
-    // Generate unique ID
-    generateId: () => 'bsc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-    
-    // Copy to clipboard
-    copyToClipboard: async (text) => {
-        try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                await navigator.clipboard.writeText(text);
-                return true;
-            } else {
-                // Fallback for older browsers
-                const textArea = document.createElement('textarea');
-                textArea.value = text;
-                textArea.style.position = 'fixed';
-                textArea.style.left = '-999999px';
-                textArea.style.top = '-999999px';
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                const success = document.execCommand('copy');
-                document.body.removeChild(textArea);
-                return success;
-            }
-        } catch (e) {
-            console.error('Copy failed:', e);
-            return false;
-        }
-    },
-    
-    // Truncate address for display
-    truncateAddress: (address, start = 6, end = 4) => {
-        if (!address || address.length < 10) return address;
-        return `${address.substring(0, start)}...${address.substring(address.length - end)}`;
-    },
-    
-    // Validate BSC address
-    validateAddress: (address) => {
-        if (!address || typeof address !== 'string') return false;
-        // Check if it's a valid Ethereum/BSC address
-        return /^0x[a-fA-F0-9]{40}$/.test(address);
-    },
-    
-    // Sanitize amount
-    sanitizeAmount: (amount) => {
-        if (typeof amount === 'string') {
-            // Remove any non-numeric characters except decimal point
-            amount = amount.replace(/[^\d.]/g, '');
-        }
-        const num = parseFloat(amount);
-        return isNaN(num) ? BSC_CONFIG.DEFAULT_AMOUNT : num.toFixed(2);
-    },
-    
-    // Format currency
-    formatCurrency: (amount) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount);
-    },
-    
-    // Get exchange rate (simplified - in real app, call an API)
-    getExchangeRate: async () => {
-        try {
-            // Try to get real exchange rate
-            const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=usd');
-            const data = await response.json();
-            return data.tether?.usd || 1;
-        } catch {
-            return 1; // Fallback to 1:1
-        }
-    },
-    
-    // Check if wallet is installed
-    checkWalletInstalled: () => {
-        return !!(window.ethereum || window.BinanceChain || window.web3);
-    },
-    
-    // Detect specific wallet
-    detectWallet: () => {
-        if (window.ethereum?.isMetaMask) return 'metamask';
-        if (window.ethereum?.isTrust) return 'trustwallet';
-        if (window.ethereum?.isTokenPocket) return 'tokenpocket';
-        if (window.BinanceChain) return 'binance';
-        if (window.ethereum) return 'generic';
-        return null;
-    },
-    
-    // Generate USDT transaction data
-    generateUSDTTransactionData: (recipient, amount) => {
-        const amountWei = BigInt(Math.round(amount * 10 ** BSC_CONFIG.USDT_DECIMALS)).toString();
-        
-        // ERC-20 transfer function signature
-        const transferSignature = '0xa9059cbb';
-        
-        // Pad recipient address (remove 0x, pad to 64 chars)
-        const paddedRecipient = recipient.replace('0x', '').padStart(64, '0');
-        
-        // Pad amount (convert to hex, pad to 64 chars)
-        const paddedAmount = BigInt(amountWei).toString(16).padStart(64, '0');
-        
-        return transferSignature + paddedRecipient + paddedAmount;
-    },
-    
-    // Validate transaction hash
-    validateTransactionHash: (txHash) => {
-        if (!txHash) return false;
-        txHash = txHash.trim();
-        
-        // Standard format: 0x + 64 hex chars
-        if (/^0x[a-fA-F0-9]{64}$/.test(txHash)) return txHash;
-        
-        // Also accept without 0x prefix
-        if (/^[a-fA-F0-9]{64}$/.test(txHash)) return '0x' + txHash;
-        
-        return false;
-    },
-    
-    // Rate limiting check
-    checkRateLimit: () => {
-        const now = Date.now();
-        if (now - BSC_STATE.lastPaymentAttempt < BSC_STATE.rateLimitWindow) {
-            return false;
-        }
-        BSC_STATE.lastPaymentAttempt = now;
-        return true;
-    },
-
-    // ✅ ADD THIS FUNCTION to validate QR content
-    validateQRContent: (recipient, amount) => {
-        const USDT_DECIMALS = 6;
-        const amountUnits = BigInt(
-            Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
-        ).toString();
-
-        const eip681URI =
-            `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer` +
-            `?address=${recipient}` +
-            `&uint256=${amountUnits}` +
-            `&chainId=56`;
-        
-        return {
-            uri: eip681URI,
-            components: {
-                scheme: 'ethereum',
-                contract: BSC_CONFIG.USDT_ADDRESS,
-                function: 'transfer',
-                recipient: recipient,
-                amountUnits: amountUnits,
-                amount: amount,
-                chainId: 56,
-                network: 'BSC',
-                token: 'USDT',
-                decimals: 6
-            },
-            validation: {
-                isEIP681: true,
-                hasChainId: true,
-                hasContract: true,
-                hasFunction: true
-            }
-        };
-    }
-};
-
-// ✅ Load dependencies dynamically
-async function loadDependencies() {
+// ✅ Load Dependencies
+async function loadBSCDependencies() {
     const dependencies = [];
     
-    // Load QRCode library if not already loaded
+    // Load QRCode
     if (typeof QRCode === 'undefined') {
-        dependencies.push(new Promise((resolve, reject) => {
+        dependencies.push(new Promise((resolve) => {
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
-            script.crossOrigin = 'anonymous';
             script.onload = resolve;
-            script.onerror = () => {
-                console.warn('QRCode.js failed to load, using fallback');
-                resolve(); // Still resolve to use fallback
-            };
+            script.onerror = resolve;
             document.head.appendChild(script);
         }));
     }
     
-    // Load ethers.js if not already loaded
+    // Load ethers
     if (typeof ethers === 'undefined') {
         dependencies.push(new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js';
-            script.crossOrigin = 'anonymous';
             script.onload = resolve;
-            script.onerror = () => {
-                console.warn('Ethers.js failed to load');
-                reject(new Error('Ethers.js library required for wallet transactions'));
-            };
+            script.onerror = reject;
             document.head.appendChild(script);
         }));
     }
     
-    return Promise.all(dependencies);
+    // Load WalletConnect
+    if (typeof window.WalletConnectProvider === 'undefined') {
+        dependencies.push(new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js';
+            script.onload = resolve;
+            script.onerror = () => console.warn('WalletConnect fallback to CDN');
+            document.head.appendChild(script);
+        }));
+    }
+    
+    return Promise.allSettled(dependencies);
 }
 
-// ✅ CSS Styles - UPDATED for better BSC branding
-function injectStyles() {
+// ✅ Inject Styles
+function injectBSCStyles() {
     if (document.getElementById('bsc-payment-styles')) return;
     
     const style = document.createElement('style');
     style.id = 'bsc-payment-styles';
     style.textContent = `
-        /* BSC Brand Colors: Yellow/Black theme */
         :root {
             --bsc-yellow: #F0B90B;
             --bsc-yellow-dark: #D4A209;
-            --bsc-yellow-light: #F8D347;
             --bsc-black: #14151A;
             --bsc-gray: #1E2026;
             --bsc-gray-light: #2B2F36;
@@ -281,13 +108,13 @@ function injectStyles() {
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.95);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 10000;
-            animation: bscFadeIn 0.3s ease-out;
             backdrop-filter: blur(8px);
+            animation: bscFadeIn 0.3s;
         }
         
         @keyframes bscFadeIn {
@@ -296,376 +123,323 @@ function injectStyles() {
         }
         
         .bsc-modal {
-            background: linear-gradient(135deg, var(--bsc-gray) 0%, var(--bsc-black) 100%);
+            background: linear-gradient(135deg, var(--bsc-gray), var(--bsc-black));
             border-radius: 24px;
-            width: 480px;
+            width: 500px;
             max-width: 95vw;
             max-height: 90vh;
             overflow-y: auto;
-            position: relative;
-            animation: bscSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(240, 185, 11, 0.2);
+            border: 1px solid rgba(240, 185, 11, 0.3);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+            animation: bscSlideUp 0.4s;
         }
         
         @keyframes bscSlideUp {
-            from { opacity: 0; transform: translateY(40px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
         
         .bsc-modal-header {
-            padding: 32px 32px 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: linear-gradient(135deg, rgba(240,185,11,0.1), transparent);
             position: relative;
-            background: linear-gradient(135deg, rgba(240, 185, 11, 0.1) 0%, rgba(240, 185, 11, 0.05) 100%);
-            border-radius: 24px 24px 0 0;
         }
         
         .bsc-modal-title {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 800;
             color: var(--bsc-yellow);
             margin: 0;
-            letter-spacing: -0.5px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
         
         .bsc-modal-subtitle {
-            font-size: 16px;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255,255,255,0.7);
             margin-top: 8px;
-            font-weight: 500;
+            font-size: 14px;
         }
         
         .bsc-modal-close {
             position: absolute;
-            top: 28px;
-            right: 28px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            font-size: 22px;
-            color: rgba(255, 255, 255, 0.7);
-            cursor: pointer;
-            width: 40px;
-            height: 40px;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
-            font-weight: 300;
         }
         
         .bsc-modal-close:hover {
-            background: rgba(240, 185, 11, 0.2);
-            color: var(--bsc-yellow);
+            background: var(--bsc-yellow);
+            color: var(--bsc-black);
             transform: rotate(90deg);
-            border-color: var(--bsc-yellow);
         }
         
         .bsc-modal-body {
-            padding: 32px;
+            padding: 24px;
         }
         
         .bsc-amount-card {
-            background: linear-gradient(135deg, rgba(240, 185, 11, 0.15) 0%, rgba(240, 185, 11, 0.05) 100%);
-            border-radius: 20px;
-            padding: 36px 28px;
+            background: linear-gradient(135deg, rgba(240,185,11,0.15), rgba(240,185,11,0.05));
+            border-radius: 16px;
+            padding: 30px;
             text-align: center;
-            margin-bottom: 32px;
-            position: relative;
-            overflow: hidden;
-            border: 2px solid rgba(240, 185, 11, 0.3);
+            margin-bottom: 24px;
+            border: 2px solid rgba(240,185,11,0.3);
         }
         
         .bsc-amount {
-            font-size: 56px;
+            font-size: 48px;
             font-weight: 900;
             color: var(--bsc-yellow);
             line-height: 1;
             margin-bottom: 8px;
-            letter-spacing: -1.5px;
-            text-shadow: 0 4px 20px rgba(240, 185, 11, 0.3);
         }
         
         .bsc-amount-label {
-            font-size: 15px;
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            font-weight: 600;
+            letter-spacing: 1px;
         }
         
         .bsc-address-card {
             background: var(--bsc-gray-light);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 32px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
         }
         
         .bsc-address-label {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.6);
-            font-weight: 600;
-            margin-bottom: 12px;
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 5px;
         }
         
         .bsc-address {
-            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Roboto Mono', monospace;
-            font-size: 15px;
+            font-family: monospace;
             word-break: break-all;
-            color: white;
-            line-height: 1.6;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 18px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .bsc-qr-section {
+            text-align: center;
+            margin: 24px 0;
+        }
+        
+        .bsc-qr-title {
+            color: var(--bsc-yellow);
+            font-weight: 600;
+            margin-bottom: 16px;
+            font-size: 16px;
         }
         
         .bsc-qr-container {
-            width: 260px;
-            height: 260px;
-            margin: 0 auto 28px;
+            width: 240px;
+            height: 240px;
+            margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            padding: 24px;
+            border-radius: 16px;
+            padding: 16px;
             border: 3px solid var(--bsc-yellow);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: transform 0.2s;
         }
         
-        .bsc-action-buttons {
+        .bsc-qr-container:hover {
+            transform: scale(1.02);
+        }
+        
+        .bsc-qr-container img,
+        .bsc-qr-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+        
+        .bsc-wallet-options {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-        
-        .bsc-btn {
-            padding: 16px 24px;
-            border-radius: 14px;
-            border: none;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.25s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-        }
-        
-        .bsc-btn-primary {
-            background: linear-gradient(135deg, var(--bsc-yellow) 0%, var(--bsc-yellow-dark) 100%);
-            color: var(--bsc-black);
-            box-shadow: 0 8px 20px rgba(240, 185, 11, 0.3);
-        }
-        
-        .bsc-btn-primary:hover {
-            background: linear-gradient(135deg, var(--bsc-yellow-light) 0%, var(--bsc-yellow) 100%);
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(240, 185, 11, 0.4);
-        }
-        
-        .bsc-btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .bsc-btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-        }
-        
-        .bsc-btn-success {
-            background: linear-gradient(135deg, var(--bsc-success) 0%, #0DAE71 100%);
-            color: white;
-            box-shadow: 0 8px 20px rgba(14, 203, 129, 0.3);
-        }
-        
-        .bsc-btn-success:hover {
-            background: linear-gradient(135deg, #0DAE71 0%, #0C9C65 100%);
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(14, 203, 129, 0.4);
-        }
-        
-        .bsc-btn-full {
-            grid-column: 1 / -1;
-        }
-        
-        .bsc-input {
-            width: 100%;
-            padding: 16px 20px;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 14px;
-            font-size: 16px;
-            margin-bottom: 24px;
-            transition: all 0.25s;
-            font-family: 'SF Mono', 'Monaco', monospace;
-            box-sizing: border-box;
-            background: rgba(0, 0, 0, 0.3);
-            color: white;
-        }
-        
-        .bsc-input:focus {
-            outline: none;
-            border-color: var(--bsc-yellow);
-            background: rgba(0, 0, 0, 0.5);
-            box-shadow: 0 0 0 4px rgba(240, 185, 11, 0.15);
-        }
-        
-        .bsc-network-info {
-            background: linear-gradient(135deg, rgba(240, 185, 11, 0.1) 0%, rgba(240, 185, 11, 0.05) 100%);
-            border: 2px solid rgba(240, 185, 11, 0.3);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 28px;
-            font-size: 15px;
-            color: var(--bsc-yellow);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .bsc-alert {
-            position: fixed;
-            top: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 10001;
-            padding: 16px 32px;
-            border-radius: 14px;
-            font-size: 16px;
-            font-weight: 600;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            min-width: 320px;
-            max-width: 500px;
-            animation: bscSlideDown 0.3s ease-out;
-        }
-        
-        @keyframes bscSlideDown {
-            from { opacity: 0; transform: translate(-50%, -30px); }
-            to { opacity: 1; transform: translate(-50%, 0); }
-        }
-        
-        .bsc-alert-success { background: var(--bsc-success); color: white; }
-        .bsc-alert-error { background: var(--bsc-error); color: white; }
-        .bsc-alert-warning { background: var(--bsc-warning); color: var(--bsc-black); }
-        .bsc-alert-info { background: var(--bsc-info); color: white; }
-        
-        /* Wallet selection styles */
-        .bsc-wallet-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
             gap: 12px;
             margin: 24px 0;
         }
         
-        .bsc-wallet-option {
+        .bsc-wallet-btn {
             background: var(--bsc-gray-light);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 14px;
-            padding: 20px 12px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 16px;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
-            flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 10px;
+            color: white;
+            font-weight: 600;
         }
         
-        .bsc-wallet-option:hover {
+        .bsc-wallet-btn:hover {
             border-color: var(--bsc-yellow);
-            transform: translateY(-3px);
-            background: rgba(240, 185, 11, 0.05);
+            background: rgba(240,185,11,0.1);
+            transform: translateY(-2px);
         }
         
         .bsc-wallet-icon {
-            font-size: 32px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-size: 24px;
         }
         
-        .bsc-wallet-name {
-            font-size: 13px;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
+        .bsc-walletconnect-qr {
+            background: var(--bsc-gray-light);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 20px 0;
             text-align: center;
         }
         
-        /* Loading spinner */
-        .bsc-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(240, 185, 11, 0.1);
-            border-top-color: var(--bsc-yellow);
-            border-radius: 50%;
-            animation: bscSpin 1s linear infinite;
-            margin: 0 auto;
+        .bsc-recipient-input {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: white;
+            font-family: monospace;
+            margin-bottom: 16px;
+            transition: all 0.2s;
         }
         
-        @keyframes bscSpin {
-            to { transform: rotate(360deg); }
+        .bsc-recipient-input:focus {
+            outline: none;
+            border-color: var(--bsc-yellow);
         }
         
-        /* Success animation */
-        .bsc-success-icon {
-            font-size: 72px;
+        .bsc-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .bsc-btn-primary {
+            background: linear-gradient(135deg, var(--bsc-yellow), var(--bsc-yellow-dark));
+            color: var(--bsc-black);
+        }
+        
+        .bsc-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(240,185,11,0.3);
+        }
+        
+        .bsc-btn-success {
+            background: var(--bsc-success);
+            color: white;
+        }
+        
+        .bsc-btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(14,203,129,0.3);
+        }
+        
+        .bsc-btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .bsc-btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .bsc-alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 16px 24px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            z-index: 10001;
+            animation: bscAlert 0.3s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        @keyframes bscAlert {
+            from { transform: translate(-50%, -20px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        
+        .bsc-alert-success { background: var(--bsc-success); }
+        .bsc-alert-error { background: var(--bsc-error); }
+        .bsc-alert-warning { background: var(--bsc-warning); color: var(--bsc-black); }
+        .bsc-alert-info { background: var(--bsc-info); }
+        
+        .bsc-tab-container {
+            display: flex;
+            gap: 8px;
             margin-bottom: 24px;
-            animation: bscScaleIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: var(--bsc-gray-light);
+            padding: 4px;
+            border-radius: 12px;
         }
         
-        @keyframes bscScaleIn {
-            0% { transform: scale(0); opacity: 0; }
-            70% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
+        .bsc-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.7);
         }
         
-        /* Mobile optimizations */
-        @media (max-width: 480px) {
-            .bsc-modal {
-                border-radius: 20px;
-                width: 95vw;
-            }
-            
-            .bsc-modal-header,
-            .bsc-modal-body {
-                padding: 24px;
-            }
-            
-            .bsc-amount {
-                font-size: 48px;
-            }
-            
-            .bsc-qr-container {
-                width: 220px;
-                height: 220px;
-                padding: 16px;
-            }
-            
-            .bsc-action-buttons {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-            
-            .bsc-wallet-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        .bsc-tab.active {
+            background: var(--bsc-yellow);
+            color: var(--bsc-black);
+        }
+        
+        .bsc-network-badge {
+            background: rgba(240,185,11,0.2);
+            border: 1px solid var(--bsc-yellow);
+            border-radius: 20px;
+            padding: 8px 16px;
+            display: inline-block;
+            color: var(--bsc-yellow);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .bsc-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            margin: 24px 0;
         }
     `;
     document.head.appendChild(style);
@@ -673,56 +447,26 @@ function injectStyles() {
 
 // ✅ Alert System
 function showBSCAlert(message, type = 'info', duration = 3000) {
-    // Remove existing alert
     const existing = document.querySelector('.bsc-alert');
     if (existing) existing.remove();
     
     const alert = document.createElement('div');
     alert.className = `bsc-alert bsc-alert-${type}`;
-    
-    const icons = {
-        success: '✅',
-        error: '❌',
-        warning: '⚠️',
-        info: 'ℹ️'
-    };
-    
-    alert.innerHTML = `
-        <span>${icons[type] || icons.info}</span>
-        <span>${message}</span>
-        <button class="bsc-alert-close" style="
-            background: none;
-            border: none;
-            color: inherit;
-            font-size: 20px;
-            cursor: pointer;
-            margin-left: auto;
-        ">×</button>
-    `;
-    
+    alert.innerHTML = message;
     document.body.appendChild(alert);
     
-    // Close button
-    alert.querySelector('.bsc-alert-close').addEventListener('click', () => {
-        alert.remove();
-    });
-    
-    // Auto-dismiss
     if (duration > 0) {
         setTimeout(() => {
-            if (alert.parentNode) {
-                alert.style.opacity = '0';
-                alert.style.transform = 'translate(-50%, -30px)';
-                setTimeout(() => alert.remove(), 300);
-            }
+            alert.style.opacity = '0';
+            setTimeout(() => alert.remove(), 300);
         }, duration);
     }
     
     return alert;
 }
 
-// ✅ Create Modal
-function createBSCModal(content, onClose = null) {
+// ✅ Modal Creator
+function createBSCModal(content, onClose) {
     const overlay = document.createElement('div');
     overlay.className = 'bsc-modal-overlay';
     
@@ -733,864 +477,448 @@ function createBSCModal(content, onClose = null) {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
     
-    // Close handlers
     const handleEscape = (e) => {
         if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', handleEscape);
-            if (onClose) onClose();
+            closeModal();
         }
     };
+    
+    const closeModal = () => {
+        overlay.remove();
+        document.removeEventListener('keydown', handleEscape);
+        if (onClose) onClose();
+    };
+    
     document.addEventListener('keydown', handleEscape);
     
-    // Close button
     const closeBtn = modal.querySelector('.bsc-modal-close');
     if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            overlay.remove();
-            document.removeEventListener('keydown', handleEscape);
-            if (onClose) onClose();
-        });
+        closeBtn.addEventListener('click', closeModal);
     }
     
-    // Close on backdrop click
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
-            overlay.remove();
-            document.removeEventListener('keydown', handleEscape);
-            if (onClose) onClose();
+            closeModal();
         }
     });
     
-    return { overlay, modal };
+    return { overlay, modal, closeModal };
 }
 
-// ✅ Enhanced QR Generation for BSC USDT
-// ✅ CORRECT BSC USDT QR Code Generation
-function generateBSCUSDTQR(recipient, amount, element) {
+// ✅ QR Generation
+function generateBSCQR(recipient, amount, element) {
     if (!element) return;
     element.innerHTML = '';
     
     try {
-        // ✅ USDT on BSC uses 6 decimals, NOT 18
-        const USDT_DECIMALS = 6;
-        const amountUnits = BigInt(
-            Math.round(parseFloat(amount) * 10 ** USDT_DECIMALS)
-        ).toString();
-
-        // ✅ CORRECT EIP-681 URI for BSC USDT
-        const eip681URI =
-            `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer` +
-            `?address=${recipient}` +
-            `&uint256=${amountUnits}` +
-            `&chainId=56`;
-
-        console.log('[BSC QR] Correct EIP-681 URI:', {
-            recipient,
-            amount,
-            amountUnits,
-            contract: BSC_CONFIG.USDT_ADDRESS,
-            chainId: 56,
-            uri: eip681URI
-        });
-
-        // Generate QR code with QRCode.js
+        const amountUnits = BigInt(Math.round(parseFloat(amount) * 10 ** 6)).toString();
+        
+        const paymentURI = `ethereum:${BSC_CONFIG.USDT_ADDRESS}/transfer?address=${recipient}&uint256=${amountUnits}&chainId=56`;
+        
         if (window.QRCode) {
-            try {
-                if (typeof window.QRCode.toCanvas === 'function') {
-                    // Using newer QRCode.js API
-                    const canvas = document.createElement('canvas');
-                    element.appendChild(canvas);
-
-                    window.QRCode.toCanvas(canvas, eip681URI, {
-                        width: 200,
-                        margin: 2,
-                        color: { dark: '#000000', light: '#FFFFFF' },
-                        errorCorrectionLevel: 'M'
-                    }, (error) => {
-                        if (error) {
-                            console.warn('QR canvas error:', error);
-                            generateFallbackQR(element, eip681URI);
-                        } else {
-                            // Add click to copy
-                            canvas.style.cursor = 'pointer';
-                            canvas.title = 'Click to copy BSC USDT payment URI';
-                            canvas.addEventListener('click', () => {
-                                BSC_UTILS.copyToClipboard(eip681URI);
-                                showBSCAlert('BSC USDT payment URI copied!', 'success');
-                            });
-                        }
-                    });
-                } else if (typeof window.QRCode === 'function') {
-                    // Using older QRCode.js
-                    new window.QRCode(element, {
-                        text: eip681URI,
-                        width: 200,
-                        height: 200,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
-                        correctLevel: window.QRCode.CorrectLevel?.M || 0
-                    });
-                    
-                    // Add click to copy
-                    setTimeout(() => {
-                        const img = element.querySelector('img') || element.querySelector('canvas');
-                        if (img) {
-                            img.style.cursor = 'pointer';
-                            img.title = 'Click to copy BSC USDT payment URI';
-                            img.addEventListener('click', () => {
-                                BSC_UTILS.copyToClipboard(eip681URI);
-                                showBSCAlert('BSC USDT payment URI copied!', 'success');
-                            });
-                        }
-                    }, 100);
-                } else {
-                    generateFallbackQR(element, eip681URI);
-                }
-            } catch (error) {
-                console.error('QR generation error:', error);
-                generateFallbackQR(element, eip681URI);
+            if (typeof window.QRCode.toCanvas === 'function') {
+                const canvas = document.createElement('canvas');
+                element.appendChild(canvas);
+                
+                window.QRCode.toCanvas(canvas, paymentURI, {
+                    width: 200,
+                    margin: 2,
+                    color: { dark: '#000000', light: '#FFFFFF' }
+                }, (error) => {
+                    if (error) {
+                        console.warn('QR error:', error);
+                        useQRServer(element, paymentURI);
+                    }
+                });
+            } else {
+                new window.QRCode(element, {
+                    text: paymentURI,
+                    width: 200,
+                    height: 200
+                });
             }
         } else {
-            generateFallbackQR(element, eip681URI);
+            useQRServer(element, paymentURI);
         }
         
-    } catch (error) {
-        console.error('QR generation failed:', error);
-        element.innerHTML = `
-            <div style="text-align: center; color: var(--bsc-error); padding: 20px;">
-                <div style="font-size: 48px;">❌</div>
-                <div>QR Generation Failed</div>
-                <div style="font-size: 12px; margin-top: 10px;">${error.message}</div>
-            </div>
-        `;
-    }
-}
-
-function generateFallbackQR(element, data) {
-    const encodedData = encodeURIComponent(data);
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodedData}`;
-    
-    const img = document.createElement('img');
-    img.src = qrUrl;
-    img.alt = 'BSC USDT Payment QR';
-    img.style.width = '200px';
-    img.style.height = '200px';
-    img.style.borderRadius = '8px';
-    
-    img.onerror = () => {
-        // Ultimate fallback
-        element.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <div style="color: var(--bsc-error); margin-bottom: 10px;">QR Code Unavailable</div>
-                <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; font-family: monospace; font-size: 12px;">
-                    ${data.substring(0, 40)}...
-                </div>
-            </div>
-        `;
-    };
-    
-    element.appendChild(img);
-}
-
-// ✅ Network Switching
-async function ensureBSCNetwork(provider = window.ethereum) {
-    if (!provider) {
-        throw new Error('No wallet provider available');
-    }
-    
-    try {
-        const chainId = await provider.request({ method: 'eth_chainId' });
-        
-        if (chainId !== BSC_CONFIG.CHAIN_ID_HEX) {
-            try {
-                await provider.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: BSC_CONFIG.CHAIN_ID_HEX }]
-                });
-            } catch (switchError) {
-                if (switchError.code === 4902) {
-                    await provider.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [{
-                            chainId: BSC_CONFIG.CHAIN_ID_HEX,
-                            chainName: 'Binance Smart Chain',
-                            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-                            rpcUrls: [BSC_CONFIG.RPC_URL],
-                            blockExplorerUrls: ['https://bscscan.com/']
-                        }]
-                    });
-                } else {
-                    throw switchError;
-                }
-            }
-        }
-        return true;
-    } catch (error) {
-        console.error('Network switch error:', error);
-        throw new Error(`Failed to switch to BSC: ${error.message}`);
-    }
-}
-
-// ✅ USDT Transaction
-async function sendBSCUSDTTransaction(recipient, amount, fromAddress, provider = window.ethereum) {
-    if (!provider) {
-        throw new Error('No wallet provider available');
-    }
-    
-    if (!window.ethers) {
-        throw new Error('Ethers.js required for transactions');
-    }
-    
-    try {
-        const ethersProvider = new window.ethers.providers.Web3Provider(provider);
-        const signer = ethersProvider.getSigner();
-        
-        // USDT Contract ABI (minimal)
-        const usdtAbi = [
-            "function transfer(address to, uint256 amount) external returns (bool)",
-            "function balanceOf(address account) external view returns (uint256)",
-            "function decimals() external view returns (uint8)"
-        ];
-        
-        const usdtContract = new window.ethers.Contract(BSC_CONFIG.USDT_ADDRESS, usdtAbi, signer);
-        
-        // ✅ Get ACTUAL decimals from contract (should be 6)
-        const decimals = await usdtContract.decimals();
-        const amountWei = window.ethers.utils.parseUnits(amount.toString(), decimals);
-        
-        // Check balance
-        const balance = await usdtContract.balanceOf(fromAddress);
-        if (balance.lt(amountWei)) {
-            throw new Error(`Insufficient USDT. You have ${window.ethers.utils.formatUnits(balance, decimals)} USDT, need ${amount} USDT`);
-        }
-        
-        // Estimate gas
-        const gasEstimate = await usdtContract.estimateGas.transfer(recipient, amountWei);
-        const gasPrice = await ethersProvider.getGasPrice();
-        
-        // Send transaction
-        const tx = await usdtContract.transfer(recipient, amountWei, {
-            gasLimit: gasEstimate.mul(120).div(100), // 20% buffer
-            gasPrice: gasPrice.mul(110).div(100) // 10% higher gas price
-        });
-        
-        console.log('Transaction sent:', tx.hash);
-        
-        // Wait for confirmation
-        const receipt = await tx.wait();
-        
-        // Store in history
-        BSC_STATE.transactionHistory.push({
-            txHash: tx.hash,
-            amount: amount,
-            recipient: recipient,
-            from: fromAddress,
-            timestamp: Date.now(),
-            status: receipt.status === 1 ? 'success' : 'failed',
-            network: 'BSC',
-            blockNumber: receipt.blockNumber
-        });
-        
-        // Save to localStorage
-        try {
-            localStorage.setItem('bsc_payments_history', JSON.stringify(BSC_STATE.transactionHistory.slice(-50)));
-        } catch (e) {
-            console.warn('Failed to save history:', e);
-        }
-        
-        return {
-            success: receipt.status === 1,
-            txHash: tx.hash,
-            explorerUrl: `${BSC_CONFIG.EXPLORER_URL}${tx.hash}`,
-            receipt: receipt
-        };
-        
-    } catch (error) {
-        console.error('Transaction error:', error);
-        
-        if (error.code === 4001 || error.message.includes('user rejected')) {
-            throw new Error('Transaction rejected by user');
-        }
-        
-        if (error.message.includes('insufficient funds')) {
-            throw new Error('Insufficient USDT balance');
-        }
-        
-        if (error.message.includes('network changed')) {
-            throw new Error('Network changed. Please try again.');
-        }
-        
-        throw new Error(`Transaction failed: ${error.message}`);
-    }
-}
-
-// ✅ Wallet Connection
-async function connectBSCWallet(walletType = 'auto') {
-    if (!BSC_UTILS.checkWalletInstalled()) {
-        throw new Error('No crypto wallet found. Please install MetaMask or Trust Wallet.');
-    }
-    
-    try {
-        let provider = window.ethereum;
-        
-        // If Binance Chain wallet is preferred
-        if (walletType === 'binance' && window.BinanceChain) {
-            provider = window.BinanceChain;
-        }
-        
-        if (!provider) {
-            throw new Error('Wallet provider not available');
-        }
-        
-        // Request accounts
-        const accounts = await provider.request({ method: 'eth_requestAccounts' });
-        
-        if (!accounts || accounts.length === 0) {
-            throw new Error('No accounts found. Please unlock your wallet.');
-        }
-        
-        const address = accounts[0];
-        BSC_STATE.userAddress = address;
-        
-        return {
-            address,
-            provider,
-            walletType: BSC_UTILS.detectWallet() || 'unknown'
-        };
-        
-    } catch (error) {
-        console.error('Wallet connection error:', error);
-        
-        if (error.code === 4001) {
-            throw new Error('Wallet connection rejected');
-        }
-        
-        if (error.code === -32002) {
-            throw new Error('Wallet connection already pending. Please check your wallet.');
-        }
-        
-        throw new Error(`Wallet connection failed: ${error.message}`);
-    }
-}
-
-// ✅ Main Payment Modal
-async function showBSCPaymentModal(amount = BSC_CONFIG.DEFAULT_AMOUNT, options = {}) {
-    await loadDependencies();
-    
-    const recipient = options.recipient || BSC_CONFIG.RECIPIENT_ADDRESS;
-    const paymentId = BSC_UTILS.generateId();
-    BSC_STATE.currentPaymentId = paymentId;
-    
-    // Load history
-    try {
-        const saved = localStorage.getItem('bsc_payments_history');
-        if (saved) {
-            BSC_STATE.transactionHistory = JSON.parse(saved);
-        }
-    } catch (e) {
-        console.warn('Failed to load history:', e);
-    }
-    
-    return new Promise((resolve) => {
-        const modalContent = `
-            <div class="bsc-modal-header">
-                <button class="bsc-modal-close">×</button>
-                <h2 class="bsc-modal-title">🟡 Pay with USDT (BSC)</h2>
-                <p class="bsc-modal-subtitle">Send ${amount} USDT on Binance Smart Chain</p>
-            </div>
-            
-            <div class="bsc-modal-body">
-                <div class="bsc-amount-card">
-                    <div class="bsc-amount">${amount} USDT</div>
-                    <div class="bsc-amount-label">Amount to Pay</div>
-                </div>
-                
-                <div class="bsc-network-info">
-                    <span>⚠️</span>
-                    <span>Send <strong>ONLY</strong> USDT on <strong>BSC (BEP-20)</strong> network</span>
-                </div>
-                
-                <div class="bsc-address-card">
-                    <div class="bsc-address-label">
-                        <span>📬</span>
-                        Recipient Address
-                    </div>
-                    <div class="bsc-address">${recipient}</div>
-                </div>
-                
-                <div class="bsc-qr-container" id="bscQRCode"></div>
-                
-                <div style="text-align: center; margin-bottom: 24px;">
-                    <div style="font-size: 14px; color: rgba(255, 255, 255, 0.7);">
-                        Scan QR with any BSC-compatible wallet
-                    </div>
-                </div>
-                
-                <div class="bsc-action-buttons">
-                    <button id="bscCopyAddress" class="bsc-btn bsc-btn-secondary">
-                        📋 Copy Address
-                    </button>
-                    <button id="bscCopyDetails" class="bsc-btn bsc-btn-secondary">
-                        🔗 Copy Payment Details
-                    </button>
-                </div>
-                
-                <button id="bscConnectWallet" class="bsc-btn bsc-btn-primary bsc-btn-full">
-                    👛 Connect Wallet & Pay
-                </button>
-                
-                <div style="margin: 28px 0; position: relative; text-align: center;">
-                    <div style="height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);"></div>
-                    <div style="display: inline-block; background: var(--bsc-gray); padding: 0 16px; position: relative; top: -12px; color: rgba(255,255,255,0.6); font-size: 13px;">
-                        Already sent payment?
-                    </div>
-                </div>
-                
-                <input type="text" 
-                       id="bscTxHash" 
-                       placeholder="Paste transaction hash (0x...)" 
-                       class="bsc-input">
-                
-                <button id="bscConfirmManual" class="bsc-btn bsc-btn-success bsc-btn-full">
-                    ✅ I've Already Paid
-                </button>
-                
-                <div style="text-align: center; margin-top: 24px;">
-                    <div style="font-size: 12px; color: rgba(255, 255, 255, 0.5);">
-                        Payment ID: ${paymentId}
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        const { overlay, modal } = createBSCModal(modalContent, () => {
-            resolve({ success: false, cancelled: true });
-        });
-        
-        // Generate QR code
+        // Add click to copy
         setTimeout(() => {
-            const qrContainer = modal.querySelector('#bscQRCode');
-            if (qrContainer) {
-                generateBSCUSDTQR(recipient, amount, qrContainer);
+            const qrElement = element.querySelector('canvas, img');
+            if (qrElement) {
+                qrElement.style.cursor = 'pointer';
+                qrElement.title = 'Click to copy payment URI';
+                qrElement.addEventListener('click', () => {
+                    navigator.clipboard.writeText(paymentURI);
+                    showBSCAlert('Payment URI copied!', 'success');
+                });
             }
         }, 100);
         
-        // Copy address
-        modal.querySelector('#bscCopyAddress').addEventListener('click', async () => {
-            const success = await BSC_UTILS.copyToClipboard(recipient);
-            if (success) {
-                showBSCAlert('Address copied!', 'success');
-            }
-        });
-        
-        // Copy payment details
-        modal.querySelector('#bscCopyDetails').addEventListener('click', async () => {
-            const details = `
-Payment Request:
-🔗 Network: BSC (BEP-20)
-💰 Amount: ${amount} USDT
-📬 To: ${recipient}
-📝 Token: USDT (${BSC_CONFIG.USDT_ADDRESS})
-⚠️ Send ONLY on BSC network
-            `.trim();
-            
-            const success = await BSC_UTILS.copyToClipboard(details);
-            if (success) {
-                showBSCAlert('Payment details copied!', 'success');
-            }
-        });
-        
-        // Connect wallet button
-        modal.querySelector('#bscConnectWallet').addEventListener('click', async () => {
-            overlay.remove();
-            
-            try {
-                showBSCAlert('Connecting wallet...', 'info');
-                
-                const wallet = await connectBSCWallet();
-                
-                // Show confirmation
-                const confirmed = await showBSCConfirmation(recipient, amount, wallet.address);
-                if (!confirmed) {
-                    resolve({ success: false, cancelled: true });
-                    return;
-                }
-                
-                // Ensure BSC network
-                await ensureBSCNetwork(wallet.provider);
-                
-                // Send transaction
-                showBSCAlert('Confirm transaction in your wallet...', 'info');
-                const result = await sendBSCUSDTTransaction(recipient, amount, wallet.address, wallet.provider);
-                
-                if (result.success) {
-                    showBSCSuccessModal(result.txHash, result.explorerUrl, amount);
-                    
-                    resolve({
-                        success: true,
-                        txHash: result.txHash,
-                        explorerUrl: result.explorerUrl,
-                        paymentId: paymentId,
-                        amount: amount,
-                        fromAddress: wallet.address,
-                        walletType: wallet.walletType
-                    });
-                } else {
-                    throw new Error('Transaction failed');
-                }
-                
-            } catch (error) {
-                console.error('Payment error:', error);
-                showBSCAlert(`Payment failed: ${error.message}`, 'error');
-                resolve({ 
-                    success: false, 
-                    error: error.message,
-                    paymentId: paymentId 
-                });
-            }
-        });
-        
-        // Manual confirmation
-        modal.querySelector('#bscConfirmManual').addEventListener('click', () => {
-            const txHash = modal.querySelector('#bscTxHash').value.trim();
-            overlay.remove();
-            
-            if (!txHash) {
-                resolve({ 
-                    success: false, 
-                    manual: true, 
-                    pendingConfirmation: true,
-                    paymentId: paymentId
-                });
-                return;
-            }
-            
-            const validatedHash = BSC_UTILS.validateTransactionHash(txHash);
-            if (!validatedHash) {
-                showBSCAlert('Invalid transaction hash format', 'error');
-                return;
-            }
-            
-            resolve({ 
-                success: true, 
-                txHash: validatedHash, 
-                explorerUrl: `${BSC_CONFIG.EXPLORER_URL}${validatedHash}`,
-                method: 'manual',
-                manual: true,
-                paymentId: paymentId
-            });
-        });
-    });
+    } catch (error) {
+        console.error('QR error:', error);
+        element.innerHTML = '<div style="color: var(--bsc-error);">QR Error</div>';
+    }
 }
 
-// ✅ Confirmation Modal
-async function showBSCConfirmation(recipient, amount, fromAddress) {
-    return new Promise((resolve) => {
-        const content = `
+function useQRServer(element, data) {
+    const img = document.createElement('img');
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data)}`;
+    img.style.width = '200px';
+    img.style.height = '200px';
+    img.alt = 'Payment QR';
+    element.appendChild(img);
+}
+
+// ✅ WalletConnect Provider
+async function initWalletConnect() {
+    if (!window.WalletConnectProvider) {
+        throw new Error('WalletConnect not loaded');
+    }
+    
+    try {
+        const provider = new window.WalletConnectProvider.default({
+            rpc: {
+                56: 'https://bsc-dataseed.binance.org/'
+            },
+            chainId: 56,
+            qrcodeModal: {
+                open: (uri, callback) => {
+                    // Show QR modal
+                    showWalletConnectQR(uri);
+                    callback();
+                },
+                close: () => {
+                    const qrModal = document.querySelector('.bsc-wc-qr-modal');
+                    if (qrModal) qrModal.remove();
+                }
+            }
+        });
+        
+        await provider.enable();
+        return provider;
+        
+    } catch (error) {
+        console.error('WalletConnect error:', error);
+        throw error;
+    }
+}
+
+// ✅ Show WalletConnect QR
+function showWalletConnectQR(uri) {
+    const modal = document.createElement('div');
+    modal.className = 'bsc-modal-overlay bsc-wc-qr-modal';
+    modal.innerHTML = `
+        <div class="bsc-modal" style="width: 400px;">
             <div class="bsc-modal-header">
+                <h3 class="bsc-modal-title">🔗 WalletConnect</h3>
                 <button class="bsc-modal-close">×</button>
-                <h2 class="bsc-modal-title">🟡 Confirm Payment</h2>
-                <p class="bsc-modal-subtitle">Please review payment details</p>
             </div>
             <div class="bsc-modal-body">
-                <div style="text-align: center; margin-bottom: 28px;">
-                    <div style="font-size: 56px; margin-bottom: 16px;">💰</div>
-                    <div style="font-size: 20px; font-weight: 700; color: white; margin-bottom: 8px;">
-                        ${amount} USDT
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.7);">
-                        From: ${BSC_UTILS.truncateAddress(fromAddress)}
+                <div class="bsc-walletconnect-qr">
+                    <div style="margin-bottom: 20px;">Scan with WalletConnect</div>
+                    <div id="wc-qr-container" style="width: 250px; height: 250px; margin: 0 auto;"></div>
+                    <div style="margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.5);">
+                        Open your WalletConnect-compatible wallet and scan
                     </div>
                 </div>
-                
-                <div class="bsc-address-card">
-                    <div class="bsc-address-label">
-                        <span>📬</span>
-                        To Address
-                    </div>
-                    <div class="bsc-address">${recipient}</div>
-                </div>
-                
-                <div style="background: rgba(240, 185, 11, 0.1); border: 2px solid rgba(240, 185, 11, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 28px;">
-                    <div style="font-size: 15px; color: var(--bsc-yellow); font-weight: 600; margin-bottom: 8px;">
-                        ⚠️ Important
-                    </div>
-                    <div style="font-size: 14px; color: rgba(255,255,255,0.8); line-height: 1.5;">
-                        • Confirm this is <strong>${amount} USDT</strong><br>
-                        • Ensure you're on <strong>BSC (BEP-20)</strong> network<br>
-                        • Verify the recipient address matches above<br>
-                        • Gas fees will be charged in BNB
-                    </div>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <button id="bscConfirmCancel" class="bsc-btn bsc-btn-secondary">
-                        Cancel
-                    </button>
-                    <button id="bscConfirmProceed" class="bsc-btn bsc-btn-primary">
-                        Confirm & Send
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        const { overlay } = createBSCModal(content);
-        
-        overlay.querySelector('#bscConfirmCancel').addEventListener('click', () => {
-            overlay.remove();
-            resolve(false);
-        });
-        
-        overlay.querySelector('#bscConfirmProceed').addEventListener('click', () => {
-            overlay.remove();
-            resolve(true);
-        });
-    });
-}
-
-// ✅ Success Modal
-function showBSCSuccessModal(txHash, explorerUrl, amount) {
-    const content = `
-        <div class="bsc-modal-header">
-            <button class="bsc-modal-close">×</button>
-            <h2 class="bsc-modal-title">🎉 Payment Successful!</h2>
-            <p class="bsc-modal-subtitle">${amount} USDT sent successfully</p>
-        </div>
-        <div class="bsc-modal-body">
-            <div style="text-align: center; padding: 40px 20px;">
-                <div class="bsc-success-icon">✅</div>
-                <div style="font-size: 22px; font-weight: 700; color: var(--bsc-success); margin-bottom: 12px;">
-                    USDT Payment Confirmed
-                </div>
-                <div style="font-size: 16px; color: rgba(255,255,255,0.8); margin-bottom: 24px; line-height: 1.5;">
-                    Your ${amount} USDT has been sent on the BSC network.
-                    <br>
-                    <span style="font-family: monospace; font-size: 14px; color: rgba(255,255,255,0.6);">
-                        ${BSC_UTILS.truncateAddress(txHash)}
-                    </span>
-                </div>
-                <a href="${explorerUrl}" target="_blank" rel="noopener noreferrer" 
-                   style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: var(--bsc-info); color: white; border-radius: 12px; text-decoration: none; font-weight: 600; transition: all 0.2s;">
-                    🔍 View on BscScan
-                </a>
-            </div>
-            <div style="text-align: center; margin-top: 24px;">
-                <button id="bscSuccessCopy" class="bsc-btn bsc-btn-secondary" style="margin-right: 12px;">
-                    📋 Copy TX Hash
-                </button>
-                <button id="bscSuccessDone" class="bsc-btn bsc-btn-success">
-                    Done
-                </button>
             </div>
         </div>
     `;
     
-    const { overlay } = createBSCModal(content);
+    document.body.appendChild(modal);
     
-    overlay.querySelector('#bscSuccessCopy').addEventListener('click', async () => {
-        const success = await BSC_UTILS.copyToClipboard(txHash);
-        if (success) {
-            showBSCAlert('Transaction hash copied!', 'success');
+    // Generate QR for URI
+    setTimeout(() => {
+        const qrContainer = modal.querySelector('#wc-qr-container');
+        if (qrContainer && window.QRCode) {
+            new window.QRCode(qrContainer, {
+                text: uri,
+                width: 250,
+                height: 250
+            });
         }
-    });
+    }, 100);
     
-    overlay.querySelector('#bscSuccessDone').addEventListener('click', () => {
-        overlay.remove();
+    // Close button
+    modal.querySelector('.bsc-modal-close').addEventListener('click', () => {
+        modal.remove();
     });
 }
 
-// ✅ Main Payment Function
-async function initiateBSCPayment(amount = BSC_CONFIG.DEFAULT_AMOUNT, options = {}) {
-    // Rate limiting
-    if (!BSC_UTILS.checkRateLimit()) {
-        showBSCAlert('Please wait before making another payment', 'warning');
-        return { success: false, error: 'Rate limited' };
-    }
+// ✅ Main Payment Modal
+async function showBSCPaymentModal(amount = BSC_CONFIG.DEFAULT_AMOUNT, initialRecipient = BSC_CONFIG.RECIPIENT_ADDRESS) {
+    await loadBSCDependencies();
+    injectBSCStyles();
     
+    let recipient = initialRecipient;
+    let activeTab = 'qr'; // 'qr' or 'wallet'
+    
+    return new Promise((resolve) => {
+        const renderModal = () => {
+            const modalContent = `
+                <div class="bsc-modal-header">
+                    <h2 class="bsc-modal-title">🟡 BSC USDT Payment</h2>
+                    <p class="bsc-modal-subtitle">Send on Binance Smart Chain (BEP-20)</p>
+                    <button class="bsc-modal-close">×</button>
+                </div>
+                
+                <div class="bsc-modal-body">
+                    <div class="bsc-amount-card">
+                        <div class="bsc-amount">${amount} USDT</div>
+                        <div class="bsc-amount-label">Payment Amount</div>
+                    </div>
+                    
+                    <div class="bsc-network-badge">
+                        ⚡ BSC Network (BEP-20)
+                    </div>
+                    
+                    <label style="color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 8px; display: block;">
+                        Recipient Address:
+                    </label>
+                    <input type="text" 
+                           id="bscRecipientInput" 
+                           class="bsc-recipient-input" 
+                           value="${recipient}"
+                           placeholder="0x...">
+                    
+                    <div class="bsc-tab-container">
+                        <button class="bsc-tab ${activeTab === 'qr' ? 'active' : ''}" data-tab="qr">📱 QR Code</button>
+                        <button class="bsc-tab ${activeTab === 'wallet' ? 'active' : ''}" data-tab="wallet">👛 Wallet</button>
+                    </div>
+                    
+                    <div id="bscTabContent"></div>
+                    
+                    <div class="bsc-divider"></div>
+                    
+                    <button id="bscConfirmPayment" class="bsc-btn bsc-btn-success">
+                        ✅ Confirm Payment
+                    </button>
+                </div>
+            `;
+            
+            const { overlay, modal, closeModal } = createBSCModal(modalContent, () => {
+                resolve({ success: false, cancelled: true });
+            });
+            
+            // Tab switching
+            const tabs = modal.querySelectorAll('.bsc-tab');
+            const tabContent = modal.querySelector('#bscTabContent');
+            
+            const switchTab = (tab) => {
+                activeTab = tab;
+                tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+                
+                recipient = modal.querySelector('#bscRecipientInput').value;
+                
+                if (tab === 'qr') {
+                    tabContent.innerHTML = `
+                        <div class="bsc-qr-section">
+                            <div class="bsc-qr-title">🔍 Scan with any BSC wallet</div>
+                            <div class="bsc-qr-container" id="bscQRCode"></div>
+                            <div style="margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.5);">
+                                Click QR to copy payment URI
+                            </div>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        const qrEl = modal.querySelector('#bscQRCode');
+                        if (qrEl) {
+                            generateBSCQR(recipient, amount, qrEl);
+                        }
+                    }, 100);
+                    
+                } else {
+                    tabContent.innerHTML = `
+                        <div class="bsc-wallet-options">
+                            <button class="bsc-wallet-btn" id="bscBrowserWallet">
+                                <span class="bsc-wallet-icon">🦊</span>
+                                <span>Browser Wallet</span>
+                            </button>
+                            <button class="bsc-wallet-btn" id="bscWalletConnect">
+                                <span class="bsc-wallet-icon">🔗</span>
+                                <span>WalletConnect</span>
+                            </button>
+                        </div>
+                        <div id="bscWalletStatus" style="text-align: center; font-size: 14px; color: rgba(255,255,255,0.6); min-height: 40px;"></div>
+                    `;
+                    
+                    // Browser wallet
+                    modal.querySelector('#bscBrowserWallet')?.addEventListener('click', async () => {
+                        try {
+                            const statusEl = modal.querySelector('#bscWalletStatus');
+                            statusEl.innerHTML = '🔄 Connecting...';
+                            
+                            if (!window.ethereum) {
+                                throw new Error('No wallet found. Please install MetaMask.');
+                            }
+                            
+                            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                            const address = accounts[0];
+                            
+                            statusEl.innerHTML = `✅ Connected: ${address.slice(0,6)}...${address.slice(-4)}`;
+                            
+                            // Check network
+                            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                            if (chainId !== '0x38') {
+                                statusEl.innerHTML += '<br>⚠️ Switch to BSC network';
+                            }
+                            
+                        } catch (error) {
+                            modal.querySelector('#bscWalletStatus').innerHTML = `❌ ${error.message}`;
+                        }
+                    });
+                    
+                    // WalletConnect
+                    modal.querySelector('#bscWalletConnect')?.addEventListener('click', async () => {
+                        try {
+                            const statusEl = modal.querySelector('#bscWalletStatus');
+                            statusEl.innerHTML = '🔄 Initializing WalletConnect...';
+                            
+                            const provider = await initWalletConnect();
+                            const accounts = await provider.request({ method: 'eth_accounts' });
+                            
+                            if (accounts && accounts.length > 0) {
+                                statusEl.innerHTML = `✅ Connected: ${accounts[0].slice(0,6)}...${accounts[0].slice(-4)}`;
+                                BSC_STATE.walletConnectProvider = provider;
+                            }
+                            
+                        } catch (error) {
+                            modal.querySelector('#bscWalletStatus').innerHTML = `❌ ${error.message}`;
+                        }
+                    });
+                }
+            };
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+            });
+            
+            // Initial render
+            switchTab(activeTab);
+            
+            // Recipient input update
+            modal.querySelector('#bscRecipientInput').addEventListener('input', (e) => {
+                recipient = e.target.value;
+                if (activeTab === 'qr') {
+                    const qrEl = modal.querySelector('#bscQRCode');
+                    if (qrEl) {
+                        generateBSCQR(recipient, amount, qrEl);
+                    }
+                }
+            });
+            
+            // Confirm payment
+            modal.querySelector('#bscConfirmPayment').addEventListener('click', () => {
+                recipient = modal.querySelector('#bscRecipientInput').value;
+                
+                if (!recipient || !recipient.match(/^0x[a-fA-F0-9]{40}$/)) {
+                    showBSCAlert('Invalid recipient address', 'error');
+                    return;
+                }
+                
+                closeModal();
+                resolve({
+                    success: true,
+                    amount: amount,
+                    recipient: recipient,
+                    method: activeTab === 'qr' ? 'qr' : 'wallet',
+                    timestamp: Date.now()
+                });
+            });
+        };
+        
+        renderModal();
+    });
+}
+
+// ✅ Main Function
+async function initiateBSCPayment(amount = BSC_CONFIG.DEFAULT_AMOUNT, options = {}) {
     if (BSC_STATE.isProcessing) {
-        showBSCAlert('Another payment is processing. Please wait.', 'warning');
+        showBSCAlert('Payment already in progress', 'warning');
         return { success: false, error: 'Already processing' };
     }
     
     BSC_STATE.isProcessing = true;
     
     try {
-        // Validate amount
-        const sanitizedAmount = BSC_UTILS.sanitizeAmount(amount);
-        amount = parseFloat(sanitizedAmount);
-        
-        if (amount <= 0) {
-            throw new Error('Amount must be greater than zero');
+        // Sanitize amount
+        amount = parseFloat(amount);
+        if (isNaN(amount) || amount <= 0) {
+            throw new Error('Invalid amount');
         }
         
-        // Validate recipient if provided
-        if (options.recipient && !BSC_UTILS.validateAddress(options.recipient)) {
-            throw new Error('Invalid recipient address');
-        }
-        
-        BSC_STATE.lastPaymentAmount = amount;
-        
-        // Inject styles
-        injectStyles();
-        
-        // Show payment modal
-        const result = await showBSCPaymentModal(amount, options);
+        // Show modal
+        const result = await showBSCPaymentModal(amount, options.recipient);
         
         if (result.success) {
-            showBSCAlert(`${amount} USDT payment successful!`, 'success', 5000);
+            showBSCAlert(`✅ Payment initiated: ${amount} USDT`, 'success');
             
-            // Call success callback
-            if (typeof options.onSuccess === 'function') {
-                setTimeout(() => options.onSuccess(result), 100);
-            }
+            // Store in history
+            BSC_STATE.transactionHistory.push(result);
             
-            // Dispatch event
-            document.dispatchEvent(new CustomEvent('bscPaymentSuccess', {
-                detail: { ...result, timestamp: Date.now() }
-            }));
+            // Callback
+            if (options.onSuccess) options.onSuccess(result);
             
-        } else if (result.cancelled) {
-            showBSCAlert('Payment cancelled', 'info');
-        } else if (result.pendingConfirmation) {
-            showBSCAlert('Please provide transaction hash to confirm payment', 'warning');
+            return result;
         }
         
         return result;
         
     } catch (error) {
         console.error('Payment error:', error);
-        showBSCAlert(`Payment failed: ${error.message}`, 'error', 5000);
+        showBSCAlert(`❌ ${error.message}`, 'error');
         
-        if (typeof options.onError === 'function') {
-            setTimeout(() => options.onError(error), 100);
-        }
-        
-        document.dispatchEvent(new CustomEvent('bscPaymentError', {
-            detail: { error: error.message, amount, timestamp: Date.now() }
-        }));
+        if (options.onError) options.onError(error);
         
         return { success: false, error: error.message };
+        
     } finally {
         BSC_STATE.isProcessing = false;
     }
 }
 
-// ✅ Initialize BSC Payments
+// ✅ Initialize
 function initializeBSCPayments() {
-    injectStyles();
+    injectBSCStyles();
     
-    // Initialize transaction history
-    try {
-        const saved = localStorage.getItem('bsc_payments_history');
-        if (saved) {
-            BSC_STATE.transactionHistory = JSON.parse(saved);
-        }
-    } catch (e) {
-        console.warn('Failed to load payment history:', e);
-    }
-    
-    // Expose API
     window.BSCPayments = {
-        // Core functions
         init: initiateBSCPayment,
-        initiate: initiateBSCPayment,
         pay: initiateBSCPayment,
-        
-        // Quick payment methods
         pay2USDT: () => initiateBSCPayment(2),
-        pay5USDT: () => initiateBSCPayment(5),
-        pay10USDT: () => initiateBSCPayment(10),
         payCustom: (amount) => initiateBSCPayment(amount),
         
-        // Configuration
         setRecipient: (address) => {
-            if (!BSC_UTILS.validateAddress(address)) {
-                showBSCAlert('Invalid BSC address', 'error');
+            if (!address.match(/^0x[a-fA-F0-9]{40}$/)) {
+                showBSCAlert('Invalid address', 'error');
                 return false;
             }
             BSC_CONFIG.RECIPIENT_ADDRESS = address;
-            showBSCAlert('Recipient address updated', 'success');
+            showBSCAlert('Recipient updated', 'success');
             return true;
         },
         
-        setConfig: (key, value) => {
-            if (BSC_CONFIG.hasOwnProperty(key)) {
-                BSC_CONFIG[key] = value;
-                return true;
-            }
-            return false;
-        },
-        
-        getConfig: () => ({ ...BSC_CONFIG }),
-        
-        // Wallet functions
-        connectWallet: connectBSCWallet,
-        checkWallet: BSC_UTILS.checkWalletInstalled,
-        detectWallet: BSC_UTILS.detectWallet,
-        
-        // QR functions
-        generateQR: (recipient, amount, element) => {
-            generateBSCUSDTQR(
-                recipient || BSC_CONFIG.RECIPIENT_ADDRESS, 
-                amount || BSC_CONFIG.DEFAULT_AMOUNT, 
+        generateQR: (element, amount, recipient) => {
+            generateBSCQR(
+                recipient || BSC_CONFIG.RECIPIENT_ADDRESS,
+                amount || BSC_CONFIG.DEFAULT_AMOUNT,
                 element
             );
         },
         
-        // Utility functions
-        copyText: BSC_UTILS.copyToClipboard,
-        truncateAddress: BSC_UTILS.truncateAddress,
-        validateAddress: BSC_UTILS.validateAddress,
-        showAlert: showBSCAlert,
+        getHistory: () => [...BSC_STATE.transactionHistory].reverse(),
         
-        // Transaction history
-        getHistory: (limit = 10) => BSC_STATE.transactionHistory.slice(-limit).reverse(),
-        clearHistory: () => {
-            BSC_STATE.transactionHistory = [];
-            try {
-                localStorage.removeItem('bsc_payments_history');
-            } catch (e) {
-                console.warn('Failed to clear history:', e);
-            }
-            return true;
-        },
-        
-        // State info
-        isReady: true,
-        version: '3.0.0',
-        state: () => ({
-            isProcessing: BSC_STATE.isProcessing,
-            currentPaymentId: BSC_STATE.currentPaymentId,
-            lastPaymentAmount: BSC_STATE.lastPaymentAmount,
-            userAddress: BSC_STATE.userAddress,
-            transactionCount: BSC_STATE.transactionHistory.length,
-            detectedWallet: BSC_UTILS.detectWallet()
-        })
+        version: '1.0.0',
+        isReady: true
     };
     
-    // Global shortcut
-    window.initiateBSCPayment = initiateBSCPayment;
-    window.BSCPaymentsReady = true;
-    
-    // Dispatch ready event
-    document.dispatchEvent(new CustomEvent('bscPaymentsReady'));
-    
-    console.log('🚀 BSC USDT Payment System v3.0 Ready');
-    console.log('📋 Available: window.BSCPayments.initiate()');
-    console.log('💡 Try: BSCPayments.pay2USDT() for quick 2 USDT payment');
-    
+    console.log('🚀 BSC Payments Ready with WalletConnect');
     return window.BSCPayments;
 }
 
-// ✅ Auto-initialize
+// Auto-initialize
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeBSCPayments);
 } else {
     setTimeout(initializeBSCPayments, 100);
-}
-
-// ✅ Export for module systems
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { initializeBSCPayments, BSC_UTILS, BSC_CONFIG };
 }
