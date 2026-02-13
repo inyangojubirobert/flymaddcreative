@@ -1713,23 +1713,27 @@ async function showBSCManualModal(recipient, amount, isDesktop = false) {
     });
 }
 
-async function showTronManualModal(recipient, amount) {
+// ======================================================
+// 🔄  NEW TRON DESKTOP QR MODAL (with recipient address)
+// ======================================================
+
+async function showTronDesktopQRModal(recipient, amount) {
     await loadQRCodeLibrary();
     
-    console.log('[TRON Manual Modal] Received recipient:', recipient);
-    console.log('[TRON Manual Modal] Amount:', amount);
+    console.log('[TRON Desktop QR Modal] Received recipient:', recipient);
+    console.log('[TRON Desktop QR Modal] Amount:', amount);
     
     if (!recipient) {
-        console.error('[TRON Manual Modal] No recipient address provided!');
+        console.error('[TRON Desktop QR Modal] No recipient address provided!');
         recipient = CONFIG.TRON.WALLET_ADDRESS;
-        console.log('[TRON Manual Modal] Using fallback address:', recipient);
+        console.log('[TRON Desktop QR Modal] Using fallback address:', recipient);
     }
     
     return new Promise((resolve) => {
         const modal = createModal(`
             <div class="bg-white p-6 rounded-xl text-center w-80 max-w-[95vw] relative">
                 <button class="crypto-modal-close" id="modalCloseX" aria-label="Close">×</button>
-                <h3 class="font-bold mb-3 pr-6 text-red-600">🔷 USDT (TRC-20)</h3>
+                <h3 class="font-bold mb-3 pr-6 text-red-600">🔷 USDT (TRC-20) Payment</h3>
                 
                 <div class="bg-gradient-to-r from-red-100 to-red-50 p-4 rounded-lg mb-4">
                     <div class="text-2xl font-bold text-red-700 mb-1">${amount} USDT</div>
@@ -1737,19 +1741,24 @@ async function showTronManualModal(recipient, amount) {
                     <div class="text-xs text-red-500 mt-1 font-bold">TRC-20 Token</div>
                 </div>
                 
-                <p class="text-sm mb-2 font-semibold">Send to this TRON address:</p>
-                <div class="bg-gray-100 p-3 rounded break-all text-xs mb-3 font-mono border border-red-200" style="word-break: break-all;">
-                    ${recipient}
+                <div class="bg-red-50 p-3 rounded mb-3">
+                    <p class="text-xs text-red-700 mb-1 font-semibold">Recipient Address:</p>
+                    <div class="text-xs font-mono break-all bg-white p-2 rounded border border-red-200" style="word-break: break-all;">
+                        ${recipient}
+                    </div>
                 </div>
                 
                 <div id="tronQR" class="mx-auto mb-3"></div>
                 
-                <div class="bg-red-50 p-3 rounded mb-3 text-left">
-                    <div class="text-xs font-medium text-red-800 mb-1">⚠️ Important:</div>
-                    <ol class="text-xs text-red-700 list-decimal pl-4 space-y-1">
-                        <li>Send <strong>ONLY USDT (TRC-20)</strong> on TRON network</li>
-                        <li>Double-check the recipient address above</li>
-                        <li>Minimum network fee: ~2-5 TRX</li>
+                <p class="text-xs text-gray-500 mb-2">Scan with TronLink or any TRON wallet</p>
+                
+                <div class="bg-blue-50 p-3 rounded mb-3 text-left">
+                    <div class="text-xs font-medium text-blue-800 mb-1">📱 How to pay:</div>
+                    <ol class="text-xs text-blue-700 list-decimal pl-4 space-y-1">
+                        <li>Scan QR code with your TRON wallet (TronLink, Trust Wallet, etc.)</li>
+                        <li>Verify the recipient address matches: <span class="font-mono">${recipient.substring(0,10)}...${recipient.substring(recipient.length-6)}</span></li>
+                        <li>Send <strong>${amount} USDT (TRC-20)</strong></li>
+                        <li>Confirm the transaction in your wallet</li>
                     </ol>
                 </div>
                 
@@ -1771,15 +1780,20 @@ async function showTronManualModal(recipient, amount) {
             </div>
         `);
 
-        const qrContent = createPaymentQRContent('TRON', recipient, amount);
-        console.log('[TRON QR] Content:', qrContent);
-        console.log('[TRON Payment Details]', {
+        // Generate QR code with TRON payment format
+        const amountSun = (amount * 1e6).toString();
+        const qrContent = `tron://transfer?to=${recipient}&amount=${amountSun}&token=${CONFIG.TRON.USDT_ADDRESS}`;
+        
+        console.log('[TRON Desktop QR] Content:', qrContent);
+        console.log('[TRON Desktop Payment Details]', {
             recipient: recipient,
             amount: amount,
+            amountSun: amountSun,
             token: 'USDT',
             network: 'TRON (TRC-20)',
             contract: CONFIG.TRON.USDT_ADDRESS
         });
+        
         generateQR(qrContent, 'tronQR');
 
         const closeX = modal.querySelector('#modalCloseX');
@@ -1818,7 +1832,8 @@ async function showTronManualModal(recipient, amount) {
                     txHash, 
                     explorerUrl: `${CONFIG.TRON.EXPLORER}${txHash}`,
                     network: 'TRON',
-                    token: 'USDT (TRC-20)'
+                    token: 'USDT (TRC-20)',
+                    recipient: recipient
                 });
             } else {
                 resolve({ 
@@ -1915,6 +1930,7 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                 const hasTronWallet = window.tronWeb && window.tronWeb.ready;
                 
                 if (hasTronWallet) {
+                    // If TronLink is available, use it directly
                     modal = await showPaymentStatusModal('TRON', amount);
                     updateStatus(modal, 'Confirm in TronLink...');
                     
@@ -1942,24 +1958,25 @@ async function initiateCryptoPayment(participantId, voteCount, amount) {
                         throw error;
                     }
                 } else {
-                    console.log('[CryptoPayment] Showing manual TRON modal with address:', recipient);
+                    // No TronLink - show QR modal with recipient address
+                    console.log('[CryptoPayment] Showing TRON desktop QR modal with address:', recipient);
                     
-                    const manualResult = await showTronManualModal(recipient, amount);
+                    const qrResult = await showTronDesktopQRModal(recipient, amount);
                     
-                    if (manualResult.cancelled) {
+                    if (qrResult.cancelled) {
                         return { success: false, cancelled: true };
                     }
                     
-                    if (manualResult.success) {
+                    if (qrResult.success) {
                         return {
-                            ...manualResult,
+                            ...qrResult,
                             participant_id: participantId,
                             payment_amount: amount,
-                            payment_intent_id: manualResult.txHash || `manual_${Date.now()}`
+                            payment_intent_id: qrResult.txHash || `manual_${Date.now()}`
                         };
                     }
                     
-                    return manualResult;
+                    return qrResult;
                 }
             }
         }
@@ -2260,6 +2277,7 @@ window.CryptoPayments = {
     process: initiateCryptoPayment,
     showBSCManualModal,
     showTronManualModal,
+    showTronDesktopQRModal,
     showNetworkSelectionModal,
     showAlert: showCryptoAlert,
     dismissAlert,
