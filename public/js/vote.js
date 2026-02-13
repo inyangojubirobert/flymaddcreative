@@ -986,38 +986,66 @@ console.log('📦 Vote.js Loading...');
     /**
      * Wait for the crypto payments module to be ready
      */
-    async function waitForCryptoPayments(timeout = 5000) {
-        return new Promise((resolve, reject) => {
-            if (window.initiateCryptoPayment && window.CryptoPaymentsReady) {
-                resolve(true);
-                return;
-            }
-            
-            const startTime = Date.now();
-            
-            const handleReady = () => {
+ // ========================================
+// 🔐 CRYPTO PAYMENT MODULE LOADER (UPDATED)
+// ========================================
+
+/**
+ * Wait for the crypto payments module to be ready
+ */
+async function waitForCryptoPayments(timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        // Check if either BSCPayments or CryptoPayments is available
+        const isReady = () => {
+            return (window.BSCPayments || window.CryptoPayments || window.initiateCryptoPayment);
+        };
+        
+        if (isReady()) {
+            console.log('[Vote] Payment modules ready:', {
+                BSCPayments: !!window.BSCPayments,
+                CryptoPayments: !!window.CryptoPayments,
+                initiateCryptoPayment: !!window.initiateCryptoPayment
+            });
+            resolve(true);
+            return;
+        }
+        
+        const startTime = Date.now();
+        
+        const handleBSCReady = () => {
+            cleanup();
+            console.log('[Vote] BSC Payments ready');
+            resolve(true);
+        };
+        
+        const handleCryptoReady = () => {
+            cleanup();
+            console.log('[Vote] Crypto Payments ready');
+            resolve(true);
+        };
+        
+        document.addEventListener('bscPaymentsReady', handleBSCReady);
+        document.addEventListener('cryptoPaymentsReady', handleCryptoReady);
+        
+        const checkInterval = setInterval(() => {
+            if (isReady()) {
                 cleanup();
                 resolve(true);
-            };
-            
-            document.addEventListener('cryptoPaymentsReady', handleReady);
-            
-            const checkInterval = setInterval(() => {
-                if (window.initiateCryptoPayment && window.CryptoPaymentsReady) {
-                    cleanup();
-                    resolve(true);
-                } else if (Date.now() - startTime > timeout) {
-                    cleanup();
-                    reject(new Error('Crypto payment module failed to load. Please refresh the page.'));
-                }
-            }, 100);
-            
-            function cleanup() {
-                clearInterval(checkInterval);
-                document.removeEventListener('cryptoPaymentsReady', handleReady);
+            } else if (Date.now() - startTime > timeout) {
+                cleanup();
+                // Don't reject, just warn - maybe modules loaded but events missed
+                console.warn('[Vote] Payment modules timeout - continuing anyway');
+                resolve(false);
             }
-        });
-    }
+        }, 200);
+        
+        function cleanup() {
+            clearInterval(checkInterval);
+            document.removeEventListener('bscPaymentsReady', handleBSCReady);
+            document.removeEventListener('cryptoPaymentsReady', handleCryptoReady);
+        }
+    });
+}
 
     // ========================================
     // 💳 HANDLE VOTE / PAYMENT (UPDATED)
@@ -1129,31 +1157,99 @@ console.log('📦 Vote.js Loading...');
     }
 
     // Dedicated crypto payment handler with detailed status updates
-    async function handleCryptoPayment(participantId, voteCount, amount) {
-        try {
-            await waitForCryptoPayments(5000);
+   // ========================================
+// 🔐 COMPLETE CRYPTO PAYMENT HANDLER (UPDATED)
+// ========================================
+async function handleCryptoPayment(participantId, voteCount, amount) {
+    try {
+        console.log('[Vote] Starting crypto payment:', { participantId, voteCount, amount });
+        
+        // Detect if mobile or desktop
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        console.log('[Vote] Device detection:', isMobile ? '📱 Mobile' : '💻 Desktop');
+        
+        // Wait for crypto modules to be ready
+        await waitForCryptoPayments(5000);
+        
+        let result;
+        
+        // DESKTOP: Use BSC Payments (WalletConnect + Browser Wallet)
+        if (!isMobile) {
+            console.log('[Vote] Desktop detected - using BSC Payments');
             
-            if (typeof window.initiateCryptoPayment !== 'function') {
-                throw new Error('Crypto payment module not loaded. Please refresh the page.');
+            if (!window.BSCPayments || typeof window.BSCPayments.pay !== 'function') {
+                console.warn('[Vote] BSCPayments not available, trying fallbacks...');
+                
+                // Try the compatibility layer
+                if (typeof window.initiateCryptoPayment === 'function') {
+                    console.log('[Vote] Using initiateCryptoPayment fallback');
+                    result = await window.initiateCryptoPayment(participantId, voteCount, amount);
+                } else {
+                    throw new Error('BSC payment module not available for desktop');
+                }
+            } else {
+                // Use BSCPayments directly
+                result = await window.BSCPayments.pay(amount, {
+                    recipient: window.BSC_CONFIG?.RECIPIENT_ADDRESS,
+                    onSuccess: (data) => {
+                        console.log('[Vote] BSC payment success:', data);
+                    },
+                    onError: (error) => {
+                        console.error('[Vote] BSC payment error:', error);
+                    }
+                });
             }
-            
-            console.log('[Vote] Starting crypto payment:', { participantId, voteCount, amount });
-            
-            const result = await window.initiateCryptoPayment(
-                String(participantId), 
-                Number(voteCount), 
-                Number(amount)
-            );
-            
-            console.log('[Vote] Crypto payment result:', result);
-            return result;
-            
-        } catch (error) {
-            console.error('[Vote] Crypto payment error:', error);
-            throw error;
         }
+        // MOBILE: Use CryptoPayments (TRON + BSC mobile)
+        else {
+            console.log('[Vote] Mobile detected - using Crypto Payments');
+            
+            if (!window.CryptoPayments || typeof window.CryptoPayments.pay !== 'function') {
+                console.warn('[Vote] CryptoPayments not available, trying fallbacks...');
+                
+                // Try the compatibility layer
+                if (typeof window.initiateCryptoPayment === 'function') {
+                    console.log('[Vote] Using initiateCryptoPayment fallback');
+                    result = await window.initiateCryptoPayment(participantId, voteCount, amount);
+                } else {
+                    throw new Error('Crypto payment module not available for mobile');
+                }
+            } else {
+                // Use CryptoPayments directly
+                result = await window.CryptoPayments.pay(amount, {
+                    onSuccess: (data) => {
+                        console.log('[Vote] Mobile payment success:', data);
+                    },
+                    onError: (error) => {
+                        console.error('[Vote] Mobile payment error:', error);
+                    }
+                });
+            }
+        }
+        
+        console.log('[Vote] Payment result:', result);
+        
+        // Format and return the result
+        if (result && result.success) {
+            return {
+                success: true,
+                txHash: result.txHash,
+                payment_intent_id: result.txHash || result.payment_intent_id || `crypto_${Date.now()}`,
+                payment_amount: amount,
+                participant_id: participantId,
+                ...result
+            };
+        } else if (result && result.cancelled) {
+            return { success: false, cancelled: true };
+        } else {
+            return result || { success: false, error: 'Unknown payment result' };
+        }
+        
+    } catch (error) {
+        console.error('[Vote] Crypto payment error:', error);
+        throw error;
     }
-
+}
     // ======================================================
     // 🔔 ALERT UTILITY FUNCTION
     // ======================================================
