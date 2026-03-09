@@ -380,9 +380,9 @@ export default function MerchantRegister() {
                             <div className="text-center mt-4">
                                 <p className="text-sm text-gray-600">
                                     Already registered?{' '}
-                                    <Link href="/merchant/login" className="text-indigo-600 hover:text-indigo-500 font-medium">
-                                        Login to Dashboard
-                                    </Link>
+                                <Link href="/merchants/merchant-login" className="text-indigo-600 hover:text-indigo-500 font-medium">
+                             Login here
+                              </Link>
                                 </p>
                             </div>
 
