@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Merchant Dashboard - One Dream Initiative</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .nav-link {
+            color: #4a5568;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .nav-link:hover {
+            background: #f7fafc;
+        }
+        .nav-link.active {
+            background: #667eea;
+            color: white;
+        }
+        .logout-btn {
+            background: none;
+            border: 1px solid #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #4a5568;
+            margin-left: 8px;
+        }
+        .logout-btn:hover {
+            background: #f7fafc;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    One Dream Initiative
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="/merchants/dashboard.html" class="nav-link active">Dashboard</a>
+                    <a href="/merchants/links.html" class="nav-link">Links</a>
+                    <a href="/merchants/withdraw.html" class="nav-link">Withdraw</a>
+                    <a href="/merchants/settings.html" class="nav-link">Settings</a>
+                    <button onclick="handleLogout()" class="logout-btn">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Welcome Card -->
+        <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 rounded-2xl mb-6">
+            <h1 class="text-2xl sm:text-3xl font-bold mb-2">
+                Welcome back, <span id="merchantName">Merchant</span>!
+            </h1>
+            <p class="text-indigo-100">Track your referrals, earnings, and payout status in real-time.</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <p class="text-gray-500 text-sm mb-2">Total Referrals</p>
+                <p class="text-3xl font-bold text-gray-800" id="totalReferrals">0</p>
+                <p class="text-green-500 text-sm mt-2">↑ Total referrals</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <p class="text-gray-500 text-sm mb-2">Pending Votes</p>
+                <p class="text-3xl font-bold text-gray-800" id="pendingVotes">0</p>
+                <p class="text-yellow-500 text-sm mt-2">Awaiting confirmation</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <p class="text-gray-500 text-sm mb-2">Completed Votes</p>
+                <p class="text-3xl font-bold text-gray-800" id="completedVotes">0</p>
+                <p class="text-green-500 text-sm mt-2">Rewards earned</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <p class="text-gray-500 text-sm mb-2">Conversion Rate</p>
+                <p class="text-3xl font-bold text-gray-800" id="conversionRate">0%</p>
+                <p class="text-blue-500 text-sm mt-2">Visitors to voters</p>
+            </div>
+        </div>
+
+        <!-- Tokens Card -->
+        <div class="bg-gradient-to-r from-amber-50 to-yellow-100 p-6 rounded-xl mb-8 flex flex-wrap justify-between items-center gap-4">
+            <div>
+                <h3 class="text-amber-800 font-semibold mb-2">Your Token Balance</h3>
+                <p class="text-4xl font-bold text-amber-900" id="totalTokens">0</p>
+                <p class="text-amber-700 text-sm mt-1" id="pendingTokens">0 tokens pending confirmation</p>
+            </div>
+            <button onclick="showWithdrawModal()" class="bg-amber-800 text-white px-8 py-3 rounded-xl font-semibold hover:bg-amber-900 transition">
+                Withdraw Tokens
+            </button>
+        </div>
+
+        <!-- Referral Links Section -->
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-800">Your Referral Links</h2>
+            <button onclick="showCreateLinkModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition">
+                + Create New Link
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8" id="linksContainer">
+            <!-- Links will be populated by JavaScript -->
+        </div>
+
+        <!-- Recent Referrals Table -->
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Recent Referrals & Earnings</h2>
+        
+        <div class="bg-white rounded-xl shadow-sm overflow-x-auto">
+            <table class="w-full min-w-[800px]">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="text-left p-4 text-sm font-semibold text-gray-600">Participant</th>
+                        <th class="text-left p-4 text-sm font-semibold text-gray-600">Registered</th>
+                        <th class="text-left p-4 text-sm font-semibold text-gray-600">Link Used</th>
+                        <th class="text-left p-4 text-sm font-semibold text-gray-600">Vote Status</th>
+                        <th class="text-left p-4 text-sm font-semibold text-gray-600">Vote Date</th>
+                        <th class="text-left p-4 text-sm font-semibold text-gray-600">Tokens</th>
+                        <th class="text-left p-4 text-sm font-semibold text-gray-600">Reward Status</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Link Modal -->
+    <div id="createLinkModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Create New Referral Link</h3>
+            <input type="text" id="linkDescription" placeholder="Link description (e.g., Twitter, Website)" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="flex gap-3">
+                <button onclick="hideCreateLinkModal()" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition">Cancel</button>
+                <button onclick="createNewLink()" id="createLinkBtn" class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">Create Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdrawModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">Withdraw Tokens</h3>
+            <p class="text-gray-600 mb-2">Available balance: <span id="availableBalance" class="font-bold text-amber-600">0</span> tokens</p>
+            <input type="number" id="withdrawAmount" placeholder="Amount to withdraw" min="50" step="1" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <p class="text-xs text-gray-500 mb-4">Minimum withdrawal: 50 tokens</p>
+            <div class="flex gap-3">
+                <button onclick="hideWithdrawModal()" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition">Cancel</button>
+                <button onclick="withdrawTokens()" id="withdrawBtn" class="flex-1 px-4 py-3 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition">Withdraw</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data for demonstration
+        const mockMerchantData = {
+            id: '123e4567-e89b-12d3-a456-426614174000',
+            merchant_name: localStorage.getItem('merchantName') || 'John Doe',
+            email: localStorage.getItem('merchantEmail') || 'merchant@example.com',
+            total_tokens_earned: 1250,
+            available_tokens: 850,
+            pending_tokens: 400,
+            total_referrals: 28,
+            pending_votes: 8,
+            completed_votes: 17,
+            conversion_rate: 64
+        };
+
+        const mockReferralLinks = [
+            {
+                id: 1,
+                link_code: 'MERCH-ABC123',
+                full_link: 'https://yourwebsite.com/register?ref=MERCH-ABC123',
+                description: 'Twitter Profile',
+                clicks_count: 45,
+                registrations_count: 12,
+                is_active: true
+            },
+            {
+                id: 2,
+                link_code: 'MERCH-XYZ789',
+                full_link: 'https://yourwebsite.com/register?ref=MERCH-XYZ789',
+                description: 'Personal Website',
+                clicks_count: 32,
+                registrations_count: 8,
+                is_active: true
+            },
+            {
+                id: 3,
+                link_code: 'MERCH-DEF456',
+                full_link: 'https://yourwebsite.com/register?ref=MERCH-DEF456',
+                description: 'Facebook Page',
+                clicks_count: 18,
+                registrations_count: 5,
+                is_active: false
+            }
+        ];
+
+        const mockReferrals = [
+            {
+                id: 1,
+                participant_name: 'Alice Johnson',
+                participant_email: 'alice@example.com',
+                participant_initial: 'A',
+                registered_date: '2024-01-15',
+                link_used: 'MERCH-ABC123',
+                vote_status: 'voted',
+                vote_date: '2024-01-20',
+                tokens: 50,
+                reward_status: 'paid'
+            },
+            {
+                id: 2,
+                participant_name: 'Bob Smith',
+                participant_email: 'bob@example.com',
+                participant_initial: 'B',
+                registered_date: '2024-01-18',
+                link_used: 'MERCH-ABC123',
+                vote_status: 'voted',
+                vote_date: '2024-01-22',
+                tokens: 50,
+                reward_status: 'paid'
+            },
+            {
+                id: 3,
+                participant_name: 'Carol Davis',
+                participant_email: 'carol@example.com',
+                participant_initial: 'C',
+                registered_date: '2024-01-20',
+                link_used: 'MERCH-XYZ789',
+                vote_status: 'pending',
+                vote_date: '-',
+                tokens: 0,
+                reward_status: 'pending'
+            },
+            {
+                id: 4,
+                participant_name: 'David Wilson',
+                participant_email: 'david@example.com',
+                participant_initial: 'D',
+                registered_date: '2024-01-22',
+                link_used: 'MERCH-ABC123',
+                vote_status: 'voted',
+                vote_date: '2024-01-25',
+                tokens: 50,
+                reward_status: 'pending'
+            },
+            {
+                id: 5,
+                participant_name: 'Eva Brown',
+                participant_email: 'eva@example.com',
+                participant_initial: 'E',
+                registered_date: '2024-01-23',
+                link_used: 'MERCH-DEF456',
+                vote_status: 'registered',
+                vote_date: '-',
+                tokens: 0,
+                reward_status: 'pending'
+            }
+        ];
+
+        // Load dashboard data
+        function loadDashboard() {
+            document.getElementById('merchantName').textContent = mockMerchantData.merchant_name;
+            document.getElementById('totalReferrals').textContent = mockMerchantData.total_referrals;
+            document.getElementById('pendingVotes').textContent = mockMerchantData.pending_votes;
+            document.getElementById('completedVotes').textContent = mockMerchantData.completed_votes;
+            document.getElementById('conversionRate').textContent = mockMerchantData.conversion_rate + '%';
+            document.getElementById('totalTokens').textContent = mockMerchantData.total_tokens_earned;
+            document.getElementById('pendingTokens').textContent = mockMerchantData.pending_tokens + ' tokens pending confirmation';
+            document.getElementById('availableBalance').textContent = mockMerchantData.available_tokens;
+            
+            loadReferralLinks();
+            loadReferralsTable();
+        }
+
+        function loadReferralLinks() {
+            const container = document.getElementById('linksContainer');
+            container.innerHTML = '';
+            
+            mockReferralLinks.forEach(link => {
+                const conversionRate = link.clicks_count > 0 
+                    ? Math.round((link.registrations_count / link.clicks_count) * 100) 
+                    : 0;
+                
+                const card = `
+                    <div class="bg-white p-5 rounded-xl shadow-sm">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="bg-gray-100 px-3 py-1 rounded-full text-xs font-semibold text-gray-700">${link.link_code}</span>
+                            <span class="w-2.5 h-2.5 rounded-full ${link.is_active ? 'bg-green-500' : 'bg-gray-400'}"></span>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg font-mono text-xs break-all mb-3">${link.full_link}</div>
+                        <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                            <div><p class="text-lg font-bold text-gray-800">${link.clicks_count || 0}</p><p class="text-xs text-gray-500">Clicks</p></div>
+                            <div><p class="text-lg font-bold text-gray-800">${link.registrations_count || 0}</p><p class="text-xs text-gray-500">Signups</p></div>
+                            <div><p class="text-lg font-bold text-gray-800">${conversionRate}%</p><p class="text-xs text-gray-500">Conv.</p></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="copyLink('${link.full_link}')" class="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition">Copy</button>
+                            <button onclick="toggleLinkStatus(${link.id}, ${link.is_active})" class="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition">${link.is_active ? 'Deactivate' : 'Activate'}</button>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        }
+
+        function loadReferralsTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            mockReferrals.forEach(ref => {
+                const row = `
+                    <tr class="border-t border-gray-100 hover:bg-gray-50">
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">${ref.participant_initial}</div>
+                                <div><h4 class="font-medium text-gray-800">${ref.participant_name}</h4><p class="text-sm text-gray-500">${ref.participant_email}</p></div>
+                            </div>
+                        </td>
+                        <td class="p-4 text-sm text-gray-600">${new Date(ref.registered_date).toLocaleDateString()}</td>
+                        <td class="p-4"><span class="bg-gray-100 px-3 py-1 rounded-full text-xs font-semibold text-gray-700">${ref.link_used}</span></td>
+                        <td class="p-4"><span class="${ref.vote_status === 'voted' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} px-3 py-1 rounded-full text-xs font-semibold">${ref.vote_status === 'voted' ? '✅ Voted' : '⏳ Pending'}</span></td>
+                        <td class="p-4 text-sm text-gray-600">${ref.vote_date !== '-' ? new Date(ref.vote_date).toLocaleDateString() : '-'}</td>
+                        <td class="p-4 font-bold text-green-600">${ref.tokens} tokens</td>
+                        <td class="p-4"><span class="${ref.reward_status === 'paid' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} px-3 py-1 rounded-full text-xs font-semibold">${ref.reward_status === 'paid' ? '💰 Paid' : '⏳ Pending'}</span></td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Modal functions
+        function showCreateLinkModal() {
+            document.getElementById('createLinkModal').classList.remove('hidden');
+            document.getElementById('createLinkModal').classList.add('flex');
+        }
+
+        function hideCreateLinkModal() {
+            document.getElementById('createLinkModal').classList.add('hidden');
+            document.getElementById('createLinkModal').classList.remove('flex');
+        }
+
+        function showWithdrawModal() {
+            document.getElementById('withdrawModal').classList.remove('hidden');
+            document.getElementById('withdrawModal').classList.add('flex');
+        }
+
+        function hideWithdrawModal() {
+            document.getElementById('withdrawModal').classList.add('hidden');
+            document.getElementById('withdrawModal').classList.remove('flex');
+        }
+
+        function createNewLink() {
+            const description = document.getElementById('linkDescription').value;
+            if (!description) {
+                alert('Please enter a description');
+                return;
+            }
+            alert('New link created successfully!');
+            hideCreateLinkModal();
+            document.getElementById('linkDescription').value = '';
+        }
+
+        function withdrawTokens() {
+            const amount = document.getElementById('withdrawAmount').value;
+            if (!amount || amount < 50) {
+                alert('Minimum withdrawal is 50 tokens');
+                return;
+            }
+            if (amount > mockMerchantData.available_tokens) {
+                alert('Insufficient balance');
+                return;
+            }
+            alert(`Withdrawal request for ${amount} tokens submitted!`);
+            hideWithdrawModal();
+            document.getElementById('withdrawAmount').value = '';
+        }
+
+        function copyLink(link) {
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Link copied to clipboard!');
+            });
+        }
+
+        function toggleLinkStatus(linkId, currentStatus) {
+            alert(`Link ${currentStatus ? 'deactivated' : 'activated'}!`);
+            loadReferralLinks();
+        }
+
+        function handleLogout() {
+            localStorage.clear();
+            window.location.href = '/merchants/login.html';
+        }
+
+        // Load dashboard on page load
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>
