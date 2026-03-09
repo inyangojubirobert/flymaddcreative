@@ -1,6 +1,6 @@
 // pages/merchant-register.jsx
 import { useState, useEffect } from 'react';
-import { useMerchantAuth } from '../context/MerchantAuthContext';
+import { useMerchantAuth } from '../../context/MerchantAuthContext';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 

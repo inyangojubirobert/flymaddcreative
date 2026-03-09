@@ -497,7 +497,7 @@
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#prizes" class="nav-link">Prizes</a>
                 <a href="vote.html" class="nav-button">Vote Now</a>
-                  <a href="#Reward-Tokens" class="nav-button">Reward Tokens</a>
+                  <a href="#merchant-showcase" class="nav-button">Reward Tokens</a>
             </div>
         </div>
     </nav>
@@ -584,6 +584,464 @@
         </div>
     </div>
 </section>
+<section class="merchant-showcase">
+  <div class="showcase-container">
+    <!-- Left Side: The "Fear & Urgency" Content -->
+    <div class="content-block">
+      <span class="badge-urgent">⚠️ Limited Time Opportunity</span>
+      <h1 class="main-heading">
+        Don't Just Watch <span class="gradient-text">Others Win</span>
+      </h1>
+      <p class="sub-heading">
+        While thousands compete for the prize pool, smart money is being made on the sidelines.
+      </p>
+
+      <div class="value-prop">
+        <div class="prop-item">
+          <span class="prop-icon">💰</span>
+          <div>
+            <h3>Earn 50 Tokens Per Vote</h3>
+            <p>No contest entry needed. Every person you refer who votes puts tokens in your pocket.</p>
+          </div>
+        </div>
+        <div class="prop-item">
+          <span class="prop-icon">⚡</span>
+          <div>
+            <h3>The Market is Moving Now</h3>
+            <p>Early movers are securing their referral links and building momentum. Don't be left behind.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Urgency Countdown / Stats -->
+      <div class="urgency-stats">
+        <div class="stat">
+          <span class="stat-number">1,247+</span>
+          <span class="stat-label">Active Referrals</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number">50</span>
+          <span class="stat-label">Tokens Per Vote</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number">🔥</span>
+          <span class="stat-label">High Demand</span>
+        </div>
+      </div>
+
+      <!-- Button Group: Get Started + Become a Merchant -->
+      <div class="button-group">
+        <a href="/merchant-register" class="primary-button">
+          Get Started Now <span class="arrow">→</span>
+        </a>
+        <a href="/merchant-register" class="secondary-button">
+          Become a Merchant
+        </a>
+      </div>
+      <p class="small-note">*No contest entry required. Instant rewards. Free to join.</p>
+    </div>
+
+    <!-- Right Side: Video Player -->
+    <div class="video-block">
+      <div class="video-wrapper">
+        <video 
+          id="heroVideo"
+          class="showcase-video" 
+          autoplay 
+          loop 
+          muted 
+          playsinline
+          poster="path-to-poster-image.jpg"
+        >
+          <!-- Primary dynamic video -->
+          <source src="https://res.cloudinary.com/dljcj00ht/video/upload/v1773083547/a-dynamic-engaging-video-for-a-merchant-referral-p_li1eyg.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      <p class="video-caption">See how others are already earning</p>
+    </div>
+  </div>
+
+  <!-- Optional Second Video / Bottom Banner -->
+  <div class="secondary-video-container">
+    <video 
+      class="secondary-video" 
+      autoplay 
+      loop 
+      muted 
+      playsinline
+    >
+      <source src="https://res.cloudinary.com/dljcj00ht/video/upload/v1773083546/animate_tgqhb0.mp4" type="video/mp4">
+    </video>
+    <div class="overlay-text">
+      <h3>Your competitors are already sharing their links. <span class="highlight">Start now.</span></h3>
+      <!-- Small Get Started link in overlay -->
+      <a href="/merchant-register" class="overlay-button">Get Started →</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Modern, responsive CSS with emotion triggers */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  .merchant-showcase {
+    background: linear-gradient(145deg, #0b1120 0%, #192132 100%);
+    color: white;
+    padding: 4rem 2rem;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+  }
+
+  .showcase-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+
+  /* Content Block Styling */
+  .content-block {
+    animation: fadeInUp 0.8s ease-out;
+  }
+
+  .badge-urgent {
+    display: inline-block;
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    padding: 0.5rem 1rem;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .main-heading {
+    font-size: clamp(2.5rem, 5vw, 3.8rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b, #ef4444);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .sub-heading {
+    font-size: 1.2rem;
+    color: #a5b4fc;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+    border-left: 4px solid #f59e0b;
+    padding-left: 1rem;
+  }
+
+  .value-prop {
+    margin-bottom: 2.5rem;
+  }
+
+  .prop-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: flex-start;
+  }
+
+  .prop-icon {
+    font-size: 2rem;
+    background: rgba(255,255,255,0.05);
+    padding: 0.5rem;
+    border-radius: 12px;
+  }
+
+  .prop-item h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: #fcd34d;
+  }
+
+  .prop-item p {
+    color: #cbd5e1;
+    line-height: 1.5;
+  }
+
+  .urgency-stats {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+    background: rgba(255,255,255,0.03);
+    padding: 1.5rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #fbbf24;
+    line-height: 1.2;
+  }
+
+  .stat-label {
+    font-size: 0.9rem;
+    color: #94a3b8;
+  }
+
+  /* Button Group Styles */
+  .button-group {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .primary-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: white;
+    font-weight: 700;
+    font-size: 1.25rem;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 20px 30px -10px rgba(239, 68, 68, 0.4);
+    border: none;
+    cursor: pointer;
+    flex: 1 1 auto;
+    min-width: 200px;
+    justify-content: center;
+  }
+
+  .primary-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 25px 35px -8px rgba(239, 68, 68, 0.6);
+    background: linear-gradient(135deg, #fbbf24, #f97316);
+  }
+
+  .secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: white;
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 1rem 2rem;
+    border-radius: 50px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(245, 158, 11, 0.5);
+    cursor: pointer;
+    flex: 1 1 auto;
+    min-width: 200px;
+    backdrop-filter: blur(4px);
+  }
+
+  .secondary-button:hover {
+    border-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .arrow {
+    font-size: 1.5rem;
+    transition: transform 0.2s;
+  }
+
+  .primary-button:hover .arrow {
+    transform: translateX(5px);
+  }
+
+  .small-note {
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  /* Video Block Styling */
+  .video-block {
+    position: relative;
+  }
+
+  .video-wrapper {
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 30px 40px -15px rgba(0,0,0,0.5), 0 0 0 2px rgba(245, 158, 11, 0.3);
+    transition: box-shadow 0.3s;
+    aspect-ratio: 16 / 9;
+  }
+
+  .video-wrapper:hover {
+    box-shadow: 0 40px 60px -15px rgba(239, 68, 68, 0.5), 0 0 0 3px #f59e0b;
+  }
+
+  .showcase-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .video-caption {
+    text-align: center;
+    margin-top: 1rem;
+    color: #9ca3af;
+    font-size: 0.95rem;
+  }
+
+  /* Secondary Video Section */
+  .secondary-video-container {
+    max-width: 1280px;
+    margin: 4rem auto 0;
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    aspect-ratio: 21 / 9;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+  }
+
+  .secondary-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .overlay-text {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(11,17,32,0.9) 0%, rgba(17,24,39,0.7) 50%, transparent 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4rem;
+  }
+
+  .overlay-text h3 {
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    font-weight: 700;
+    color: white;
+    max-width: 60%;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+
+  .overlay-text .highlight {
+    color: #fbbf24;
+    border-bottom: 2px solid #ef4444;
+    padding-bottom: 2px;
+  }
+
+  .overlay-button {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: white;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 20px -5px rgba(239, 68, 68, 0.4);
+    white-space: nowrap;
+  }
+
+  .overlay-button:hover {
+    transform: scale(1.05);
+    background: linear-gradient(135deg, #fbbf24, #f97316);
+    box-shadow: 0 15px 25px -5px rgba(239, 68, 68, 0.6);
+  }
+
+  /* Animations */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Mobile Responsive */
+  @media (max-width: 900px) {
+    .showcase-container {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    .urgency-stats {
+      flex-wrap: wrap;
+    }
+
+    .overlay-text {
+      padding: 0 2rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+      background: linear-gradient(180deg, rgba(11,17,32,0.95) 0%, rgba(17,24,39,0.9) 100%);
+    }
+
+    .overlay-text h3 {
+      max-width: 100%;
+      font-size: 1.2rem;
+    }
+
+    .overlay-button {
+      align-self: flex-start;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .merchant-showcase {
+      padding: 2rem 1rem;
+    }
+
+    .button-group {
+      flex-direction: column;
+    }
+
+    .primary-button, .secondary-button {
+      width: 100%;
+      min-width: auto;
+    }
+
+    .urgency-stats {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .overlay-text h3 {
+      font-size: 1rem;
+    }
+
+    .overlay-button {
+      width: 100%;
+      justify-content: center;
+      padding: 0.75rem 1rem;
+    }
+  }
+</style>
 
     <!-- Progress Section -->
     <section class="progress-section">

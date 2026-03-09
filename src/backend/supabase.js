@@ -24,7 +24,10 @@ function getSupabaseClient() {
   }
   return _supabase;
 }
+// ✅ ADD THIS LINE to export the supabase client
+export const supabase = getSupabaseClient();
 
+// --------------------
 // Helper to get the client in each function
 const getDb = getSupabaseClient;
 
