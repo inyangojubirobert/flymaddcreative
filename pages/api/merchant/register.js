@@ -1,9 +1,7 @@
 // pages/api/merchants/register.js
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'onedream_secret_2024';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -14,44 +12,54 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
-    // CORS headers (same as participant)
+    // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    
-    if (req.method === 'OPTIONS') return res.status(200).end();
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-    
-    const { merchant_name, email, company_name, wallet_address, password } = req.body;
-    
-    // Validation (simplified like participant)
-    if (!merchant_name?.trim() || !email?.trim() || !password) {
-        return res.status(400).json({ error: 'Merchant name, email and password are required' });
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
     }
-    
+
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
     try {
-        const normalizedEmail = email.trim().toLowerCase();
+        const { merchant_name, email, company_name, wallet_address, password } = req.body;
         
-        // Check if email already exists (using maybeSingle to avoid errors)
+        // Validation
+        if (!merchant_name || !email || !password) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters' });
+        }
+
+        // Check if email already exists
         const { data: existingMerchant } = await supabase
             .from('referral_merchants')
             .select('id')
-            .eq('email', normalizedEmail)
+            .eq('email', email.toLowerCase().trim())
             .maybeSingle();
-            
+
         if (existingMerchant) {
             return res.status(400).json({ error: 'Email already registered' });
         }
-        
-        // Hash password (using 12 rounds like participant)
+
         const passwordHash = await bcrypt.hash(password, 12);
         
-        // Insert merchant
         const { data: merchant, error: insertError } = await supabase
             .from('referral_merchants')
             .insert({
                 merchant_name: merchant_name.trim(),
-                email: normalizedEmail,
+                email: email.toLowerCase().trim(),
                 company_name: company_name?.trim() || null,
                 wallet_address: wallet_address?.trim() || null,
                 password_hash: passwordHash,
@@ -63,35 +71,30 @@ export default async function handler(req, res) {
             .single();
 
         if (insertError) {
-            console.error('Supabase insert error:', insertError);
+            console.error('Insert error:', insertError);
             if (insertError.code === '23505') {
                 return res.status(400).json({ error: 'Email already registered' });
             }
             throw insertError;
         }
-        
-        // Small delay to allow trigger to create referral link (like participant)
+
+        // Get referral link
         await new Promise(r => setTimeout(r, 300));
         
-        // Get the auto-generated referral link
         const { data: referralLink } = await supabase
             .from('merchant_referral_links')
             .select('link_code, full_link, is_active')
             .eq('merchant_id', merchant.id)
             .maybeSingle();
 
-        // Generate JWT token (like participant)
+        // Generate JWT token
+        const jwt = require('jsonwebtoken');
         const token = jwt.sign(
-            { 
-                merchantId: merchant.id, 
-                email: merchant.email,
-                type: 'merchant' 
-            }, 
-            JWT_SECRET, 
+            { merchantId: merchant.id, email: merchant.email },
+            process.env.JWT_SECRET || 'onedream_secret_2024',
             { expiresIn: '7d' }
         );
-        
-        // Return success (matching participant structure)
+
         res.status(201).json({
             success: true,
             merchant: {
@@ -105,13 +108,12 @@ export default async function handler(req, res) {
                 status: merchant.status,
                 created_at: merchant.created_at,
                 token,
-                referral_link: referralLink?.full_link || null,
-                link_code: referralLink?.link_code || null
+                referral_link: referralLink?.full_link || null
             }
         });
-        
-    } catch (err) {
-        console.error('Merchant registration error:', err);
+
+    } catch (error) {
+        console.error('Registration error:', error);
         res.status(500).json({ error: 'Registration failed' });
     }
 }
