@@ -413,35 +413,61 @@
                 
                 const data = await response.json();
                 
-                if (response.ok && data.success) {
-                    // Show success card with real referral link
-                    document.getElementById('registrationCard').style.display = 'none';
-                    document.getElementById('successCard').classList.remove('hidden');
-                    document.getElementById('referralLinkBox').classList.remove('hidden');
-                    
-                    // Display the actual referral link from the API response
-                    if (data.referral_link) {
-                        const linkText = data.referral_link.full_link || data.referral_link;
-                        document.getElementById('referralLinkDisplay').textContent = linkText;
-                    } else {
-                        document.getElementById('referralLinkDisplay').textContent = 'Referral link generated';
-                    }
-                    
-                    // Save merchant data to localStorage for session
-                    localStorage.setItem('merchantEmail', email);
-                    localStorage.setItem('merchantName', merchantName);
-                    if (data.merchant?.id) {
-                        localStorage.setItem('merchantId', data.merchant.id);
-                    }
-                    
-                    console.log('Registration successful:', data);
-                    
-                } else {
-                    // Show error message from API
-                    showError(data.message || 'Registration failed. Please try again.');
-                    btn.disabled = false;
-                    btn.innerHTML = 'Register as Merchant';
-                }
+        if (response.ok && data.success) {
+    // Show success card with real referral link
+    document.getElementById('registrationCard').style.display = 'none';
+    document.getElementById('successCard').classList.remove('hidden');
+    document.getElementById('referralLinkBox').classList.remove('hidden');
+    
+    // Display the actual referral link from the API response
+    // Check all possible locations where the referral link might be
+    let referralLinkText = 'Referral link generated';
+    
+    if (data.merchant?.referral_link) {
+        // Case 1: merchant.referral_link (from your updated API)
+        referralLinkText = data.merchant.referral_link;
+    } else if (data.referral_link?.full_link) {
+        // Case 2: referral_link.full_link (from original API)
+        referralLinkText = data.referral_link.full_link;
+    } else if (data.referral_link) {
+        // Case 3: direct referral_link string
+        referralLinkText = data.referral_link;
+    }
+    
+    document.getElementById('referralLinkDisplay').textContent = referralLinkText;
+    
+    // Save merchant data to localStorage for session
+    if (data.merchant) {
+        // Save token if available
+        if (data.merchant.token) {
+            localStorage.setItem('merchantToken', data.merchant.token);
+        }
+        
+        // Save email (from merchant object or fallback to form email)
+        localStorage.setItem('merchantEmail', data.merchant.email || email);
+        
+        // Save merchant name (from merchant object or fallback to form name)
+        localStorage.setItem('merchantName', data.merchant.merchant_name || merchantName);
+        
+        // Save merchant ID if available
+        if (data.merchant.id) {
+            localStorage.setItem('merchantId', data.merchant.id);
+        }
+    } else {
+        // Fallback to form data if merchant object not available
+        localStorage.setItem('merchantEmail', email);
+        localStorage.setItem('merchantName', merchantName);
+    }
+    
+    console.log('Registration successful:', data);
+    
+} else {
+    // Show error message from API - check both error and message fields
+    const errorMsg = data.error || data.message || 'Registration failed. Please try again.';
+    showError(errorMsg);
+    btn.disabled = false;
+    btn.innerHTML = 'Register as Merchant';
+}
                 
             } catch (error) {
                 console.error('Registration error:', error);
