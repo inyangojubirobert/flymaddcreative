@@ -1,5 +1,6 @@
 // pages/api/merchants/register.js
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken'; // Add this import
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -88,7 +89,6 @@ export default async function handler(req, res) {
             .maybeSingle();
 
         // Generate JWT token
-        const jwt = require('jsonwebtoken');
         const token = jwt.sign(
             { merchantId: merchant.id, email: merchant.email },
             process.env.JWT_SECRET || 'onedream_secret_2024',
