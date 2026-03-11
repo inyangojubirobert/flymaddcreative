@@ -72,6 +72,7 @@
                     </label>
                     <input
                         id="merchantName"
+                        name="merchant_name"
                         type="text"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                         placeholder="John Doe or Company Name"
@@ -86,6 +87,7 @@
                     </label>
                     <input
                         id="email"
+                        name="email"
                         type="email"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                         placeholder="your@email.com"
@@ -100,6 +102,7 @@
                     </label>
                     <input
                         id="companyName"
+                        name="company_name"
                         type="text"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                         placeholder="Your company"
@@ -113,6 +116,7 @@
                     </label>
                     <input
                         id="walletAddress"
+                        name="wallet_address"
                         type="text"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                         placeholder="0x... or USDT TRC 20 address"
@@ -128,6 +132,7 @@
                     <div class="relative">
                         <input
                             id="password"
+                            name="password"
                             type="password"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 pr-12"
                             placeholder="Minimum 8 characters"
@@ -193,7 +198,7 @@
                 <div class="text-center mt-4">
                     <p class="text-sm text-gray-600">
                         Already registered? 
-                        <a href="merchant-login.html" class="text-indigo-600 hover:text-indigo-500 font-medium">
+                        <a href="/merchants/login.html" class="text-indigo-600 hover:text-indigo-500 font-medium">
                             Login here
                         </a>
                     </p>
@@ -259,7 +264,7 @@
 
             <!-- Action Buttons -->
             <div class="space-y-3">
-                <a href="merchant-login.html" class="block w-full bg-indigo-600 text-white text-center py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition">
+                <a href="/merchants/login.html" class="block w-full bg-indigo-600 text-white text-center py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition">
                     Go to Login →
                 </a>
                 <a href="/" class="block w-full bg-gray-100 text-gray-700 text-center py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition">
@@ -270,7 +275,7 @@
     </div>
 
     <script>
-        // API endpoint
+        // API endpoint - using relative URL to work in any environment
         const API_URL = '/api/merchants/register';
 
         // Toggle password visibility
@@ -326,15 +331,15 @@
             }
         });
 
-        // Form submission
+        // Form submission - REAL API CONNECTION
         document.getElementById('merchantForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             // Get values
             const merchantName = document.getElementById('merchantName').value.trim();
             const email = document.getElementById('email').value.trim();
-            const companyName = document.getElementById('companyName').value.trim();
-            const walletAddress = document.getElementById('walletAddress').value.trim();
+            const companyName = document.getElementById('companyName').value.trim() || null;
+            const walletAddress = document.getElementById('walletAddress').value.trim() || null;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const terms = document.getElementById('terms').checked;
@@ -363,9 +368,11 @@
             
             if (walletAddress) {
                 const ethPattern = /^0x[a-fA-F0-9]{40}$/;
+                const trc20Pattern = /^T[a-zA-Z0-9]{33}$/; // TRC20 address pattern
                 const solPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-                if (!ethPattern.test(walletAddress) && !solPattern.test(walletAddress)) {
-                    showError('Please enter a valid wallet address (Ethereum or Solana format)');
+                
+                if (!ethPattern.test(walletAddress) && !trc20Pattern.test(walletAddress) && !solPattern.test(walletAddress)) {
+                    showError('Please enter a valid wallet address (Ethereum, TRC20, or Solana format)');
                     return;
                 }
             }
@@ -389,29 +396,63 @@
             `;
             
             try {
-                // Simulate API call - replace with actual fetch
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                // REAL API CALL - Replace mock with actual fetch
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        merchant_name: merchantName,
+                        email: email,
+                        company_name: companyName,
+                        wallet_address: walletAddress,
+                        password: password
+                    })
+                });
                 
-                // Mock response
-                const mockData = {
-                    success: true,
-                    referral_link: {
-                        full_link: 'https://yourwebsite.com/register?ref=MERCH-ABC123XYZ'
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Show success card with real referral link
+                    document.getElementById('registrationCard').style.display = 'none';
+                    document.getElementById('successCard').classList.remove('hidden');
+                    document.getElementById('referralLinkBox').classList.remove('hidden');
+                    
+                    // Display the actual referral link from the API response
+                    if (data.referral_link) {
+                        const linkText = data.referral_link.full_link || data.referral_link;
+                        document.getElementById('referralLinkDisplay').textContent = linkText;
+                    } else {
+                        document.getElementById('referralLinkDisplay').textContent = 'Referral link generated';
                     }
-                };
-                
-                // Show success card
-                document.getElementById('registrationCard').style.display = 'none';
-                document.getElementById('successCard').classList.remove('hidden');
-                document.getElementById('referralLinkBox').classList.remove('hidden');
-                document.getElementById('referralLinkDisplay').textContent = mockData.referral_link.full_link;
-                
-                // Save merchant data to localStorage for demo
-                localStorage.setItem('merchantEmail', email);
-                localStorage.setItem('merchantName', merchantName);
+                    
+                    // Save merchant data to localStorage for session
+                    localStorage.setItem('merchantEmail', email);
+                    localStorage.setItem('merchantName', merchantName);
+                    if (data.merchant?.id) {
+                        localStorage.setItem('merchantId', data.merchant.id);
+                    }
+                    
+                    console.log('Registration successful:', data);
+                    
+                } else {
+                    // Show error message from API
+                    showError(data.message || 'Registration failed. Please try again.');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Register as Merchant';
+                }
                 
             } catch (error) {
-                alert('Registration failed. Please try again.');
+                console.error('Registration error:', error);
+                
+                // Check if it's a network error
+                if (!navigator.onLine) {
+                    showError('You are offline. Please check your internet connection.');
+                } else {
+                    showError('Unable to connect to server. Please try again later.');
+                }
+                
                 btn.disabled = false;
                 btn.innerHTML = 'Register as Merchant';
             }
@@ -423,6 +464,9 @@
             const messageEl = document.getElementById('errorMessage');
             container.classList.remove('hidden');
             messageEl.textContent = message;
+            
+            // Scroll to error
+            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function hideError() {
@@ -441,8 +485,20 @@
                     btn.textContent = originalText;
                     btn.classList.remove('bg-green-600');
                 }, 2000);
+            }).catch(err => {
+                alert('Failed to copy link. Please copy manually.');
             });
         }
+
+        // Check if API is reachable on page load (optional)
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch(API_URL, { method: 'HEAD' });
+                console.log('API reachable:', response.ok);
+            } catch (error) {
+                console.warn('API may not be reachable:', error);
+            }
+        });
     </script>
 </body>
 </html>
