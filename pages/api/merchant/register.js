@@ -1,6 +1,6 @@
 // pages/api/merchants/register.js
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken'; // Add this import
+import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -13,25 +13,18 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
-    // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
         const { merchant_name, email, company_name, wallet_address, password } = req.body;
         
-        // Validation
         if (!merchant_name || !email || !password) {
-            return res.status(400).json({ error: 'Missing required fields' });
+            return res.status(400).json({ error: 'Merchant name, email and password are required' });
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,7 +36,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Password must be at least 8 characters' });
         }
 
-        // Check if email already exists
+        // Check if email exists
         const { data: existingMerchant } = await supabase
             .from('referral_merchants')
             .select('id')
@@ -54,7 +47,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Email already registered' });
         }
 
-        const passwordHash = await bcrypt.hash(password, 12);
+        const passwordHash = await bcrypt.hash(password, 10);
         
         const { data: merchant, error: insertError } = await supabase
             .from('referral_merchants')
@@ -79,16 +72,15 @@ export default async function handler(req, res) {
             throw insertError;
         }
 
-        // Get referral link
-        await new Promise(r => setTimeout(r, 300));
+        // Wait for trigger to create referral link
+        await new Promise(resolve => setTimeout(resolve, 300));
         
         const { data: referralLink } = await supabase
             .from('merchant_referral_links')
-            .select('link_code, full_link, is_active')
+            .select('full_link')
             .eq('merchant_id', merchant.id)
             .maybeSingle();
 
-        // Generate JWT token
         const token = jwt.sign(
             { merchantId: merchant.id, email: merchant.email },
             process.env.JWT_SECRET || 'onedream_secret_2024',
