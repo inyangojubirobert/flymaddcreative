@@ -173,137 +173,72 @@
     </div>
 
     <script>
-        // Mock data for demonstration
-        const mockMerchantData = {
-            id: '123e4567-e89b-12d3-a456-426614174000',
-            merchant_name: localStorage.getItem('merchantName') || 'John Doe',
-            email: localStorage.getItem('merchantEmail') || 'merchant@example.com',
-            total_tokens_earned: 1250,
-            available_tokens: 850,
-            pending_tokens: 400,
-            total_referrals: 28,
-            pending_votes: 8,
-            completed_votes: 17,
-            conversion_rate: 64
-        };
+        const API_BASE = '/api/merchants';
+        const merchantId = localStorage.getItem('merchantId');
+        const token = localStorage.getItem('merchantToken');
 
-        const mockReferralLinks = [
-            {
-                id: 1,
-                link_code: 'MERCH-ABC123',
-                full_link: 'https://yourwebsite.com/register?ref=MERCH-ABC123',
-                description: 'Twitter Profile',
-                clicks_count: 45,
-                registrations_count: 12,
-                is_active: true
-            },
-            {
-                id: 2,
-                link_code: 'MERCH-XYZ789',
-                full_link: 'https://yourwebsite.com/register?ref=MERCH-XYZ789',
-                description: 'Personal Website',
-                clicks_count: 32,
-                registrations_count: 8,
-                is_active: true
-            },
-            {
-                id: 3,
-                link_code: 'MERCH-DEF456',
-                full_link: 'https://yourwebsite.com/register?ref=MERCH-DEF456',
-                description: 'Facebook Page',
-                clicks_count: 18,
-                registrations_count: 5,
-                is_active: false
-            }
-        ];
-
-        const mockReferrals = [
-            {
-                id: 1,
-                participant_name: 'Alice Johnson',
-                participant_email: 'alice@example.com',
-                participant_initial: 'A',
-                registered_date: '2024-01-15',
-                link_used: 'MERCH-ABC123',
-                vote_status: 'voted',
-                vote_date: '2024-01-20',
-                tokens: 50,
-                reward_status: 'paid'
-            },
-            {
-                id: 2,
-                participant_name: 'Bob Smith',
-                participant_email: 'bob@example.com',
-                participant_initial: 'B',
-                registered_date: '2024-01-18',
-                link_used: 'MERCH-ABC123',
-                vote_status: 'voted',
-                vote_date: '2024-01-22',
-                tokens: 50,
-                reward_status: 'paid'
-            },
-            {
-                id: 3,
-                participant_name: 'Carol Davis',
-                participant_email: 'carol@example.com',
-                participant_initial: 'C',
-                registered_date: '2024-01-20',
-                link_used: 'MERCH-XYZ789',
-                vote_status: 'pending',
-                vote_date: '-',
-                tokens: 0,
-                reward_status: 'pending'
-            },
-            {
-                id: 4,
-                participant_name: 'David Wilson',
-                participant_email: 'david@example.com',
-                participant_initial: 'D',
-                registered_date: '2024-01-22',
-                link_used: 'MERCH-ABC123',
-                vote_status: 'voted',
-                vote_date: '2024-01-25',
-                tokens: 50,
-                reward_status: 'pending'
-            },
-            {
-                id: 5,
-                participant_name: 'Eva Brown',
-                participant_email: 'eva@example.com',
-                participant_initial: 'E',
-                registered_date: '2024-01-23',
-                link_used: 'MERCH-DEF456',
-                vote_status: 'registered',
-                vote_date: '-',
-                tokens: 0,
-                reward_status: 'pending'
-            }
-        ];
-
-        // Load dashboard data
-        function loadDashboard() {
-            document.getElementById('merchantName').textContent = mockMerchantData.merchant_name;
-            document.getElementById('totalReferrals').textContent = mockMerchantData.total_referrals;
-            document.getElementById('pendingVotes').textContent = mockMerchantData.pending_votes;
-            document.getElementById('completedVotes').textContent = mockMerchantData.completed_votes;
-            document.getElementById('conversionRate').textContent = mockMerchantData.conversion_rate + '%';
-            document.getElementById('totalTokens').textContent = mockMerchantData.total_tokens_earned;
-            document.getElementById('pendingTokens').textContent = mockMerchantData.pending_tokens + ' tokens pending confirmation';
-            document.getElementById('availableBalance').textContent = mockMerchantData.available_tokens;
-            
-            loadReferralLinks();
-            loadReferralsTable();
+        function getAuthHeaders() {
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers.Authorization = `Bearer ${token}`;
+            return headers;
         }
 
-        function loadReferralLinks() {
+        function redirectToLogin() {
+            localStorage.removeItem('merchantId');
+            localStorage.removeItem('merchantToken');
+            window.location.href = '/merchants/login.html';
+        }
+
+        async function fetchDashboardData() {
+            if (!merchantId) {
+                redirectToLogin();
+                return null;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/${merchantId}/dashboard`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    console.error('Dashboard load error:', data);
+                    redirectToLogin();
+                    return null;
+                }
+
+                return data;
+            } catch (err) {
+                console.error('Dashboard fetch error:', err);
+                return null;
+            }
+        }
+
+        function renderStats(stats, merchant) {
+            document.getElementById('merchantName').textContent = merchant?.merchant_name || localStorage.getItem('merchantName') || 'Merchant';
+            document.getElementById('totalReferrals').textContent = stats?.total_referrals ?? 0;
+            document.getElementById('pendingVotes').textContent = stats?.pending_votes ?? 0;
+            document.getElementById('completedVotes').textContent = stats?.completed_votes ?? 0;
+            document.getElementById('conversionRate').textContent = (stats?.conversion_rate ?? 0) + '%';
+            document.getElementById('totalTokens').textContent = stats?.total_tokens_earned ?? 0;
+            document.getElementById('pendingTokens').textContent = (stats?.pending_tokens ?? 0) + ' tokens pending confirmation';
+            document.getElementById('availableBalance').textContent = stats?.available_tokens ?? 0;
+        }
+
+        function renderReferralLinks(links) {
             const container = document.getElementById('linksContainer');
             container.innerHTML = '';
-            
-            mockReferralLinks.forEach(link => {
-                const conversionRate = link.clicks_count > 0 
-                    ? Math.round((link.registrations_count / link.clicks_count) * 100) 
+
+            if (!links || !links.length) {
+                container.innerHTML = '<div class="col-span-full text-center text-gray-500">No referral links yet. Create one to get started.</div>';
+                return;
+            }
+
+            links.forEach(link => {
+                const conversionRate = link.clicks_count > 0
+                    ? Math.round((link.registrations_count / link.clicks_count) * 100)
                     : 0;
-                
+
                 const card = `
                     <div class="bg-white p-5 rounded-xl shadow-sm">
                         <div class="flex justify-between items-center mb-3">
@@ -318,7 +253,7 @@
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <button onclick="copyLink('${link.full_link}')" class="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition">Copy</button>
-                            <button onclick="toggleLinkStatus(${link.id}, ${link.is_active})" class="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition">${link.is_active ? 'Deactivate' : 'Activate'}</button>
+                            <button onclick="toggleLinkStatus('${link.id}', ${link.is_active})" class="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition">${link.is_active ? 'Deactivate' : 'Activate'}</button>
                         </div>
                     </div>
                 `;
@@ -326,96 +261,140 @@
             });
         }
 
-        function loadReferralsTable() {
+        function renderRecentActivity(entries) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
-            
-            mockReferrals.forEach(ref => {
+
+            if (!entries || !entries.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-gray-500">No recent referrals yet.</td></tr>';
+                return;
+            }
+
+            entries.forEach(ref => {
+                const participantName = ref.participant?.name || 'Unknown';
+                const participantEmail = ref.participant?.email || '';
+                const registeredDate = ref.registered_date ? new Date(ref.registered_date).toLocaleDateString() : '-';
+                const linkUsed = ref.link_used || '-';
+                const voteStatus = ref.vote?.status || 'pending';
+                const voteDate = ref.vote?.date ? new Date(ref.vote.date).toLocaleDateString() : '-';
+                const tokens = ref.reward?.tokens ?? 0;
+                const rewardStatus = ref.reward?.status || 'pending';
+
                 const row = `
                     <tr class="border-t border-gray-100 hover:bg-gray-50">
                         <td class="p-4">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">${ref.participant_initial}</div>
-                                <div><h4 class="font-medium text-gray-800">${ref.participant_name}</h4><p class="text-sm text-gray-500">${ref.participant_email}</p></div>
+                                <div class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">${participantName.charAt(0).toUpperCase()}</div>
+                                <div><h4 class="font-medium text-gray-800">${participantName}</h4><p class="text-sm text-gray-500">${participantEmail}</p></div>
                             </div>
                         </td>
-                        <td class="p-4 text-sm text-gray-600">${new Date(ref.registered_date).toLocaleDateString()}</td>
-                        <td class="p-4"><span class="bg-gray-100 px-3 py-1 rounded-full text-xs font-semibold text-gray-700">${ref.link_used}</span></td>
-                        <td class="p-4"><span class="${ref.vote_status === 'voted' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} px-3 py-1 rounded-full text-xs font-semibold">${ref.vote_status === 'voted' ? '✅ Voted' : '⏳ Pending'}</span></td>
-                        <td class="p-4 text-sm text-gray-600">${ref.vote_date !== '-' ? new Date(ref.vote_date).toLocaleDateString() : '-'}</td>
-                        <td class="p-4 font-bold text-green-600">${ref.tokens} tokens</td>
-                        <td class="p-4"><span class="${ref.reward_status === 'paid' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} px-3 py-1 rounded-full text-xs font-semibold">${ref.reward_status === 'paid' ? '💰 Paid' : '⏳ Pending'}</span></td>
+                        <td class="p-4 text-sm text-gray-600">${registeredDate}</td>
+                        <td class="p-4"><span class="bg-gray-100 px-3 py-1 rounded-full text-xs font-semibold text-gray-700">${linkUsed}</span></td>
+                        <td class="p-4"><span class="${voteStatus === 'confirmed' || voteStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} px-3 py-1 rounded-full text-xs font-semibold">${voteStatus === 'confirmed' || voteStatus === 'paid' ? '✅ Voted' : '⏳ Pending'}</span></td>
+                        <td class="p-4 text-sm text-gray-600">${voteDate}</td>
+                        <td class="p-4 font-bold text-green-600">${tokens} tokens</td>
+                        <td class="p-4"><span class="${rewardStatus === 'paid' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} px-3 py-1 rounded-full text-xs font-semibold">${rewardStatus === 'paid' ? '💰 Paid' : '⏳ Pending'}</span></td>
                     </tr>
                 `;
                 tbody.innerHTML += row;
             });
         }
 
-        // Modal functions
-        function showCreateLinkModal() {
-            document.getElementById('createLinkModal').classList.remove('hidden');
-            document.getElementById('createLinkModal').classList.add('flex');
-        }
-
-        function hideCreateLinkModal() {
-            document.getElementById('createLinkModal').classList.add('hidden');
-            document.getElementById('createLinkModal').classList.remove('flex');
-        }
-
-        function showWithdrawModal() {
-            document.getElementById('withdrawModal').classList.remove('hidden');
-            document.getElementById('withdrawModal').classList.add('flex');
-        }
-
-        function hideWithdrawModal() {
-            document.getElementById('withdrawModal').classList.add('hidden');
-            document.getElementById('withdrawModal').classList.remove('flex');
-        }
-
-        function createNewLink() {
+        async function createNewLink() {
             const description = document.getElementById('linkDescription').value;
             if (!description) {
                 alert('Please enter a description');
                 return;
             }
-            alert('New link created successfully!');
-            hideCreateLinkModal();
-            document.getElementById('linkDescription').value = '';
+
+            try {
+                const res = await fetch(`${API_BASE}/${merchantId}/links`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ description })
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Failed to create link');
+                }
+
+                hideCreateLinkModal();
+                document.getElementById('linkDescription').value = '';
+                await refreshDashboard();
+            } catch (err) {
+                alert(err.message || 'Unable to create link');
+            }
         }
 
-        function withdrawTokens() {
-            const amount = document.getElementById('withdrawAmount').value;
+        async function toggleLinkStatus(linkId, currentStatus) {
+            try {
+                const res = await fetch(`${API_BASE}/links/${linkId}`, {
+                    method: 'PATCH',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ is_active: !currentStatus })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Failed to update link');
+                }
+                await refreshDashboard();
+            } catch (err) {
+                alert(err.message || 'Unable to update link status');
+            }
+        }
+
+        async function withdrawTokens() {
+            const amount = Number(document.getElementById('withdrawAmount').value);
             if (!amount || amount < 50) {
                 alert('Minimum withdrawal is 50 tokens');
                 return;
             }
-            if (amount > mockMerchantData.available_tokens) {
-                alert('Insufficient balance');
-                return;
+
+            try {
+                const res = await fetch(`${API_BASE}/${merchantId}/withdraw`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ amount })
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Withdrawal failed');
+                }
+
+                alert('Withdrawal request submitted!');
+                hideWithdrawModal();
+                document.getElementById('withdrawAmount').value = '';
+                await refreshDashboard();
+            } catch (err) {
+                alert(err.message || 'Unable to withdraw tokens');
             }
-            alert(`Withdrawal request for ${amount} tokens submitted!`);
-            hideWithdrawModal();
-            document.getElementById('withdrawAmount').value = '';
         }
 
         function copyLink(link) {
             navigator.clipboard.writeText(link).then(() => {
                 alert('Link copied to clipboard!');
+            }).catch(() => {
+                alert('Failed to copy link. Please copy manually.');
             });
-        }
-
-        function toggleLinkStatus(linkId, currentStatus) {
-            alert(`Link ${currentStatus ? 'deactivated' : 'activated'}!`);
-            loadReferralLinks();
         }
 
         function handleLogout() {
             localStorage.clear();
-            window.location.href = 'merchant-login.html';
+            window.location.href = '/merchants/login.html';
         }
 
-        // Load dashboard on page load
-        document.addEventListener('DOMContentLoaded', loadDashboard);
+        async function refreshDashboard() {
+            const data = await fetchDashboardData();
+            if (!data) return;
+
+            renderStats(data.stats, data.merchant);
+            renderReferralLinks(data.referral_links);
+            renderRecentActivity(data.recent_activity);
+        }
+
+        document.addEventListener('DOMContentLoaded', refreshDashboard);
     </script>
 </body>
 </html>

@@ -12,7 +12,8 @@
     "build:wc": "esbuild src/wc-entry.js --bundle --minify --sourcemap --outfile=public/js/wc-bundle.js --platform=browser --target=es2017",
     "start": "next start",
     "lint": "next lint",
-    "test:db": "node scripts/test-db.mjs"
+    "test:db": "node scripts/test-db.mjs",
+    "migrate:add-password-hash": "node scripts/add-password-hash-column.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
@@ -21,11 +22,13 @@
     "@walletconnect/modal": "^2.7.0",
     "bcryptjs": "^2.4.3",
     "buffer": "^6.0.3",
+    "dotenv": "^16.3.1",
     "ethers": "^6.16.0",
     "framer-motion": "^10.16.4",
     "jsonwebtoken": "^9.0.3",
     "next": "^14.2.35",
     "next-connect": "^1.0.0",
+    "pg": "^8.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tronweb": "^6.1.1",

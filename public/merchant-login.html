@@ -237,36 +237,38 @@
             `;
             
             try {
-                // Simulate API call - replace with actual fetch to your backend
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                
-                // Demo credentials check
-                if (email === 'demo@merchant.com' && password === 'demo1234') {
-                    // Mock successful login
-                    const mockMerchant = {
-                        id: '123e4567-e89b-12d3-a456-426614174000',
-                        merchant_name: 'Demo Merchant',
-                        email: email,
-                        total_tokens_earned: 1250,
-                        available_tokens: 850
-                    };
-                    
-                    // Save to localStorage
-                    localStorage.setItem('merchantToken', 'demo-token-12345');
-                    localStorage.setItem('merchantData', JSON.stringify(mockMerchant));
-                    
+                // Attempt real login via API
+                const LOGIN_URL = '/api/merchants/login';
+                const response = await fetch(LOGIN_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const merchant = data.merchant || {};
+
+                    // Persist merchant session
+                    if (data.token) localStorage.setItem('merchantToken', data.token);
+                    if (merchant.id) localStorage.setItem('merchantId', merchant.id);
+                    localStorage.setItem('merchantName', merchant.merchant_name || merchant.email || '');
+                    localStorage.setItem('merchantEmail', merchant.email || email);
+
                     showSuccess('Login successful! Redirecting to dashboard...');
-                    
-                    // Redirect to dashboard
                     setTimeout(() => {
-                        window.location.href = '/merchants/dashboard.html';
-                    }, 1000);
+                        window.location.href = '/merchant-dashboard.html';
+                    }, 800);
                 } else {
-                    showError('Invalid email or password');
+                    const msg = data.message || data.error || 'Invalid email or password';
+                    showError(msg);
                     btn.disabled = false;
                     btn.innerHTML = 'Login to Dashboard';
                 }
-                
+
             } catch (error) {
                 showError('Login failed. Please try again.');
                 btn.disabled = false;

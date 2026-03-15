@@ -81,7 +81,15 @@ router.post('/api/merchants/register', async (req, res) => {
 
         if (insertError) {
             console.error('Supabase insert error:', insertError);
-            
+
+            // If the database schema does not include a password_hash, supply a clear error
+            if (insertError.message && insertError.message.includes('password_hash')) {
+                return res.status(500).json({ 
+                    success: false, 
+                    message: 'Server misconfiguration: merchant password storage is not set up. Please add a password_hash column to referral_merchants.' 
+                });
+            }
+
             // Check for duplicate email error
             if (insertError.code === '23505' && insertError.message.includes('email')) {
                 return res.status(409).json({ 
@@ -89,7 +97,7 @@ router.post('/api/merchants/register', async (req, res) => {
                     message: 'Email already registered' 
                 });
             }
-            
+
             throw insertError;
         }
 
@@ -172,6 +180,15 @@ router.post('/api/merchants/login', async (req, res) => {
             });
         }
         
+        // Ensure password hash exists
+        if (!merchant.password_hash) {
+            console.error('Merchant login failed: missing password_hash for merchant', merchant.id);
+            return res.status(500).json({ 
+                success: false, 
+                message: 'Merchant account not fully configured. Please contact support.' 
+            });
+        }
+
         // Verify password
         const validPassword = await bcrypt.compare(password, merchant.password_hash);
         
