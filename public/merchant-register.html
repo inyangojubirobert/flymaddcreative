@@ -276,7 +276,7 @@
 
     <script>
         // API endpoint - using relative URL to work in any environment
-        const API_URL = '/api/merchants/register';
+     const API_URL = '/api/merchants';
 
         // Toggle password visibility
         function togglePassword(inputId, iconId) {
@@ -397,19 +397,20 @@
             
             try {
                 // REAL API CALL - Replace mock with actual fetch
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        merchant_name: merchantName,
-                        email: email,
-                        company_name: companyName,
-                        wallet_address: walletAddress,
-                        password: password
-                    })
-                });
+             const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+        // Note: No _route needed, the endpoint is determined by the URL
+        merchant_name: merchantName,
+        email: email,
+        company_name: companyName,
+        wallet_address: walletAddress,
+        password: password
+    })
+});
                 
                 const data = await response.json();
                 
