@@ -2,41 +2,10 @@
 import { createRouter } from 'next-connect';
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
-import pg from 'pg';
 
 // Initialize Supabase admin client (server-side only)
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Helper: ensure the referral_merchants table has a password_hash column.
-// Some deployments may have an older schema that lacks this column.
-let _passwordHashColumnEnsured = false;
-async function ensurePasswordHashColumn() {
-  if (_passwordHashColumnEnsured) return;
-
-  const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
-  if (!connectionString) {
-    throw new Error('Missing DATABASE_URL / SUPABASE_DB_URL for schema migration.');
-  }
-
-  const client = new pg.Client({ connectionString });
-  await client.connect();
-
-  try {
-    const { rows } = await client.query(
-      `SELECT column_name FROM information_schema.columns
-       WHERE table_schema = 'public' AND table_name = 'referral_merchants' AND column_name = 'password_hash'`
-    );
-
-    if (rows.length === 0) {
-      await client.query(`ALTER TABLE public.referral_merchants ADD COLUMN IF NOT EXISTS password_hash text;`);
-    }
-
-    _passwordHashColumnEnsured = true;
-  } finally {
-    await client.end();
-  }
-}
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
@@ -46,11 +15,24 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const router = createRouter();
 
+// Normalize incoming route paths so this handler can be mounted under different prefixes.
+// This ensures the router matches regardless of whether req.url includes "/api/merchants".
+const BASE_PATH = '/api/merchants';
+router.use((req, res, next) => {
+  if (!req.url) return next();
+  const [path, query] = req.url.split('?');
+  if (path.startsWith(BASE_PATH)) {
+    const newPath = path.slice(BASE_PATH.length) || '/';
+    req.url = newPath + (query ? `?${query}` : '');
+  }
+  next();
+});
+
 // Helper to generate JWT (if using JWT)
 // import jwt from 'jsonwebtoken'; // Uncomment if using JWT
 
 // ==================== MERCHANT REGISTRATION ====================
-router.post('/api/merchants/register', async (req, res) => {
+router.post('/register', async (req, res) => {
     try {
         const { merchant_name, email, company_name, wallet_address, password } = req.body;
         
@@ -90,17 +72,6 @@ router.post('/api/merchants/register', async (req, res) => {
             return res.status(409).json({ 
                 success: false, 
                 message: 'Email already registered' 
-            });
-        }
-
-        // Ensure the schema has a password_hash column (fixes misconfigured deployments)
-        try {
-            await ensurePasswordHashColumn();
-        } catch (err) {
-            console.error('Failed to ensure password_hash column exists:', err);
-            return res.status(500).json({ 
-                success: false, 
-                message: 'Server misconfiguration: unable to ensure merchant password storage is configured.' 
             });
         }
 
@@ -189,7 +160,7 @@ router.post('/api/merchants/register', async (req, res) => {
 });
 
 // ==================== MERCHANT LOGIN ====================
-router.post('/api/merchants/login', async (req, res) => {
+router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         
@@ -200,17 +171,6 @@ router.post('/api/merchants/login', async (req, res) => {
             });
         }
 
-        // Ensure the schema has a password_hash column (fixes misconfigured deployments)
-        try {
-            await ensurePasswordHashColumn();
-        } catch (err) {
-            console.error('Failed to ensure password_hash column exists:', err);
-            return res.status(500).json({ 
-                success: false, 
-                message: 'Server misconfiguration: unable to ensure merchant password storage is configured.' 
-            });
-        }
-        
         // Get merchant with password hash
         const { data: merchant, error } = await supabase
             .from('referral_merchants')
@@ -224,7 +184,7 @@ router.post('/api/merchants/login', async (req, res) => {
                 message: 'Invalid credentials' 
             });
         }
-        
+
         // Check if account is active
         if (merchant.status !== 'active') {
             return res.status(403).json({ 
@@ -287,7 +247,7 @@ router.post('/api/merchants/login', async (req, res) => {
 });
 
 // ==================== GET MERCHANT DASHBOARD ====================
-router.get('/api/merchants/:id/dashboard', async (req, res) => {
+router.get('/:id/dashboard', async (req, res) => {
     try {
         const { id } = req.params;
         
@@ -437,7 +397,7 @@ router.get('/api/merchants/:id/dashboard', async (req, res) => {
 });
 
 // ==================== CREATE NEW REFERRAL LINK ====================
-router.post('/api/merchants/:id/links', async (req, res) => {
+router.post('/:id/links', async (req, res) => {
     try {
         const { id } = req.params;
         const { description } = req.body;
@@ -498,7 +458,7 @@ router.post('/api/merchants/:id/links', async (req, res) => {
 });
 
 // ==================== UPDATE LINK STATUS ====================
-router.patch('/api/merchants/links/:linkId', async (req, res) => {
+router.patch('/links/:linkId', async (req, res) => {
     try {
         const { linkId } = req.params;
         const { is_active } = req.body;
@@ -540,7 +500,7 @@ router.patch('/api/merchants/links/:linkId', async (req, res) => {
 });
 
 // ==================== GET LINK STATS ====================
-router.get('/api/merchants/links/:linkId/stats', async (req, res) => {
+router.get('/links/:linkId/stats', async (req, res) => {
     try {
         const { linkId } = req.params;
         
@@ -616,7 +576,7 @@ router.get('/api/merchants/links/:linkId/stats', async (req, res) => {
 });
 
 // ==================== REQUEST WITHDRAWAL ====================
-router.post('/api/merchants/:id/withdraw', async (req, res) => {
+router.post('/:id/withdraw', async (req, res) => {
     try {
         const { id } = req.params;
         const { amount, wallet_address } = req.body;
@@ -696,7 +656,7 @@ router.post('/api/merchants/:id/withdraw', async (req, res) => {
 });
 
 // ==================== UPDATE MERCHANT PROFILE ====================
-router.patch('/api/merchants/:id', async (req, res) => {
+router.patch('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const { merchant_name, company_name, wallet_address } = req.body;
@@ -777,7 +737,7 @@ router.post('/api/track/click', async (req, res) => {
 });
 
 // ==================== GET MERCHANT BY TOKEN ====================
-router.get('/api/merchants/me', async (req, res) => {
+router.get('/me', async (req, res) => {
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader) {
