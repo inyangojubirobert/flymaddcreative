@@ -2,6 +2,36 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import pg from 'pg';
+
+// Ensure referral_merchants has a password_hash column (deployment schema fix)
+let _passwordHashColumnEnsured = false;
+async function ensurePasswordHashColumn() {
+  if (_passwordHashColumnEnsured) return;
+
+  const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
+  if (!connectionString) {
+    throw new Error('Missing DATABASE_URL / SUPABASE_DB_URL for schema migration.');
+  }
+
+  const client = new pg.Client({ connectionString });
+  await client.connect();
+
+  try {
+    const { rows } = await client.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'referral_merchants' AND column_name = 'password_hash'`
+    );
+
+    if (rows.length === 0) {
+      await client.query(`ALTER TABLE public.referral_merchants ADD COLUMN IF NOT EXISTS password_hash text;`);
+    }
+
+    _passwordHashColumnEnsured = true;
+  } finally {
+    await client.end();
+  }
+}
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -45,6 +75,13 @@ export default async function handler(req, res) {
 
         if (existingMerchant) {
             return res.status(400).json({ error: 'Email already registered' });
+        }
+
+        try {
+            await ensurePasswordHashColumn();
+        } catch (err) {
+            console.error('Failed to ensure password_hash column exists:', err);
+            return res.status(500).json({ error: 'Server misconfiguration: merchant password storage is not configured.' });
         }
 
         const passwordHash = await bcrypt.hash(password, 10);

@@ -14,6 +14,7 @@
 
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { promises as dns } from 'dns';
 
 dotenv.config();
 
@@ -25,8 +26,42 @@ if (!connectionString) {
   process.exit(1);
 }
 
+// If the password contains special URL characters like "@", it must be URL-encoded.
+// A common failure mode is using a password like "@13Dec8891" directly in the URL.
+// In that case, the string becomes: postgres://postgres:@13Dec8891@host..., which is invalid.
+if ((connectionString.match(/@/g) || []).length > 1) {
+  console.error('\nERROR: Your DATABASE_URL contains multiple "@" characters.');
+  console.error('If your password contains an "@", URL-encode it (e.g., "@" → "%40").');
+  console.error('Example: postgres://postgres:%4013Dec8891@db.pjtuisyvpvoswmcgxsfs.supabase.co:5432/postgres');
+  process.exit(1);
+}
+
 async function run() {
-  const client = new pg.Client({ connectionString });
+  // pg's built-in resolver can fail when the hostname only has AAAA (IPv6) records.
+  // In that case, resolve the host ourselves and connect using the IPv6 address.
+  const url = new URL(connectionString);
+  const cfg = {
+    user: url.username,
+    password: url.password,
+    database: url.pathname.replace(/^\//, ''),
+    port: url.port ? Number(url.port) : 5432,
+    host: url.hostname,
+    ssl: url.protocol === 'postgresql:' || url.protocol === 'postgres:' ? { rejectUnauthorized: false } : false
+  };
+
+  try {
+    const v4 = await dns.resolve4(cfg.host).catch(() => []);
+    if (!v4.length) {
+      const v6 = await dns.resolve6(cfg.host).catch(() => []);
+      if (v6.length) {
+        cfg.host = v6[0];
+      }
+    }
+  } catch (e) {
+    // If DNS resolution fails, we'll still try using the raw host value and let pg report the error.
+  }
+
+  const client = new pg.Client(cfg);
 
   try {
     await client.connect();
