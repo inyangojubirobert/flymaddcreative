@@ -15,11 +15,22 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const router = createRouter();
 
+// Log incoming path + method to help debug route matching
+router.use((req, res, next) => {
+  console.debug('API request:', req.method, req.url);
+  next();
+});
+
 // Normalize incoming route paths so this handler can be mounted under different prefixes.
 // This ensures the router matches regardless of whether req.url includes "/api" or "/api/merchants".
 const BASE_PREFIXES = ['/api/merchants', '/api', '/merchants'];
 router.use((req, res, next) => {
   if (!req.url) return next();
+
+  // Allow simple health-checks via HEAD (used by the frontend check)
+  if (req.method === 'HEAD') {
+    return res.status(200).end();
+  }
 
   const [rawPath, query] = req.url.split('?');
   let path = rawPath;
@@ -799,9 +810,19 @@ export default router.handler({
         });
     },
     onNoMatch: (req, res) => {
-        res.status(404).json({ 
-            success: false, 
-            message: 'Route not found' 
-        });
+        const info = {
+            success: false,
+            message: 'Route not found',
+            method: req.method,
+            url: req.url,
+            headers: {
+                host: req.headers.host,
+                referer: req.headers.referer,
+                'x-forwarded-host': req.headers['x-forwarded-host'],
+                'x-forwarded-proto': req.headers['x-forwarded-proto'],
+            }
+        };
+        console.warn('No matching route for request:', info);
+        res.status(404).json(info);
     }
 });
