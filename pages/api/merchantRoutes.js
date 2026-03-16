@@ -16,15 +16,33 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const router = createRouter();
 
 // Normalize incoming route paths so this handler can be mounted under different prefixes.
-// This ensures the router matches regardless of whether req.url includes "/api/merchants".
-const BASE_PATH = '/api/merchants';
+// This ensures the router matches regardless of whether req.url includes "/api" or "/api/merchants".
+const BASE_PREFIXES = ['/api/merchants', '/api', '/merchants'];
 router.use((req, res, next) => {
   if (!req.url) return next();
-  const [path, query] = req.url.split('?');
-  if (path.startsWith(BASE_PATH)) {
-    const newPath = path.slice(BASE_PATH.length) || '/';
-    req.url = newPath + (query ? `?${query}` : '');
+
+  const [rawPath, query] = req.url.split('?');
+  let path = rawPath;
+
+  // Remove any trailing slash (but keep root)
+  if (path.length > 1 && path.endsWith('/')) {
+    path = path.slice(0, -1);
   }
+
+  // Strip known prefixes
+  for (const prefix of BASE_PREFIXES) {
+    if (path.startsWith(prefix)) {
+      path = path.slice(prefix.length) || '/';
+      break;
+    }
+  }
+
+  // Ensure leading slash
+  if (!path.startsWith('/')) {
+    path = '/' + path;
+  }
+
+  req.url = path + (query ? `?${query}` : '');
   next();
 });
 
