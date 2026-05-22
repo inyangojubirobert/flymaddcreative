@@ -48,7 +48,8 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Login failed');
 
-        localStorage.setItem('onedream_token', data.token);
+        const token = data.user?.token || data.token;
+        if (token) localStorage.setItem('onedream_token', token);
         localStorage.setItem('onedream_user', JSON.stringify(data.user));
         return data.user;
     }

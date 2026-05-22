@@ -1,0 +1,93 @@
+[
+  {
+    "source_table": "analytics_events",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "analytics_events_participant_id_fkey"
+  },
+  {
+    "source_table": "crypto_votes",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "crypto_votes_participant_id_fkey"
+  },
+  {
+    "source_table": "crypto_votes",
+    "source_column": "user_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "crypto_votes_user_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_links",
+    "source_column": "merchant_id",
+    "target_table": "referral_merchants",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_links_merchant_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_rewards",
+    "source_column": "vote_id",
+    "target_table": "crypto_votes",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_rewards_vote_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_rewards",
+    "source_column": "merchant_id",
+    "target_table": "referral_merchants",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_rewards_merchant_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_rewards",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_rewards_participant_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_rewards",
+    "source_column": "merchant_link_id",
+    "target_table": "merchant_referral_links",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_rewards_merchant_link_id_fkey"
+  },
+  {
+    "source_table": "participants",
+    "source_column": "referred_by_merchant_link_id",
+    "target_table": "merchant_referral_links",
+    "target_column": "id",
+    "constraint_name": "participants_referred_by_merchant_link_id_fkey"
+  },
+  {
+    "source_table": "payments",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "payments_participant_id_fkey"
+  },
+  {
+    "source_table": "usdt_payments",
+    "source_column": "user_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "usdt_payments_user_id_fkey"
+  },
+  {
+    "source_table": "votes",
+    "source_column": "payment_id",
+    "target_table": "payments",
+    "target_column": "id",
+    "constraint_name": "votes_payment_id_fkey"
+  },
+  {
+    "source_table": "votes",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "votes_participant_id_fkey"
+  }
+]

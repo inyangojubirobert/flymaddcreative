@@ -1,17 +1,20 @@
 // API route for user registration - aligned with participants table
 
 import { registerParticipant } from '../../../src/backend/supabase.js';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    
+
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-    
+
     const { name, email, username, password } = req.body;
-    
+
     // Validate
     if (!name?.trim() || !email?.trim() || !username?.trim() || !password) {
         return res.status(400).json({ error: 'All fields required' });
@@ -26,10 +29,17 @@ export default async function handler(req, res) {
     if (password.length < 6) {
         return res.status(400).json({ error: 'Password: 6+ characters' });
     }
-    
+
     try {
         const participant = await registerParticipant(name, email, cleanUsername, password);
-        res.status(201).json({ success: true, participant });
+
+        const token = jwt.sign(
+            { userId: participant.id, email: participant.email, type: 'onedream' },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.status(201).json({ success: true, participant: { ...participant, token } });
     } catch (error) {
         res.status(400).json({ error: error.message || 'Registration failed.' });
     }
