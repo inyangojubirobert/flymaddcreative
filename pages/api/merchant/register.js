@@ -3,6 +3,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
 
+function generateLinkCode(merchantId) {
+    const idPart = merchantId.replace(/-/g, '').substring(0, 6).toUpperCase();
+    const randPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${idPart}${randPart}`;
+}
+
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -72,17 +78,36 @@ export default async function handler(req, res) {
             throw insertError;
         }
 
-        // Wait for trigger to create referral link
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        const { data: referralLink } = await supabase
+        // Check if a DB trigger created a referral link; create one if not
+        let { data: referralLink } = await supabase
             .from('merchant_referral_links')
-            .select('full_link')
+            .select('id, link_code, full_link')
             .eq('merchant_id', merchant.id)
             .maybeSingle();
 
+        if (!referralLink) {
+            const linkCode = generateLinkCode(merchant.id);
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.flymaddcreative.online';
+            const fullLink = `${siteUrl}/registration.html?ref=${linkCode}`;
+
+            const { data: newLink } = await supabase
+                .from('merchant_referral_links')
+                .insert({
+                    merchant_id: merchant.id,
+                    link_code: linkCode,
+                    full_link: fullLink,
+                    is_active: true,
+                    clicks_count: 0,
+                    registrations_count: 0
+                })
+                .select('id, link_code, full_link')
+                .single();
+
+            referralLink = newLink;
+        }
+
         const token = jwt.sign(
-            { merchantId: merchant.id, email: merchant.email },
+            { merchantId: merchant.id, email: merchant.email, type: 'merchant' },
             process.env.JWT_SECRET || 'onedream_secret_2024',
             { expiresIn: '7d' }
         );

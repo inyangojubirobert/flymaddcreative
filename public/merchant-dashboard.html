@@ -111,6 +111,20 @@
             </button>
         </div>
 
+        <!-- Wallet Address Card -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-8 flex flex-wrap justify-between items-center gap-4">
+            <div>
+                <h3 class="text-gray-800 font-semibold mb-1">Payout Wallet Address</h3>
+                <p class="text-sm text-gray-500 mb-2">Required for token withdrawals</p>
+                <div id="walletDisplay" class="font-mono text-sm text-gray-700 break-all">
+                    <span class="text-gray-400 italic">No wallet address set</span>
+                </div>
+            </div>
+            <button onclick="showWalletModal()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition whitespace-nowrap">
+                <span id="walletBtnLabel">Add Wallet</span>
+            </button>
+        </div>
+
         <!-- Referral Links Section -->
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-bold text-gray-800">Your Referral Links</h2>
@@ -147,7 +161,7 @@
     </div>
 
     <!-- Create Link Modal -->
-    <div id="createLinkModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div id="createLinkModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6">
             <h3 class="text-xl font-bold text-gray-800 mb-4">Create New Referral Link</h3>
             <input type="text" id="linkDescription" placeholder="Link description (e.g., Twitter, Website)" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
@@ -158,8 +172,22 @@
         </div>
     </div>
 
+    <!-- Wallet Address Modal -->
+    <div id="walletModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-2">Payout Wallet Address</h3>
+            <p class="text-sm text-gray-500 mb-4">Enter your wallet address for token withdrawals. Supports Ethereum (0x...), TRC20 (T...) and Solana formats.</p>
+            <input type="text" id="walletInput" placeholder="0x... or TRC20 address" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm">
+            <p id="walletError" class="text-red-600 text-sm mb-3 hidden"></p>
+            <div class="flex gap-3">
+                <button onclick="hideWalletModal()" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition">Cancel</button>
+                <button onclick="saveWalletAddress()" id="saveWalletBtn" class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Withdraw Modal -->
-    <div id="withdrawModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+    <div id="withdrawModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6">
             <h3 class="text-xl font-bold text-gray-800 mb-4">Withdraw Tokens</h3>
             <p class="text-gray-600 mb-2">Available balance: <span id="availableBalance" class="font-bold text-amber-600">0</span> tokens</p>
@@ -186,7 +214,7 @@
         function redirectToLogin() {
             localStorage.removeItem('merchantId');
             localStorage.removeItem('merchantToken');
-            window.location.href = '/merchants/login.html';
+            window.location.href = '/merchant-login.html';
         }
 
         async function fetchDashboardData() {
@@ -223,6 +251,19 @@
             document.getElementById('totalTokens').textContent = stats?.total_tokens_earned ?? 0;
             document.getElementById('pendingTokens').textContent = (stats?.pending_tokens ?? 0) + ' tokens pending confirmation';
             document.getElementById('availableBalance').textContent = stats?.available_tokens ?? 0;
+            renderWalletAddress(merchant?.wallet_address);
+        }
+
+        function renderWalletAddress(address) {
+            const display = document.getElementById('walletDisplay');
+            const btnLabel = document.getElementById('walletBtnLabel');
+            if (address) {
+                display.textContent = address;
+                btnLabel.textContent = 'Update Wallet';
+            } else {
+                display.innerHTML = '<span class="text-gray-400 italic">No wallet address set</span>';
+                btnLabel.textContent = 'Add Wallet';
+            }
         }
 
         function renderReferralLinks(links) {
@@ -380,9 +421,81 @@
             });
         }
 
+        function showCreateLinkModal() {
+            document.getElementById('createLinkModal').classList.remove('hidden');
+        }
+        function hideCreateLinkModal() {
+            document.getElementById('createLinkModal').classList.add('hidden');
+        }
+        function showWithdrawModal() {
+            document.getElementById('withdrawModal').classList.remove('hidden');
+        }
+        function hideWithdrawModal() {
+            document.getElementById('withdrawModal').classList.add('hidden');
+        }
+
+        function showWalletModal() {
+            const current = document.getElementById('walletDisplay').textContent.trim();
+            const input = document.getElementById('walletInput');
+            input.value = (current && !current.includes('No wallet')) ? current : '';
+            document.getElementById('walletError').classList.add('hidden');
+            document.getElementById('walletModal').classList.remove('hidden');
+        }
+
+        function hideWalletModal() {
+            document.getElementById('walletModal').classList.add('hidden');
+        }
+
+        async function saveWalletAddress() {
+            const walletAddress = document.getElementById('walletInput').value.trim();
+            const errorEl = document.getElementById('walletError');
+            const btn = document.getElementById('saveWalletBtn');
+
+            if (!walletAddress) {
+                errorEl.textContent = 'Please enter a wallet address.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const ethPattern = /^0x[a-fA-F0-9]{40}$/;
+            const trc20Pattern = /^T[a-zA-Z0-9]{33}$/;
+            const solPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+            if (!ethPattern.test(walletAddress) && !trc20Pattern.test(walletAddress) && !solPattern.test(walletAddress)) {
+                errorEl.textContent = 'Invalid address format. Use Ethereum (0x...), TRC20 (T...) or Solana format.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            errorEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const res = await fetch(`${API_BASE}/${merchantId}`, {
+                    method: 'PATCH',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ wallet_address: walletAddress })
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    throw new Error(data.message || 'Failed to save wallet address');
+                }
+
+                renderWalletAddress(data.merchant.wallet_address);
+                hideWalletModal();
+            } catch (err) {
+                errorEl.textContent = err.message || 'Unable to save. Please try again.';
+                errorEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save';
+            }
+        }
+
         function handleLogout() {
             localStorage.clear();
-            window.location.href = '/merchants/login.html';
+            window.location.href = '/merchant-login.html';
         }
 
         async function refreshDashboard() {

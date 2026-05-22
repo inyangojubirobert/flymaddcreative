@@ -109,21 +109,6 @@
                     />
                 </div>
 
-                <!-- Wallet Address -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Wallet Address <span class="text-gray-400">(Optional)</span>
-                    </label>
-                    <input
-                        id="walletAddress"
-                        name="wallet_address"
-                        type="text"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        placeholder="0x... or USDT TRC 20 address"
-                    />
-                    <p class="text-xs text-gray-500 mt-1">For token withdrawals</p>
-                </div>
-
                 <!-- Password -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -197,8 +182,8 @@
                 <!-- Login Link -->
                 <div class="text-center mt-4">
                     <p class="text-sm text-gray-600">
-                        Already registered? 
-                        <a href="/merchants/login.html" class="text-indigo-600 hover:text-indigo-500 font-medium">
+                        Already registered?
+                        <a href="/merchant-login.html" class="text-indigo-600 hover:text-indigo-500 font-medium">
                             Login here
                         </a>
                     </p>
@@ -275,8 +260,7 @@
     </div>
 
     <script>
-        // API endpoint - using relative URL to work in any environment
-        const API_URL = '/api/merchants/register';
+        const API_URL = '/api/merchant/register';
         // Toggle password visibility
         function togglePassword(inputId, iconId) {
             const input = document.getElementById(inputId);
@@ -338,7 +322,6 @@
             const merchantName = document.getElementById('merchantName').value.trim();
             const email = document.getElementById('email').value.trim();
             const companyName = document.getElementById('companyName').value.trim() || null;
-            const walletAddress = document.getElementById('walletAddress').value.trim() || null;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const terms = document.getElementById('terms').checked;
@@ -363,17 +346,6 @@
             if (password !== confirmPassword) {
                 showError('Passwords do not match');
                 return;
-            }
-            
-            if (walletAddress) {
-                const ethPattern = /^0x[a-fA-F0-9]{40}$/;
-                const trc20Pattern = /^T[a-zA-Z0-9]{33}$/; // TRC20 address pattern
-                const solPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-                
-                if (!ethPattern.test(walletAddress) && !trc20Pattern.test(walletAddress) && !solPattern.test(walletAddress)) {
-                    showError('Please enter a valid wallet address (Ethereum, TRC20, or Solana format)');
-                    return;
-                }
             }
             
             if (!terms) {
@@ -402,11 +374,9 @@
         'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-        // Note: No _route needed, the endpoint is determined by the URL
         merchant_name: merchantName,
         email: email,
         company_name: companyName,
-        wallet_address: walletAddress,
         password: password
     })
 });
@@ -516,10 +486,9 @@
             });
         }
 
-        // Check if API is reachable on page load (optional)
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                const response = await fetch(API_URL, { method: 'HEAD' });
+                const response = await fetch('/api/onedream/health');
                 console.log('API reachable:', response.ok);
             } catch (error) {
                 console.warn('API may not be reachable:', error);
