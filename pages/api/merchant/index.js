@@ -409,9 +409,9 @@ router.post('/:id/links', async (req, res) => {
     }
     
     // Generate unique link code
-    const baseUrl = process.env.BASE_URL || 'https://flymaddcreative.online';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.flymaddcreative.online';
     const uniqueCode = 'MERCH-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-    const fullLink = `${baseUrl}/register?ref=${uniqueCode}`;
+    const fullLink = `${baseUrl}/registration.html?ref=${uniqueCode}`;
     
     // Insert new link
     const { data: link, error } = await supabase
