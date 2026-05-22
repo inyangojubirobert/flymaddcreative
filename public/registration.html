@@ -353,6 +353,9 @@
         let redirectTimer = null;
         let redirectCountdown = 10;
 
+        // Read merchant referral code from URL (?ref=MERCH-XXXXX)
+        const merchantRefCode = new URLSearchParams(window.location.search).get('ref') || null;
+
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('📄 DOM loaded, initializing...');
             
@@ -433,12 +436,12 @@
             setLoading(true);
             
             try {
-                // Use the shared API function with password
                 currentParticipant = await window.SupabaseAPI.registerParticipant(
                     formData.name,
                     formData.email,
                     formData.username,
-                    formData.password
+                    formData.password,
+                    merchantRefCode
                 );
                 
                 console.log('✅ Registration complete:', currentParticipant);

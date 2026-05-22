@@ -28,11 +28,11 @@
     // ========================================
     // AUTH FUNCTIONS (BACKEND)
     // ========================================
-    async function registerParticipant(name, email, username, password) {
+    async function registerParticipant(name, email, username, password, refCode) {
         const response = await fetch(`${API_BASE_URL}/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, username, password })
+            body: JSON.stringify({ name, email, username, password, ref_code: refCode || undefined })
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Registration failed');

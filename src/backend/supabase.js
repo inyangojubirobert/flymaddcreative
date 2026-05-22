@@ -83,27 +83,30 @@ export async function getParticipantByUserCode(userCode) {
 /**
  * Register participant (hashes password before saving)
  */
-export async function registerParticipant(name, email, username, password) {
+export async function registerParticipant(name, email, username, password, referredByMerchantLinkId = null) {
   const db = getDb();
-  // Check if email or username already exists
   const existingEmail = await getParticipantByEmail(email);
   if (existingEmail) throw new Error('Email already registered');
 
   const existingUsername = await getParticipantByUsername(username);
   if (existingUsername) throw new Error('Username already taken');
 
-  // Hash the password
   const passwordHash = bcrypt.hashSync(password, 10);
 
-  // Insert participant
+  const insertData = {
+    name: name.trim(),
+    email: email.toLowerCase().trim(),
+    username: username.toLowerCase().trim(),
+    password_hash: passwordHash
+  };
+
+  if (referredByMerchantLinkId) {
+    insertData.referred_by_merchant_link_id = referredByMerchantLinkId;
+  }
+
   const { data, error } = await db
     .from('participants')
-    .insert({
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      username: username.toLowerCase().trim(),
-      password_hash: passwordHash
-    })
+    .insert(insertData)
     .select('id, name, email, username, user_code, total_votes, current_stage, created_at')
     .single();
 

@@ -123,7 +123,7 @@
                 <!-- Register Link -->
                 <div class="text-center mt-6">
                     <p class="text-sm text-gray-600">
-                        Don't have a merchant account?{' '}
+                        Don't have a merchant account?
                         <a href="merchant-register.html" class="text-indigo-600 hover:text-indigo-500 font-medium">
                             Register here
                         </a>
@@ -237,8 +237,7 @@
             `;
             
             try {
-                // Attempt real login via API
-                const LOGIN_URL = '/api/merchants/login';
+                const LOGIN_URL = '/api/merchant/login';
                 const response = await fetch(LOGIN_URL, {
                     method: 'POST',
                     headers: {
@@ -252,8 +251,8 @@
                 if (response.ok && data.success) {
                     const merchant = data.merchant || {};
 
-                    // Persist merchant session
-                    if (data.token) localStorage.setItem('merchantToken', data.token);
+                    const token = merchant.token || data.token;
+                    if (token) localStorage.setItem('merchantToken', token);
                     if (merchant.id) localStorage.setItem('merchantId', merchant.id);
                     localStorage.setItem('merchantName', merchant.merchant_name || merchant.email || '');
                     localStorage.setItem('merchantEmail', merchant.email || email);
@@ -280,8 +279,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const token = localStorage.getItem('merchantToken');
             if (token) {
-                // Auto-redirect to dashboard if already logged in
-                window.location.href = '/merchants/dashboard.html';
+                window.location.href = '/merchant-dashboard.html';
             }
         });
     </script>
