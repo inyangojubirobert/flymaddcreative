@@ -73,7 +73,9 @@ export default async function handler(req, res) {
             .eq('participant_id', participant.id)
             .order('achieved_at', { ascending: true });
 
-        if (achieveError) throw achieveError;
+        if (achieveError) {
+            console.warn('participant_milestones table not found:', achieveError.message);
+        }
 
         // Get all available milestones to show progress
         const { data: allMilestones, error: milestonesError } = await supabase
@@ -82,7 +84,9 @@ export default async function handler(req, res) {
             .eq('is_active', true)
             .order('vote_threshold', { ascending: true });
 
-        if (milestonesError) throw milestonesError;
+        if (milestonesError) {
+            console.warn('milestones table not found:', milestonesError.message);
+        }
 
         // Calculate which milestones are next
         const achievedIds = new Set(achievements?.map(a => a.milestone?.id) || []);

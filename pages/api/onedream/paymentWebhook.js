@@ -50,14 +50,14 @@ export default async function handler(req, res) {
 
     // Record payment in database
     const { data: payment, error: paymentError } = await supabase
-      .from('onedream_payments')
+      .from('payments')
       .insert({
-        user_id: paymentData.userId,
-        provider: provider,
-        amount_usd: paymentData.amount,
-        provider_payment_id: paymentData.paymentId,
-        status: 'completed',
-        metadata: paymentData.metadata || {}
+        participant_id: paymentData.userId,
+        payment_method: provider,
+        amount: paymentData.amount,
+        currency: 'USD',
+        payment_intent_id: paymentData.paymentId,
+        status: 'completed'
       })
       .select()
       .single();

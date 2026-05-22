@@ -40,7 +40,9 @@ export default async function handler(req, res) {
             .eq('is_active', true)
             .order('vote_threshold', { ascending: true });
 
-        if (milestonesError) throw milestonesError;
+        if (milestonesError) {
+            console.warn('milestones table not found:', milestonesError.message);
+        }
 
         // ========================================
         // 3. CALCULATE MILESTONE PROGRESS

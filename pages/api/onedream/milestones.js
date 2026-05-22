@@ -25,10 +25,13 @@ export default async function handler(req, res) {
             .eq('is_active', true)
             .order('vote_threshold', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+            // milestones table doesn't exist yet — return empty list
+            console.warn('milestones table not found:', error.message);
+            return res.status(200).json({ success: true, milestones: [], count: 0 });
+        }
 
-        // Transform data for frontend use
-        const milestones = data.map(m => ({
+        const milestones = (data || []).map(m => ({
             id: m.id,
             name: m.name,
             description: m.description,

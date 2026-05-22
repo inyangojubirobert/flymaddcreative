@@ -23,17 +23,10 @@ export default async function handler(req, res) {
             return res.status(404).json({ error: 'Participant not found' });
         }
         
-        // Get referral link
-        const { data: referralLink } = await supabase
-            .from('referral_links')
-            .select('user_vote_link')
-            .eq('participant_id', data.id)
-            .single();
-        
-        res.status(200).json({ 
+        res.status(200).json({
             participant: {
                 ...data,
-                voteLink: referralLink?.user_vote_link || `https://www.flymaddcreative.online/vote.html?user=${data.username}`
+                voteLink: `https://www.flymaddcreative.online/vote.html?user=${data.username}`
             }
         });
     } catch (err) {
