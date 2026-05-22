@@ -137,30 +137,6 @@ export async function verifyParticipantPassword(email, password) {
 }
 
 /**
- * Get referral link for participant
- */
-export async function getReferralLink(participantId) {
-  try {
-    const db = getDb();
-    const { data, error } = await db
-      .from('referral_links')
-      .select('user_vote_link')
-      .eq('participant_id', participantId)
-      .single();
-
-    if (error) {
-      // Table might not exist or no record found - return null instead of throwing
-      console.warn('getReferralLink warning:', error.message);
-      return null;
-    }
-    return data?.user_vote_link || null;
-  } catch (err) {
-    console.warn('getReferralLink error:', err.message);
-    return null;
-  }
-}
-
-/**
  * Get leaderboard
  */
 export async function getLeaderboard(limit = 50) {

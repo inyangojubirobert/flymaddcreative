@@ -2,7 +2,7 @@
 // Handles authentication for onedream_users table
 // Returns JWT token for session management
 
-import { getParticipantWithPassword, getReferralLink } from '../../../src/backend/supabase.js';
+import { getParticipantWithPassword } from '../../../src/backend/supabase.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -41,8 +41,7 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const voteLink = await getReferralLink(user.id)
-            || `https://www.flymaddcreative.online/vote.html?user=${user.username}`;
+        const voteLink = `https://www.flymaddcreative.online/vote.html?user=${user.username}`;
 
         // Generate JWT token
         const token = jwt.sign(
