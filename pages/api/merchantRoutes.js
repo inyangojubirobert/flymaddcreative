@@ -1,7 +1,10 @@
 // pages/api/merchantRoutes.js
 import { createRouter } from 'next-connect';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+
+const jwtSecret = process.env.JWT_SECRET || 'onedream_secret_2024';
 
 // Initialize Supabase admin client (server-side only)
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -250,20 +253,21 @@ router.post('/login', async (req, res) => {
 
         // Remove password hash from response
         const { password_hash, ...safeMerchant } = merchant;
-        
-        // Generate token (optional)
-        // const token = jwt.sign(
-        //     { id: merchant.id, email: merchant.email, type: 'merchant' },
-        //     process.env.JWT_SECRET,
-        //     { expiresIn: '7d' }
-        // );
-        
+
+        const token = jwt.sign(
+            { id: merchant.id, email: merchant.email, type: 'merchant' },
+            jwtSecret,
+            { expiresIn: '7d' }
+        );
+
         res.json({
             success: true,
             message: 'Login successful',
-            merchant: safeMerchant,
+            merchant: {
+                ...safeMerchant,
+                token
+            },
             referral_links: referralLinks || []
-            // token: token // Uncomment if using JWT
         });
         
     } catch (error) {
