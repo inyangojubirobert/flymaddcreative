@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('main:', d.get\\('main'\\)\\); print\\('exports:', d.get\\('exports'\\)\\); print\\('version:', d.get\\('version'\\)\\)\")",
+      "Bash(New-Item -ItemType Directory -Force \"C:\\\\Users\\\\DELL\\\\flymaddcreative\\\\pages\\\\api\\\\onedream\\\\videos\")",
+      "Bash(Out-Null)"
+    ]
+  }
+}

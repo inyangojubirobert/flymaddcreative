@@ -208,6 +208,29 @@
                     </div>
                 </div>
 
+                <!-- ── About This Participant (loaded dynamically) ── -->
+                <div id="participantProfile" class="hidden glassmorphism rounded-2xl p-8 mb-8">
+                    <h3 class="text-xl font-bold mb-5 flex items-center gap-2">🎭 About This Participant</h3>
+
+                    <!-- Media (video / photo / YouTube embed) -->
+                    <div id="voteProfileMedia" class="hidden mb-6">
+                        <div id="voteMediaPlayer" class="rounded-xl overflow-hidden bg-black mb-3" style="aspect-ratio:16/9;"></div>
+                        <p class="font-semibold text-sm" id="voteMediaTitle"></p>
+                    </div>
+
+                    <!-- Bio -->
+                    <div id="voteProfileBio" class="hidden mb-5">
+                        <h4 class="text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">About</h4>
+                        <p class="text-white/90 text-sm leading-relaxed whitespace-pre-line" id="voteProfileBioText"></p>
+                    </div>
+
+                    <!-- Contact (only when contact_is_public = true) -->
+                    <div id="voteProfileContact" class="hidden">
+                        <h4 class="text-xs font-semibold text-white/50 uppercase tracking-widest mb-3">Contact</h4>
+                        <div id="voteContactLinks" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
                 <!-- Voting Section -->
                 <div class="glassmorphism rounded-2xl p-8 mb-8">
                     <div class="text-center">
@@ -378,6 +401,105 @@ window.__publicConfigReady = (async function () {
      APP MODULES (STRICT ORDER)
 ======================================== -->
 <script src="/js/supabase-config.js"></script>
+
+<!-- ── Participant Profile Section ── -->
+<script>
+(function () {
+    // Poll until vote.js sets window.currentParticipant, then load their profile
+    function waitForParticipant() {
+        if (window.currentParticipant?.username) {
+            loadVoteProfile(window.currentParticipant.username);
+        } else {
+            setTimeout(waitForParticipant, 250);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', waitForParticipant);
+
+    function ytId(url) {
+        if (!url) return null;
+        const ps = [/youtube\.com\/watch\?v=([^&\s]+)/, /youtu\.be\/([^?/\s]+)/, /youtube\.com\/embed\/([^?/\s]+)/];
+        for (const p of ps) { const m = url.match(p); if (m) return m[1]; }
+        return null;
+    }
+
+    async function loadVoteProfile(username) {
+        if (!window.SupabaseAPI?.getParticipantProfile) return;
+        try {
+            const profile = await window.SupabaseAPI.getParticipantProfile(username, true);
+            if (!profile) return;
+
+            const sectionEl = document.getElementById('participantProfile');
+            let hasAny = false;
+
+            // ── Media ──────────────────────────────────────────────────
+            if (profile.media_url) {
+                hasAny = true;
+                const mediaEl  = document.getElementById('voteProfileMedia');
+                const playerEl = document.getElementById('voteMediaPlayer');
+                const titleEl  = document.getElementById('voteMediaTitle');
+
+                const id = ytId(profile.media_url);
+                if (id) {
+                    playerEl.innerHTML = `<iframe class="w-full h-full"
+                        src="https://www.youtube.com/embed/${id}"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>`;
+                } else if (profile.media_type === 'photo_upload') {
+                    playerEl.style.aspectRatio = 'auto';
+                    playerEl.innerHTML = `<img src="${profile.media_url}" class="w-full rounded-xl object-contain max-h-72" alt="Profile photo">`;
+                } else {
+                    playerEl.innerHTML = `<video class="w-full h-full" controls preload="metadata">
+                        <source src="${profile.media_url}">
+                        <p class="text-white/60 p-4 text-sm">
+                            Video cannot play inline.
+                            <a href="${profile.media_url}" target="_blank" class="underline">Open link</a>
+                        </p>
+                    </video>`;
+                }
+
+                if (profile.media_title) titleEl.textContent = profile.media_title;
+                mediaEl.classList.remove('hidden');
+            }
+
+            // ── Bio ────────────────────────────────────────────────────
+            if (profile.bio?.trim()) {
+                hasAny = true;
+                document.getElementById('voteProfileBioText').textContent = profile.bio;
+                document.getElementById('voteProfileBio').classList.remove('hidden');
+            }
+
+            // ── Contact (only if public) ───────────────────────────────
+            if (profile.contact_is_public) {
+                const items = [];
+                if (profile.phone)         items.push({ icon: '📞', label: 'Call',      href: `tel:${profile.phone}`,                     text: profile.phone });
+                if (profile.whatsapp)      items.push({ icon: '💬', label: 'WhatsApp',  href: `https://wa.me/${profile.whatsapp.replace(/\D/g,'')}`, text: 'WhatsApp' });
+                if (profile.contact_email) items.push({ icon: '✉️', label: 'Email',     href: `mailto:${profile.contact_email}`,            text: profile.contact_email });
+                if (profile.instagram)     items.push({ icon: '📸', label: 'Instagram', href: profile.instagram.startsWith('http') ? profile.instagram : `https://instagram.com/${profile.instagram.replace('@','')}`, text: profile.instagram });
+                if (profile.facebook)      items.push({ icon: '📘', label: 'Facebook',  href: profile.facebook.startsWith('http') ? profile.facebook : `https://facebook.com/${profile.facebook}`, text: profile.facebook });
+                if (profile.twitter)       items.push({ icon: '🐦', label: 'Twitter',   href: profile.twitter.startsWith('http') ? profile.twitter : `https://twitter.com/${profile.twitter.replace('@','')}`, text: profile.twitter });
+                if (profile.website)       items.push({ icon: '🌐', label: 'Website',   href: profile.website,                              text: 'Website' });
+
+                if (items.length) {
+                    hasAny = true;
+                    const linksEl = document.getElementById('voteContactLinks');
+                    linksEl.innerHTML = items.map(it =>
+                        `<a href="${it.href}" target="_blank" rel="noopener noreferrer"
+                            class="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg text-sm transition-colors">
+                            <span>${it.icon}</span><span class="truncate max-w-[160px]">${it.text}</span>
+                         </a>`
+                    ).join('');
+                    document.getElementById('voteProfileContact').classList.remove('hidden');
+                }
+            }
+
+            if (hasAny) sectionEl.classList.remove('hidden');
+        } catch (err) {
+            console.warn('Profile load error:', err);
+        }
+    }
+})();
+</script>
 
 <script src="/js/paystack-payments.js"></script>
 <script src="/js/bsc-payments.js"></script> <!-- 🆕 Dedicated BSC USDT Payment System - MUST load first -->

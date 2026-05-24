@@ -131,6 +131,47 @@
     }
 
     // ========================================
+    // PARTICIPANT PROFILE API
+    // ========================================
+
+    // Public fetch — strips private contact if contact_is_public = false
+    async function getParticipantProfile(username, isPublic = false) {
+        const qs = isPublic ? '?public=true' : '';
+        const res = await fetch(`${API_BASE_URL}/profile/${encodeURIComponent(username)}${qs}`);
+        if (!res.ok) return null;
+        return (await res.json()).profile || null;
+    }
+
+    // Authenticated save — upserts bio / media / contact in one call
+    async function saveParticipantProfile(username, profileData, token) {
+        const res = await fetch(`${API_BASE_URL}/profile/${encodeURIComponent(username)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(profileData)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to save profile');
+        return data.profile;
+    }
+
+    // Authenticated media upload (video or image)
+    async function uploadProfileMedia(file, token) {
+        const formData = new FormData();
+        formData.append('media', file);
+        const res = await fetch(`${API_BASE_URL}/profile/upload`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        return data; // { media_type, storage_path, public_url, bucket }
+    }
+
+    // ========================================
     // SUPABASE INITIALIZATION (STATLESS + SAFE)
     // ========================================
     function initializeSupabase() {
@@ -242,7 +283,12 @@
         // Direct Supabase access (for votes, leaderboard, progress)
         getParticipantsFromSupabase,
         fetchParticipantByUsername,
-        fetchParticipantByUserCode
+        fetchParticipantByUserCode,
+
+        // Participant profile (bio, media, contact)
+        getParticipantProfile,
+        saveParticipantProfile,
+        uploadProfileMedia,
     };
 
     console.log('✅ One Dream API + Supabase Client loaded');

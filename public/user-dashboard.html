@@ -278,6 +278,193 @@
             </div>
         </div>
 
+        <!-- ═══════════════════════════════════════════════════════════
+             MY PUBLIC PROFILE
+             ═══════════════════════════════════════════════════════════ -->
+        <div class="dashboard-card rounded-2xl p-6 mb-8">
+            <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xl font-bold flex items-center gap-2">🎭 My Public Profile</h2>
+                <span id="profileActiveBadge" class="hidden text-xs px-2 py-1 rounded-full bg-green-900/50 text-green-300 border border-green-700/50">✓ Active</span>
+            </div>
+            <p class="text-slate-400 text-sm mb-5">What voters see on your vote page — media, bio, and contact info.</p>
+
+            <!-- Loading spinner -->
+            <div id="profileLoading" class="text-center py-6">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-400 mx-auto"></div>
+            </div>
+
+            <!-- Profile content (revealed after load) -->
+            <div id="profileContent" class="hidden">
+
+                <!-- ── Compact preview (shown when profile has any content) ── -->
+                <div id="profilePreview" class="hidden mb-5 bg-slate-800/40 rounded-xl p-4 border border-slate-700/50">
+                    <div class="flex items-start gap-4">
+                        <div id="previewThumb" class="w-16 h-16 rounded-xl bg-slate-700 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden"></div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-sm truncate" id="previewMediaTitle">—</p>
+                            <p class="text-xs text-slate-400 mt-1 line-clamp-2" id="previewBioSnippet">No bio yet.</p>
+                            <div class="flex flex-wrap gap-3 mt-2">
+                                <span id="previewContactStatus" class="text-xs text-slate-500">Contact hidden</span>
+                                <span id="previewMediaStatus"  class="text-xs text-slate-500">No media</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Tab bar ── -->
+                <div class="flex rounded-lg overflow-hidden mb-5 bg-slate-800/50 border border-slate-700/50">
+                    <button id="tabMediaBtn"   onclick="switchProfileTab('media')"
+                            class="flex-1 py-2 px-3 text-sm font-medium transition-colors">🎬 Media</button>
+                    <button id="tabBioBtn"     onclick="switchProfileTab('bio')"
+                            class="flex-1 py-2 px-3 text-sm font-medium transition-colors">📝 About Me</button>
+                    <button id="tabContactBtn" onclick="switchProfileTab('contact')"
+                            class="flex-1 py-2 px-3 text-sm font-medium transition-colors">📞 Contact</button>
+                </div>
+
+                <!-- ══════════════ TAB: MEDIA ══════════════ -->
+                <div id="tabMedia">
+                    <!-- Current media preview -->
+                    <div id="currentMediaWrap" class="hidden rounded-xl overflow-hidden bg-black mb-4" style="aspect-ratio:16/9;"></div>
+
+                    <!-- Source type toggle -->
+                    <div class="flex rounded-lg overflow-hidden mb-4 bg-slate-700/50">
+                        <button id="srcUploadBtn" onclick="switchMediaSrc('upload')"
+                                class="flex-1 py-2 px-3 text-sm font-medium transition-colors">📁 Upload File</button>
+                        <button id="srcLinkBtn"   onclick="switchMediaSrc('link')"
+                                class="flex-1 py-2 px-3 text-sm font-medium transition-colors">🔗 YouTube / Link</button>
+                    </div>
+
+                    <!-- File drop zone -->
+                    <div id="mediaUploadArea" class="mb-4">
+                        <label for="mediaFileInput" id="mediaDropZone"
+                               class="block cursor-pointer border-2 border-dashed border-slate-600 hover:border-yellow-500 rounded-xl p-6 text-center transition-colors">
+                            <div class="text-3xl mb-2">📎</div>
+                            <p class="text-sm text-slate-300 mb-1">Drag &amp; drop a video or photo here</p>
+                            <p class="text-xs text-slate-500">MP4 · WebM · MOV · AVI · JPG · PNG · GIF · WebP &nbsp;|&nbsp; Video max 100 MB · Image max 10 MB</p>
+                            <input type="file" id="mediaFileInput"
+                                   accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo,image/jpeg,image/png,image/gif,image/webp"
+                                   class="hidden">
+                        </label>
+                        <div id="mediaFileInfo" class="hidden mt-3 bg-slate-800/50 rounded-lg p-3 flex items-center gap-3">
+                            <span class="text-2xl" id="mediaFileIcon">📎</span>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium truncate" id="mediaFileName"></p>
+                                <p class="text-xs text-slate-400"          id="mediaFileSize"></p>
+                            </div>
+                            <button onclick="clearMediaFile()" class="text-red-400 hover:text-red-300 text-sm px-1">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- External / YouTube link -->
+                    <div id="mediaLinkArea" class="hidden mb-4">
+                        <input type="url" id="mediaLinkInput"
+                               placeholder="https://youtube.com/watch?v=... or any video/image URL"
+                               class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors">
+                        <div id="mediaLinkDetect" class="hidden mt-2 text-xs px-1"></div>
+                    </div>
+
+                    <!-- Title -->
+                    <input type="text" id="mediaTitleInput" maxlength="100"
+                           placeholder="Title — e.g. My Talent Showreel 2025"
+                           class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors mb-4">
+
+                    <!-- Upload progress -->
+                    <div id="mediaUploadProgress" class="hidden mb-4">
+                        <div class="flex justify-between text-xs text-slate-400 mb-1">
+                            <span id="progressLabel">Uploading…</span>
+                            <span id="progressPct">0%</span>
+                        </div>
+                        <div class="h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div id="progressBar" class="h-full bg-yellow-500 rounded-full transition-all duration-300" style="width:0%"></div>
+                        </div>
+                    </div>
+
+                    <button onclick="saveMedia()" id="saveMediaBtn"
+                            class="w-full bg-yellow-600 hover:bg-yellow-500 text-black font-semibold py-3 rounded-lg transition-colors">
+                        💾 Save Media
+                    </button>
+                    <div id="mediaSaveMsg" class="hidden mt-3 p-3 rounded-lg text-sm text-center"></div>
+                </div>
+
+                <!-- ══════════════ TAB: BIO ══════════════ -->
+                <div id="tabBio" class="hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="text-sm font-medium text-slate-300">Your Bio</label>
+                        <span class="text-xs text-slate-500"><span id="bioCharCount">0</span> / 500</span>
+                    </div>
+                    <textarea id="bioInput" rows="6" maxlength="500"
+                              placeholder="Tell voters about yourself — your talent, background, dreams, and why you deserve to win…"
+                              class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors resize-none mb-4"></textarea>
+                    <button onclick="saveBio()" id="saveBioBtn"
+                            class="w-full bg-yellow-600 hover:bg-yellow-500 text-black font-semibold py-3 rounded-lg transition-colors">
+                        💾 Save Bio
+                    </button>
+                    <div id="bioSaveMsg" class="hidden mt-3 p-3 rounded-lg text-sm text-center"></div>
+                </div>
+
+                <!-- ══════════════ TAB: CONTACT ══════════════ -->
+                <div id="tabContact" class="hidden">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">📞 Phone</label>
+                            <input type="tel" id="ctPhone" placeholder="+1 234 567 8900"
+                                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">✉️ Contact Email</label>
+                            <input type="email" id="ctEmail" placeholder="you@example.com"
+                                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">💬 WhatsApp</label>
+                            <input type="tel" id="ctWhatsapp" placeholder="+1 234 567 8900"
+                                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">📸 Instagram</label>
+                            <input type="text" id="ctInstagram" placeholder="@yourhandle"
+                                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">📘 Facebook</label>
+                            <input type="text" id="ctFacebook" placeholder="facebook.com/you"
+                                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">🐦 Twitter / X</label>
+                            <input type="text" id="ctTwitter" placeholder="@yourhandle"
+                                   class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors">
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs text-slate-400 mb-1">🌐 Website</label>
+                        <input type="url" id="ctWebsite" placeholder="https://yourwebsite.com"
+                               class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors">
+                    </div>
+
+                    <!-- Public visibility toggle -->
+                    <label class="flex items-start gap-3 cursor-pointer mb-5 p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
+                        <div class="relative flex-shrink-0 mt-0.5">
+                            <input type="checkbox" id="ctPublicToggle" class="sr-only peer">
+                            <div class="w-10 h-6 bg-slate-600 peer-checked:bg-green-600 rounded-full transition-colors"></div>
+                            <div class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4 pointer-events-none"></div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium">Make contact info public</p>
+                            <p class="text-xs text-slate-400 mt-0.5">When enabled, voters can see your details on your vote page</p>
+                        </div>
+                    </label>
+
+                    <button onclick="saveContact()" id="saveContactBtn"
+                            class="w-full bg-yellow-600 hover:bg-yellow-500 text-black font-semibold py-3 rounded-lg transition-colors">
+                        💾 Save Contact Info
+                    </button>
+                    <div id="contactSaveMsg" class="hidden mt-3 p-3 rounded-lg text-sm text-center"></div>
+                </div>
+
+            </div><!-- /profileContent -->
+        </div>
+
         <!-- Quick Actions -->
         <div class="flex flex-col sm:flex-row gap-4">
             <a href="leadershipBoard.html" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-4 px-6 rounded-xl transition-colors text-center">
@@ -396,6 +583,9 @@
             // Vote link
             const voteLink = `https://www.flymaddcreative.online/vote.html?user=${user.username}`;
             document.getElementById('voteLink').textContent = voteLink;
+
+            // Load public profile section
+            loadProfile();
         }
 
         async function fetchUserRank() {
@@ -487,6 +677,298 @@
                 <p class="text-slate-400">${message}</p>
             `;
         }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🎭 MY PUBLIC PROFILE
+        // ═══════════════════════════════════════════════════════════════════
+        let currentProfile = null;
+        let currentProfileTab = 'media';
+        let currentMediaSrc  = 'upload';
+        let selectedMediaFile = null;
+
+        // ── Load ────────────────────────────────────────────────────────────
+        async function loadProfile() {
+            if (!currentUser) return;
+            try {
+                currentProfile = await window.SupabaseAPI.getParticipantProfile(currentUser.username);
+            } catch (_) {
+                currentProfile = null;
+            }
+            document.getElementById('profileLoading').classList.add('hidden');
+            document.getElementById('profileContent').classList.remove('hidden');
+            applyProfileToUI(currentProfile);
+            switchProfileTab('media'); // default tab
+        }
+
+        function applyProfileToUI(p) {
+            if (!p) return;
+
+            // Preview bar
+            const hasContent = p.bio || p.media_type || p.phone || p.contact_email || p.instagram;
+            if (hasContent) {
+                document.getElementById('profilePreview').classList.remove('hidden');
+                document.getElementById('profileActiveBadge').classList.remove('hidden');
+            }
+
+            // Thumb
+            const thumb = document.getElementById('previewThumb');
+            if (p.media_type === 'photo_upload' && p.media_url) {
+                thumb.innerHTML = `<img src="${p.media_url}" class="w-full h-full object-cover" alt="thumb">`;
+            } else if (p.media_type) {
+                thumb.textContent = p.media_type.includes('video') || p.media_type === 'youtube' ? '🎬' : '🖼️';
+            } else {
+                thumb.textContent = '🎭';
+            }
+
+            document.getElementById('previewMediaTitle').textContent = p.media_title || (p.bio ? 'Bio set' : '—');
+            document.getElementById('previewBioSnippet').textContent  = p.bio ? p.bio.slice(0, 120) + (p.bio.length > 120 ? '…' : '') : 'No bio yet.';
+            document.getElementById('previewContactStatus').textContent = p.contact_is_public ? '✅ Contact public' : '🔒 Contact hidden';
+            document.getElementById('previewMediaStatus').textContent   = p.media_type ? `Media: ${p.media_type.replace('_', ' ')}` : 'No media';
+
+            // Media tab
+            if (p.media_title)  document.getElementById('mediaTitleInput').value = p.media_title;
+            if (p.media_url && (p.media_type === 'youtube' || p.media_type === 'external')) {
+                switchMediaSrc('link');
+                document.getElementById('mediaLinkInput').value = p.media_url;
+                updateLinkDetect(p.media_url);
+            }
+            renderCurrentMedia(p);
+
+            // Bio tab
+            if (p.bio) {
+                document.getElementById('bioInput').value = p.bio;
+                document.getElementById('bioCharCount').textContent = p.bio.length;
+            }
+
+            // Contact tab
+            if (p.phone)         document.getElementById('ctPhone').value     = p.phone;
+            if (p.contact_email) document.getElementById('ctEmail').value     = p.contact_email;
+            if (p.whatsapp)      document.getElementById('ctWhatsapp').value  = p.whatsapp;
+            if (p.instagram)     document.getElementById('ctInstagram').value = p.instagram;
+            if (p.facebook)      document.getElementById('ctFacebook').value  = p.facebook;
+            if (p.twitter)       document.getElementById('ctTwitter').value   = p.twitter;
+            if (p.website)       document.getElementById('ctWebsite').value   = p.website;
+            document.getElementById('ctPublicToggle').checked = !!p.contact_is_public;
+        }
+
+        function renderCurrentMedia(p) {
+            const wrap = document.getElementById('currentMediaWrap');
+            if (!p || !p.media_url) { wrap.classList.add('hidden'); return; }
+
+            wrap.classList.remove('hidden');
+            const ytId = extractYouTubeId(p.media_url);
+            if (ytId) {
+                wrap.innerHTML = `<iframe class="w-full h-full" src="https://www.youtube.com/embed/${ytId}"
+                    frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+            } else if (p.media_type === 'photo_upload') {
+                wrap.style.aspectRatio = 'auto';
+                wrap.innerHTML = `<img src="${p.media_url}" class="w-full rounded-xl object-contain max-h-64" alt="Profile photo">`;
+            } else {
+                wrap.innerHTML = `<video class="w-full h-full" controls preload="metadata">
+                    <source src="${p.media_url}">
+                </video>`;
+            }
+        }
+
+        // ── Tabs ────────────────────────────────────────────────────────────
+        function switchProfileTab(tab) {
+            currentProfileTab = tab;
+            ['media', 'bio', 'contact'].forEach(t => {
+                const content = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+                const btn     = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1) + 'Btn');
+                const active  = t === tab;
+                content?.classList.toggle('hidden', !active);
+                if (btn) {
+                    btn.className = `flex-1 py-2 px-3 text-sm font-medium transition-colors ${active ? 'bg-yellow-600 text-black' : 'text-slate-400 hover:text-white'}`;
+                }
+            });
+        }
+
+        function switchMediaSrc(src) {
+            currentMediaSrc = src;
+            document.getElementById('mediaUploadArea').classList.toggle('hidden',  src !== 'upload');
+            document.getElementById('mediaLinkArea').classList.toggle('hidden',    src !== 'link');
+            document.getElementById('srcUploadBtn').className =
+                `flex-1 py-2 px-3 text-sm font-medium transition-colors ${src === 'upload' ? 'bg-slate-500 text-white' : 'text-slate-400 hover:text-white'}`;
+            document.getElementById('srcLinkBtn').className =
+                `flex-1 py-2 px-3 text-sm font-medium transition-colors ${src === 'link' ? 'bg-slate-500 text-white' : 'text-slate-400 hover:text-white'}`;
+        }
+
+        function clearMediaFile() {
+            selectedMediaFile = null;
+            document.getElementById('mediaFileInput').value = '';
+            document.getElementById('mediaFileInfo').classList.add('hidden');
+        }
+
+        // ── YouTube detection ───────────────────────────────────────────────
+        function extractYouTubeId(url) {
+            if (!url) return null;
+            const patterns = [/youtube\.com\/watch\?v=([^&\s]+)/, /youtu\.be\/([^?/\s]+)/, /youtube\.com\/embed\/([^?/\s]+)/];
+            for (const p of patterns) { const m = url.match(p); if (m) return m[1]; }
+            return null;
+        }
+
+        function updateLinkDetect(url) {
+            const el = document.getElementById('mediaLinkDetect');
+            if (!url?.trim()) { el.classList.add('hidden'); return; }
+            const isYT = !!extractYouTubeId(url);
+            el.textContent = isYT ? '✅ YouTube video detected — will embed automatically' : '🔗 External link — will open in player';
+            el.className   = `mt-2 text-xs px-1 ${isYT ? 'text-green-400' : 'text-slate-400'}`;
+            el.classList.remove('hidden');
+        }
+
+        // ── Save: Media ─────────────────────────────────────────────────────
+        async function saveMedia() {
+            const token = localStorage.getItem('onedream_token');
+            if (!token) { showSaveMsg('mediaSaveMsg', 'You must be logged in.', 'error'); return; }
+
+            const title = document.getElementById('mediaTitleInput').value.trim();
+            const btn   = document.getElementById('saveMediaBtn');
+            btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+            try {
+                let mediaPayload = {};
+
+                if (currentMediaSrc === 'upload') {
+                    if (!selectedMediaFile) {
+                        showSaveMsg('mediaSaveMsg', 'Please select a file first.', 'error'); return;
+                    }
+                    document.getElementById('mediaUploadProgress').classList.remove('hidden');
+                    simulateProgress('progressBar', 'progressPct');
+                    const uploaded = await window.SupabaseAPI.uploadProfileMedia(selectedMediaFile, token);
+                    document.getElementById('progressBar').style.width = '100%';
+                    document.getElementById('progressPct').textContent = '100%';
+                    mediaPayload = { media_type: uploaded.media_type, media_url: uploaded.public_url, storage_path: uploaded.storage_path };
+                } else {
+                    const url = document.getElementById('mediaLinkInput').value.trim();
+                    if (!url) { showSaveMsg('mediaSaveMsg', 'Please enter a URL.', 'error'); return; }
+                    const type = extractYouTubeId(url) ? 'youtube' : 'external';
+                    mediaPayload = { media_type: type, media_url: url, storage_path: null };
+                }
+
+                // Merge with existing profile data so other fields are preserved
+                const existing = currentProfile || {};
+                currentProfile = await window.SupabaseAPI.saveParticipantProfile(currentUser.username, {
+                    ...existing,
+                    ...mediaPayload,
+                    media_title: title,
+                }, token);
+
+                applyProfileToUI(currentProfile);
+                renderCurrentMedia(currentProfile);
+                showSaveMsg('mediaSaveMsg', 'Media saved! ✓', 'success');
+            } catch (err) {
+                showSaveMsg('mediaSaveMsg', err.message || 'Save failed.', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = '💾 Save Media';
+                document.getElementById('mediaUploadProgress').classList.add('hidden');
+                document.getElementById('progressBar').style.width = '0%';
+            }
+        }
+
+        // ── Save: Bio ───────────────────────────────────────────────────────
+        async function saveBio() {
+            const token = localStorage.getItem('onedream_token');
+            if (!token) { showSaveMsg('bioSaveMsg', 'You must be logged in.', 'error'); return; }
+            const bio = document.getElementById('bioInput').value.trim();
+            const btn = document.getElementById('saveBioBtn');
+            btn.disabled = true; btn.textContent = '⏳ Saving…';
+            try {
+                const existing = currentProfile || {};
+                currentProfile = await window.SupabaseAPI.saveParticipantProfile(currentUser.username,
+                    { ...existing, bio }, token);
+                applyProfileToUI(currentProfile);
+                showSaveMsg('bioSaveMsg', 'Bio saved! ✓', 'success');
+            } catch (err) {
+                showSaveMsg('bioSaveMsg', err.message || 'Save failed.', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = '💾 Save Bio';
+            }
+        }
+
+        // ── Save: Contact ───────────────────────────────────────────────────
+        async function saveContact() {
+            const token = localStorage.getItem('onedream_token');
+            if (!token) { showSaveMsg('contactSaveMsg', 'You must be logged in.', 'error'); return; }
+            const btn = document.getElementById('saveContactBtn');
+            btn.disabled = true; btn.textContent = '⏳ Saving…';
+            try {
+                const existing = currentProfile || {};
+                currentProfile = await window.SupabaseAPI.saveParticipantProfile(currentUser.username, {
+                    ...existing,
+                    phone:            document.getElementById('ctPhone').value.trim(),
+                    contact_email:    document.getElementById('ctEmail').value.trim(),
+                    whatsapp:         document.getElementById('ctWhatsapp').value.trim(),
+                    instagram:        document.getElementById('ctInstagram').value.trim(),
+                    facebook:         document.getElementById('ctFacebook').value.trim(),
+                    twitter:          document.getElementById('ctTwitter').value.trim(),
+                    website:          document.getElementById('ctWebsite').value.trim(),
+                    contact_is_public: document.getElementById('ctPublicToggle').checked,
+                }, token);
+                applyProfileToUI(currentProfile);
+                showSaveMsg('contactSaveMsg', 'Contact info saved! ✓', 'success');
+            } catch (err) {
+                showSaveMsg('contactSaveMsg', err.message || 'Save failed.', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = '💾 Save Contact Info';
+            }
+        }
+
+        // ── Helpers ─────────────────────────────────────────────────────────
+        function showSaveMsg(elId, msg, type) {
+            const el = document.getElementById(elId);
+            el.textContent = msg;
+            el.className = `mt-3 p-3 rounded-lg text-sm text-center ${type === 'success'
+                ? 'bg-green-900/50 text-green-300 border border-green-700/50'
+                : 'bg-red-900/50 text-red-300 border border-red-700/50'}`;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 5000);
+        }
+
+        function simulateProgress(barId, pctId) {
+            let v = 0;
+            const iv = setInterval(() => {
+                v = Math.min(v + Math.random() * 18, 88);
+                document.getElementById(barId).style.width = v + '%';
+                document.getElementById(pctId).textContent = Math.round(v) + '%';
+                if (v >= 88) clearInterval(iv);
+            }, 280);
+        }
+
+        // ── Wire up file input + drag-drop (after DOM ready) ────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileInput = document.getElementById('mediaFileInput');
+            fileInput?.addEventListener('change', (e) => {
+                const f = e.target.files[0];
+                if (!f) return;
+                selectedMediaFile = f;
+                document.getElementById('mediaFileIcon').textContent = f.type.startsWith('video/') ? '🎬' : '🖼️';
+                document.getElementById('mediaFileName').textContent = f.name;
+                document.getElementById('mediaFileSize').textContent = (f.size / 1024 / 1024).toFixed(1) + ' MB';
+                document.getElementById('mediaFileInfo').classList.remove('hidden');
+            });
+
+            const dropZone = document.getElementById('mediaDropZone');
+            dropZone?.addEventListener('dragover',  (e) => { e.preventDefault(); dropZone.classList.add('border-yellow-400','bg-yellow-900/10'); });
+            dropZone?.addEventListener('dragleave', ()  => { dropZone.classList.remove('border-yellow-400','bg-yellow-900/10'); });
+            dropZone?.addEventListener('drop',      (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-yellow-400','bg-yellow-900/10');
+                const f = e.dataTransfer.files[0];
+                if (f && (f.type.startsWith('video/') || f.type.startsWith('image/'))) {
+                    selectedMediaFile = f;
+                    document.getElementById('mediaFileIcon').textContent = f.type.startsWith('video/') ? '🎬' : '🖼️';
+                    document.getElementById('mediaFileName').textContent = f.name;
+                    document.getElementById('mediaFileSize').textContent = (f.size / 1024 / 1024).toFixed(1) + ' MB';
+                    document.getElementById('mediaFileInfo').classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('mediaLinkInput')?.addEventListener('input', (e) => updateLinkDetect(e.target.value));
+            document.getElementById('bioInput')?.addEventListener('input', (e) => {
+                document.getElementById('bioCharCount').textContent = e.target.value.length;
+            });
+        });
     </script>
 </body>
 </html>
