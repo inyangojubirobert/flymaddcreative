@@ -1,157 +1,100 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Schema — One Dream Initiative</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 24px; line-height: 1.6; }
-        h1  { color: #fbbf24; margin-bottom: 4px; }
-        h2  { color: #a78bfa; margin-top: 2.5rem; margin-bottom: .5rem; border-bottom: 1px solid #1e293b; padding-bottom: 6px; }
-        h3  { color: #7dd3fc; margin-top: 1.5rem; }
-        pre { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 13px; line-height: 1.7; }
-        code { font-family: 'Cascadia Code', 'Fira Code', monospace; }
-        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
-        th  { background: #1e293b; padding: 10px 14px; text-align: left; color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
-        td  { padding: 9px 14px; border-bottom: 1px solid #1e293b; font-size: 13px; }
-        tr:hover td { background: #1e293b55; }
-        .new  { color: #34d399; }
-        .badge { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 10px; background: #064e3b; color: #6ee7b7; margin-left: 6px; vertical-align: middle; }
-        .note { background: #1e3a5f; border-left: 3px solid #3b82f6; padding: 12px 16px; border-radius: 4px; margin: 1rem 0; font-size: 13px; color: #bfdbfe; }
-    </style>
-</head>
-<body>
-
-<h1>📐 Database Schema — One Dream Initiative</h1>
-<p style="color:#94a3b8;margin-top:4px;">Run new migrations in <strong>Supabase → SQL Editor</strong>.</p>
-
-<!-- ═══════════════════════════════════════════════════════════════════════
-     NEW TABLE — participant_profiles
-═══════════════════════════════════════════════════════════════════════════ -->
-<h2>🆕 Migration: participant_profiles</h2>
-<p style="color:#94a3b8;font-size:14px;">Stores each participant's public bio, media (video / photo / link), and optional contact info.</p>
-
-<pre><code>-- ─────────────────────────────────────────────────────────────────
--- participant_profiles
--- One row per participant (UNIQUE on participant_id).
--- POST /api/onedream/profile/[username] does an upsert on this table.
--- ─────────────────────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS participant_profiles (
-    id               UUID         DEFAULT gen_random_uuid() PRIMARY KEY,
-    participant_id   UUID         NOT NULL UNIQUE REFERENCES participants(id) ON DELETE CASCADE,
-
-    -- Bio / description
-    bio              TEXT         DEFAULT '',
-
-    -- Media  (video upload, photo upload, YouTube embed, or any external link)
-    media_type       TEXT         CHECK (media_type IN ('video_upload','photo_upload','youtube','external')),
-    media_url        TEXT,           -- public URL (Supabase Storage or external)
-    storage_path     TEXT,           -- Supabase Storage object path (uploads only)
-    media_title      TEXT         DEFAULT '',
-
-    -- Contact info (always stored; shown publicly only when contact_is_public = TRUE)
-    phone            TEXT         DEFAULT '',
-    contact_email    TEXT         DEFAULT '',
-    whatsapp         TEXT         DEFAULT '',
-    instagram        TEXT         DEFAULT '',
-    facebook         TEXT         DEFAULT '',
-    twitter          TEXT         DEFAULT '',
-    website          TEXT         DEFAULT '',
-    contact_is_public BOOLEAN     DEFAULT FALSE,
-
-    created_at       TIMESTAMPTZ  DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ  DEFAULT NOW()
-);
-
--- Fast lookup by participant
-CREATE INDEX IF NOT EXISTS idx_participant_profiles_participant_id
-    ON participant_profiles (participant_id);
-
--- Auto-bump updated_at on every update
-CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
-BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
-$$;
-
-CREATE OR REPLACE TRIGGER trg_participant_profiles_updated_at
-    BEFORE UPDATE ON participant_profiles
-    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- Row-level security
-ALTER TABLE participant_profiles ENABLE ROW LEVEL SECURITY;
-
--- Anyone can read profiles (public page)
-CREATE POLICY "Public read participant_profiles"
-    ON participant_profiles FOR SELECT USING (TRUE);
-
--- Backend API routes use the SERVICE ROLE key and bypass RLS for writes
-</code></pre>
-
-<h3>🪣 Supabase Storage Buckets</h3>
-<div class="note">Create two <strong>public</strong> buckets in <em>Supabase → Storage</em>:
-    <ul style="margin:.5rem 0 0 1rem;">
-        <li><code>participant-videos</code> — for uploaded video files (max 100 MB per file)</li>
-        <li><code>participant-photos</code> — for uploaded image files (max 10 MB per file)</li>
-    </ul>
-    Set both to <strong>Public</strong> so generated URLs are accessible without auth.
-</div>
-
-<pre><code>-- Or via SQL (run in Supabase SQL Editor):
-INSERT INTO storage.buckets (id, name, public)
-VALUES
-    ('participant-videos', 'participant-videos', true),
-    ('participant-photos', 'participant-photos', true)
-ON CONFLICT (id) DO NOTHING;
-</code></pre>
-
-<!-- ═══════════════════════════════════════════════════════════════════════
-     API ROUTES ADDED
-═══════════════════════════════════════════════════════════════════════════ -->
-<h2>🛣️ New API Routes</h2>
-<table>
-    <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Description</th></tr></thead>
-    <tbody>
-        <tr><td>GET</td><td>/api/onedream/profile/[username]</td><td>Public</td><td>Returns full profile. Add <code>?public=true</code> to strip private contact fields.</td></tr>
-        <tr><td>POST</td><td>/api/onedream/profile/[username]</td><td>JWT</td><td>Upserts bio, media metadata, and contact info.</td></tr>
-        <tr><td>POST</td><td>/api/onedream/profile/upload</td><td>JWT</td><td>Multipart upload for video or photo → Supabase Storage. Returns <code>public_url</code>.</td></tr>
-    </tbody>
-</table>
-
-<!-- ═══════════════════════════════════════════════════════════════════════
-     FOREIGN KEY RELATIONSHIPS (full list)
-═══════════════════════════════════════════════════════════════════════════ -->
-<h2>🔗 Foreign Key Relationships</h2>
-<table>
-    <thead>
-        <tr>
-            <th>Source Table</th><th>Source Column</th>
-            <th>Target Table</th><th>Target Column</th>
-            <th>Constraint Name</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr><td>analytics_events</td><td>participant_id</td><td>participants</td><td>id</td><td>analytics_events_participant_id_fkey</td></tr>
-        <tr><td>crypto_votes</td><td>participant_id</td><td>participants</td><td>id</td><td>crypto_votes_participant_id_fkey</td></tr>
-        <tr><td>crypto_votes</td><td>user_id</td><td>participants</td><td>id</td><td>crypto_votes_user_id_fkey</td></tr>
-        <tr><td>merchant_referral_links</td><td>merchant_id</td><td>referral_merchants</td><td>id</td><td>merchant_referral_links_merchant_id_fkey</td></tr>
-        <tr><td>merchant_referral_rewards</td><td>vote_id</td><td>crypto_votes</td><td>id</td><td>merchant_referral_rewards_vote_id_fkey</td></tr>
-        <tr><td>merchant_referral_rewards</td><td>merchant_id</td><td>referral_merchants</td><td>id</td><td>merchant_referral_rewards_merchant_id_fkey</td></tr>
-        <tr><td>merchant_referral_rewards</td><td>participant_id</td><td>participants</td><td>id</td><td>merchant_referral_rewards_participant_id_fkey</td></tr>
-        <tr><td>merchant_referral_rewards</td><td>merchant_link_id</td><td>merchant_referral_links</td><td>id</td><td>merchant_referral_rewards_merchant_link_id_fkey</td></tr>
-        <tr><td>participants</td><td>referred_by_merchant_link_id</td><td>merchant_referral_links</td><td>id</td><td>participants_referred_by_merchant_link_id_fkey</td></tr>
-        <tr><td>payments</td><td>participant_id</td><td>participants</td><td>id</td><td>payments_participant_id_fkey</td></tr>
-        <tr><td>usdt_payments</td><td>user_id</td><td>participants</td><td>id</td><td>usdt_payments_user_id_fkey</td></tr>
-        <tr><td>votes</td><td>payment_id</td><td>payments</td><td>id</td><td>votes_payment_id_fkey</td></tr>
-        <tr><td>votes</td><td>participant_id</td><td>participants</td><td>id</td><td>votes_participant_id_fkey</td></tr>
-        <tr class="new">
-            <td>participant_profiles <span class="badge">NEW</span></td>
-            <td>participant_id</td>
-            <td>participants</td>
-            <td>id</td>
-            <td>participant_profiles_participant_id_fkey</td>
-        </tr>
-    </tbody>
-</table>
-
-</body>
-</html>
+[
+  {
+    "source_table": "analytics_events",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "analytics_events_participant_id_fkey"
+  },
+  {
+    "source_table": "crypto_votes",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "crypto_votes_participant_id_fkey"
+  },
+  {
+    "source_table": "crypto_votes",
+    "source_column": "user_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "crypto_votes_user_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_links",
+    "source_column": "merchant_id",
+    "target_table": "referral_merchants",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_links_merchant_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_rewards",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_rewards_participant_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_rewards",
+    "source_column": "vote_id",
+    "target_table": "crypto_votes",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_rewards_vote_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_rewards",
+    "source_column": "merchant_link_id",
+    "target_table": "merchant_referral_links",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_rewards_merchant_link_id_fkey"
+  },
+  {
+    "source_table": "merchant_referral_rewards",
+    "source_column": "merchant_id",
+    "target_table": "referral_merchants",
+    "target_column": "id",
+    "constraint_name": "merchant_referral_rewards_merchant_id_fkey"
+  },
+  {
+    "source_table": "participant_profiles",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "participant_profiles_participant_id_fkey"
+  },
+  {
+    "source_table": "participants",
+    "source_column": "referred_by_merchant_link_id",
+    "target_table": "merchant_referral_links",
+    "target_column": "id",
+    "constraint_name": "participants_referred_by_merchant_link_id_fkey"
+  },
+  {
+    "source_table": "payments",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "payments_participant_id_fkey"
+  },
+  {
+    "source_table": "usdt_payments",
+    "source_column": "user_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "usdt_payments_user_id_fkey"
+  },
+  {
+    "source_table": "votes",
+    "source_column": "payment_id",
+    "target_table": "payments",
+    "target_column": "id",
+    "constraint_name": "votes_payment_id_fkey"
+  },
+  {
+    "source_table": "votes",
+    "source_column": "participant_id",
+    "target_table": "participants",
+    "target_column": "id",
+    "constraint_name": "votes_participant_id_fkey"
+  }
+]
