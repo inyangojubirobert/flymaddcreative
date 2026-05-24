@@ -36,21 +36,34 @@ export default function handler(req, res) {
     }
 
     return new Promise((resolve) => {
-        const busboy = Busboy({
-            headers: req.headers,
-            limits: { fileSize: MAX_VIDEO_BYTES, files: 1 }
-        });
+        let busboy;
+        try {
+            busboy = Busboy({
+                headers: req.headers,
+                limits: { fileSize: MAX_VIDEO_BYTES, files: 1 }
+            });
+        } catch (err) {
+            res.status(400).json({ error: 'Invalid upload request: ' + err.message });
+            return resolve();
+        }
 
         let chunks = [];
         let mimeType = '';
         let originalName = 'media';
         let sizeLimitHit = false;
+        let fileReceived = false;
 
         busboy.on('file', (_field, file, info) => {
+            fileReceived = true;
             mimeType     = info.mimeType || info.mimetype || '';
             originalName = info.filename || 'media';
+
             file.on('limit', () => { sizeLimitHit = true; });
             file.on('data',  (chunk) => chunks.push(chunk));
+            file.on('error', (err) => {
+                if (!res.headersSent) res.status(500).json({ error: 'File stream error: ' + err.message });
+                resolve();
+            });
         });
 
         busboy.on('finish', async () => {
@@ -58,8 +71,8 @@ export default function handler(req, res) {
                 res.status(413).json({ error: 'File too large. Videos max 100 MB, images max 10 MB.' });
                 return resolve();
             }
-            if (!chunks.length) {
-                res.status(400).json({ error: 'No file provided.' });
+            if (!fileReceived || !chunks.length) {
+                res.status(400).json({ error: 'No file received.' });
                 return resolve();
             }
 
@@ -67,7 +80,9 @@ export default function handler(req, res) {
             const isImage = ALLOWED_IMAGE.includes(mimeType);
 
             if (!isVideo && !isImage) {
-                res.status(400).json({ error: 'Unsupported file type. Allowed: mp4, webm, mov, avi, jpg, png, gif, webp.' });
+                res.status(400).json({
+                    error: `Unsupported file type "${mimeType}". Allowed: mp4, webm, mov, avi, jpg, png, gif, webp.`
+                });
                 return resolve();
             }
 
@@ -78,36 +93,49 @@ export default function handler(req, res) {
                 return resolve();
             }
 
-            const bucket     = isVideo ? 'participant-videos' : 'participant-photos';
-            const rawExt     = originalName.includes('.') ? originalName.split('.').pop().toLowerCase() : '';
-            const ext        = rawExt ? `.${rawExt}` : (isVideo ? '.mp4' : '.jpg');
+            const bucket      = isVideo ? 'participant-videos' : 'participant-photos';
+            const rawExt      = originalName.includes('.') ? originalName.split('.').pop().toLowerCase() : '';
+            const ext         = rawExt ? `.${rawExt}` : (isVideo ? '.mp4' : '.jpg');
             const storagePath = `${decoded.userId}/${Date.now()}${ext}`;
 
-            const { error: uploadErr } = await supabase.storage
-                .from(bucket)
-                .upload(storagePath, fileBuffer, { contentType: mimeType, upsert: true });
+            try {
+                // Ensure bucket exists (no-op if already created)
+                await supabase.storage.createBucket(bucket, { public: true }).catch(() => {});
 
-            if (uploadErr) {
-                res.status(500).json({ error: uploadErr.message });
-                return resolve();
+                const { error: uploadErr } = await supabase.storage
+                    .from(bucket)
+                    .upload(storagePath, fileBuffer, { contentType: mimeType, upsert: true });
+
+                if (uploadErr) {
+                    res.status(500).json({ error: 'Storage upload failed: ' + uploadErr.message });
+                    return resolve();
+                }
+
+                const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(storagePath);
+
+                res.status(200).json({
+                    media_type:   isVideo ? 'video_upload' : 'photo_upload',
+                    storage_path: storagePath,
+                    public_url:   urlData.publicUrl,
+                    bucket,
+                });
+            } catch (err) {
+                if (!res.headersSent) res.status(500).json({ error: 'Upload processing error: ' + err.message });
             }
-
-            const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(storagePath);
-
-            res.status(200).json({
-                media_type:   isVideo ? 'video_upload' : 'photo_upload',
-                storage_path: storagePath,
-                public_url:   urlData.publicUrl,
-                bucket,
-            });
             resolve();
         });
 
         busboy.on('error', (err) => {
-            res.status(500).json({ error: err.message });
+            if (!res.headersSent) res.status(500).json({ error: 'Form parse error: ' + err.message });
             resolve();
         });
 
-        req.pipe(busboy);
+        // More reliable than req.pipe(busboy) in Next.js 14
+        req.on('data', (chunk) => busboy.write(chunk));
+        req.on('end',  () => busboy.end());
+        req.on('error', (err) => {
+            if (!res.headersSent) res.status(500).json({ error: 'Request error: ' + err.message });
+            resolve();
+        });
     });
 }
