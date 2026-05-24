@@ -313,13 +313,16 @@
                     row.className += ' bg-yellow-500/10';
                 }
                 
+                const voteUrl = `vote.html?user=${encodeURIComponent(participant.username)}`;
                 row.innerHTML = `
                     <td class="px-6 py-4">
                         <span class="font-bold text-xl ${getRankClass(rank)}">${getRankIcon(rank)} ${rank}</span>
                     </td>
                     <td class="px-6 py-4">
-                        <div class="font-semibold">${escapeHtml(participant.name)}</div>
-                        <div class="text-sm text-slate-400">@${escapeHtml(participant.username)}</div>
+                        <a href="${voteUrl}" class="group block">
+                            <div class="font-semibold group-hover:text-yellow-400 transition-colors">${escapeHtml(participant.name)}</div>
+                            <div class="text-sm text-slate-400 group-hover:text-yellow-500 transition-colors">@${escapeHtml(participant.username)}</div>
+                        </a>
                     </td>
                     <td class="px-6 py-4">
                         <span class="font-bold text-lg text-blue-400">${votes.toLocaleString()}</span>
