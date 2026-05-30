@@ -391,17 +391,18 @@
         return data;
     }
 
-    async function uploadCatalogueImage(file, username) {
-        const supabase = getSupabaseInstance();
-        if (!supabase) throw new Error('Supabase not initialized');
-        const ext = file.name.split('.').pop().toLowerCase();
-        const path = `catalogue/${username}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage
-            .from('profile-media')
-            .upload(path, file, { cacheControl: '3600', upsert: false });
-        if (error) throw error;
-        const { data } = supabase.storage.from('profile-media').getPublicUrl(path);
-        return data.publicUrl;
+    async function uploadCatalogueImage(file, token) {
+        // Reuse the existing backend upload endpoint (avoids direct bucket access)
+        const formData = new FormData();
+        formData.append('media', file);
+        const res = await fetch(`${API_BASE_URL}/profile/upload`, {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Image upload failed');
+        return data.public_url;
     }
 
     // ========================================

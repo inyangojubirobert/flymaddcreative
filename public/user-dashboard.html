@@ -531,11 +531,18 @@
                     <div>
                         <label class="block text-xs text-slate-400 mb-2">Product Images (up to 4)</label>
                         <div id="productImagesPreview" class="flex gap-2 flex-wrap mb-2"></div>
-                        <label class="block cursor-pointer border-2 border-dashed border-slate-600 hover:border-yellow-500 rounded-xl p-4 text-center transition-colors">
+                        <!-- File upload -->
+                        <label class="block cursor-pointer border-2 border-dashed border-slate-600 hover:border-yellow-500 rounded-xl p-4 text-center transition-colors mb-2">
                             <span class="text-2xl">📷</span>
-                            <p class="text-xs text-slate-400 mt-1">Click to upload image (JPG/PNG/WebP, max 5MB each)</p>
+                            <p class="text-xs text-slate-400 mt-1">Click to upload image (JPG/PNG/WebP)</p>
                             <input type="file" id="productImageInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple class="hidden">
                         </label>
+                        <!-- URL paste fallback -->
+                        <div class="flex gap-2">
+                            <input type="url" id="productImageUrl" placeholder="Or paste an image URL…"
+                                   class="flex-1 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none">
+                            <button type="button" onclick="addImageByUrl()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg transition-colors">Add</button>
+                        </div>
                         <div id="productImgUploadMsg" class="hidden mt-2 text-xs text-center"></div>
                     </div>
 
@@ -1211,6 +1218,16 @@
             renderImagePreviews();
         }
 
+        function addImageByUrl() {
+            const input = document.getElementById('productImageUrl');
+            const url = input.value.trim();
+            if (!url) return;
+            if (pendingProductImages.length >= 4) { showProductMsg('Max 4 images.', 'error'); return; }
+            pendingProductImages.push({ url });
+            renderImagePreviews();
+            input.value = '';
+        }
+
         async function saveProduct() {
             const title = document.getElementById('productTitle').value.trim();
             const price = parseFloat(document.getElementById('productPrice').value);
@@ -1221,12 +1238,20 @@
             btn.disabled = true; btn.textContent = '⏳ Saving…';
 
             try {
-                // Upload any new file images
-                const uploadPromises = pendingProductImages
-                    .filter(img => img.file)
-                    .map(img => window.SupabaseAPI.uploadCatalogueImage(img.file, currentUser.username)
-                        .then(url => { img.url = url; delete img.file; }));
-                if (uploadPromises.length) await Promise.all(uploadPromises);
+                // Upload any new file images via the backend endpoint
+                const token = localStorage.getItem('onedream_token');
+                for (const img of pendingProductImages) {
+                    if (img.file) {
+                        try {
+                            img.url = await window.SupabaseAPI.uploadCatalogueImage(img.file, token);
+                            delete img.file;
+                        } catch (uploadErr) {
+                            showProductMsg('Image upload failed: ' + uploadErr.message + '. Try using an image URL instead.', 'error');
+                            btn.disabled = false; btn.textContent = '💾 Save Product';
+                            return;
+                        }
+                    }
+                }
 
                 const methods = [];
                 if (document.getElementById('pmPaystack').checked) methods.push('paystack');
