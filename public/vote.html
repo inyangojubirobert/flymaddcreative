@@ -231,6 +231,13 @@
                     </div>
                 </div>
 
+                <!-- ── Seller Catalogue ── -->
+                <div id="voteCatalogueSection" class="hidden glassmorphism rounded-2xl p-8 mb-8">
+                    <h3 class="text-xl font-bold mb-2 flex items-center gap-2">🛍️ Shop from <span id="voteCatalogueSeller"></span></h3>
+                    <p class="text-white/60 text-sm mb-5">Browse products — payments are held in escrow until you confirm delivery.</p>
+                    <div id="voteCatalogueGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                </div>
+
                 <!-- Voting Section -->
                 <div class="glassmorphism rounded-2xl p-8 mb-8">
                     <div class="text-center">
@@ -496,6 +503,65 @@ window.__publicConfigReady = (async function () {
             if (hasAny) sectionEl.classList.remove('hidden');
         } catch (err) {
             console.warn('Profile load error:', err);
+        }
+    }
+})();
+</script>
+
+<!-- ── Vote-page Catalogue ── -->
+<script>
+(function () {
+    const PRODUCT_PAGE = 'https://www.flymaddcreative.online/catalogue-product.html';
+
+    function waitAndLoadCatalogue() {
+        if (window.currentParticipant?.username) {
+            loadVoteCatalogue(window.currentParticipant.username);
+        } else {
+            setTimeout(waitAndLoadCatalogue, 300);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', waitAndLoadCatalogue);
+
+    async function loadVoteCatalogue(username) {
+        if (!window.SupabaseAPI?.getPublicCatalogueByUsername) return;
+        try {
+            const items = await window.SupabaseAPI.getPublicCatalogueByUsername(username);
+            if (!items.length) return;
+            const section = document.getElementById('voteCatalogueSection');
+            document.getElementById('voteCatalogueSeller').textContent = username;
+            const grid = document.getElementById('voteCatalogueGrid');
+            grid.innerHTML = items.map(item => {
+                const img = item.images?.[0] || '';
+                const methods = item.payment_methods || ['paystack', 'usdt'];
+                const badges = [
+                    methods.includes('paystack') ? '<span class="text-xs bg-green-900/50 text-green-300 px-2 py-0.5 rounded-full">🏦 Fiat</span>' : '',
+                    methods.includes('usdt')     ? '<span class="text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded-full">💎 USDT</span>' : '',
+                ].join('');
+                return `<div class="bg-white/10 rounded-xl overflow-hidden hover:bg-white/15 transition-colors">
+                    ${img
+                        ? `<div class="h-40 overflow-hidden"><img src="${img}" class="w-full h-full object-cover" alt="${item.title}"></div>`
+                        : `<div class="h-40 bg-white/5 flex items-center justify-center text-4xl">🛍️</div>`}
+                    <div class="p-4">
+                        <p class="font-semibold text-sm">${item.title}</p>
+                        ${item.description ? `<p class="text-white/60 text-xs mt-1 line-clamp-2">${item.description}</p>` : ''}
+                        <div class="flex items-center justify-between mt-3">
+                            <span class="text-yellow-400 font-bold">$${parseFloat(item.price_usd).toFixed(2)}</span>
+                            <div class="flex gap-1">${badges}</div>
+                        </div>
+                        <div class="flex gap-2 mt-3">
+                            <a href="${PRODUCT_PAGE}?item=${item.id}" target="_blank"
+                               class="flex-1 text-center text-sm bg-yellow-500 hover:bg-yellow-400 text-black font-semibold py-2 rounded-lg transition-colors">
+                                Buy Now
+                            </a>
+                            <button onclick="navigator.clipboard.writeText('${PRODUCT_PAGE}?item=${item.id}').then(()=>alert('Link copied!'))"
+                                    class="text-sm bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-colors">🔗</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+            section.classList.remove('hidden');
+        } catch (err) {
+            console.warn('Vote catalogue load error:', err);
         }
     }
 })();

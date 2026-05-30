@@ -469,6 +469,45 @@
             </div><!-- /profileContent -->
         </div>
 
+        <!-- ═══════════════════════════════════════════════════════════
+             SALES CATALOGUE
+             ═══════════════════════════════════════════════════════════ -->
+        <div class="dashboard-card rounded-2xl p-6 mb-8" id="catalogueSection">
+            <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xl font-bold flex items-center gap-2">🛍️ My Sales Catalogue</h2>
+                <button onclick="copyCatalogueLink()" class="text-xs px-3 py-1 rounded-full bg-yellow-900/50 text-yellow-300 border border-yellow-700/50 hover:bg-yellow-800/50 transition-colors">
+                    🔗 Share Catalogue
+                </button>
+            </div>
+            <p class="text-slate-400 text-sm mb-5">List products for sale — shoppers can find and buy from your vote page.</p>
+
+            <!-- Tabs -->
+            <div class="flex rounded-lg overflow-hidden mb-5 bg-slate-800/50 border border-slate-700/50">
+                <button id="catTabProductsBtn" onclick="switchCatTab('products')"
+                        class="flex-1 py-2 px-3 text-sm font-medium transition-colors bg-yellow-600 text-black">🛒 Products</button>
+                <button id="catTabOrdersBtn" onclick="switchCatTab('orders')"
+                        class="flex-1 py-2 px-3 text-sm font-medium transition-colors text-slate-400 hover:text-white">📦 Orders</button>
+            </div>
+
+            <!-- Products Tab -->
+            <div id="catTabProducts">
+                <button onclick="openProductModal(null)"
+                        class="w-full mb-4 border-2 border-dashed border-slate-600 hover:border-yellow-500 rounded-xl py-4 text-slate-400 hover:text-yellow-400 transition-colors text-sm font-medium">
+                    + Add New Product
+                </button>
+                <div id="catalogueProductsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="text-center text-slate-500 text-sm py-8 col-span-2">Loading products…</div>
+                </div>
+            </div>
+
+            <!-- Orders Tab -->
+            <div id="catTabOrders" class="hidden">
+                <div id="catalogueOrdersList" class="space-y-3">
+                    <div class="text-center text-slate-500 text-sm py-8">Loading orders…</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Quick Actions -->
         <div class="flex flex-col sm:flex-row gap-4">
             <a href="leadershipBoard.html" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-4 px-6 rounded-xl transition-colors text-center">
@@ -477,6 +516,91 @@
             <a href="vote.html" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-4 px-6 rounded-xl transition-colors text-center">
                 ✅ Vote for Others
             </a>
+        </div>
+
+        <!-- ═══ ADD / EDIT PRODUCT MODAL ═══ -->
+        <div id="productModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg my-4">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-lg font-bold" id="productModalTitle">Add Product</h3>
+                    <button onclick="closeProductModal()" class="text-slate-400 hover:text-white text-xl leading-none">✕</button>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Images -->
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-2">Product Images (up to 4)</label>
+                        <div id="productImagesPreview" class="flex gap-2 flex-wrap mb-2"></div>
+                        <label class="block cursor-pointer border-2 border-dashed border-slate-600 hover:border-yellow-500 rounded-xl p-4 text-center transition-colors">
+                            <span class="text-2xl">📷</span>
+                            <p class="text-xs text-slate-400 mt-1">Click to upload image (JPG/PNG/WebP, max 5MB each)</p>
+                            <input type="file" id="productImageInput" accept="image/jpeg,image/png,image/webp,image/gif" multiple class="hidden">
+                        </label>
+                        <div id="productImgUploadMsg" class="hidden mt-2 text-xs text-center"></div>
+                    </div>
+
+                    <!-- Title -->
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Product Title *</label>
+                        <input type="text" id="productTitle" maxlength="120" placeholder="e.g. Handmade Leather Bag"
+                               class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none">
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Description</label>
+                        <textarea id="productDesc" rows="3" maxlength="500" placeholder="Describe your product…"
+                                  class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none resize-none"></textarea>
+                    </div>
+
+                    <!-- Price -->
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Price (USD) *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                            <input type="number" id="productPrice" min="0.01" step="0.01" placeholder="0.00"
+                                   class="w-full bg-slate-800 border border-slate-600 rounded-lg pl-7 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Payment Methods -->
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-2">Accepted Payment Methods</label>
+                        <div class="flex gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="pmPaystack" checked class="accent-yellow-500">
+                                <span class="text-sm">🏦 Paystack (Fiat)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="pmUsdt" checked class="accent-yellow-500">
+                                <span class="text-sm">💎 USDT Crypto</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Status</label>
+                        <select id="productStatus" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-yellow-500 focus:outline-none">
+                            <option value="active">Active (visible to buyers)</option>
+                            <option value="paused">Paused (hidden from buyers)</option>
+                        </select>
+                    </div>
+
+                    <input type="hidden" id="editingProductId">
+
+                    <div class="flex gap-3 pt-2">
+                        <button onclick="saveProduct()" id="saveProductBtn"
+                                class="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black font-semibold py-3 rounded-lg transition-colors">
+                            💾 Save Product
+                        </button>
+                        <button onclick="closeProductModal()" class="px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                    <div id="productSaveMsg" class="hidden p-3 rounded-lg text-sm text-center"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -590,6 +714,8 @@
 
             // Load public profile section
             loadProfile();
+            // Load sales catalogue
+            loadCatalogue();
         }
 
         async function fetchUserRank() {
@@ -939,6 +1065,238 @@
             }, 280);
         }
 
+        // ═══════════════════════════════════════════════════════════════════
+        // 🛍️ SALES CATALOGUE
+        // ═══════════════════════════════════════════════════════════════════
+        const PAYSTACK_PK = 'pk_live_689666a376853473f2945d2032123db6cd53239d';
+        const USDT_BSC    = '0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d';
+        const USDT_TRC    = 'TVuPgEs4hSLSwPf8NMirVxeYse1vrmEtXL';
+        const BASE_URL    = 'https://www.flymaddcreative.online';
+
+        let catalogueItems = [];
+        let pendingProductImages = []; // { url, file? }
+        let currentCatTab = 'products';
+
+        function switchCatTab(tab) {
+            currentCatTab = tab;
+            ['products', 'orders'].forEach(t => {
+                document.getElementById('catTabProducts' + (t === 'products' ? '' : 'Loading'))?.classList?.add('hidden');
+                const contentEl = document.getElementById('catTab' + t.charAt(0).toUpperCase() + t.slice(1));
+                const btnEl     = document.getElementById('catTab' + t.charAt(0).toUpperCase() + t.slice(1) + 'Btn');
+                if (contentEl) contentEl.classList.toggle('hidden', t !== tab);
+                if (btnEl) btnEl.className = `flex-1 py-2 px-3 text-sm font-medium transition-colors ${t === tab ? 'bg-yellow-600 text-black' : 'text-slate-400 hover:text-white'}`;
+            });
+            if (tab === 'orders') loadCatalogueOrders();
+        }
+
+        async function loadCatalogue() {
+            if (!currentUser) return;
+            catalogueItems = await window.SupabaseAPI.getCatalogueByUsername(currentUser.username);
+            renderCatalogueProducts(catalogueItems);
+        }
+
+        function renderCatalogueProducts(items) {
+            const grid = document.getElementById('catalogueProductsGrid');
+            if (!items.length) {
+                grid.innerHTML = '<div class="text-center text-slate-500 text-sm py-8 col-span-2">No products yet. Add your first product above.</div>';
+                return;
+            }
+            grid.innerHTML = items.map(item => {
+                const img = item.images?.[0] || '';
+                const statusColor = item.status === 'active' ? 'text-green-400' : 'text-slate-500';
+                return `<div class="bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700/50">
+                    ${img ? `<div class="w-full h-36 bg-slate-900 overflow-hidden"><img src="${img}" class="w-full h-full object-cover" alt="${item.title}"></div>`
+                           : `<div class="w-full h-36 bg-slate-900 flex items-center justify-center text-4xl">🛍️</div>`}
+                    <div class="p-3">
+                        <p class="font-semibold text-sm truncate">${item.title}</p>
+                        <p class="text-yellow-400 font-bold text-sm mt-1">$${parseFloat(item.price_usd).toFixed(2)}</p>
+                        <p class="text-xs ${statusColor} mt-1">${item.status === 'active' ? '● Live' : '● Paused'}</p>
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="copyProductLink('${item.id}')"
+                                    class="flex-1 text-xs bg-slate-700 hover:bg-slate-600 text-white py-1.5 rounded-lg transition-colors">🔗 Share</button>
+                            <button onclick="openProductModal('${item.id}')"
+                                    class="flex-1 text-xs bg-yellow-700 hover:bg-yellow-600 text-white py-1.5 rounded-lg transition-colors">✏️ Edit</button>
+                            <button onclick="confirmDeleteProduct('${item.id}')"
+                                    class="text-xs bg-red-900/50 hover:bg-red-800/50 text-red-400 py-1.5 px-2 rounded-lg transition-colors">🗑</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function loadCatalogueOrders() {
+            if (!currentUser) return;
+            const list = document.getElementById('catalogueOrdersList');
+            list.innerHTML = '<div class="text-center text-slate-500 text-sm py-4">Loading…</div>';
+            const orders = await window.SupabaseAPI.getOrdersBySellerUsername(currentUser.username);
+            if (!orders.length) {
+                list.innerHTML = '<div class="text-center text-slate-500 text-sm py-8">No orders yet.</div>';
+                return;
+            }
+            const statusLabel = { pending:'⏳ Pending', paid:'💰 Paid (Hold)', pending_verification:'🔍 Verifying USDT',
+                                  buyer_confirmed:'✅ Confirmed – release funds', disputed:'⚠️ Disputed', released:'🟢 Released' };
+            list.innerHTML = orders.map(o => {
+                const title = o.catalogue_items?.title || 'Product';
+                const sl    = statusLabel[o.status] || o.status;
+                const isConfirmed = o.status === 'buyer_confirmed';
+                return `<div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-sm truncate">${title}</p>
+                            <p class="text-xs text-slate-400 mt-0.5">${o.buyer_name} · ${o.buyer_email}</p>
+                            <p class="text-xs text-slate-400">${o.payment_method === 'usdt' ? '💎 USDT' : '🏦 Paystack'} · $${parseFloat(o.amount_usd).toFixed(2)}</p>
+                            ${o.tx_hash ? `<p class="text-xs text-slate-500 mt-1 break-all">TX: ${o.tx_hash.slice(0,20)}…</p>` : ''}
+                        </div>
+                        <span class="text-xs whitespace-nowrap ${isConfirmed ? 'text-green-400' : 'text-slate-400'}">${sl}</span>
+                    </div>
+                    ${isConfirmed ? `<button onclick="releaseOrderFunds('${o.id}')"
+                        class="w-full mt-3 bg-green-700 hover:bg-green-600 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                        🟢 Release Funds to Me
+                    </button>` : ''}
+                    ${o.status === 'disputed' ? `<p class="mt-2 text-xs text-orange-400">Dispute raised — contact buyer and resolve before releasing.</p>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        // ── Product Modal ──────────────────────────────────────────────
+        function openProductModal(itemId) {
+            pendingProductImages = [];
+            document.getElementById('productTitle').value = '';
+            document.getElementById('productDesc').value  = '';
+            document.getElementById('productPrice').value = '';
+            document.getElementById('productStatus').value = 'active';
+            document.getElementById('editingProductId').value = '';
+            document.getElementById('productImagesPreview').innerHTML = '';
+            document.getElementById('productSaveMsg').classList.add('hidden');
+            document.getElementById('pmPaystack').checked = true;
+            document.getElementById('pmUsdt').checked = true;
+
+            if (itemId) {
+                const item = catalogueItems.find(i => i.id === itemId);
+                if (item) {
+                    document.getElementById('productModalTitle').textContent = 'Edit Product';
+                    document.getElementById('editingProductId').value = item.id;
+                    document.getElementById('productTitle').value  = item.title;
+                    document.getElementById('productDesc').value   = item.description || '';
+                    document.getElementById('productPrice').value  = item.price_usd;
+                    document.getElementById('productStatus').value = item.status || 'active';
+                    document.getElementById('pmPaystack').checked  = item.payment_methods?.includes('paystack') ?? true;
+                    document.getElementById('pmUsdt').checked      = item.payment_methods?.includes('usdt') ?? true;
+                    if (item.images?.length) {
+                        pendingProductImages = item.images.map(u => ({ url: u }));
+                        renderImagePreviews();
+                    }
+                }
+            } else {
+                document.getElementById('productModalTitle').textContent = 'Add Product';
+            }
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        function renderImagePreviews() {
+            document.getElementById('productImagesPreview').innerHTML = pendingProductImages.map((img, i) =>
+                `<div class="relative w-16 h-16 rounded-lg overflow-hidden bg-slate-700 flex-shrink-0">
+                    <img src="${img.url}" class="w-full h-full object-cover" alt="">
+                    <button onclick="removeProductImage(${i})" class="absolute top-0.5 right-0.5 bg-black/70 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">✕</button>
+                </div>`
+            ).join('');
+        }
+
+        function removeProductImage(idx) {
+            pendingProductImages.splice(idx, 1);
+            renderImagePreviews();
+        }
+
+        async function saveProduct() {
+            const title = document.getElementById('productTitle').value.trim();
+            const price = parseFloat(document.getElementById('productPrice').value);
+            if (!title) { showProductMsg('Title is required.', 'error'); return; }
+            if (!price || price <= 0) { showProductMsg('Enter a valid price.', 'error'); return; }
+
+            const btn = document.getElementById('saveProductBtn');
+            btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+            try {
+                // Upload any new file images
+                const uploadPromises = pendingProductImages
+                    .filter(img => img.file)
+                    .map(img => window.SupabaseAPI.uploadCatalogueImage(img.file, currentUser.username)
+                        .then(url => { img.url = url; delete img.file; }));
+                if (uploadPromises.length) await Promise.all(uploadPromises);
+
+                const methods = [];
+                if (document.getElementById('pmPaystack').checked) methods.push('paystack');
+                if (document.getElementById('pmUsdt').checked) methods.push('usdt');
+
+                const editId = document.getElementById('editingProductId').value;
+                const payload = {
+                    seller_username: currentUser.username,
+                    title,
+                    description: document.getElementById('productDesc').value.trim(),
+                    price_usd: price,
+                    images: pendingProductImages.map(i => i.url),
+                    payment_methods: methods,
+                    status: document.getElementById('productStatus').value,
+                };
+                if (editId) payload.id = editId;
+
+                const saved = await window.SupabaseAPI.saveCatalogueItem(payload);
+                showProductMsg('Product saved! ✓', 'success');
+                await loadCatalogue();
+                setTimeout(closeProductModal, 1200);
+            } catch (err) {
+                showProductMsg(err.message || 'Save failed.', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = '💾 Save Product';
+            }
+        }
+
+        function showProductMsg(msg, type) {
+            const el = document.getElementById('productSaveMsg');
+            el.textContent = msg;
+            el.className = `p-3 rounded-lg text-sm text-center ${type === 'success'
+                ? 'bg-green-900/50 text-green-300 border border-green-700/50'
+                : 'bg-red-900/50 text-red-300 border border-red-700/50'}`;
+            el.classList.remove('hidden');
+        }
+
+        async function confirmDeleteProduct(id) {
+            if (!confirm('Remove this product from your catalogue?')) return;
+            try {
+                await window.SupabaseAPI.deleteCatalogueItem(id, currentUser.username);
+                await loadCatalogue();
+            } catch (e) {
+                alert('Delete failed: ' + e.message);
+            }
+        }
+
+        async function releaseOrderFunds(orderId) {
+            if (!confirm('Confirm funds released to you? This cannot be undone.')) return;
+            try {
+                await window.SupabaseAPI.updateOrderStatus(orderId, 'released');
+                loadCatalogueOrders();
+            } catch (e) {
+                alert('Update failed: ' + e.message);
+            }
+        }
+
+        function copyCatalogueLink() {
+            if (!currentUser) return;
+            const link = `${BASE_URL}/vote.html?user=${currentUser.username}#catalogue`;
+            navigator.clipboard.writeText(link).then(() => alert('Catalogue link copied!\n' + link));
+        }
+
+        function copyProductLink(itemId) {
+            const link = `${BASE_URL}/catalogue-product.html?item=${itemId}`;
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Product link copied!\n' + link);
+            });
+        }
+
         // ── Wire up file input + drag-drop (after DOM ready) ────────────────
         document.addEventListener('DOMContentLoaded', function () {
             const fileInput = document.getElementById('mediaFileInput');
@@ -971,6 +1329,23 @@
             document.getElementById('mediaLinkInput')?.addEventListener('input', (e) => updateLinkDetect(e.target.value));
             document.getElementById('bioInput')?.addEventListener('input', (e) => {
                 document.getElementById('bioCharCount').textContent = e.target.value.length;
+            });
+
+            // Catalogue image input
+            document.getElementById('productImageInput')?.addEventListener('change', async (e) => {
+                const files = Array.from(e.target.files);
+                const remaining = 4 - pendingProductImages.length;
+                const toAdd = files.slice(0, remaining);
+                const msgEl = document.getElementById('productImgUploadMsg');
+                msgEl.textContent = 'Images queued — will upload on save.';
+                msgEl.className = 'mt-2 text-xs text-center text-slate-400';
+                msgEl.classList.remove('hidden');
+                toAdd.forEach(file => {
+                    const url = URL.createObjectURL(file);
+                    pendingProductImages.push({ url, file });
+                });
+                renderImagePreviews();
+                e.target.value = '';
             });
         });
     </script>

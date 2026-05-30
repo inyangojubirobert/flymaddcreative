@@ -264,6 +264,147 @@
     };
 
     // ========================================
+    // CATALOGUE API (direct Supabase)
+    // ========================================
+    async function getCatalogueByUsername(username) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('catalogue_items')
+            .select('*')
+            .eq('seller_username', username)
+            .neq('status', 'deleted')
+            .order('created_at', { ascending: false });
+        if (error) { console.warn('Catalogue fetch error:', error); return []; }
+        return data || [];
+    }
+
+    async function getPublicCatalogueByUsername(username) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('catalogue_items')
+            .select('*')
+            .eq('seller_username', username)
+            .eq('status', 'active')
+            .order('created_at', { ascending: false });
+        if (error) return [];
+        return data || [];
+    }
+
+    async function getCatalogueItem(id) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) return null;
+        const { data, error } = await supabase
+            .from('catalogue_items')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) return null;
+        return data;
+    }
+
+    async function saveCatalogueItem(item) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) throw new Error('Supabase not initialized');
+        const payload = { ...item, updated_at: new Date().toISOString() };
+        if (item.id) {
+            const { data, error } = await supabase
+                .from('catalogue_items')
+                .update(payload)
+                .eq('id', item.id)
+                .eq('seller_username', item.seller_username)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        } else {
+            delete payload.id;
+            const { data, error } = await supabase
+                .from('catalogue_items')
+                .insert({ ...payload, created_at: new Date().toISOString() })
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
+    }
+
+    async function deleteCatalogueItem(id, seller_username) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) throw new Error('Supabase not initialized');
+        const { error } = await supabase
+            .from('catalogue_items')
+            .update({ status: 'deleted' })
+            .eq('id', id)
+            .eq('seller_username', seller_username);
+        if (error) throw error;
+    }
+
+    async function createCatalogueOrder(order) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) throw new Error('Supabase not initialized');
+        const buyerToken = Math.random().toString(36).slice(2) + Date.now().toString(36);
+        const { data, error } = await supabase
+            .from('catalogue_orders')
+            .insert({ ...order, buyer_token: buyerToken, created_at: new Date().toISOString() })
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    async function getOrdersBySellerUsername(username) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('catalogue_orders')
+            .select('*, catalogue_items(title)')
+            .eq('seller_username', username)
+            .order('created_at', { ascending: false });
+        if (error) return [];
+        return data || [];
+    }
+
+    async function getOrderById(orderId) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) return null;
+        const { data, error } = await supabase
+            .from('catalogue_orders')
+            .select('*, catalogue_items(title, images, price_usd, seller_username)')
+            .eq('id', orderId)
+            .single();
+        if (error) return null;
+        return data;
+    }
+
+    async function updateOrderStatus(orderId, status) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) throw new Error('Supabase not initialized');
+        const { data, error } = await supabase
+            .from('catalogue_orders')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', orderId)
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    async function uploadCatalogueImage(file, username) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) throw new Error('Supabase not initialized');
+        const ext = file.name.split('.').pop().toLowerCase();
+        const path = `catalogue/${username}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage
+            .from('profile-media')
+            .upload(path, file, { cacheControl: '3600', upsert: false });
+        if (error) throw error;
+        const { data } = supabase.storage.from('profile-media').getPublicUrl(path);
+        return data.publicUrl;
+    }
+
+    // ========================================
     // EXPORT GLOBAL API
     // ========================================
     window.SupabaseAPI = {
@@ -289,6 +430,18 @@
         getParticipantProfile,
         saveParticipantProfile,
         uploadProfileMedia,
+
+        // Sales Catalogue
+        getCatalogueByUsername,
+        getPublicCatalogueByUsername,
+        getCatalogueItem,
+        saveCatalogueItem,
+        deleteCatalogueItem,
+        createCatalogueOrder,
+        getOrdersBySellerUsername,
+        getOrderById,
+        updateOrderStatus,
+        uploadCatalogueImage,
     };
 
     console.log('✅ One Dream API + Supabase Client loaded');
