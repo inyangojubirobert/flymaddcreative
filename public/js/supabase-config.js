@@ -264,6 +264,66 @@
     };
 
     // ========================================
+    // WITHDRAWAL / REWARDS API
+    // ========================================
+    const REWARD_RATE_USD = 1.00; // $1 per vote (50% of $2 vote cost)
+
+    async function getWithdrawalsByUsername(username) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('participant_withdrawals')
+            .select('*')
+            .eq('username', username)
+            .order('created_at', { ascending: false });
+        if (error) { console.warn('Withdrawals fetch error:', error); return []; }
+        return data || [];
+    }
+
+    async function requestWithdrawal(username, amount_usd, payment_method, payment_details) {
+        const supabase = getSupabaseInstance();
+        if (!supabase) throw new Error('Supabase not initialized');
+        const { data, error } = await supabase
+            .from('participant_withdrawals')
+            .insert({
+                username,
+                amount_usd,
+                payment_method,
+                payment_details,
+                status: 'pending',
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    function calcEarnings(totalVotes) {
+        return parseFloat((totalVotes * REWARD_RATE_USD).toFixed(2));
+    }
+
+    function calcTotalWithdrawn(withdrawals) {
+        return withdrawals
+            .filter(w => w.status !== 'rejected')
+            .reduce((sum, w) => sum + parseFloat(w.amount_usd || 0), 0);
+    }
+
+    function getNextWithdrawalDate() {
+        const now = new Date();
+        const day28 = new Date(now.getFullYear(), now.getMonth(), 28);
+        if (now.getDate() >= 28) {
+            // Next month's 28th
+            return new Date(now.getFullYear(), now.getMonth() + 1, 28);
+        }
+        return day28;
+    }
+
+    function isWithdrawalOpen() {
+        return new Date().getDate() >= 28;
+    }
+
+    // ========================================
     // CATALOGUE API (direct Supabase)
     // ========================================
     async function getCatalogueByUsername(username) {
@@ -431,6 +491,15 @@
         getParticipantProfile,
         saveParticipantProfile,
         uploadProfileMedia,
+
+        // Rewards & Withdrawals
+        getWithdrawalsByUsername,
+        requestWithdrawal,
+        calcEarnings,
+        calcTotalWithdrawn,
+        getNextWithdrawalDate,
+        isWithdrawalOpen,
+        REWARD_RATE_USD,
 
         // Sales Catalogue
         getCatalogueByUsername,

@@ -188,6 +188,89 @@
             </div>
         </div>
 
+        <!-- ═══════════════════════════════════════════════════════════
+             EARNINGS & REWARDS
+             ═══════════════════════════════════════════════════════════ -->
+        <div class="dashboard-card rounded-2xl p-6 mb-8" style="background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(5,150,105,0.08)); border-color: rgba(16,185,129,0.25);">
+            <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xl font-bold flex items-center gap-2">💰 My Earnings & Rewards</h2>
+                <span class="text-xs px-3 py-1 rounded-full bg-green-900/50 text-green-300 border border-green-700/50">50/50 Split</span>
+            </div>
+            <p class="text-slate-400 text-sm mb-5">You earn <strong class="text-green-400">$1.00 per vote</strong> — 50% of every $2 vote goes directly to you. Funds withdrawable on the <strong class="text-green-400">28th of every month</strong>.</p>
+
+            <!-- Earnings Cards -->
+            <div class="grid grid-cols-3 gap-3 mb-5">
+                <div class="bg-black/30 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-green-400" id="earningsTotal">$0.00</div>
+                    <div class="text-xs text-slate-400 mt-1">Total Earned</div>
+                </div>
+                <div class="bg-black/30 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-slate-400" id="earningsWithdrawn">$0.00</div>
+                    <div class="text-xs text-slate-400 mt-1">Withdrawn</div>
+                </div>
+                <div class="bg-black/30 rounded-xl p-4 text-center">
+                    <div class="text-2xl font-bold text-yellow-400" id="earningsAvailable">$0.00</div>
+                    <div class="text-xs text-slate-400 mt-1">Available</div>
+                </div>
+            </div>
+
+            <!-- Withdrawal Window Status -->
+            <div id="withdrawalWindowBanner" class="rounded-xl p-4 mb-5 text-sm flex items-center gap-3">
+                <span class="text-2xl" id="withdrawalWindowIcon">⏳</span>
+                <div>
+                    <p class="font-semibold" id="withdrawalWindowTitle">Loading…</p>
+                    <p class="text-xs text-slate-400" id="withdrawalWindowSub"></p>
+                </div>
+            </div>
+
+            <!-- Withdrawal Form (shown when window is open) -->
+            <div id="withdrawalForm" class="hidden bg-black/30 rounded-xl p-5 mb-5 border border-green-800/40">
+                <h3 class="font-semibold text-green-300 mb-4 text-sm">Request Withdrawal</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Amount (USD) *</label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                            <input type="number" id="withdrawAmount" min="1" step="0.01" placeholder="0.00"
+                                   class="w-full bg-slate-800 border border-slate-600 rounded-lg pl-7 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:border-green-500 focus:outline-none">
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">Available: <span id="withdrawMaxHint" class="text-green-400 font-semibold">$0.00</span></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Payment Method *</label>
+                        <select id="withdrawMethod" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none">
+                            <option value="">Select method…</option>
+                            <option value="paystack">🏦 Bank / Paystack</option>
+                            <option value="usdt_bsc">💎 USDT BEP-20 (BSC)</option>
+                            <option value="usdt_trc">💎 USDT TRC-20 (Tron)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Payment Details *</label>
+                        <textarea id="withdrawDetails" rows="2" maxlength="300"
+                                  placeholder="Bank name + account number, or your USDT wallet address…"
+                                  class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-green-500 focus:outline-none resize-none"></textarea>
+                    </div>
+                    <button onclick="submitWithdrawal()" id="withdrawBtn"
+                            class="w-full bg-green-700 hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition-colors text-sm">
+                        💸 Submit Withdrawal Request
+                    </button>
+                    <div id="withdrawMsg" class="hidden p-3 rounded-lg text-sm text-center"></div>
+                </div>
+            </div>
+
+            <!-- Transaction History -->
+            <div>
+                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                    📋 Withdrawal History
+                    <button onclick="loadWithdrawals()" class="text-xs text-slate-500 hover:text-slate-300 transition-colors">(refresh)</button>
+                </h3>
+                <div id="withdrawalHistory" class="space-y-2 max-h-64 overflow-y-auto">
+                    <p class="text-xs text-slate-500 text-center py-4">Loading history…</p>
+                </div>
+            </div>
+        </div>
+
         <!-- User Stage Progress Bar -->
         <div class="mb-8" id="userProgress">
             <!-- Progress bar will be rendered here -->
@@ -721,6 +804,8 @@
 
             // Load public profile section
             loadProfile();
+            // Load earnings & rewards
+            loadEarnings();
             // Load sales catalogue
             loadCatalogue();
         }
@@ -1070,6 +1155,127 @@
                 document.getElementById(pctId).textContent = Math.round(v) + '%';
                 if (v >= 88) clearInterval(iv);
             }, 280);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 💰 EARNINGS & REWARDS
+        // ═══════════════════════════════════════════════════════════════════
+        let _withdrawals = [];
+        let _availableBalance = 0;
+
+        async function loadEarnings() {
+            if (!currentUser) return;
+            const votes = currentUser.total_votes || 0;
+            _withdrawals = await window.SupabaseAPI.getWithdrawalsByUsername(currentUser.username);
+
+            const earned    = window.SupabaseAPI.calcEarnings(votes);
+            const withdrawn = window.SupabaseAPI.calcTotalWithdrawn(_withdrawals);
+            _availableBalance = Math.max(0, parseFloat((earned - withdrawn).toFixed(2)));
+
+            document.getElementById('earningsTotal').textContent     = '$' + earned.toFixed(2);
+            document.getElementById('earningsWithdrawn').textContent = '$' + withdrawn.toFixed(2);
+            document.getElementById('earningsAvailable').textContent = '$' + _availableBalance.toFixed(2);
+            document.getElementById('withdrawMaxHint').textContent   = '$' + _availableBalance.toFixed(2);
+
+            renderWithdrawalWindow();
+            renderWithdrawalHistory(_withdrawals);
+        }
+
+        function renderWithdrawalWindow() {
+            const isOpen   = window.SupabaseAPI.isWithdrawalOpen();
+            const nextDate = window.SupabaseAPI.getNextWithdrawalDate();
+            const banner   = document.getElementById('withdrawalWindowBanner');
+            const form     = document.getElementById('withdrawalForm');
+
+            if (isOpen && _availableBalance > 0) {
+                banner.className = 'rounded-xl p-4 mb-5 text-sm flex items-center gap-3 bg-green-900/30 border border-green-700/40';
+                document.getElementById('withdrawalWindowIcon').textContent  = '✅';
+                document.getElementById('withdrawalWindowTitle').textContent = 'Withdrawal window is open!';
+                document.getElementById('withdrawalWindowSub').textContent   = 'You can withdraw your earnings today. Window closes after the 28th.';
+                form.classList.remove('hidden');
+            } else if (isOpen && _availableBalance <= 0) {
+                banner.className = 'rounded-xl p-4 mb-5 text-sm flex items-center gap-3 bg-slate-800/50 border border-slate-700/40';
+                document.getElementById('withdrawalWindowIcon').textContent  = '💸';
+                document.getElementById('withdrawalWindowTitle').textContent = 'Window is open but no balance available.';
+                document.getElementById('withdrawalWindowSub').textContent   = 'Keep collecting votes to build your earnings!';
+                form.classList.add('hidden');
+            } else {
+                const daysLeft = Math.ceil((nextDate - new Date()) / 86400000);
+                banner.className = 'rounded-xl p-4 mb-5 text-sm flex items-center gap-3 bg-blue-900/20 border border-blue-800/30';
+                document.getElementById('withdrawalWindowIcon').textContent  = '📅';
+                document.getElementById('withdrawalWindowTitle').textContent = `Next withdrawal: ${nextDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+                document.getElementById('withdrawalWindowSub').textContent   = `${daysLeft} day${daysLeft !== 1 ? 's' : ''} until the withdrawal window opens. Keep voting to grow your balance!`;
+                form.classList.add('hidden');
+            }
+        }
+
+        function renderWithdrawalHistory(withdrawals) {
+            const container = document.getElementById('withdrawalHistory');
+            if (!withdrawals.length) {
+                container.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No withdrawals yet.</p>';
+                return;
+            }
+            const statusStyle = {
+                pending:    'bg-yellow-900/40 text-yellow-300',
+                processing: 'bg-blue-900/40 text-blue-300',
+                paid:       'bg-green-900/40 text-green-300',
+                rejected:   'bg-red-900/40 text-red-300',
+            };
+            const statusLabel = { pending:'⏳ Pending', processing:'🔄 Processing', paid:'✅ Paid', rejected:'❌ Rejected' };
+            container.innerHTML = withdrawals.map(w => {
+                const date = new Date(w.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const sl   = statusLabel[w.status] || w.status;
+                const sc   = statusStyle[w.status] || 'bg-slate-700 text-slate-300';
+                return `<div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3 text-sm">
+                    <div>
+                        <p class="font-semibold text-white">$${parseFloat(w.amount_usd).toFixed(2)} <span class="text-xs text-slate-400 font-normal">via ${w.payment_method}</span></p>
+                        <p class="text-xs text-slate-500 mt-0.5">${date}</p>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded-full ${sc}">${sl}</span>
+                </div>`;
+            }).join('');
+        }
+
+        async function loadWithdrawals() {
+            if (!currentUser) return;
+            _withdrawals = await window.SupabaseAPI.getWithdrawalsByUsername(currentUser.username);
+            renderWithdrawalHistory(_withdrawals);
+        }
+
+        async function submitWithdrawal() {
+            const amount  = parseFloat(document.getElementById('withdrawAmount').value);
+            const method  = document.getElementById('withdrawMethod').value;
+            const details = document.getElementById('withdrawDetails').value.trim();
+
+            if (!amount || amount <= 0)         { showWithdrawMsg('Enter a valid amount.', 'error'); return; }
+            if (amount > _availableBalance)      { showWithdrawMsg(`Max available is $${_availableBalance.toFixed(2)}.`, 'error'); return; }
+            if (!method)                         { showWithdrawMsg('Select a payment method.', 'error'); return; }
+            if (!details)                        { showWithdrawMsg('Enter your payment details.', 'error'); return; }
+            if (!window.SupabaseAPI.isWithdrawalOpen()) { showWithdrawMsg('Withdrawal window is not open yet.', 'error'); return; }
+
+            const btn = document.getElementById('withdrawBtn');
+            btn.disabled = true; btn.textContent = '⏳ Submitting…';
+            try {
+                await window.SupabaseAPI.requestWithdrawal(currentUser.username, amount, method, details);
+                showWithdrawMsg('Withdrawal request submitted! Processing by the 28th.', 'success');
+                document.getElementById('withdrawAmount').value  = '';
+                document.getElementById('withdrawDetails').value = '';
+                await loadEarnings();
+            } catch (e) {
+                showWithdrawMsg(e.message || 'Submission failed.', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = '💸 Submit Withdrawal Request';
+            }
+        }
+
+        function showWithdrawMsg(msg, type) {
+            const el = document.getElementById('withdrawMsg');
+            el.textContent = msg;
+            el.className = `p-3 rounded-lg text-sm text-center ${type === 'success'
+                ? 'bg-green-900/50 text-green-300 border border-green-700/50'
+                : 'bg-red-900/50 text-red-300 border border-red-700/50'}`;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 6000);
         }
 
         // ═══════════════════════════════════════════════════════════════════
