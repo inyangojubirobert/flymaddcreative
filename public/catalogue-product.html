@@ -357,54 +357,43 @@ async function handlePay() {
     const btn = document.getElementById('payBtn');
     btn.disabled = true;
 
-    try {
-        if (selectedMethod === 'paystack') {
-            await payWithPaystack(name, email, wapp, notes);
-        } else {
-            await payWithUsdt(name, email, wapp, notes);
-        }
-    } catch (e) {
-        showPayMsg(e.message || 'Payment failed. Please try again.', 'error');
-    } finally {
-        btn.disabled = false;
+    if (selectedMethod === 'paystack') {
+        await payWithPaystack(name, email, wapp, notes);
+    } else {
+        await payWithUsdt(name, email, wapp, notes);
     }
+    btn.disabled = false;
 }
 
 async function payWithPaystack(name, email, wapp, notes) {
     const amountKobo = Math.round(parseFloat(currentItem.price_usd) * 1600 * 100);
     return new Promise(resolve => {
-        // Paystack's SDK type-checks `callback` via {}.toString.call(fn) === "[object Function]",
-        // which is false for async functions (they report as [object AsyncFunction]) and
-        // throws "Attribute callback must be a valid function" before opening the iframe.
-        // Keep this callback synchronous and delegate the async work to an inner IIFE.
         const handler = PaystackPop.setup({
             key: PAYSTACK_PK,
             email,
             amount: amountKobo,
             currency: 'NGN',
             metadata: { item_id: currentItem.id, buyer_name: name },
-            callback: (response) => {
-                (async () => {
-                    try {
-                        const order = await window.SupabaseAPI.createCatalogueOrder({
-                            item_id: currentItem.id,
-                            seller_username: currentItem.seller_username,
-                            buyer_name: name,
-                            buyer_email: email,
-                            buyer_whatsapp: wapp,
-                            amount_usd: currentItem.price_usd,
-                            payment_method: 'paystack',
-                            payment_ref: response.reference,
-                            tx_hash: null,
-                            status: 'paid',
-                            notes,
-                        });
-                        showSuccess(order);
-                    } catch (e) {
-                        showPayMsg('Payment received but order creation failed. Contact support with ref: ' + response.reference, 'error');
-                    }
-                    resolve();
-                })();
+            callback: async (response) => {
+                try {
+                    const order = await window.SupabaseAPI.createCatalogueOrder({
+                        item_id: currentItem.id,
+                        seller_username: currentItem.seller_username,
+                        buyer_name: name,
+                        buyer_email: email,
+                        buyer_whatsapp: wapp,
+                        amount_usd: currentItem.price_usd,
+                        payment_method: 'paystack',
+                        payment_ref: response.reference,
+                        tx_hash: null,
+                        status: 'paid',
+                        notes,
+                    });
+                    showSuccess(order);
+                } catch (e) {
+                    showPayMsg('Payment received but order creation failed. Contact support with ref: ' + response.reference, 'error');
+                }
+                resolve();
             },
             onClose: () => resolve()
         });
