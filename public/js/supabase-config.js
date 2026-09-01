@@ -310,17 +310,13 @@
     }
 
     function getNextWithdrawalDate() {
-        const now = new Date();
-        const day28 = new Date(now.getFullYear(), now.getMonth(), 28);
-        if (now.getDate() >= 28) {
-            // Next month's 28th
-            return new Date(now.getFullYear(), now.getMonth() + 1, 28);
-        }
-        return day28;
+        // Withdrawals are now available at any time
+        return new Date();
     }
 
     function isWithdrawalOpen() {
-        return new Date().getDate() >= 28;
+        // Withdrawals are always open - no 28th restriction
+        return true;
     }
 
     // ========================================
