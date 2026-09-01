@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal | Flymadd Creative</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-button.active { @apply bg-green-700 text-white; }
+    .tab-button { @apply bg-slate-700 text-slate-300 hover:bg-slate-600; }
+    .message-admin { @apply bg-green-900/25 border border-green-800/30; }
+    .message-participant { @apply bg-slate-700/70; }
+  </style>
+</head>
+<body class="bg-slate-900 text-white">
+  <div id="loginView" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-slate-800/80 p-8 border border-slate-700/50">
+      <h1 class="text-2xl font-bold text-center mb-2">Admin Portal</h1>
+      <p class="text-center text-slate-400 text-sm mb-6">Manage messages, withdrawals, and catalogue orders</p>
+      
+      <form id="loginForm" class="space-y-4">
+        <input type="email" id="adminEmail" placeholder="Admin email" required
+               class="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-500 outline-none focus:border-green-500">
+        <input type="password" id="adminPassword" placeholder="Password" required
+               class="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-500 outline-none focus:border-green-500">
+        <button type="submit" id="loginButton" class="w-full rounded-lg bg-green-700 py-2 font-semibold hover:bg-green-600">
+          Sign in
+        </button>
+        <p id="loginError" class="hidden text-center text-red-400 text-sm mt-2"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="dashboardView" class="hidden min-h-screen bg-slate-900">
+    <nav class="bg-slate-800 border-b border-slate-700 p-4">
+      <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold">Admin Portal</h1>
+        <div class="flex items-center gap-4">
+          <span id="adminIdentity" class="text-sm text-slate-400"></span>
+          <button onclick="logoutAdmin()" class="text-xs bg-red-900/50 hover:bg-red-900 px-3 py-1 rounded border border-red-800/50">Logout</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-6">
+      <div class="flex gap-2 mb-6 overflow-x-auto">
+        <button onclick="switchTab('messages')" class="tab-button active px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">💬 Messages</button>
+        <button onclick="switchTab('withdrawals')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">💰 Withdrawals</button>
+        <button onclick="switchTab('orders')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🛍️ Orders</button>
+      </div>
+
+      <!-- Messages Tab -->
+      <div id="messagesTab" class="space-y-4">
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Support Messages & Complaints</h2>
+            <button onclick="loadMessages()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Refresh</button>
+          </div>
+          <div id="messagesList" class="space-y-3 max-h-96 overflow-y-auto">
+            <p class="text-slate-500">Loading messages…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Withdrawals Tab -->
+      <div id="withdrawalsTab" class="hidden space-y-4">
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Withdrawal Requests</h2>
+            <select id="withdrawalStatusFilter" onchange="loadWithdrawals()" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="processing">Processing</option>
+              <option value="claimed">Claimed</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+          <div id="withdrawalsList" class="space-y-3 max-h-96 overflow-y-auto">
+            <p class="text-slate-500">Loading withdrawals…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Orders Tab -->
+      <div id="ordersTab" class="hidden space-y-4">
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Catalogue Orders & Sales</h2>
+            <button onclick="loadOrders()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Refresh</button>
+          </div>
+          <div id="ordersList" class="space-y-3 max-h-96 overflow-y-auto">
+            <p class="text-slate-500">Loading orders…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_TOKEN_KEY = 'flymadd_admin_portal_token';
+    const state = { token: localStorage.getItem(ADMIN_TOKEN_KEY), admin: null };
+
+    function escapeText(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;').replace(/\n/g, '<br>');
+    }
+
+    async function adminFetch(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`,
+          ...(options.headers || {})
+        }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 401 || response.status === 403) {
+        logoutAdmin();
+      }
+      if (!response.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = document.getElementById('loginButton');
+      const error = document.getElementById('loginError');
+      error.classList.add('hidden');
+      button.disabled = true;
+      button.textContent = 'Signing in…';
+      try {
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('adminEmail').value.trim(),
+            password: document.getElementById('adminPassword').value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Sign in failed');
+        state.token = data.token;
+        state.admin = data.admin;
+        localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+        showDashboard();
+      } catch (err) {
+        error.textContent = err.message || 'Sign in failed';
+        error.classList.remove('hidden');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Sign in';
+      }
+    });
+
+    function showDashboard() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.remove('hidden');
+      document.getElementById('adminIdentity').textContent = state.admin ? `${state.admin.display_name} · ${state.admin.email}` : '';
+      switchTab('messages');
+    }
+
+    function logoutAdmin() {
+      localStorage.removeItem(ADMIN_TOKEN_KEY);
+      state.token = null;
+      state.admin = null;
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('loginView').classList.remove('hidden');
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('[id$="Tab"]').forEach(el => el.classList.add('hidden'));
+      document.getElementById(tab + 'Tab').classList.remove('hidden');
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if (tab === 'messages') loadMessages();
+      if (tab === 'withdrawals') loadWithdrawals();
+      if (tab === 'orders') loadOrders();
+    }
+
+    async function loadMessages() {
+      const container = document.getElementById('messagesList');
+      container.innerHTML = '<p class="text-slate-500">Loading…</p>';
+      try {
+        const response = await adminFetch('/api/admin/withdrawals');
+        const withdrawals = response.withdrawals || [];
+        let allMessages = [];
+        
+        for (const withdrawal of withdrawals) {
+          try {
+            const msgs = await adminFetch(`/api/admin/messages?participant_id=${encodeURIComponent(withdrawal.participant?.id || '')}`);
+            allMessages = allMessages.concat(msgs.messages || []);
+          } catch (e) {}
+        }
+
+        if (!allMessages.length) {
+          container.innerHTML = '<p class="text-slate-500">No messages yet.</p>';
+          return;
+        }
+
+        container.innerHTML = allMessages.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(msg => {
+          const date = new Date(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          const isAdmin = msg.sender_type === 'admin' || msg.sender_type === 'system';
+          return `<div class="rounded-lg px-4 py-3 text-sm ${isAdmin ? 'message-admin' : 'message-participant'}">
+            <div class="flex justify-between gap-2 mb-1">
+              <strong>${escapeText(msg.sender_type === 'system' ? 'System' : msg.sender_type)}</strong>
+              <span class="text-slate-400 text-xs">${date}</span>
+            </div>
+            <p class="text-slate-100">${escapeText(msg.body)}</p>
+          </div>`;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = `<p class="text-red-400">Error: ${escapeText(err.message)}</p>`;
+      }
+    }
+
+    async function loadWithdrawals() {
+      const container = document.getElementById('withdrawalsList');
+      container.innerHTML = '<p class="text-slate-500">Loading…</p>';
+      try {
+        const status = document.getElementById('withdrawalStatusFilter').value;
+        const response = await adminFetch(`/api/admin/withdrawals?status=${status === 'all' ? '' : status}`);
+        const withdrawals = response.withdrawals || [];
+
+        if (!withdrawals.length) {
+          container.innerHTML = '<p class="text-slate-500">No withdrawals found.</p>';
+          return;
+        }
+
+        container.innerHTML = withdrawals.map(w => {
+          const date = new Date(w.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          return `<div class="rounded-lg bg-slate-700/50 border border-slate-600/50 px-4 py-3 text-sm">
+            <div class="flex justify-between gap-2 mb-1">
+              <span class="font-semibold">${escapeText(w.participant?.name || w.username)}</span>
+              <span class="bg-slate-600 px-2 py-0.5 rounded text-xs">${escapeText(w.status)}</span>
+            </div>
+            <p class="text-green-300">$${Number(w.amount_usd).toFixed(2)} · ${escapeText(w.payment_method)}</p>
+            <p class="text-slate-400 text-xs mt-1">${date}</p>
+          </div>`;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = `<p class="text-red-400">Error: ${escapeText(err.message)}</p>`;
+      }
+    }
+
+    async function loadOrders() {
+      const container = document.getElementById('ordersList');
+      container.innerHTML = '<p class="text-slate-500">Loading…</p>';
+      try {
+        const response = await adminFetch('/api/admin/orders');
+        const orders = response.orders || [];
+
+        if (!orders.length) {
+          container.innerHTML = '<p class="text-slate-500">No orders found.</p>';
+          return;
+        }
+
+        container.innerHTML = orders.map(order => {
+          const date = new Date(order.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          return `<div class="rounded-lg bg-slate-700/50 border border-slate-600/50 px-4 py-3 text-sm">
+            <div class="flex justify-between gap-2 mb-1">
+              <span class="font-semibold">${escapeText(order.seller_username)} → ${escapeText(order.buyer_username)}</span>
+              <span class="bg-blue-600 px-2 py-0.5 rounded text-xs">${escapeText(order.status)}</span>
+            </div>
+            <p class="text-green-300">$${Number(order.amount_usd).toFixed(2)}</p>
+            <p class="text-slate-400 text-xs mt-1">${date}</p>
+          </div>`;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = `<p class="text-red-400">Error: ${escapeText(err.message)}</p>`;
+      }
+    }
+
+    // Check if already logged in
+    if (state.token) {
+      state.admin = { display_name: 'Admin', email: 'admin@flymadd.com' };
+      showDashboard();
+    }
+  </script>
+</body>
+</html>
