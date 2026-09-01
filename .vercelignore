@@ -1,0 +1,8 @@
+# The mobile app is built and distributed separately from this Next.js website.
+
+mobile/
+
+# Generated Android distribution artifacts are not website source files.
+
+_.apk
+_.aab
