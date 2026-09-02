@@ -271,6 +271,32 @@
             </div>
         </div>
 
+        <!-- ═══════════════════════════════════════════════════════════
+             SUPPORT MESSAGES
+             ═══════════════════════════════════════════════════════════ -->
+        <div class="dashboard-card rounded-2xl p-6 mb-8">
+            <div class="flex items-center justify-between mb-1">
+                <h2 class="text-xl font-bold flex items-center gap-2">💬 Support Messages</h2>
+                <button onclick="loadSupportMessages()" class="text-xs text-slate-500 hover:text-slate-300 transition-colors">(refresh)</button>
+            </div>
+            <p class="text-slate-400 text-sm mb-4">Messages from the administration team about your withdrawals, including payment confirmations.</p>
+
+            <div id="supportMessagesList" class="space-y-2 max-h-80 overflow-y-auto mb-4">
+                <p class="text-xs text-slate-500 text-center py-4">Loading messages…</p>
+            </div>
+
+            <div class="bg-black/30 rounded-xl p-4 border border-slate-700/50">
+                <textarea id="supportMessageInput" rows="2" maxlength="2000"
+                          placeholder="Ask about a withdrawal or send a message to the admin team…"
+                          class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-green-500 focus:outline-none resize-none"></textarea>
+                <button onclick="submitSupportMessage()" id="supportMessageBtn"
+                        class="mt-3 w-full bg-green-700 hover:bg-green-600 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
+                    Send Message
+                </button>
+                <div id="supportMessageMsg" class="hidden mt-3 p-3 rounded-lg text-sm text-center"></div>
+            </div>
+        </div>
+
         <!-- User Stage Progress Bar -->
         <div class="mb-8" id="userProgress">
             <!-- Progress bar will be rendered here -->
@@ -806,6 +832,8 @@
             loadProfile();
             // Load earnings & rewards
             loadEarnings();
+            // Load support messages
+            loadSupportMessages();
             // Load sales catalogue
             loadCatalogue();
         }
@@ -1263,6 +1291,88 @@
             const el = document.getElementById('withdrawMsg');
             el.textContent = msg;
             el.className = `p-3 rounded-lg text-sm text-center ${type === 'success'
+                ? 'bg-green-900/50 text-green-300 border border-green-700/50'
+                : 'bg-red-900/50 text-red-300 border border-red-700/50'}`;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 6000);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 💬 SUPPORT MESSAGES
+        // ═══════════════════════════════════════════════════════════════════
+        function renderSupportMessageBody(body) {
+            // Mobile app attaches screenshots as a local file:// URI, which can't be
+            // displayed on the web - show a plain label instead of a dead link/image.
+            const text = escapeText(body || '');
+            return text.replace(/\[Payment screenshot\]\n?(file:\/\/\S+)?/g, '📎 Payment screenshot attached (view in the mobile app)');
+        }
+
+        function escapeText(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function loadSupportMessages() {
+            const container = document.getElementById('supportMessagesList');
+            const token = localStorage.getItem('onedream_token');
+            if (!token) { container.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">You must be logged in.</p>'; return; }
+            try {
+                const res = await fetch('/api/onedream/messages', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Unable to load messages');
+                const messages = data.messages || [];
+                if (!messages.length) {
+                    container.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No messages yet.</p>';
+                    return;
+                }
+                container.innerHTML = messages.map(m => {
+                    const date = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                    const isAdmin = m.sender_type === 'admin' || m.sender_type === 'system';
+                    return `<div class="rounded-lg px-4 py-3 text-sm ${isAdmin ? 'bg-green-900/20 border border-green-800/40' : 'bg-slate-800/50'}">
+                        <p class="text-xs font-semibold mb-1 ${isAdmin ? 'text-green-400' : 'text-slate-400'}">${isAdmin ? 'FlyMadd Support' : 'You'}</p>
+                        <p class="text-slate-200 whitespace-pre-wrap">${renderSupportMessageBody(m.body)}</p>
+                        <p class="text-xs text-slate-500 mt-1">${date}</p>
+                    </div>`;
+                }).join('');
+                container.scrollTop = container.scrollHeight;
+            } catch (err) {
+                container.innerHTML = `<p class="text-xs text-red-400 text-center py-4">${escapeText(err.message)}</p>`;
+            }
+        }
+
+        async function submitSupportMessage() {
+            const input = document.getElementById('supportMessageInput');
+            const body = input.value.trim();
+            if (!body) { showSupportMessageMsg('Type a message first.', 'error'); return; }
+            const token = localStorage.getItem('onedream_token');
+            if (!token) { showSupportMessageMsg('You must be logged in.', 'error'); return; }
+
+            const btn = document.getElementById('supportMessageBtn');
+            btn.disabled = true; btn.textContent = '⏳ Sending…';
+            try {
+                const res = await fetch('/api/onedream/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ body })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Unable to send message');
+                input.value = '';
+                await loadSupportMessages();
+            } catch (err) {
+                showSupportMessageMsg(err.message || 'Send failed.', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Send Message';
+            }
+        }
+
+        function showSupportMessageMsg(msg, type) {
+            const el = document.getElementById('supportMessageMsg');
+            el.textContent = msg;
+            el.className = `mt-3 p-3 rounded-lg text-sm text-center ${type === 'success'
                 ? 'bg-green-900/50 text-green-300 border border-green-700/50'
                 : 'bg-red-900/50 text-red-300 border border-red-700/50'}`;
             el.classList.remove('hidden');
