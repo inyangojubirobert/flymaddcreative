@@ -197,6 +197,8 @@ const PAYSTACK_PK  = 'pk_live_689666a376853473f2945d2032123db6cd53239d';
 const USDT_BSC     = '0xa3A25699995266af5Aa08dbeF2715f4b3698cF8d';
 const USDT_TRC     = 'TVuPgEs4hSLSwPf8NMirVxeYse1vrmEtXL';
 const BASE_URL     = 'https://www.flymaddcreative.online';
+const FALLBACK_NGN_RATE = 1600;
+let liveNgnRate = null;
 
 let currentItem    = null;
 let selectedMethod = null;
@@ -210,6 +212,7 @@ let lastBuyerToken = null;
 // ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
     await waitForAPI();
+    fetchLiveRate();
     const params = new URLSearchParams(window.location.search);
     const itemId  = params.get('item');
     const orderId = params.get('order');
@@ -229,6 +232,19 @@ function waitForAPI() {
         const check = () => window.SupabaseAPI ? resolve() : setTimeout(check, 100);
         check();
     });
+}
+
+// The Paystack charge here must use the same rate verify-order.js checks
+// against server-side - a stale hardcoded rate causes real payments to fail
+// verification after the customer has already been charged.
+async function fetchLiveRate() {
+    try {
+        const res = await fetch('/api/exchange-rate');
+        const data = await res.json();
+        if (data.rate) liveNgnRate = data.rate;
+    } catch (e) {
+        console.warn('Exchange rate fetch failed, using fallback rate.', e);
+    }
 }
 
 // ──────────────────────────────────────────────
@@ -366,7 +382,8 @@ async function handlePay() {
 }
 
 async function payWithPaystack(name, email, wapp, notes) {
-    const amountKobo = Math.round(parseFloat(currentItem.price_usd) * 1600 * 100);
+    const rate = liveNgnRate || FALLBACK_NGN_RATE;
+    const amountKobo = Math.round(parseFloat(currentItem.price_usd) * rate * 100);
     return new Promise(resolve => {
         const handler = PaystackPop.setup({
             key: PAYSTACK_PK,
