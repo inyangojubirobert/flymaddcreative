@@ -391,33 +391,39 @@ async function payWithPaystack(name, email, wapp, notes) {
             amount: amountKobo,
             currency: 'NGN',
             metadata: { item_id: currentItem.id, buyer_name: name },
-            callback: async (response) => {
-                try {
-                    const res = await fetch('/api/catalogue/verify-order', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            item_id: currentItem.id,
-                            buyer_name: name,
-                            buyer_email: email,
-                            buyer_whatsapp: wapp,
-                            notes,
-                            payment_method: 'paystack',
-                            payment_ref: response.reference,
-                        }),
-                    });
-                    const order = await res.json();
-                    if (!res.ok) throw new Error(order.error || 'Order verification failed');
-                    showSuccess(order);
-                } catch (e) {
-                    showPayMsg('Payment received but order creation failed. Contact support with ref: ' + response.reference, 'error');
-                }
-                resolve();
+            // Paystack's inline.js rejects an async function here ("Attribute
+            // callback must be a valid function") - it must stay synchronous,
+            // with the async work run separately inside it.
+            callback: (response) => {
+                finishPaystackOrder(name, email, wapp, notes, response).finally(resolve);
             },
             onClose: () => resolve()
         });
         handler.openIframe();
     });
+}
+
+async function finishPaystackOrder(name, email, wapp, notes, response) {
+    try {
+        const res = await fetch('/api/catalogue/verify-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                item_id: currentItem.id,
+                buyer_name: name,
+                buyer_email: email,
+                buyer_whatsapp: wapp,
+                notes,
+                payment_method: 'paystack',
+                payment_ref: response.reference,
+            }),
+        });
+        const order = await res.json();
+        if (!res.ok) throw new Error(order.error || 'Order verification failed');
+        showSuccess(order);
+    } catch (e) {
+        showPayMsg('Payment received but order creation failed. Contact support with ref: ' + response.reference, 'error');
+    }
 }
 
 async function payWithUsdt(name, email, wapp, notes) {
