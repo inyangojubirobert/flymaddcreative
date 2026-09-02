@@ -20,7 +20,9 @@ export default async function handler(req, res) {
       .select(`
         id,
         seller_username,
-        buyer_username,
+        buyer_name,
+        buyer_email,
+        buyer_whatsapp,
         item_id,
         status,
         amount_usd,
@@ -28,12 +30,12 @@ export default async function handler(req, res) {
         exchange_rate,
         currency,
         payment_method,
-        payment_reference,
+        payment_ref,
+        tx_hash,
+        notes,
         created_at,
-        buyer_confirmed_at,
-        seller_confirmed_at,
-        buyer_id,
-        seller_id
+        updated_at,
+        catalogue_items(title)
       `)
       .order('created_at', { ascending: false });
 
@@ -44,12 +46,6 @@ export default async function handler(req, res) {
 
     const { data: orders, error } = await query;
     if (error) throw error;
-
-    // Get summary stats
-    const { data: summaryData } = await supabase
-      .from('catalogue_orders')
-      .select('status, amount_usd')
-      .select('status, count() as count, sum(amount_usd) as total_usd', { count: 'exact' });
 
     return res.status(200).json({
       orders: orders || [],

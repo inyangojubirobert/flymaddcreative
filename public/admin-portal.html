@@ -259,11 +259,13 @@
 
         container.innerHTML = orders.map(order => {
           const date = new Date(order.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const itemTitle = order.catalogue_items?.title || order.item_id;
           return `<div class="rounded-lg bg-slate-700/50 border border-slate-600/50 px-4 py-3 text-sm">
             <div class="flex justify-between gap-2 mb-1">
-              <span class="font-semibold">${escapeText(order.seller_username)} → ${escapeText(order.buyer_username)}</span>
+              <span class="font-semibold">${escapeText(order.seller_username)} → ${escapeText(order.buyer_name || 'Unknown buyer')}</span>
               <span class="bg-blue-600 px-2 py-0.5 rounded text-xs">${escapeText(order.status)}</span>
             </div>
+            <p class="text-slate-300 text-xs">${escapeText(itemTitle)}</p>
             <p class="text-green-300">$${Number(order.amount_usd).toFixed(2)}</p>
             <p class="text-slate-400 text-xs mt-1">${date}</p>
           </div>`;
