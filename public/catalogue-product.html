@@ -376,19 +376,21 @@ async function payWithPaystack(name, email, wapp, notes) {
             metadata: { item_id: currentItem.id, buyer_name: name },
             callback: async (response) => {
                 try {
-                    const order = await window.SupabaseAPI.createCatalogueOrder({
-                        item_id: currentItem.id,
-                        seller_username: currentItem.seller_username,
-                        buyer_name: name,
-                        buyer_email: email,
-                        buyer_whatsapp: wapp,
-                        amount_usd: currentItem.price_usd,
-                        payment_method: 'paystack',
-                        payment_ref: response.reference,
-                        tx_hash: null,
-                        status: 'paid',
-                        notes,
+                    const res = await fetch('/api/catalogue/verify-order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            item_id: currentItem.id,
+                            buyer_name: name,
+                            buyer_email: email,
+                            buyer_whatsapp: wapp,
+                            notes,
+                            payment_method: 'paystack',
+                            payment_ref: response.reference,
+                        }),
                     });
+                    const order = await res.json();
+                    if (!res.ok) throw new Error(order.error || 'Order verification failed');
                     showSuccess(order);
                 } catch (e) {
                     showPayMsg('Payment received but order creation failed. Contact support with ref: ' + response.reference, 'error');
@@ -405,19 +407,21 @@ async function payWithUsdt(name, email, wapp, notes) {
     const txHash = document.getElementById('txHashInput').value.trim();
     if (!txHash) { showPayMsg('Please paste your transaction hash.', 'error'); return; }
     try {
-        const order = await window.SupabaseAPI.createCatalogueOrder({
-            item_id: currentItem.id,
-            seller_username: currentItem.seller_username,
-            buyer_name: name,
-            buyer_email: email,
-            buyer_whatsapp: wapp,
-            amount_usd: currentItem.price_usd,
-            payment_method: 'usdt',
-            payment_ref: null,
-            tx_hash: txHash,
-            status: 'pending_verification',
-            notes,
+        const res = await fetch('/api/catalogue/verify-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                item_id: currentItem.id,
+                buyer_name: name,
+                buyer_email: email,
+                buyer_whatsapp: wapp,
+                notes,
+                payment_method: 'usdt',
+                tx_hash: txHash,
+            }),
         });
+        const order = await res.json();
+        if (!res.ok) throw new Error(order.error || 'Order failed.');
         showSuccess(order);
     } catch (e) {
         showPayMsg(e.message || 'Order failed.', 'error');
