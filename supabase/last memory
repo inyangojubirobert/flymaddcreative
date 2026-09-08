@@ -1,0 +1,20 @@
+[https://res.cloudinary.com/dljcj00ht/image/upload/v1785978424/bascardo_watermark_logo.png](https://res.cloudinary.com/dljcj00ht/image/upload/v1785978424/bascardo_watermark_logo.png) this is the bascardo AI logo use it and define that Bascardo AI analyzes your sales and business activity to reveal trends, identify opportunities, and recommend actions to help you grow. i feel it should have its own interface . Yes, but I would not bury Bascardo AI inside User Support.
+Give Bascardo AI its own interface, while allowing it to also appear inside Support when useful.
+A clean structure would be:
+Bascardo AI
+→ Chat with AI
+→ Analyze My Business
+→ Sales Insights
+→ Recommendations
+→ AI Chat History
+User Support
+→ Help Center
+→ Contact Support
+→ Report a Problem
+→ Ask Bascardo AI
+This distinction matters because Bascardo AI is becoming more than a support bot. It's a business intelligence assistant that understands the user's sales, products, analytics, and performance.
+I'd actually give Bascardo AI its own dashboard/menu icon in the APK. When opened, the first screen could say:
+What can Bascardo AI help you with?
+Ask a question or analyze your business performance.
+Then buttons such as Analyze My Sales, Improve My Products, Marketing Ideas, and Ask Anything.
+That makes the AI feel like a real product feature—and makes your future Pro/Business AI subscription much easier to sell than if users perceive it merely as customer support.
