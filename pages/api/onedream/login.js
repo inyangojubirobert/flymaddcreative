@@ -5,8 +5,7 @@
 import { getParticipantWithPassword } from '../../../src/backend/supabase.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+import { getJwtSecret } from '../../../lib/jwtSecret';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -50,7 +49,7 @@ export default async function handler(req, res) {
                 email: user.email,
                 type: 'onedream'
             },
-            JWT_SECRET,
+            getJwtSecret(),
             { expiresIn: '7d' }
         );
 

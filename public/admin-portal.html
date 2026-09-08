@@ -10,6 +10,7 @@
     .tab-button { @apply bg-slate-700 text-slate-300 hover:bg-slate-600; }
     .message-admin { @apply bg-green-900/25 border border-green-800/30; }
     .message-participant { @apply bg-slate-700/70; }
+    .message-ai { @apply bg-purple-900/25 border border-purple-800/30; }
   </style>
 </head>
 <body class="bg-slate-900 text-white">
@@ -56,8 +57,31 @@
             <h2 class="text-xl font-bold">Support Messages & Complaints</h2>
             <button onclick="loadMessages()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Refresh</button>
           </div>
-          <div id="messagesList" class="space-y-3 max-h-96 overflow-y-auto">
-            <p class="text-slate-500">Loading messages…</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div id="conversationsList" class="md:col-span-1 space-y-2 max-h-[32rem] overflow-y-auto">
+              <p class="text-slate-500">Loading conversations…</p>
+            </div>
+            <div class="md:col-span-2 flex flex-col">
+              <div id="threadList" class="space-y-3 max-h-96 overflow-y-auto mb-3">
+                <p class="text-slate-500">Select a conversation to view messages.</p>
+              </div>
+              <div id="replyBox" class="hidden border-t border-slate-700 pt-3">
+                <textarea id="replyInput" rows="2" maxlength="2000" placeholder="Reply to this participant…"
+                          class="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-green-500 focus:outline-none resize-none"></textarea>
+                <div id="replyImagePreviewWrap" class="hidden mt-2 relative inline-block">
+                  <img id="replyImagePreview" class="w-24 h-24 object-cover rounded-lg border border-slate-600" />
+                  <button onclick="removeReplyImage()" type="button" class="absolute -top-2 -right-2 bg-black/80 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">✕</button>
+                </div>
+                <input type="file" id="replyFileInput" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" onchange="onReplyFileSelected(event)" />
+                <div class="flex gap-2 mt-2">
+                  <button onclick="document.getElementById('replyFileInput').click()" type="button"
+                          class="flex-shrink-0 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium px-3 py-2 rounded-lg">📎 Attach</button>
+                  <button onclick="sendReply()" id="replySendBtn"
+                          class="flex-1 bg-green-700 hover:bg-green-600 text-white font-semibold py-2 rounded-lg text-sm">Send Reply</button>
+                </div>
+                <p id="replyError" class="hidden text-red-400 text-xs mt-2"></p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -173,46 +197,169 @@
       document.querySelectorAll('[id$="Tab"]').forEach(el => el.classList.add('hidden'));
       document.getElementById(tab + 'Tab').classList.remove('hidden');
       document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+      // `showDashboard()` opens the first tab programmatically, so there is
+      // no click event on mobile (and some desktop browsers) to reference.
+      // Derive the correct control from its declared tab instead of relying
+      // on the non-standard global `event` object.
+      const activeButton = [...document.querySelectorAll('.tab-button')]
+        .find(button => button.getAttribute('onclick')?.includes(`'${tab}'`));
+      activeButton?.classList.add('active');
 
       if (tab === 'messages') loadMessages();
       if (tab === 'withdrawals') loadWithdrawals();
       if (tab === 'orders') loadOrders();
     }
 
+    let activeParticipantId = null;
+
+    function renderMessageBody(body) {
+      const text = body || '';
+      const urlMatch = text.match(/(https?:\/\/\S+)/);
+      if (urlMatch) {
+        const url = urlMatch[1];
+        const rest = escapeText(text.replace(url, '').replace(/\[(Payment screenshot|Attachment)\]/, '').trim());
+        return (rest ? `<p>${rest}</p>` : '') + `<img src="${url}" alt="attachment" class="mt-2 max-w-full rounded-lg max-h-64 object-contain" />`;
+      }
+      return `<p>${escapeText(text)}</p>`;
+    }
+
     async function loadMessages() {
-      const container = document.getElementById('messagesList');
+      const container = document.getElementById('conversationsList');
       container.innerHTML = '<p class="text-slate-500">Loading…</p>';
       try {
-        const response = await adminFetch('/api/admin/withdrawals');
-        const withdrawals = response.withdrawals || [];
-        let allMessages = [];
-        
-        for (const withdrawal of withdrawals) {
-          try {
-            const msgs = await adminFetch(`/api/admin/messages?participant_id=${encodeURIComponent(withdrawal.participant?.id || '')}`);
-            allMessages = allMessages.concat(msgs.messages || []);
-          } catch (e) {}
+        const response = await adminFetch('/api/admin/messages');
+        const messages = response.messages || [];
+
+        const byParticipant = new Map();
+        for (const msg of messages) {
+          const pid = msg.participant_id;
+          if (!byParticipant.has(pid)) {
+            byParticipant.set(pid, { participant: msg.participants, lastMessage: msg, unreadCount: 0 });
+          }
+          const entry = byParticipant.get(pid);
+          if (new Date(msg.created_at) > new Date(entry.lastMessage.created_at)) entry.lastMessage = msg;
+          if (msg.sender_type === 'participant' && !msg.read_at) entry.unreadCount += 1;
         }
 
-        if (!allMessages.length) {
+        const conversations = Array.from(byParticipant.values())
+          .sort((a, b) => new Date(b.lastMessage.created_at) - new Date(a.lastMessage.created_at));
+
+        if (!conversations.length) {
           container.innerHTML = '<p class="text-slate-500">No messages yet.</p>';
           return;
         }
 
-        container.innerHTML = allMessages.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(msg => {
-          const date = new Date(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-          const isAdmin = msg.sender_type === 'admin' || msg.sender_type === 'system';
-          return `<div class="rounded-lg px-4 py-3 text-sm ${isAdmin ? 'message-admin' : 'message-participant'}">
-            <div class="flex justify-between gap-2 mb-1">
-              <strong>${escapeText(msg.sender_type === 'system' ? 'System' : msg.sender_type)}</strong>
-              <span class="text-slate-400 text-xs">${date}</span>
+        container.innerHTML = conversations.map(c => {
+          const pid = c.lastMessage.participant_id;
+          const name = c.participant?.name || c.participant?.username || 'Unknown participant';
+          const date = new Date(c.lastMessage.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          return `<button onclick="openConversation('${pid}')" class="w-full text-left rounded-lg px-3 py-2 text-sm ${activeParticipantId === pid ? 'bg-green-900/30 border border-green-800/50' : 'bg-slate-700/50 hover:bg-slate-700 border border-transparent'}">
+            <div class="flex justify-between gap-2">
+              <span class="font-semibold">${escapeText(name)}</span>
+              ${c.unreadCount ? `<span class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">${c.unreadCount}</span>` : ''}
             </div>
-            <p class="text-slate-100">${escapeText(msg.body)}</p>
-          </div>`;
+            <p class="text-slate-400 text-xs truncate">${escapeText(c.lastMessage.body)}</p>
+            <p class="text-slate-500 text-[10px] mt-0.5">${date}</p>
+          </button>`;
         }).join('');
       } catch (err) {
         container.innerHTML = `<p class="text-red-400">Error: ${escapeText(err.message)}</p>`;
+      }
+    }
+
+    async function openConversation(participantId) {
+      activeParticipantId = participantId;
+      document.getElementById('replyBox').classList.remove('hidden');
+      const threadContainer = document.getElementById('threadList');
+      threadContainer.innerHTML = '<p class="text-slate-500">Loading…</p>';
+      loadMessages(); // re-render list to highlight selection
+      try {
+        const data = await adminFetch(`/api/admin/messages?participant_id=${encodeURIComponent(participantId)}`);
+        const messages = data.messages || [];
+        if (!messages.length) {
+          threadContainer.innerHTML = '<p class="text-slate-500">No messages yet.</p>';
+          return;
+        }
+        threadContainer.innerHTML = messages.map(msg => {
+          const date = new Date(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          const isAdmin = msg.sender_type === 'admin' || msg.sender_type === 'system';
+          const isAi = msg.sender_type === 'ai';
+          const bubbleClass = isAi ? 'message-ai' : (isAdmin ? 'message-admin' : 'message-participant');
+          return `<div class="rounded-lg px-4 py-3 text-sm ${bubbleClass}">
+            <div class="flex justify-between gap-2 mb-1">
+              <strong>${escapeText(msg.sender_type === 'system' ? 'System' : (isAi ? 'Bascardo Token AI' : msg.sender_type))}</strong>
+              <span class="text-slate-400 text-xs">${date}</span>
+            </div>
+            <div class="text-slate-100">${renderMessageBody(msg.body)}</div>
+          </div>`;
+        }).join('');
+        threadContainer.scrollTop = threadContainer.scrollHeight;
+      } catch (err) {
+        threadContainer.innerHTML = `<p class="text-red-400">Error: ${escapeText(err.message)}</p>`;
+      }
+    }
+
+    let pendingReplyFile = null;
+
+    function onReplyFileSelected(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      pendingReplyFile = file;
+      const reader = new FileReader();
+      reader.onload = () => {
+        document.getElementById('replyImagePreview').src = reader.result;
+        document.getElementById('replyImagePreviewWrap').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeReplyImage() {
+      pendingReplyFile = null;
+      document.getElementById('replyFileInput').value = '';
+      document.getElementById('replyImagePreviewWrap').classList.add('hidden');
+    }
+
+    async function uploadReplyImage(file) {
+      const formData = new FormData();
+      formData.append('media', file);
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${state.token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Image upload failed');
+      return data.public_url;
+    }
+
+    async function sendReply() {
+      if (!activeParticipantId) return;
+      const input = document.getElementById('replyInput');
+      const body = input.value.trim();
+      const errorEl = document.getElementById('replyError');
+      errorEl.classList.add('hidden');
+      if (!body && !pendingReplyFile) { errorEl.textContent = 'Type a message or attach an image first.'; errorEl.classList.remove('hidden'); return; }
+
+      const btn = document.getElementById('replySendBtn');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        let finalBody = body;
+        if (pendingReplyFile) {
+          const url = await uploadReplyImage(pendingReplyFile);
+          finalBody = `${body ? `${body}\n\n` : ''}[Attachment]\n${url}`;
+        }
+        await adminFetch('/api/admin/messages', {
+          method: 'POST',
+          body: JSON.stringify({ participant_id: activeParticipantId, body: finalBody })
+        });
+        input.value = '';
+        removeReplyImage();
+        await openConversation(activeParticipantId);
+      } catch (err) {
+        errorEl.textContent = err.message || 'Send failed.';
+        errorEl.classList.remove('hidden');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Send Reply';
       }
     }
 
@@ -260,10 +407,18 @@
         container.innerHTML = orders.map(order => {
           const date = new Date(order.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           const itemTitle = order.catalogue_items?.title || order.item_id;
+          const statusMap = {
+            paid:                 { label: '💰 Paid – Awaiting Delivery', color: 'bg-blue-600' },
+            pending_verification: { label: '🔍 USDT Verifying',           color: 'bg-purple-600' },
+            buyer_confirmed:      { label: '✅ Buyer Confirmed',           color: 'bg-green-700' },
+            disputed:             { label: '⚠️ Disputed',                 color: 'bg-red-700' },
+            released:             { label: '🟢 Released',                 color: 'bg-green-600' },
+          };
+          const s = statusMap[order.status] || { label: order.status, color: 'bg-slate-600' };
           return `<div class="rounded-lg bg-slate-700/50 border border-slate-600/50 px-4 py-3 text-sm">
             <div class="flex justify-between gap-2 mb-1">
               <span class="font-semibold">${escapeText(order.seller_username)} → ${escapeText(order.buyer_name || 'Unknown buyer')}</span>
-              <span class="bg-blue-600 px-2 py-0.5 rounded text-xs">${escapeText(order.status)}</span>
+              <span class="${s.color} px-2 py-0.5 rounded text-xs whitespace-nowrap">${s.label}</span>
             </div>
             <p class="text-slate-300 text-xs">${escapeText(itemTitle)}</p>
             <p class="text-green-300">$${Number(order.amount_usd).toFixed(2)}</p>

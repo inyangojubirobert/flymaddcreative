@@ -64,6 +64,32 @@
         <div id="ocStatusBadge" class="inline-block px-4 py-1 rounded-full text-sm font-medium mb-6"></div>
         <div id="ocActions" class="space-y-3"></div>
         <p class="text-xs text-slate-500 mt-6">Order ID: <span id="ocOrderId" class="font-mono"></span></p>
+
+        <!-- Buyer <-> Seller order chat (only for orders that already exist, i.e. already paid) -->
+        <div class="mt-8 text-left">
+            <h3 class="text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">💬 Message the Seller</h3>
+            <div id="ocMessagesList" class="space-y-2 max-h-64 overflow-y-auto mb-3"></div>
+            <div class="bg-black/30 rounded-xl p-3 border border-slate-700/50">
+                <div id="ocImagePreviewWrap" class="hidden mb-2 relative inline-block">
+                    <img id="ocImagePreview" class="w-20 h-20 object-cover rounded-lg border border-slate-600" />
+                    <button onclick="removeOrderMessageImage()" type="button"
+                            class="absolute -top-2 -right-2 bg-black/80 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">✕</button>
+                </div>
+                <textarea id="ocMessageInput" rows="2" maxlength="2000"
+                          placeholder="Ask about delivery, shipping, or anything else…"
+                          onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})"
+                          class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none resize-none"></textarea>
+                <input type="file" id="ocMessageFileInput" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" onchange="onOrderMessageFileSelected(event)" />
+                <div class="flex gap-2 mt-2">
+                    <button onclick="document.getElementById('ocMessageFileInput').click()" type="button"
+                            class="flex-shrink-0 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">📎</button>
+                    <button onclick="sendOrderMessage()" id="ocMessageSendBtn"
+                            class="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black font-semibold py-2 rounded-lg transition-colors text-sm">
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -486,6 +512,8 @@ async function showOrderConfirm(orderId, token) {
     try {
         const order = await window.SupabaseAPI.getOrderById(orderId);
         if (!order || order.buyer_token !== token) { showError(); return; }
+        lastBuyerToken = token;
+        lastOrderId = orderId;
 
         const item    = order.catalogue_items;
         const view    = document.getElementById('orderConfirmView');
@@ -530,15 +558,28 @@ async function showOrderConfirm(orderId, token) {
         } else if (order.status === 'released') {
             actions.innerHTML = `<p class="text-green-400 text-sm">This order is complete. Thank you for shopping!</p>`;
         }
+
+        loadOrderMessages(orderId);
     } catch (e) {
         showError();
     }
 }
 
+async function orderAction(orderId, action) {
+    const res = await fetch('/api/catalogue/order-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, action, buyer_token: lastBuyerToken })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Action failed.');
+    return data.order;
+}
+
 async function confirmDelivery(orderId) {
     if (!confirm('Confirm you have received your order? This will release payment to the seller.')) return;
     try {
-        await window.SupabaseAPI.updateOrderStatus(orderId, 'buyer_confirmed');
+        await orderAction(orderId, 'confirm_delivery');
         location.reload();
     } catch (e) {
         alert('Failed: ' + e.message);
@@ -549,11 +590,124 @@ async function raiseDispute(orderId) {
     const reason = prompt('Briefly describe the issue (optional):');
     if (reason === null) return;
     try {
-        await window.SupabaseAPI.updateOrderStatus(orderId, 'disputed');
+        await orderAction(orderId, 'raise_dispute');
         location.reload();
     } catch (e) {
         alert('Failed: ' + e.message);
     }
+}
+
+// ──────────────────────────────────────────────
+// Order chat (buyer side)
+// ──────────────────────────────────────────────
+let pendingOrderMessageFile = null;
+
+function onOrderMessageFileSelected(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    pendingOrderMessageFile = file;
+    const reader = new FileReader();
+    reader.onload = () => {
+        document.getElementById('ocImagePreview').src = reader.result;
+        document.getElementById('ocImagePreviewWrap').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeOrderMessageImage() {
+    pendingOrderMessageFile = null;
+    document.getElementById('ocMessageFileInput').value = '';
+    document.getElementById('ocImagePreviewWrap').classList.add('hidden');
+}
+
+function renderOrderMessages(messages) {
+    const list = document.getElementById('ocMessagesList');
+    if (!messages.length) {
+        list.innerHTML = '<p class="text-xs text-slate-500 text-center py-3">No messages yet.</p>';
+        return;
+    }
+    list.innerHTML = messages.map(m => {
+        const isSeller = m.sender_role === 'seller';
+        const isOwn = m.sender_role === 'buyer';
+        const date = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        return `<div class="rounded-xl shadow-md px-3 py-2 text-sm ${isSeller ? 'bg-yellow-900/20 border border-yellow-800/40' : 'bg-slate-800/50'}">
+            <div class="flex items-center justify-between gap-2 mb-0.5">
+                <p class="text-xs font-semibold ${isSeller ? 'text-yellow-400' : 'text-slate-400'}">${isSeller ? 'Seller' : 'You'}</p>
+                ${isOwn ? `<button onclick="deleteOrderMessage('${m.id}')" class="text-xs text-red-400 hover:text-red-300">Delete</button>` : ''}
+            </div>
+            ${m.body ? `<p class="text-slate-200 whitespace-pre-wrap">${escapeHtml(m.body)}</p>` : ''}
+            ${m.media_url ? `<img src="${m.media_url}" class="mt-2 max-w-full rounded-lg max-h-48 object-contain" alt="attachment" />` : ''}
+            <p class="text-xs text-slate-500 mt-0.5">${date}</p>
+        </div>`;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+}
+
+async function loadOrderMessages(orderId) {
+    try {
+        const res = await fetch(`/api/catalogue/order-messages?order_id=${orderId}&buyer_token=${lastBuyerToken}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unable to load messages');
+        renderOrderMessages(data.messages || []);
+    } catch (e) {
+        document.getElementById('ocMessagesList').innerHTML = `<p class="text-xs text-red-400 text-center py-3">${escapeHtml(e.message)}</p>`;
+    }
+}
+
+async function sendOrderMessage() {
+    const input = document.getElementById('ocMessageInput');
+    const body = input.value.trim();
+    if (!body && !pendingOrderMessageFile) return;
+    const btn = document.getElementById('ocMessageSendBtn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+        let mediaUrl = null;
+        if (pendingOrderMessageFile) {
+            const formData = new FormData();
+            formData.append('media', pendingOrderMessageFile);
+            const uploadRes = await fetch(`/api/catalogue/order-messages/upload?order_id=${lastOrderId}&buyer_token=${lastBuyerToken}`, {
+                method: 'POST',
+                body: formData
+            });
+            const uploadData = await uploadRes.json();
+            if (!uploadRes.ok) throw new Error(uploadData.error || 'Image upload failed');
+            mediaUrl = uploadData.public_url;
+        }
+        const res = await fetch('/api/catalogue/order-messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: lastOrderId, buyer_token: lastBuyerToken, body, media_url: mediaUrl })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unable to send message');
+        input.value = '';
+        removeOrderMessageImage();
+        await loadOrderMessages(lastOrderId);
+    } catch (e) {
+        alert('Failed: ' + e.message);
+    } finally {
+        btn.disabled = false; btn.textContent = 'Send';
+    }
+}
+
+async function deleteOrderMessage(id) {
+    if (!confirm('Delete this message and any attached image?')) return;
+    try {
+        const res = await fetch(`/api/catalogue/order-messages?order_id=${lastOrderId}&id=${id}&buyer_token=${lastBuyerToken}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unable to delete message');
+        await loadOrderMessages(lastOrderId);
+    } catch (e) {
+        alert('Failed: ' + e.message);
+    }
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
 }
 
 // ──────────────────────────────────────────────

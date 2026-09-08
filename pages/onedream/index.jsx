@@ -119,7 +119,7 @@ export default function OneDreamIndex() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Step 1: Register */}
             <div className="text-center p-8 rounded-xl bg-blue-50 border border-blue-100">
               <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -167,6 +167,22 @@ export default function OneDreamIndex() {
               </p>
               <span className="text-green-600 font-medium">
                 Climb the leaderboard →
+              </span>
+            </div>
+
+            {/* Step 4: Build Your Storefront */}
+            <div className="text-center p-8 rounded-xl bg-purple-50 border border-purple-100">
+              <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h18v18H3V3zm0 6h18M9 3v18" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">4. Build Your Storefront</h3>
+              <p className="text-gray-600 mb-4">
+                Build a 10-product catalogue with a promotional video and unlock a $10/month promotion package — your business profile gets referred to customers on flymaddcreative.online.
+              </p>
+              <span className="text-purple-600 font-medium">
+                Grow your business →
               </span>
             </div>
           </div>

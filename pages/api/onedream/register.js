@@ -3,13 +3,12 @@
 import { registerParticipant } from '../../../src/backend/supabase.js';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../../../lib/jwtSecret';
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -53,7 +52,7 @@ export default async function handler(req, res) {
 
         const token = jwt.sign(
             { userId: participant.id, email: participant.email, type: 'onedream' },
-            JWT_SECRET,
+            getJwtSecret(),
             { expiresIn: '7d' }
         );
 

@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'onedream_secret_2024';
+import { getJwtSecret } from '../../../lib/jwtSecret';
 
 export default function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,7 +16,7 @@ export default function handler(req, res) {
     
     try {
         const token = auth.slice(7);
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, getJwtSecret());
         res.status(200).json({ valid: true, userId: decoded.userId, email: decoded.email });
     } catch {
         res.status(401).json({ valid: false, error: 'Invalid token' });

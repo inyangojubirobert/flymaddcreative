@@ -72,12 +72,19 @@ export default function Login() {
 
       if (response.ok) {
         // Store user session data
-        if (data.token) {
-          localStorage.setItem('onedream_token', data.token);
+        const token = data.token || data.user?.token;
+        if (token) {
+          localStorage.setItem('onedream_token', token);
+        }
+        if (data.user?.username) {
+          localStorage.setItem('onedream_user', JSON.stringify({
+            username: data.user.username,
+            user_code: data.user.user_code,
+          }));
         }
         
-        // Redirect to dashboard
-        router.push('/onedream/dashboard');
+        // Both web login routes use the same responsive, production dashboard.
+        router.push('/user-dashboard.html');
       } else {
         setError(data.error || 'Login failed. Please check your credentials.');
       }

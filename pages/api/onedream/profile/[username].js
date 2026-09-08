@@ -1,18 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../../../../lib/jwtSecret';
 
 const supabase = createClient(
     process.env.SUPABASE_URL || 'https://pjtuisyvpvoswmcgxsfs.supabase.co',
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
-const JWT_SECRET = process.env.JWT_SECRET || 'onedream_secret_2024';
-
 function verifyToken(req) {
     const auth = req.headers.authorization;
     if (!auth?.startsWith('Bearer ')) return null;
     try {
-        return jwt.verify(auth.slice(7), JWT_SECRET);
+        return jwt.verify(auth.slice(7), getJwtSecret());
     } catch {
         return null;
     }

@@ -39,8 +39,9 @@ export default function Dashboard() {
 
   // Load dashboard data
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    const token = localStorage.getItem('onedream_token');
+    router.replace(token ? '/user-dashboard.html' : '/onedream/login');
+  }, [router]);
 
   const loadDashboardData = async () => {
     try {

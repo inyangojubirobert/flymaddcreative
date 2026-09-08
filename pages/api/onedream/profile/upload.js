@@ -1,13 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import Busboy from 'busboy';
+import { getJwtSecret } from '../../../../lib/jwtSecret';
 
 const supabase = createClient(
     process.env.SUPABASE_URL || 'https://pjtuisyvpvoswmcgxsfs.supabase.co',
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
-
-const JWT_SECRET = process.env.JWT_SECRET || 'onedream_secret_2024';
 
 const ALLOWED_VIDEO = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo'];
 const ALLOWED_IMAGE = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -30,7 +29,7 @@ export default function handler(req, res) {
 
     let decoded;
     try {
-        decoded = jwt.verify(auth.slice(7), JWT_SECRET);
+        decoded = jwt.verify(auth.slice(7), getJwtSecret());
     } catch {
         return res.status(401).json({ error: 'Invalid token' });
     }

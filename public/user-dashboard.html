@@ -70,6 +70,55 @@
             from { transform: translateY(-100%); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
+
+        /* Reduce oversized images/media on desktop viewports without
+           touching the mobile layout (which already fits small screens). */
+        @media (min-width: 1024px) {
+            #currentMediaWrap { max-width: 480px; margin-left: auto; margin-right: auto; }
+            .support-message-attachment { max-height: 180px !important; }
+            #supportMessageImagePreview { width: 72px !important; height: 72px !important; }
+        }
+
+        /* ── Full-screen message and Bascardo AI workspaces ───────────── */
+        .bascardo-bubble-participant { background: #27364a; border: 1px solid rgba(148, 163, 184, 0.24); }
+        .bascardo-bubble-admin { background: rgba(6, 95, 70, 0.3); border: 1px solid rgba(52, 211, 153, 0.35); }
+        .bascardo-bubble-ai { background: #fff7d6; border: 1px solid #f5cc57; color: #172033; }
+        .ai-shell {
+            --ai-view-height: 100dvh;
+            height: var(--ai-view-height);
+            background:
+                radial-gradient(circle at 8% 4%, rgba(245, 196, 66, 0.15), transparent 28%),
+                radial-gradient(circle at 95% 88%, rgba(59, 130, 246, 0.12), transparent 30%),
+            #0b1220;
+            z-index: 70;
+        }
+        #aiPlansModal { z-index: 80; }
+        #aiPlansModal > div { max-height: 90dvh; }
+        .ai-header { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(16px); }
+        .ai-workspace { min-height: 0; }
+        .ai-sidebar { background: rgba(15, 23, 42, 0.72); }
+        .ai-main { min-width: 0; min-height: 0; }
+        .ai-chat-list { min-height: 180px; overscroll-behavior: contain; scroll-behavior: smooth; }
+        .ai-message { max-width: min(82%, 680px); border-radius: 18px; padding: 12px 14px; line-height: 1.55; overflow-wrap: anywhere; }
+        .ai-message-user { margin-left: auto; background: #244a7c; border: 1px solid #3b6fa9; color: #f8fafc; border-bottom-right-radius: 5px; }
+        .ai-message-assistant { margin-right: auto; background: #fff7d6; border: 1px solid #f5cc57; color: #172033; border-bottom-left-radius: 5px; }
+        .ai-quick-card { min-height: 108px; transition: transform .18s ease, filter .18s ease; }
+        .ai-quick-card:hover { transform: translateY(-2px); filter: brightness(1.04); }
+        .ai-history-item.active { background: rgba(245, 196, 66, 0.14); border-color: rgba(245, 196, 66, 0.55); }
+        .ai-composer { padding-bottom: max(.8rem, env(safe-area-inset-bottom)); background: rgba(15, 23, 42, 0.94); backdrop-filter: blur(16px); }
+        .ai-card-glow { background: linear-gradient(135deg, rgba(255, 247, 214, .98), rgba(226, 232, 240, .95)); color: #172033; }
+        @media (max-width: 767px) {
+            .ai-shell { width: 100vw; max-width: 100vw; overflow: hidden; }
+            .ai-header > div:first-child { flex: 1; min-width: 0; }
+            .ai-sidebar { width: 100%; min-width: 0; max-width: 100vw; max-height: 30dvh; overflow-x: hidden; overflow-y: auto; }
+            .ai-main { width: 100%; max-width: 100vw; }
+            .ai-workspace { flex-direction: column; }
+            .ai-message { max-width: 92%; }
+            .ai-quick-card { min-height: 76px; }
+            .ai-chat-list { min-height: 70px; }
+            .ai-shell.ai-keyboard-open .ai-sidebar,
+            .ai-shell.ai-keyboard-open .ai-main > div:first-child { display: none; }
+        }
     </style>
 </head>
 <body class="text-white">
@@ -85,6 +134,7 @@
                     </svg>
                 </button>
                 <div class="hidden md:flex items-center space-x-4">
+                    <button onclick="openBascardoAI()" class="text-yellow-300 hover:text-yellow-200 transition-colors whitespace-nowrap">Bascardo AI</button>
                     <a href="leadershipBoard.html" class="text-slate-300 hover:text-white transition-colors whitespace-nowrap">Leaderboard</a>
                     <a href="search.html" class="text-slate-300 hover:text-white transition-colors whitespace-nowrap">Search</a>
                     <button onclick="logout()" class="text-red-400 hover:text-red-300 transition-colors text-sm whitespace-nowrap">Logout</button>
@@ -92,6 +142,7 @@
             </div>
             <div id="mobile-menu" class="md:hidden hidden pb-4">
                 <div class="flex flex-col space-y-3">
+                    <button onclick="openBascardoAI(); document.getElementById('mobile-menu').classList.add('hidden')" class="text-yellow-300 hover:text-yellow-200 transition-colors py-2 text-left">Bascardo AI</button>
                     <a href="leadershipBoard.html" class="text-slate-300 hover:text-white transition-colors py-2">Leaderboard</a>
                     <a href="search.html" class="text-slate-300 hover:text-white transition-colors py-2">Search</a>
                     <button onclick="logout()" class="text-red-400 hover:text-red-300 transition-colors text-sm py-2 text-left">Logout</button>
@@ -272,6 +323,33 @@
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════
+             BASCARDO AI
+             ═══════════════════════════════════════════════════════════ -->
+        <section class="dashboard-card rounded-2xl p-5 sm:p-7 mb-8 overflow-hidden relative" style="background: linear-gradient(135deg, rgba(255,247,214,.98), rgba(226,232,240,.96)); border-color: rgba(245,196,66,.75); color:#172033;">
+            <div class="absolute -right-12 -top-16 w-48 h-48 rounded-full" style="background:rgba(245,196,66,.2); filter:blur(2px);"></div>
+            <div class="relative flex flex-col lg:flex-row lg:items-center gap-5">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                    <img src="https://res.cloudinary.com/dljcj00ht/image/upload/v1785978424/bascardo_watermark_logo.png"
+                         alt="Bascardo AI logo" class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-contain bg-white shadow-lg border border-yellow-300 flex-shrink-0" />
+                    <div class="min-w-0">
+                        <p class="text-xs font-extrabold tracking-widest text-yellow-700 uppercase mb-1">Your business intelligence assistant</p>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold mb-2">Bascardo AI</h2>
+                        <p class="text-sm sm:text-base text-slate-700 leading-relaxed">Bascardo AI analyzes your sales and business activity to reveal trends, identify opportunities, and recommend actions to help you grow.</p>
+                    </div>
+                </div>
+                <button onclick="openBascardoAI()" class="w-full lg:w-auto bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-3.5 rounded-xl transition-colors shadow-lg flex items-center justify-center gap-2">
+                    <span>✨</span><span>Open Bascardo AI</span><span aria-hidden="true">→</span>
+                </button>
+            </div>
+            <div class="relative grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-5">
+                <button onclick="openBascardoAI('sales')" class="ai-quick-card text-left rounded-xl p-3.5 bg-yellow-100 border border-yellow-300"><span class="text-xl">📊</span><strong class="block text-sm mt-1">Analyze My Sales</strong><span class="text-xs text-slate-600">Trends and opportunities</span></button>
+                <button onclick="openBascardoAI('products')" class="ai-quick-card text-left rounded-xl p-3.5 bg-blue-100 border border-blue-200"><span class="text-xl">🏷️</span><strong class="block text-sm mt-1">Improve My Products</strong><span class="text-xs text-slate-600">Catalogue recommendations</span></button>
+                <button onclick="openBascardoAI('marketing')" class="ai-quick-card text-left rounded-xl p-3.5 bg-green-100 border border-green-200"><span class="text-xl">📣</span><strong class="block text-sm mt-1">Marketing Ideas</strong><span class="text-xs text-slate-600">Actions to reach buyers</span></button>
+                <button onclick="openBascardoAI('ask')" class="ai-quick-card text-left rounded-xl p-3.5 bg-slate-200 border border-slate-300"><span class="text-xl">💬</span><strong class="block text-sm mt-1">Ask Anything</strong><span class="text-xs text-slate-600">Chat with Bascardo AI</span></button>
+            </div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════════
              SUPPORT MESSAGES
              ═══════════════════════════════════════════════════════════ -->
         <div class="dashboard-card rounded-2xl p-6 mb-8">
@@ -279,7 +357,11 @@
                 <h2 class="text-xl font-bold flex items-center gap-2">💬 Support Messages</h2>
                 <button onclick="loadSupportMessages()" class="text-xs text-slate-500 hover:text-slate-300 transition-colors">(refresh)</button>
             </div>
-            <p class="text-slate-400 text-sm mb-4">Messages from the administration team about your withdrawals, including payment confirmations.</p>
+            <p class="text-slate-400 text-sm mb-4">Contact the FlyMadd team about withdrawals, account help, or a problem. AI conversations are kept separately.</p>
+
+            <button onclick="openBascardoAI('ask')" class="w-full mb-4 bg-yellow-100 hover:bg-yellow-50 border border-yellow-300 text-slate-900 font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2">
+                <span>✨</span> Ask Bascardo AI instead
+            </button>
 
             <div id="supportMessagesList" class="space-y-2 max-h-80 overflow-y-auto mb-4">
                 <p class="text-xs text-slate-500 text-center py-4">Loading messages…</p>
@@ -288,11 +370,22 @@
             <div class="bg-black/30 rounded-xl p-4 border border-slate-700/50">
                 <textarea id="supportMessageInput" rows="2" maxlength="2000"
                           placeholder="Ask about a withdrawal or send a message to the admin team…"
+                          onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})"
                           class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-green-500 focus:outline-none resize-none"></textarea>
-                <button onclick="submitSupportMessage()" id="supportMessageBtn"
-                        class="mt-3 w-full bg-green-700 hover:bg-green-600 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
-                    Send Message
-                </button>
+                <div id="supportMessageImagePreviewWrap" class="hidden mt-2 relative inline-block">
+                    <img id="supportMessageImagePreview" class="w-24 h-24 object-cover rounded-lg border border-slate-600" />
+                    <button onclick="removeSupportMessageImage()" type="button"
+                            class="absolute -top-2 -right-2 bg-black/80 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">✕</button>
+                </div>
+                <input type="file" id="supportMessageFileInput" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" onchange="onSupportMessageFileSelected(event)" />
+                <div class="flex gap-2 mt-3">
+                    <button onclick="document.getElementById('supportMessageFileInput').click()" type="button"
+                            class="flex-shrink-0 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium px-3 py-2.5 rounded-lg transition-colors">📎 Attach</button>
+                    <button onclick="submitSupportMessage()" id="supportMessageBtn"
+                            class="flex-1 bg-green-700 hover:bg-green-600 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
+                        Send Message
+                    </button>
+                </div>
                 <div id="supportMessageMsg" class="hidden mt-3 p-3 rounded-lg text-sm text-center"></div>
             </div>
         </div>
@@ -720,6 +813,181 @@
         </div>
     </div>
 
+    <!-- ═══ BASCARDO AI WORKSPACE ═══ -->
+    <div id="bascardoAiScreen" class="ai-shell hidden fixed inset-0 z-[70] flex flex-col text-white" role="dialog" aria-modal="true" aria-labelledby="bascardoAiTitle">
+        <header class="ai-header flex items-center justify-between gap-3 px-3 sm:px-5 py-3 border-b border-slate-700/70 flex-shrink-0">
+            <div class="flex items-center gap-3 min-w-0">
+                <img src="https://res.cloudinary.com/dljcj00ht/image/upload/v1785978424/bascardo_watermark_logo.png" alt="Bascardo AI logo" class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl object-contain bg-white border border-yellow-300 flex-shrink-0" />
+                <div class="min-w-0">
+                    <h2 id="bascardoAiTitle" class="font-extrabold text-lg sm:text-xl truncate">Bascardo AI</h2>
+                    <p class="text-xs text-slate-300 truncate">Business insights built from your FlyMadd activity</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="startNewAiChat()" class="inline-flex items-center justify-center bg-yellow-100 hover:bg-yellow-50 text-slate-900 font-bold text-sm px-3 sm:px-4 py-2.5 rounded-xl" aria-label="Start a new AI chat"><span class="hidden sm:inline">＋ New chat</span><span class="sm:hidden text-lg leading-none">＋</span></button>
+                <button onclick="closeBascardoAI()" class="text-slate-300 hover:text-white text-2xl leading-none px-2 py-1" aria-label="Close Bascardo AI">✕</button>
+            </div>
+        </header>
+
+        <div class="ai-workspace flex flex-1 overflow-hidden">
+            <aside class="ai-sidebar w-full md:w-80 lg:w-96 flex-shrink-0 border-b md:border-b-0 md:border-r border-slate-700/70 p-3 sm:p-4 overflow-y-auto">
+                <div class="rounded-2xl p-4 mb-3 ai-card-glow shadow-lg">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-widest text-yellow-700">Current plan</p>
+                            <p id="aiPlanName" class="text-xl font-extrabold mt-1">Free</p>
+                            <p id="aiCreditsText" class="text-xs text-slate-600 mt-1">Loading AI credits…</p>
+                        </div>
+                        <button onclick="openAiPlans()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2.5 rounded-xl flex-shrink-0"><span class="hidden sm:inline">AI Subscription</span><span class="sm:hidden">Plans</span></button>
+                    </div>
+                    <div class="h-2 bg-slate-300 rounded-full overflow-hidden mt-3"><div id="aiCreditBar" class="h-full bg-yellow-500 rounded-full" style="width:0%"></div></div>
+                </div>
+
+                <div class="grid grid-cols-4 md:grid-cols-2 gap-2 mb-4">
+                    <div class="rounded-xl bg-slate-800/80 border border-slate-700 p-2.5"><span class="text-xs text-slate-400">Sales · 30d</span><strong id="aiMetricSales" class="block text-sm text-yellow-300 mt-1">$0.00</strong></div>
+                    <div class="rounded-xl bg-slate-800/80 border border-slate-700 p-2.5"><span class="text-xs text-slate-400">Orders</span><strong id="aiMetricOrders" class="block text-sm text-blue-300 mt-1">0</strong></div>
+                    <div class="rounded-xl bg-slate-800/80 border border-slate-700 p-2.5"><span class="text-xs text-slate-400">Votes</span><strong id="aiMetricVotes" class="block text-sm text-green-300 mt-1">0</strong></div>
+                    <div class="rounded-xl bg-slate-800/80 border border-slate-700 p-2.5"><span class="text-xs text-slate-400">Position</span><strong id="aiMetricRank" class="block text-sm text-purple-300 mt-1">#—</strong></div>
+                </div>
+
+                <div class="flex items-center justify-between gap-2 mb-2">
+                    <h3 class="text-xs font-extrabold tracking-widest text-slate-400 uppercase">AI chat history</h3>
+                    <button onclick="deleteAllAiChats()" class="text-xs text-red-300 hover:text-red-200">Clear all</button>
+                </div>
+                <button onclick="startNewAiChat()" class="sm:hidden w-full mb-2 bg-yellow-100 text-slate-900 font-bold text-sm px-3 py-2.5 rounded-xl">＋ New chat</button>
+                <div id="aiHistoryList" class="space-y-2">
+                    <p class="text-xs text-slate-500 text-center py-4">Loading history…</p>
+                </div>
+            </aside>
+
+            <main class="ai-main flex-1 flex flex-col overflow-hidden">
+                <div class="px-3 sm:px-5 pt-3 sm:pt-4 flex-shrink-0">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold tracking-widest text-yellow-300 uppercase">What can Bascardo AI help you with?</p>
+                            <h3 id="aiConversationHeading" class="font-bold text-base sm:text-lg truncate">New conversation</h3>
+                        </div>
+                        <button id="aiDeleteCurrentBtn" onclick="deleteCurrentAiChat()" class="hidden text-xs text-red-300 hover:text-red-200 border border-red-800/60 rounded-lg px-3 py-2">Delete chat</button>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                        <button onclick="runAiQuickAction('sales')" class="ai-quick-card rounded-xl p-3 bg-yellow-100 border border-yellow-300 text-slate-900 text-left"><span>📊</span><strong class="block text-xs sm:text-sm mt-1">Analyze My Sales</strong><span class="hidden sm:block text-xs text-slate-600">Trends and opportunities</span></button>
+                        <button onclick="runAiQuickAction('products')" class="ai-quick-card rounded-xl p-3 bg-blue-100 border border-blue-200 text-slate-900 text-left"><span>🏷️</span><strong class="block text-xs sm:text-sm mt-1">Improve My Products</strong><span class="hidden sm:block text-xs text-slate-600">Catalogue recommendations</span></button>
+                        <button onclick="runAiQuickAction('marketing')" class="ai-quick-card rounded-xl p-3 bg-green-100 border border-green-200 text-slate-900 text-left"><span>📣</span><strong class="block text-xs sm:text-sm mt-1">Marketing Ideas</strong><span class="hidden sm:block text-xs text-slate-600">Reach more buyers</span></button>
+                        <button onclick="runAiQuickAction('ask')" class="ai-quick-card rounded-xl p-3 bg-slate-200 border border-slate-300 text-slate-900 text-left"><span>💬</span><strong class="block text-xs sm:text-sm mt-1">Ask Anything</strong><span class="hidden sm:block text-xs text-slate-600">Chat with Bascardo AI</span></button>
+                    </div>
+                </div>
+
+                <div id="aiChatList" class="ai-chat-list flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-3" aria-live="polite">
+                    <div class="ai-message ai-message-assistant">
+                        <p class="text-xs font-extrabold text-yellow-800 mb-1">Bascardo AI</p>
+                        <p>Ask a question or analyze your business performance. I can use your catalogue sales, products, votes, and leadership position to give you practical next steps.</p>
+                    </div>
+                </div>
+
+                <div class="ai-composer border-t border-slate-700/70 px-3 sm:px-5 pt-3 flex-shrink-0">
+                    <div id="aiStatusMessage" class="hidden mb-2 p-2.5 rounded-lg text-xs text-center"></div>
+                    <div class="max-w-4xl mx-auto flex items-end gap-2">
+                        <textarea id="aiChatInput" rows="2" maxlength="2000" placeholder="Ask Bascardo AI about your business…" class="flex-1 min-w-0 bg-slate-800 border border-slate-600 rounded-xl px-3 py-2.5 text-sm text-white placeholder-slate-400 focus:border-yellow-400 focus:outline-none resize-none"></textarea>
+                        <button id="aiSendBtn" onclick="sendAiQuestion()" class="bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-slate-950 font-extrabold px-4 sm:px-5 py-3 rounded-xl flex-shrink-0">Send</button>
+                    </div>
+                    <p class="text-[11px] text-slate-500 text-center mt-1.5">Bascardo AI can make mistakes. Review important business decisions.</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bascardo AI plan selector. Web checkout is securely handled by Paystack. -->
+    <div id="aiPlansModal" class="hidden fixed inset-0 z-[80] bg-black/70 p-4 items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="aiPlansTitle">
+        <div class="w-full max-w-3xl max-h-[90dvh] overflow-y-auto rounded-2xl bg-slate-900 border border-slate-700 p-5 sm:p-7 shadow-2xl">
+            <div class="flex items-start justify-between gap-3 mb-5">
+                <div><p class="text-xs font-bold tracking-widest text-yellow-300 uppercase">Bascardo AI subscription</p><h2 id="aiPlansTitle" class="text-2xl font-extrabold mt-1">Choose how you want to grow</h2><p class="text-sm text-slate-400 mt-1">Pay securely with Paystack. Your plan activates only after the backend verifies the payment.</p></div>
+                <button onclick="closeAiPlans()" class="text-2xl text-slate-400 hover:text-white" aria-label="Close plans">✕</button>
+            </div>
+            <div id="aiPlanCards" class="grid md:grid-cols-3 gap-3"></div>
+            <div id="aiPlanMessage" class="hidden mt-4 p-3 rounded-xl text-sm text-center"></div>
+        </div>
+    </div>
+
+    <!-- ═══ FLYMADD SUPPORT MESSAGE THREAD SCREEN ═══
+         Full-screen interactive conversation view, opened from the Support
+         Messages card without changing that card's own markup/behavior. -->
+    <div id="messageThreadScreen" class="hidden fixed inset-0 bg-slate-950 z-[60] flex flex-col">
+        <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 bg-slate-900/80" style="backdrop-filter: blur(12px);">
+            <div class="flex items-center gap-3 min-w-0">
+                <span class="w-9 h-9 rounded-full bg-green-900/50 border border-green-500/40 flex items-center justify-center flex-shrink-0" aria-hidden="true">🛟</span>
+                <div class="min-w-0">
+                    <h2 class="font-bold truncate">Support Conversation</h2>
+                    <p class="text-xs text-slate-400 truncate">FlyMadd Support</p>
+                </div>
+            </div>
+            <button onclick="closeMessageThreadScreen()" class="text-slate-400 hover:text-white text-2xl leading-none px-2">✕</button>
+        </div>
+
+        <div id="threadScreenList" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 max-w-2xl w-full mx-auto"></div>
+
+        <div class="border-t border-slate-800 bg-slate-900/80 px-4 py-3" style="backdrop-filter: blur(12px);">
+            <div class="max-w-2xl w-full mx-auto">
+                <div id="threadScreenImagePreviewWrap" class="hidden mb-2 relative inline-block">
+                    <img id="threadScreenImagePreview" class="w-16 h-16 object-cover rounded-lg border border-slate-600" />
+                    <button onclick="removeThreadScreenImage()" type="button"
+                            class="absolute -top-2 -right-2 bg-black/80 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">✕</button>
+                </div>
+                <textarea id="threadScreenInput" rows="2" maxlength="2000"
+                          placeholder="Message the FlyMadd Support team…"
+                          onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})"
+                          class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-purple-500 focus:outline-none resize-none"></textarea>
+                <input type="file" id="threadScreenFileInput" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" onchange="onThreadScreenFileSelected(event)" />
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <button onclick="document.getElementById('threadScreenFileInput').click()" type="button"
+                            class="flex-shrink-0 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium px-3 py-2.5 rounded-lg transition-colors">📎</button>
+                    <button onclick="sendThreadScreenMessage()" id="threadScreenSendBtn"
+                            class="flex-1 bg-green-700 hover:bg-green-600 text-white font-semibold py-2.5 rounded-lg transition-colors text-sm">
+                        Send to Support
+                    </button>
+                </div>
+                <div id="threadScreenMsg" class="hidden mt-3 p-3 rounded-lg text-sm text-center"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CATALOGUE ORDER CHAT (seller side) ═══
+         Full-screen buyer<->seller conversation for a specific paid order. -->
+    <div id="orderMessageScreen" class="hidden fixed inset-0 bg-slate-950 z-[60] flex flex-col">
+        <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-800 bg-slate-900/80" style="backdrop-filter: blur(12px);">
+            <div class="min-w-0">
+                <h2 class="font-bold truncate">Order Chat</h2>
+                <p id="orderMessageProductTitle" class="text-xs text-slate-400 truncate">Product</p>
+            </div>
+            <button onclick="closeOrderMessageScreen()" class="text-slate-400 hover:text-white text-2xl leading-none px-2">✕</button>
+        </div>
+
+        <div id="orderMessageList" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 max-w-2xl w-full mx-auto"></div>
+
+        <div class="border-t border-slate-800 bg-slate-900/80 px-4 py-3" style="backdrop-filter: blur(12px);">
+            <div class="max-w-2xl w-full mx-auto">
+                <div id="orderMessageImagePreviewWrap" class="hidden mb-2 relative inline-block">
+                    <img id="orderMessageImagePreview" class="w-16 h-16 object-cover rounded-lg border border-slate-600" />
+                    <button onclick="removeOrderMessageImage()" type="button"
+                            class="absolute -top-2 -right-2 bg-black/80 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">✕</button>
+                </div>
+                <textarea id="orderMessageInput" rows="2" maxlength="2000"
+                          placeholder="Message the buyer about delivery…"
+                          onfocus="this.scrollIntoView({behavior:'smooth', block:'center'})"
+                          class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none resize-none"></textarea>
+                <input type="file" id="orderMessageFileInput" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" onchange="onOrderMessageFileSelected(event)" />
+                <div class="flex gap-2 mt-3">
+                    <button onclick="document.getElementById('orderMessageFileInput').click()" type="button"
+                            class="flex-shrink-0 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium px-3 py-2.5 rounded-lg transition-colors">📎</button>
+                    <button onclick="sendOrderMessageAsSeller()" id="orderMessageSendBtn"
+                            class="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black font-semibold py-2.5 rounded-lg transition-colors text-sm">
+                        Send
+                    </button>
+                </div>
+                <div id="orderMessageMsg" class="hidden mt-3 p-3 rounded-lg text-sm text-center"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ========================================
         // 🔧 VERSION: User Dashboard v1
@@ -734,6 +1002,17 @@
             const username = urlParams.get('user') || urlParams.get('username');
             const userCode = urlParams.get('code');
             const isNewUser = urlParams.get('welcome') === 'true';
+            const openAiView = urlParams.get('view') === 'ai';
+
+            if (openAiView) {
+                setTimeout(async () => {
+                    await openBascardoAI();
+                    const paymentReference = urlParams.get('reference') || urlParams.get('trxref');
+                    if (urlParams.get('ai_subscription') === 'verify' && paymentReference) {
+                        await verifyPaystackAiSubscription(paymentReference);
+                    }
+                }, 0);
+            }
             
             // Check localStorage for saved user
             const savedUser = localStorage.getItem('onedream_user');
@@ -1301,10 +1580,41 @@
         // 💬 SUPPORT MESSAGES
         // ═══════════════════════════════════════════════════════════════════
         function renderSupportMessageBody(body) {
-            // Mobile app attaches screenshots as a local file:// URI, which can't be
-            // displayed on the web - show a plain label instead of a dead link/image.
-            const text = escapeText(body || '');
-            return text.replace(/\[Payment screenshot\]\n?(file:\/\/\S+)?/g, '📎 Payment screenshot attached (view in the mobile app)');
+            const text = body || '';
+            // A leading file:// URI comes from an old mobile build that hadn't
+            // uploaded the screenshot yet - it can't be displayed on the web.
+            const localFileMatch = text.match(/\[Payment screenshot\]\n?(file:\/\/\S+)/);
+            if (localFileMatch) {
+                return escapeText(text.replace(localFileMatch[0], '')).trim()
+                    + '<p class="text-xs text-slate-500 mt-1">📎 Payment screenshot attached (view in the mobile app)</p>';
+            }
+            const urlMatch = text.match(/(https?:\/\/\S+)/);
+            if (urlMatch) {
+                const url = urlMatch[1];
+                const rest = escapeText(text.replace(url, '').replace(/\[(Payment screenshot|Attachment)\]/, '').trim());
+                return (rest ? `<p>${rest}</p>` : '') + `<img src="${url}" alt="attachment" class="support-message-attachment mt-2 max-w-full rounded-lg max-h-64 object-contain" />`;
+            }
+            return escapeText(text);
+        }
+
+        let pendingSupportMessageFile = null;
+
+        function onSupportMessageFileSelected(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            pendingSupportMessageFile = file;
+            const reader = new FileReader();
+            reader.onload = () => {
+                document.getElementById('supportMessageImagePreview').src = reader.result;
+                document.getElementById('supportMessageImagePreviewWrap').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeSupportMessageImage() {
+            pendingSupportMessageFile = null;
+            document.getElementById('supportMessageFileInput').value = '';
+            document.getElementById('supportMessageImagePreviewWrap').classList.add('hidden');
         }
 
         function escapeText(str) {
@@ -1322,8 +1632,9 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
+                if (res.status === 401) { localStorage.removeItem('onedream_token'); throw new Error('Your session has expired. Please log in again.'); }
                 if (!res.ok) throw new Error(data.error || 'Unable to load messages');
-                const messages = data.messages || [];
+                const messages = (data.messages || []).filter(message => message.sender_type !== 'ai');
                 if (!messages.length) {
                     container.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No messages yet.</p>';
                     return;
@@ -1331,9 +1642,14 @@
                 container.innerHTML = messages.map(m => {
                     const date = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
                     const isAdmin = m.sender_type === 'admin' || m.sender_type === 'system';
-                    return `<div class="rounded-lg px-4 py-3 text-sm ${isAdmin ? 'bg-green-900/20 border border-green-800/40' : 'bg-slate-800/50'}">
-                        <p class="text-xs font-semibold mb-1 ${isAdmin ? 'text-green-400' : 'text-slate-400'}">${isAdmin ? 'FlyMadd Support' : 'You'}</p>
-                        <p class="text-slate-200 whitespace-pre-wrap">${renderSupportMessageBody(m.body)}</p>
+                    const isOwn = m.sender_type === 'participant';
+                    const label = isAdmin ? 'FlyMadd Support' : 'You';
+                    return `<div onclick="openMessageThreadScreen()" class="cursor-pointer rounded-xl shadow-md px-4 py-3 text-sm transition-colors hover:brightness-110 ${isAdmin ? 'bg-green-900/20 border border-green-800/40' : 'bg-slate-800/50'}">
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                            <p class="text-xs font-semibold ${isAdmin ? 'text-green-400' : 'text-slate-400'}">${label}</p>
+                            ${isOwn ? `<button onclick="event.stopPropagation(); deleteSupportMessageItem('${m.id}')" class="text-xs text-red-400 hover:text-red-300">Delete</button>` : ''}
+                        </div>
+                        <div class="text-slate-200 whitespace-pre-wrap">${renderSupportMessageBody(m.body)}</div>
                         <p class="text-xs text-slate-500 mt-1">${date}</p>
                     </div>`;
                 }).join('');
@@ -1346,21 +1662,28 @@
         async function submitSupportMessage() {
             const input = document.getElementById('supportMessageInput');
             const body = input.value.trim();
-            if (!body) { showSupportMessageMsg('Type a message first.', 'error'); return; }
+            if (!body && !pendingSupportMessageFile) { showSupportMessageMsg('Type a message or attach an image first.', 'error'); return; }
             const token = localStorage.getItem('onedream_token');
             if (!token) { showSupportMessageMsg('You must be logged in.', 'error'); return; }
 
             const btn = document.getElementById('supportMessageBtn');
             btn.disabled = true; btn.textContent = '⏳ Sending…';
             try {
+                let finalBody = body;
+                if (pendingSupportMessageFile) {
+                    const url = await window.SupabaseAPI.uploadCatalogueImage(pendingSupportMessageFile, token);
+                    finalBody = `${body ? `${body}\n\n` : ''}[Attachment]\n${url}`;
+                }
                 const res = await fetch('/api/onedream/messages', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ body })
+                    body: JSON.stringify({ body: finalBody })
                 });
                 const data = await res.json();
+                if (res.status === 401) { localStorage.removeItem('onedream_token'); throw new Error('Your session has expired. Please log in again.'); }
                 if (!res.ok) throw new Error(data.error || 'Unable to send message');
                 input.value = '';
+                removeSupportMessageImage();
                 await loadSupportMessages();
             } catch (err) {
                 showSupportMessageMsg(err.message || 'Send failed.', 'error');
@@ -1377,6 +1700,488 @@
                 : 'bg-red-900/50 text-red-300 border border-red-700/50'}`;
             el.classList.remove('hidden');
             setTimeout(() => el.classList.add('hidden'), 6000);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // ✨ BASCARDO AI — private business assistant and conversation history
+        // ═══════════════════════════════════════════════════════════════════
+        let aiOverview = null;
+        let aiConversations = [];
+        let aiCurrentConversationId = null;
+        let aiMessages = [];
+        let aiBusy = false;
+
+        const aiWelcomeMessage = {
+            role: 'assistant',
+            content: 'Ask a question or analyze your business performance. I can use your catalogue sales, products, votes, and leadership position to give you practical next steps.'
+        };
+
+        function syncBascardoViewport() {
+            const height = window.visualViewport?.height || window.innerHeight;
+            document.getElementById('bascardoAiScreen')?.style.setProperty('--ai-view-height', `${height}px`);
+        }
+
+        async function aiFetch(url, options = {}) {
+            const token = localStorage.getItem('onedream_token');
+            if (!token) throw new Error('Your session has expired. Please sign in again.');
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+                    ...(options.headers || {}),
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.status === 401) localStorage.removeItem('onedream_token');
+            if (!response.ok) {
+                const error = new Error(data.error || 'Bascardo AI is unavailable right now.');
+                error.code = data.code;
+                error.status = response.status;
+                throw error;
+            }
+            return data;
+        }
+
+        async function openBascardoAI(action) {
+            const screen = document.getElementById('bascardoAiScreen');
+            screen.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            syncBascardoViewport();
+            try {
+                await Promise.all([loadAiOverview(), loadAiConversations()]);
+                if (action) await runAiQuickAction(action);
+            } catch (error) {
+                showAiStatus(error.message, 'error');
+            }
+        }
+
+        function closeBascardoAI() {
+            document.getElementById('bascardoAiScreen').classList.add('hidden');
+            closeAiPlans();
+            document.body.style.overflow = '';
+        }
+
+        async function loadAiOverview() {
+            aiOverview = await aiFetch('/api/onedream/ai-overview');
+            const usage = aiOverview.usage || {};
+            const plan = aiOverview.plan || { name: 'Free' };
+            document.getElementById('aiPlanName').textContent = plan.name || 'Free';
+            document.getElementById('aiCreditsText').textContent = `${Number(usage.creditsRemaining || 0).toLocaleString()} of ${Number(usage.creditsLimit || 0).toLocaleString()} credits remaining`;
+            const usedPercent = usage.creditsLimit ? Math.min(100, Math.max(0, (Number(usage.creditsUsed || 0) / Number(usage.creditsLimit)) * 100)) : 0;
+            document.getElementById('aiCreditBar').style.width = `${100 - usedPercent}%`;
+
+            const metrics = aiOverview.metrics || {};
+            document.getElementById('aiMetricSales').textContent = `$${Number(metrics.catalogue?.revenue30DaysUsd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('aiMetricOrders').textContent = Number(metrics.catalogue?.orders30Days || 0).toLocaleString();
+            document.getElementById('aiMetricVotes').textContent = Number(metrics.votes?.total || 0).toLocaleString();
+            document.getElementById('aiMetricRank').textContent = metrics.leadership?.position ? `#${metrics.leadership.position}` : '#—';
+            renderAiPlanCards();
+        }
+
+        function renderAiPlanCards() {
+            const container = document.getElementById('aiPlanCards');
+            const plans = aiOverview?.plans || [
+                { id: 'free', name: 'Free', priceUsd: 0, monthlyCredits: 25, businessAnalysis: false },
+                { id: 'pro', name: 'Pro', priceUsd: 9, monthlyCredits: 200, businessAnalysis: true },
+                { id: 'business', name: 'Business', priceUsd: 20, monthlyCredits: 750, businessAnalysis: true }
+            ];
+            const activePlan = aiOverview?.plan?.id || 'free';
+            container.innerHTML = plans.map(plan => {
+                const active = plan.id === activePlan;
+                const paid = plan.id !== 'free';
+                return `<article class="rounded-2xl border p-4 ${active ? 'border-yellow-400 bg-yellow-400/10' : 'border-slate-700 bg-slate-800/60'}">
+                    <div class="flex items-center justify-between gap-2"><h3 class="font-extrabold text-lg">${escapeText(plan.name)}</h3>${active ? '<span class="text-xs bg-yellow-300 text-slate-900 font-bold px-2 py-1 rounded-full">Current</span>' : ''}</div>
+                    <p class="text-2xl font-extrabold mt-3">$${Number(plan.priceUsd).toFixed(0)}<span class="text-xs font-normal text-slate-400"> / month</span></p>
+                    <p class="text-sm text-slate-300 mt-3">${Number(plan.monthlyCredits).toLocaleString()} AI credits monthly</p>
+                    <p class="text-sm text-slate-300 mt-1">${plan.businessAnalysis ? '✓ Full business analysis' : 'Chat and app guidance'}</p>
+                    ${paid ? `<button onclick="requestAiSubscription('${plan.id}')" ${active ? 'disabled' : ''} class="w-full mt-4 py-2.5 rounded-xl font-bold text-sm ${active ? 'bg-slate-700 text-slate-400' : 'bg-yellow-300 hover:bg-yellow-200 text-slate-950'}">${active ? 'Current plan' : `Subscribe to ${escapeText(plan.name)}`}</button>` : '<p class="text-xs text-slate-500 mt-5">Included automatically</p>'}
+                </article>`;
+            }).join('');
+        }
+
+        function openAiPlans() {
+            const modal = document.getElementById('aiPlansModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            renderAiPlanCards();
+        }
+
+        function closeAiPlans() {
+            const modal = document.getElementById('aiPlansModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function requestAiSubscription(plan) {
+            const message = document.getElementById('aiPlanMessage');
+            message.className = 'mt-4 p-3 rounded-xl text-sm text-center bg-slate-800 text-slate-300';
+            message.textContent = 'Opening secure Paystack checkout…';
+            try {
+                const callbackUrl = `${window.location.origin}${window.location.pathname}?view=ai&ai_subscription=verify`;
+                const data = await aiFetch('/api/onedream/ai-subscription', {
+                    method: 'POST',
+                    body: JSON.stringify({ plan, callback_url: callbackUrl })
+                });
+                if (!data.authorizationUrl) throw new Error('Secure checkout URL was not returned.');
+                window.location.assign(data.authorizationUrl);
+            } catch (error) {
+                message.className = 'mt-4 p-3 rounded-xl text-sm text-center bg-red-900/50 text-red-200 border border-red-700/50';
+                message.textContent = error.message;
+            }
+        }
+
+        async function verifyPaystackAiSubscription(reference) {
+            showAiStatus('Verifying your Paystack subscription…', 'info');
+            try {
+                const data = await aiFetch('/api/onedream/ai-subscription/verify', {
+                    method: 'POST',
+                    body: JSON.stringify({ reference })
+                });
+                await loadAiOverview();
+                showAiStatus(data.message || 'Your Bascardo AI subscription is active.', 'success');
+            } catch (error) {
+                showAiStatus(error.message || 'The subscription payment could not be verified.', 'error');
+            } finally {
+                const cleanUrl = new URL(window.location.href);
+                cleanUrl.searchParams.delete('ai_subscription');
+                cleanUrl.searchParams.delete('reference');
+                cleanUrl.searchParams.delete('trxref');
+                window.history.replaceState({}, '', cleanUrl);
+            }
+        }
+
+        async function loadAiConversations() {
+            const data = await aiFetch('/api/onedream/ai-conversations');
+            aiConversations = data.conversations || [];
+            renderAiHistory();
+        }
+
+        function renderAiHistory() {
+            const container = document.getElementById('aiHistoryList');
+            if (!aiConversations.length) {
+                container.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No saved chats yet.</p>';
+                return;
+            }
+            container.innerHTML = aiConversations.map(conversation => {
+                const active = conversation.id === aiCurrentConversationId;
+                const date = new Date(conversation.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                return `<button onclick="selectAiConversation('${conversation.id}')" class="ai-history-item ${active ? 'active' : ''} w-full text-left rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-2.5 hover:border-yellow-600/60">
+                    <span class="block text-sm font-semibold truncate">${escapeText(conversation.title || 'Conversation')}</span>
+                    <span class="block text-xs text-slate-500 mt-1">${date}</span>
+                </button>`;
+            }).join('');
+        }
+
+        async function selectAiConversation(id) {
+            const container = document.getElementById('aiChatList');
+            container.innerHTML = '<p class="text-sm text-slate-400 text-center py-8">Loading chat…</p>';
+            try {
+                const data = await aiFetch(`/api/onedream/ai-conversations/${encodeURIComponent(id)}`);
+                aiCurrentConversationId = data.conversation.id;
+                aiMessages = data.messages || [];
+                document.getElementById('aiConversationHeading').textContent = data.conversation.title || 'Conversation';
+                document.getElementById('aiDeleteCurrentBtn').classList.remove('hidden');
+                renderAiMessages();
+                renderAiHistory();
+            } catch (error) {
+                showAiStatus(error.message, 'error');
+                startNewAiChat();
+            }
+        }
+
+        function startNewAiChat() {
+            aiCurrentConversationId = null;
+            aiMessages = [aiWelcomeMessage];
+            document.getElementById('aiConversationHeading').textContent = 'New conversation';
+            document.getElementById('aiDeleteCurrentBtn').classList.add('hidden');
+            renderAiMessages();
+            renderAiHistory();
+            setTimeout(() => document.getElementById('aiChatInput')?.focus(), 80);
+        }
+
+        function renderAiMessages() {
+            const container = document.getElementById('aiChatList');
+            const messages = aiMessages.length ? aiMessages : [aiWelcomeMessage];
+            container.innerHTML = messages.map(message => {
+                const assistant = message.role === 'assistant';
+                return `<div class="ai-message ${assistant ? 'ai-message-assistant' : 'ai-message-user'}">
+                    <p class="text-xs font-extrabold mb-1 ${assistant ? 'text-yellow-800' : 'text-blue-200'}">${assistant ? 'Bascardo AI' : 'You'}</p>
+                    <p class="whitespace-pre-wrap">${escapeText(message.content || '')}</p>
+                </div>`;
+            }).join('');
+            requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+        }
+
+        async function runAiQuickAction(action) {
+            const prompts = {
+                sales: 'Analyze my catalogue sales for the last 30 days, compare them with the previous 30 days, identify trends and opportunities, and recommend my next actions.',
+                products: 'Review my current catalogue performance and recommend specific improvements to my product titles, descriptions, prices, and product mix using only the data available.',
+                marketing: 'Give me practical marketing ideas for my FlyMadd catalogue based on my products, recent sales, votes, stage, and leaderboard position.'
+            };
+            if (action === 'ask') {
+                const input = document.getElementById('aiChatInput');
+                input.focus();
+                setTimeout(() => input.scrollIntoView({ behavior: 'smooth', block: 'end' }), 120);
+                return;
+            }
+            if (action === 'sales' && aiOverview && !aiOverview.plan?.businessAnalysis) {
+                showAiStatus('Business analysis is available on Pro and Business plans.', 'info');
+                openAiPlans();
+                return;
+            }
+            await sendAiQuestion(prompts[action], action === 'sales' ? 'business_analysis' : 'chat');
+        }
+
+        async function sendAiQuestion(suggestedQuestion, action = 'chat') {
+            if (aiBusy) return;
+            const input = document.getElementById('aiChatInput');
+            const question = (suggestedQuestion || input.value).trim();
+            if (!question) { showAiStatus('Ask Bascardo AI a question first.', 'error'); return; }
+
+            const previousMessages = [...aiMessages];
+            aiMessages = [...(aiMessages.length ? aiMessages : [aiWelcomeMessage]), { role: 'user', content: question }];
+            input.value = '';
+            renderAiMessages();
+            setAiBusy(true, action === 'business_analysis' ? 'Analyzing…' : 'Thinking…');
+            try {
+                const data = await aiFetch('/api/onedream/ai-chat', {
+                    method: 'POST',
+                    body: JSON.stringify({ question, action, conversation_id: aiCurrentConversationId })
+                });
+                aiCurrentConversationId = data.conversation.id;
+                await selectAiConversation(aiCurrentConversationId);
+                await Promise.allSettled([loadAiConversations(), loadAiOverview()]);
+            } catch (error) {
+                aiMessages = previousMessages;
+                renderAiMessages();
+                showAiStatus(error.message, 'error');
+                if (error.code === 'AI_PLAN_REQUIRED' || error.code === 'AI_QUOTA_EXCEEDED') openAiPlans();
+            } finally {
+                setAiBusy(false);
+            }
+        }
+
+        function setAiBusy(busy, label) {
+            aiBusy = busy;
+            const button = document.getElementById('aiSendBtn');
+            button.disabled = busy;
+            button.textContent = busy ? (label || 'Thinking…') : 'Send';
+        }
+
+        function showAiStatus(message, type = 'info') {
+            const element = document.getElementById('aiStatusMessage');
+            const colors = type === 'error'
+                ? 'bg-red-900/60 text-red-200 border border-red-700/60'
+                : type === 'success'
+                  ? 'bg-green-900/60 text-green-100 border border-green-700/60'
+                : 'bg-blue-900/50 text-blue-100 border border-blue-700/50';
+            element.className = `mb-2 p-2.5 rounded-lg text-xs text-center ${colors}`;
+            element.textContent = message;
+            setTimeout(() => element.classList.add('hidden'), 6500);
+        }
+
+        async function deleteCurrentAiChat() {
+            if (!aiCurrentConversationId || !confirm('Delete this AI chat permanently?')) return;
+            try {
+                await aiFetch(`/api/onedream/ai-conversations/${encodeURIComponent(aiCurrentConversationId)}`, { method: 'DELETE' });
+                startNewAiChat();
+                await loadAiConversations();
+                showAiStatus('AI chat deleted.', 'info');
+            } catch (error) {
+                showAiStatus(error.message, 'error');
+            }
+        }
+
+        async function deleteAllAiChats() {
+            if (!aiConversations.length || !confirm('Delete all of your Bascardo AI chat history permanently?')) return;
+            try {
+                await aiFetch('/api/onedream/ai-conversations', { method: 'DELETE' });
+                startNewAiChat();
+                await loadAiConversations();
+                showAiStatus('All AI chats deleted. You have a clean history.', 'info');
+            } catch (error) {
+                showAiStatus(error.message, 'error');
+            }
+        }
+
+        window.visualViewport?.addEventListener('resize', syncBascardoViewport);
+        window.visualViewport?.addEventListener('scroll', syncBascardoViewport);
+        document.getElementById('aiChatInput')?.addEventListener('focus', () => {
+            document.getElementById('bascardoAiScreen')?.classList.add('ai-keyboard-open');
+            setTimeout(() => {
+                syncBascardoViewport();
+                const list = document.getElementById('aiChatList');
+                list.scrollTop = list.scrollHeight;
+                document.getElementById('aiChatInput').scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }, 160);
+        });
+        document.getElementById('aiChatInput')?.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (document.activeElement !== document.getElementById('aiChatInput')) {
+                    document.getElementById('bascardoAiScreen')?.classList.remove('ai-keyboard-open');
+                }
+            }, 180);
+        });
+        document.getElementById('aiChatInput')?.addEventListener('keydown', event => {
+            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+                event.preventDefault();
+                sendAiQuestion();
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════════════
+        // 🛟 FLYMADD SUPPORT FULL-SCREEN MESSAGE THREAD
+        // ═══════════════════════════════════════════════════════════════════
+        let pendingThreadScreenFile = null;
+        let threadScreenMessages = [];
+
+        function openMessageThreadScreen() {
+            document.getElementById('messageThreadScreen').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            loadThreadScreenMessages();
+        }
+
+        function closeMessageThreadScreen() {
+            document.getElementById('messageThreadScreen').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function renderThreadScreenList() {
+            const container = document.getElementById('threadScreenList');
+            if (!threadScreenMessages.length) {
+                container.innerHTML = '<p class="text-sm text-slate-500 text-center py-8">No support messages yet. Send the FlyMadd team a message below.</p>';
+                return;
+            }
+            container.innerHTML = threadScreenMessages.map(m => {
+                const date = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                const isAdmin = m.sender_type === 'admin' || m.sender_type === 'system';
+                const isOwn = m.sender_type === 'participant';
+                const label = isAdmin ? 'FlyMadd Support' : 'You';
+                const bubbleClass = isAdmin ? 'bascardo-bubble-admin' : 'bascardo-bubble-participant';
+                const avatar = isAdmin ? '🛟' : '🙂';
+                return `<div class="rounded-xl shadow-md px-4 py-3 text-sm ${bubbleClass}">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <p class="text-xs font-semibold flex items-center gap-1.5 text-slate-300">${avatar} ${label}</p>
+                        ${isOwn ? `<button onclick="deleteThreadScreenMessageItem('${m.id}')" class="text-xs text-red-400 hover:text-red-300">Delete</button>` : ''}
+                    </div>
+                    <div class="text-slate-100 whitespace-pre-wrap">${renderSupportMessageBody(m.body)}</div>
+                    <p class="text-xs text-slate-500 mt-1">${date}</p>
+                </div>`;
+            }).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function loadThreadScreenMessages() {
+            const container = document.getElementById('threadScreenList');
+            const token = localStorage.getItem('onedream_token');
+            if (!token) { container.innerHTML = '<p class="text-sm text-slate-500 text-center py-8">You must be logged in.</p>'; return; }
+            container.innerHTML = '<p class="text-sm text-slate-500 text-center py-8">Loading conversation…</p>';
+            try {
+                const res = await fetch('/api/onedream/messages', { headers: { 'Authorization': `Bearer ${token}` } });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Unable to load messages');
+                threadScreenMessages = (data.messages || []).filter(message => message.sender_type !== 'ai');
+                renderThreadScreenList();
+            } catch (err) {
+                container.innerHTML = `<p class="text-sm text-red-400 text-center py-8">${escapeText(err.message)}</p>`;
+            }
+        }
+
+        function onThreadScreenFileSelected(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            pendingThreadScreenFile = file;
+            const reader = new FileReader();
+            reader.onload = () => {
+                document.getElementById('threadScreenImagePreview').src = reader.result;
+                document.getElementById('threadScreenImagePreviewWrap').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeThreadScreenImage() {
+            pendingThreadScreenFile = null;
+            document.getElementById('threadScreenFileInput').value = '';
+            document.getElementById('threadScreenImagePreviewWrap').classList.add('hidden');
+        }
+
+        function showThreadScreenMsg(msg, type) {
+            const el = document.getElementById('threadScreenMsg');
+            el.textContent = msg;
+            el.className = `mt-3 p-3 rounded-lg text-sm text-center ${type === 'success'
+                ? 'bg-green-900/50 text-green-300 border border-green-700/50'
+                : 'bg-red-900/50 text-red-300 border border-red-700/50'}`;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 6000);
+        }
+
+        async function sendThreadScreenMessage() {
+            const input = document.getElementById('threadScreenInput');
+            const body = input.value.trim();
+            if (!body && !pendingThreadScreenFile) { showThreadScreenMsg('Type a message or attach an image first.', 'error'); return; }
+            const token = localStorage.getItem('onedream_token');
+            if (!token) { showThreadScreenMsg('You must be logged in.', 'error'); return; }
+
+            const btn = document.getElementById('threadScreenSendBtn');
+            btn.disabled = true; btn.textContent = '⏳ Sending…';
+            try {
+                let finalBody = body;
+                if (pendingThreadScreenFile) {
+                    const url = await window.SupabaseAPI.uploadCatalogueImage(pendingThreadScreenFile, token);
+                    finalBody = `${body ? `${body}\n\n` : ''}[Attachment]\n${url}`;
+                }
+                const res = await fetch('/api/onedream/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ body: finalBody })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Unable to send message');
+                input.value = '';
+                removeThreadScreenImage();
+                await loadThreadScreenMessages();
+                await loadSupportMessages();
+            } catch (err) {
+                showThreadScreenMsg(err.message || 'Send failed.', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Send to Support';
+            }
+        }
+
+        async function deleteSupportMessageItem(id) {
+            if (!confirm('Delete this message and any attached image?')) return;
+            const token = localStorage.getItem('onedream_token');
+            if (!token) return;
+            try {
+                const res = await fetch(`/api/onedream/messages/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Unable to delete message');
+                await loadSupportMessages();
+            } catch (err) {
+                showSupportMessageMsg(err.message || 'Delete failed.', 'error');
+            }
+        }
+
+        async function deleteThreadScreenMessageItem(id) {
+            if (!confirm('Delete this message and any attached image?')) return;
+            const token = localStorage.getItem('onedream_token');
+            if (!token) return;
+            try {
+                const res = await fetch(`/api/onedream/messages/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Unable to delete message');
+                await loadThreadScreenMessages();
+                await loadSupportMessages();
+            } catch (err) {
+                showThreadScreenMsg(err.message || 'Delete failed.', 'error');
+            }
         }
 
         // ═══════════════════════════════════════════════════════════════════
@@ -1468,8 +2273,153 @@
                         🟢 Release Funds to Me
                     </button>` : ''}
                     ${o.status === 'disputed' ? `<p class="mt-2 text-xs text-orange-400">Dispute raised — contact buyer and resolve before releasing.</p>` : ''}
+                    <button onclick="openOrderMessageScreen('${o.id}', '${escapeText(title).replace(/'/g, "&#39;")}')"
+                        class="w-full mt-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium py-2 rounded-lg transition-colors">
+                        💬 Message Buyer
+                    </button>
                 </div>`;
             }).join('');
+        }
+
+        // ── Order chat (seller side) ──────────────────────────────────
+        let activeOrderMessageId = null;
+
+        function openOrderMessageScreen(orderId, productTitle) {
+            activeOrderMessageId = orderId;
+            document.getElementById('orderMessageProductTitle').textContent = productTitle || 'Product';
+            document.getElementById('orderMessageScreen').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            loadOrderMessagesAsSeller();
+        }
+
+        function closeOrderMessageScreen() {
+            document.getElementById('orderMessageScreen').classList.add('hidden');
+            document.body.style.overflow = '';
+            activeOrderMessageId = null;
+            removeOrderMessageImage();
+        }
+
+        function renderOrderMessageList(messages) {
+            const list = document.getElementById('orderMessageList');
+            if (!messages.length) {
+                list.innerHTML = '<p class="text-sm text-slate-500 text-center py-8">No messages yet.</p>';
+                return;
+            }
+            list.innerHTML = messages.map(m => {
+                const isSeller = m.sender_role === 'seller';
+                const date = new Date(m.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+                return `<div class="rounded-xl shadow-md px-4 py-3 text-sm ${isSeller ? 'bg-yellow-900/20 border border-yellow-800/40' : 'bg-slate-800/50'}">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <p class="text-xs font-semibold ${isSeller ? 'text-yellow-400' : 'text-slate-400'}">${isSeller ? 'You' : 'Buyer'}</p>
+                        ${isSeller ? `<button onclick="deleteOrderMessageAsSeller('${m.id}')" class="text-xs text-red-400 hover:text-red-300">Delete</button>` : ''}
+                    </div>
+                    ${m.body ? `<div class="text-slate-100 whitespace-pre-wrap">${escapeText(m.body)}</div>` : ''}
+                    ${m.media_url ? `<img src="${m.media_url}" class="support-message-attachment mt-2 max-w-full rounded-lg max-h-64 object-contain" alt="attachment" />` : ''}
+                    <p class="text-xs text-slate-500 mt-1">${date}</p>
+                </div>`;
+            }).join('');
+            list.scrollTop = list.scrollHeight;
+        }
+
+        async function loadOrderMessagesAsSeller() {
+            const token = localStorage.getItem('onedream_token');
+            const list = document.getElementById('orderMessageList');
+            if (!token || !activeOrderMessageId) return;
+            list.innerHTML = '<p class="text-sm text-slate-500 text-center py-8">Loading…</p>';
+            try {
+                const res = await fetch(`/api/catalogue/order-messages?order_id=${activeOrderMessageId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Unable to load messages');
+                renderOrderMessageList(data.messages || []);
+            } catch (err) {
+                list.innerHTML = `<p class="text-sm text-red-400 text-center py-8">${escapeText(err.message)}</p>`;
+            }
+        }
+
+        let pendingOrderMessageSellerFile = null;
+
+        function onOrderMessageFileSelected(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            pendingOrderMessageSellerFile = file;
+            const reader = new FileReader();
+            reader.onload = () => {
+                document.getElementById('orderMessageImagePreview').src = reader.result;
+                document.getElementById('orderMessageImagePreviewWrap').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeOrderMessageImage() {
+            pendingOrderMessageSellerFile = null;
+            document.getElementById('orderMessageFileInput').value = '';
+            document.getElementById('orderMessageImagePreviewWrap').classList.add('hidden');
+        }
+
+        async function sendOrderMessageAsSeller() {
+            const input = document.getElementById('orderMessageInput');
+            const body = input.value.trim();
+            if ((!body && !pendingOrderMessageSellerFile) || !activeOrderMessageId) return;
+            const token = localStorage.getItem('onedream_token');
+            if (!token) return;
+            const btn = document.getElementById('orderMessageSendBtn');
+            btn.disabled = true; btn.textContent = 'Sending…';
+            try {
+                let mediaUrl = null;
+                if (pendingOrderMessageSellerFile) {
+                    const formData = new FormData();
+                    formData.append('media', pendingOrderMessageSellerFile);
+                    const uploadRes = await fetch(`/api/catalogue/order-messages/upload?order_id=${activeOrderMessageId}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: formData
+                    });
+                    const uploadData = await uploadRes.json();
+                    if (!uploadRes.ok) throw new Error(uploadData.error || 'Image upload failed');
+                    mediaUrl = uploadData.public_url;
+                }
+                const res = await fetch('/api/catalogue/order-messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ order_id: activeOrderMessageId, body, media_url: mediaUrl })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Unable to send message');
+                input.value = '';
+                removeOrderMessageImage();
+                await loadOrderMessagesAsSeller();
+            } catch (err) {
+                const el = document.getElementById('orderMessageMsg');
+                el.textContent = err.message || 'Send failed.';
+                el.className = 'mt-3 p-3 rounded-lg text-sm text-center bg-red-900/50 text-red-300 border border-red-700/50';
+                el.classList.remove('hidden');
+                setTimeout(() => el.classList.add('hidden'), 6000);
+            } finally {
+                btn.disabled = false; btn.textContent = 'Send';
+            }
+        }
+
+        async function deleteOrderMessageAsSeller(id) {
+            if (!confirm('Delete this message and any attached image?')) return;
+            const token = localStorage.getItem('onedream_token');
+            if (!token || !activeOrderMessageId) return;
+            try {
+                const res = await fetch(`/api/catalogue/order-messages?order_id=${activeOrderMessageId}&id=${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Unable to delete message');
+                await loadOrderMessagesAsSeller();
+            } catch (err) {
+                const el = document.getElementById('orderMessageMsg');
+                el.textContent = err.message || 'Delete failed.';
+                el.className = 'mt-3 p-3 rounded-lg text-sm text-center bg-red-900/50 text-red-300 border border-red-700/50';
+                el.classList.remove('hidden');
+                setTimeout(() => el.classList.add('hidden'), 6000);
+            }
         }
 
         // ── Product Modal ──────────────────────────────────────────────

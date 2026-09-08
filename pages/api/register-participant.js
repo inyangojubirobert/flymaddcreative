@@ -1,8 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createParticipant, getParticipantByEmail, getParticipantByUsername, getReferralLink } from '../../src/backend/supabase.js';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'onedream_secret_2024';
+import { getJwtSecret } from '../../lib/jwtSecret';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -39,7 +38,7 @@ export default async function handler(req, res) {
             || `https://www.flymaddcreative.online/vote.html?user=${normalizedUsername}`;
         
         // JWT
-        const token = jwt.sign({ userId: participant.id, email: participant.email }, JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({ userId: participant.id, email: participant.email, type: 'onedream' }, getJwtSecret(), { expiresIn: '7d' });
         
         res.status(201).json({
             success: true,
