@@ -28,6 +28,8 @@ build/
 dist/
 .next/
 out/
+*.apk
+*.aab
 
 # 💾 OS generated files
 .DS_Store

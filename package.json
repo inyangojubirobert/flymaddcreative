@@ -13,6 +13,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:db": "node scripts/test-db.mjs",
+    "test:subscriptions": "node --experimental-vm-modules --test scripts/test-google-play-subscriptions.mjs scripts/test-ai-subscription-currency.mjs",
+    "check:google-play": "node scripts/check-google-play-readiness.mjs",
     "migrate:add-password-hash": "node scripts/add-password-hash-column.mjs"
   },
   "dependencies": {
@@ -25,6 +27,7 @@
     "dotenv": "^16.3.1",
     "ethers": "^6.16.0",
     "framer-motion": "^10.16.4",
+    "google-auth-library": "^11.0.2",
     "jsonwebtoken": "^9.0.3",
     "next": "^14.2.35",
     "next-connect": "^1.0.0",
@@ -35,6 +38,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/forms": "^0.5.6",
     "@tailwindcss/typography": "^0.5.10",
     "autoprefixer": "^10.4.16",
