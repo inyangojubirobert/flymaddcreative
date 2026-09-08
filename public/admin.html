@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin Payouts - FlyMadd Creative</title>
+  <link href="./dist/output.css" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    <section id="loginView" class="max-w-md mx-auto mt-16 rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-xl">
+      <p class="text-xs uppercase tracking-widest text-green-400 mb-2">FlyMadd Creative</p>
+      <h1 class="text-2xl font-bold">Payout Administration</h1>
+      <p class="text-sm text-slate-400 mt-2">Sign in to review participant withdrawal requests and payout messages.</p>
+
+      <form id="adminLoginForm" class="mt-6 space-y-4">
+        <label class="block text-sm">
+          <span class="text-slate-300">Email</span>
+          <input id="adminEmail" type="email" autocomplete="username" required
+                 class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white outline-none focus:border-green-500">
+        </label>
+        <label class="block text-sm">
+          <span class="text-slate-300">Password</span>
+          <input id="adminPassword" type="password" autocomplete="current-password" required
+                 class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white outline-none focus:border-green-500">
+        </label>
+        <p id="loginError" class="hidden text-sm text-red-300"></p>
+        <button id="adminLoginButton" type="submit" class="w-full rounded-lg bg-green-700 py-2.5 font-semibold text-white hover:bg-green-600">
+          Sign in securely
+        </button>
+      </form>
+    </section>
+
+    <section id="dashboardView" class="hidden">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-7">
+        <div>
+          <p class="text-xs uppercase tracking-widest text-green-400">FlyMadd Creative</p>
+          <h1 class="text-2xl font-bold">Payout Administration</h1>
+          <p id="adminIdentity" class="text-sm text-slate-400 mt-1"></p>
+        </div>
+        <button onclick="logoutAdmin()" class="rounded-lg border border-slate-600 px-4 py-2 text-sm hover:bg-slate-800">Sign out</button>
+      </div>
+
+      <div class="grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
+        <section class="rounded-2xl border border-slate-700 bg-slate-900/70 p-5">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 class="font-semibold">Withdrawal requests</h2>
+              <p id="withdrawalSummary" class="text-xs text-slate-400 mt-1">Loading…</p>
+            </div>
+            <div class="flex gap-2">
+              <select id="statusFilter" onchange="loadWithdrawals()" class="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm outline-none focus:border-green-500">
+                <option value="all">All statuses</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="claimed">Claimed / paid</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <button onclick="loadWithdrawals()" class="rounded-lg border border-slate-600 px-3 py-2 text-sm hover:bg-slate-800">Refresh</button>
+            </div>
+          </div>
+          <div id="withdrawalList" class="space-y-2 max-h-[72vh] overflow-y-auto pr-1"></div>
+        </section>
+
+        <aside class="rounded-2xl border border-slate-700 bg-slate-900/70 p-5">
+          <div id="withdrawalDetailEmpty" class="py-12 text-center text-sm text-slate-500">Select a withdrawal request to review its payout and messages.</div>
+          <div id="withdrawalDetail" class="hidden">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="detailName" class="font-semibold"></h2>
+                <p id="detailContact" class="text-xs text-slate-400 mt-1"></p>
+              </div>
+              <span id="detailStatus" class="rounded-full bg-slate-700 px-2 py-1 text-xs"></span>
+            </div>
+            <div class="mt-4 rounded-lg bg-slate-800/70 p-3 text-sm space-y-1">
+              <p><span class="text-slate-400">Request:</span> <span id="detailAmount"></span></p>
+              <p><span class="text-slate-400">Method:</span> <span id="detailMethod"></span></p>
+              <p><span class="text-slate-400">Recipient details:</span> <span id="detailPaymentDetails" class="break-all"></span></p>
+            </div>
+
+            <form id="payoutForm" class="mt-5 space-y-3">
+              <h3 class="text-sm font-semibold text-green-300">Record payout decision</h3>
+              <label class="block text-xs text-slate-400">Status
+                <select id="payoutStatus" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-green-500"></select>
+              </label>
+              <div id="claimFields" class="grid grid-cols-2 gap-3">
+                <label class="block text-xs text-slate-400">Payout type
+                  <select id="payoutType" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-green-500">
+                    <option value="fiat">Fiat</option>
+                    <option value="crypto">Crypto</option>
+                  </select>
+                </label>
+                <label class="block text-xs text-slate-400">Currency
+                  <input id="payoutCurrency" placeholder="NGN / USDT" maxlength="12" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-green-500">
+                </label>
+                <label class="block text-xs text-slate-400">Amount paid
+                  <input id="payoutAmount" type="number" min="0" step="0.000001" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-green-500">
+                </label>
+                <label class="block text-xs text-slate-400">Network (crypto only)
+                  <input id="payoutNetwork" placeholder="BSC / Tron" maxlength="50" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-green-500">
+                </label>
+                <label class="block col-span-2 text-xs text-slate-400">Bank / transaction reference
+                  <input id="payoutReference" maxlength="250" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-green-500">
+                </label>
+              </div>
+              <label class="block text-xs text-slate-400">Admin note (optional)
+                <textarea id="adminNote" rows="2" maxlength="2000" class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-green-500"></textarea>
+              </label>
+              <p id="payoutFeedback" class="hidden text-xs"></p>
+              <button id="savePayoutButton" type="submit" class="w-full rounded-lg bg-green-700 py-2.5 text-sm font-semibold text-white hover:bg-green-600">Save payout decision</button>
+            </form>
+
+            <div class="mt-6 border-t border-slate-700 pt-5">
+              <div class="flex items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold text-green-300">Participant messages</h3>
+                <button onclick="loadMessagesForSelected()" class="text-xs text-slate-400 hover:text-white">Refresh</button>
+              </div>
+              <div id="adminMessages" class="mt-3 max-h-52 space-y-2 overflow-y-auto">
+                <p class="text-xs text-slate-500">Select a request to load messages.</p>
+              </div>
+              <textarea id="adminMessageBody" rows="2" maxlength="2000" placeholder="Reply to the participant…"
+                        class="mt-3 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-green-500"></textarea>
+              <button onclick="sendAdminMessage()" id="adminMessageButton" class="mt-2 rounded-lg bg-slate-700 px-4 py-2 text-xs font-semibold hover:bg-slate-600">Send message</button>
+              <p id="messageFeedback" class="hidden mt-2 text-xs"></p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const ADMIN_TOKEN_KEY = 'flymadd_admin_token';
+    const ADMIN_PROFILE_KEY = 'flymadd_admin_profile';
+    const state = { token: localStorage.getItem(ADMIN_TOKEN_KEY), admin: null, withdrawals: [], selected: null };
+
+    function escapeAdminText(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;').replace(/\n/g, '<br>');
+    }
+
+    async function adminFetch(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.token}`,
+          ...(options.headers || {})
+        }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 401 || response.status === 403) {
+        logoutAdmin();
+      }
+      if (!response.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    }
+
+    document.getElementById('adminLoginForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = document.getElementById('adminLoginButton');
+      const error = document.getElementById('loginError');
+      error.classList.add('hidden');
+      button.disabled = true;
+      button.textContent = 'Signing in…';
+      try {
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('adminEmail').value.trim(),
+            password: document.getElementById('adminPassword').value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Sign in failed');
+        state.token = data.token;
+        state.admin = data.admin;
+        localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+        localStorage.setItem(ADMIN_PROFILE_KEY, JSON.stringify(data.admin));
+        showDashboard();
+      } catch (err) {
+        error.textContent = err.message || 'Sign in failed';
+        error.classList.remove('hidden');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Sign in securely';
+      }
+    });
+
+    function showDashboard() {
+      state.admin = state.admin || JSON.parse(localStorage.getItem(ADMIN_PROFILE_KEY) || 'null');
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.remove('hidden');
+      document.getElementById('adminIdentity').textContent = state.admin ? `${state.admin.display_name} · ${state.admin.email}` : '';
+      loadWithdrawals();
+    }
+
+    function logoutAdmin() {
+      localStorage.removeItem(ADMIN_TOKEN_KEY);
+      localStorage.removeItem(ADMIN_PROFILE_KEY);
+      state.token = null;
+      state.admin = null;
+      state.selected = null;
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('loginView').classList.remove('hidden');
+    }
+
+    async function loadWithdrawals() {
+      const container = document.getElementById('withdrawalList');
+      container.innerHTML = '<p class="py-8 text-center text-sm text-slate-500">Loading requests…</p>';
+      try {
+        const status = document.getElementById('statusFilter').value;
+        const data = await adminFetch(`/api/admin/withdrawals?status=${encodeURIComponent(status)}`);
+        state.withdrawals = data.withdrawals || [];
+        state.admin = data.admin || state.admin;
+        renderWithdrawalList(data.summary || {});
+      } catch (err) {
+        container.innerHTML = `<p class="py-8 text-center text-sm text-red-300">${escapeAdminText(err.message)}</p>`;
+      }
+    }
+
+    function renderWithdrawalList(summary) {
+      const container = document.getElementById('withdrawalList');
+      const total = state.withdrawals.length;
+      document.getElementById('withdrawalSummary').textContent = `${total} shown · ${summary.pending || 0} pending · ${summary.processing || 0} processing`;
+      if (!total) {
+        container.innerHTML = '<p class="py-8 text-center text-sm text-slate-500">No withdrawal requests match this filter.</p>';
+        return;
+      }
+      container.innerHTML = state.withdrawals.map(row => {
+        const participant = row.participant || {};
+        const selected = state.selected?.id === row.id;
+        const date = new Date(row.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+        return `<button onclick="selectWithdrawal('${row.id}')" class="w-full rounded-xl border p-3 text-left transition ${selected ? 'border-green-500 bg-green-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'}">
+          <div class="flex items-start justify-between gap-3"><span class="font-semibold">${escapeAdminText(participant.name || row.username)}</span><span class="rounded-full bg-slate-700 px-2 py-1 text-xs">${escapeAdminText(row.status)}</span></div>
+          <p class="mt-1 text-sm text-green-300">$${Number(row.amount_usd).toFixed(2)} · ${escapeAdminText(row.payment_method)}</p>
+          <p class="mt-1 text-xs text-slate-400">${escapeAdminText(participant.email || '')} · ${date}</p>
+        </button>`;
+      }).join('');
+    }
+
+    function selectWithdrawal(id) {
+      state.selected = state.withdrawals.find(row => row.id === id) || null;
+      if (!state.selected) return;
+      const row = state.selected;
+      const participant = row.participant || {};
+      document.getElementById('withdrawalDetailEmpty').classList.add('hidden');
+      document.getElementById('withdrawalDetail').classList.remove('hidden');
+      document.getElementById('detailName').textContent = participant.name || row.username;
+      document.getElementById('detailContact').textContent = `${participant.email || 'No email'} · @${row.username}`;
+      document.getElementById('detailStatus').textContent = row.status;
+      document.getElementById('detailAmount').textContent = `$${Number(row.amount_usd).toFixed(2)}`;
+      document.getElementById('detailMethod').textContent = row.payment_method;
+      document.getElementById('detailPaymentDetails').textContent = row.payment_details;
+      document.getElementById('adminNote').value = row.admin_note || '';
+      document.getElementById('payoutType').value = row.payout_type || 'fiat';
+      document.getElementById('payoutCurrency').value = row.payout_currency || '';
+      document.getElementById('payoutAmount').value = row.payout_amount || '';
+      document.getElementById('payoutNetwork').value = row.payout_network || '';
+      document.getElementById('payoutReference').value = row.payout_reference || '';
+      configurePayoutStatus(row.status);
+      renderWithdrawalList({});
+      loadMessagesForSelected();
+    }
+
+    function configurePayoutStatus(currentStatus) {
+      const select = document.getElementById('payoutStatus');
+      const save = document.getElementById('savePayoutButton');
+      const options = currentStatus === 'pending'
+        ? [['processing', 'Mark as processing'], ['claimed', 'Confirm and mark claimed'], ['rejected', 'Reject request']]
+        : currentStatus === 'processing'
+          ? [['claimed', 'Confirm and mark claimed'], ['rejected', 'Reject request']]
+          : [];
+      select.innerHTML = options.map(([value, label]) => `<option value="${value}">${label}</option>`).join('');
+      const final = options.length === 0;
+      select.disabled = final;
+      save.disabled = final;
+      save.classList.toggle('opacity-50', final);
+      save.textContent = final ? 'Final payout record' : 'Save payout decision';
+      toggleClaimFields();
+    }
+
+    document.getElementById('payoutStatus').addEventListener('change', toggleClaimFields);
+    function toggleClaimFields() {
+      const isClaim = document.getElementById('payoutStatus').value === 'claimed';
+      document.getElementById('claimFields').classList.toggle('hidden', !isClaim);
+    }
+
+    document.getElementById('payoutForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!state.selected) return;
+      const feedback = document.getElementById('payoutFeedback');
+      const button = document.getElementById('savePayoutButton');
+      button.disabled = true;
+      feedback.classList.add('hidden');
+      try {
+        const status = document.getElementById('payoutStatus').value;
+        const data = await adminFetch(`/api/admin/withdrawals/${state.selected.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            status,
+            payout_type: document.getElementById('payoutType').value,
+            payout_currency: document.getElementById('payoutCurrency').value,
+            payout_amount: document.getElementById('payoutAmount').value,
+            payout_network: document.getElementById('payoutNetwork').value,
+            payout_reference: document.getElementById('payoutReference').value,
+            admin_note: document.getElementById('adminNote').value
+          })
+        });
+        feedback.textContent = 'Payout record saved and the participant was notified.';
+        feedback.className = 'mt-2 text-xs text-green-300';
+        state.selected = null;
+        await loadWithdrawals();
+        document.getElementById('withdrawalDetail').classList.add('hidden');
+        document.getElementById('withdrawalDetailEmpty').classList.remove('hidden');
+        return data;
+      } catch (err) {
+        feedback.textContent = err.message || 'Could not save payout record.';
+        feedback.className = 'mt-2 text-xs text-red-300';
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    async function loadMessagesForSelected() {
+      const container = document.getElementById('adminMessages');
+      const participantId = state.selected?.participant?.id;
+      if (!participantId) {
+        container.innerHTML = '<p class="text-xs text-slate-500">Participant details are unavailable for this withdrawal.</p>';
+        return;
+      }
+      container.innerHTML = '<p class="text-xs text-slate-500">Loading messages…</p>';
+      try {
+        const data = await adminFetch(`/api/admin/messages?participant_id=${encodeURIComponent(participantId)}`);
+        const messages = data.messages || [];
+        container.innerHTML = messages.length ? messages.map(message => {
+          const label = message.sender_type === 'participant' ? data.participant.name : message.sender_type === 'system' ? 'System' : 'You';
+          const date = new Date(message.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+          return `<div class="rounded-lg px-3 py-2 text-xs ${message.sender_type === 'participant' ? 'bg-slate-700/70' : 'bg-green-900/25 border border-green-800/30'}">
+            <div class="flex justify-between gap-2 mb-1"><strong>${escapeAdminText(label)}</strong><span class="text-slate-400">${date}</span></div>
+            <p class="leading-relaxed">${escapeAdminText(message.body)}</p>
+          </div>`;
+        }).join('') : '<p class="text-xs text-slate-500">No messages yet.</p>';
+        container.scrollTop = container.scrollHeight;
+      } catch (err) {
+        container.innerHTML = `<p class="text-xs text-red-300">${escapeAdminText(err.message)}</p>`;
+      }
+    }
+
+    async function sendAdminMessage() {
+      const bodyInput = document.getElementById('adminMessageBody');
+      const button = document.getElementById('adminMessageButton');
+      const feedback = document.getElementById('messageFeedback');
+      const participantId = state.selected?.participant?.id;
+      const body = bodyInput.value.trim();
+      if (!participantId || !body) return;
+      button.disabled = true;
+      feedback.classList.add('hidden');
+      try {
+        await adminFetch('/api/admin/messages', {
+          method: 'POST',
+          body: JSON.stringify({ participant_id: participantId, withdrawal_id: state.selected.id, body })
+        });
+        bodyInput.value = '';
+        feedback.textContent = 'Message sent.';
+        feedback.className = 'mt-2 text-xs text-green-300';
+        await loadMessagesForSelected();
+      } catch (err) {
+        feedback.textContent = err.message || 'Could not send message.';
+        feedback.className = 'mt-2 text-xs text-red-300';
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    if (state.token) showDashboard();
+  </script>
+</body>
+</html>
