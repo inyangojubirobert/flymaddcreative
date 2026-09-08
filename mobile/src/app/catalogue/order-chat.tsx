@@ -1,7 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View, Image, Keyboard } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  Keyboard,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,20 +21,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Palette, Spacing } from '@/constants/theme';
-import { BASCARDO_LOGO_URL } from '@/constants/bascardo';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCloudinaryUpload } from '@/hooks/useCloudinaryUpload';
-import { getSupportMessages, sendSupportMessage, deleteSupportMessage, type SupportMessage } from '@/api/messages';
+import { getOrderMessages, sendOrderMessage, deleteOrderMessage, type OrderMessage } from '@/api/order-messages';
 import { ApiError } from '@/lib/api-client';
 
-export default function MessagesScreen() {
+export default function OrderChatScreen() {
+  const { orderId, buyerToken, title } = useLocalSearchParams<{ orderId: string; buyerToken?: string; title?: string }>();
   const { token } = useAuth();
-  const router = useRouter();
   const theme = useTheme();
   const queryClient = useQueryClient();
   const inputRef = useRef<TextInput | null>(null);
-  const listRef = useRef<FlatList<SupportMessage> | null>(null);
+  const listRef = useRef<FlatList<OrderMessage> | null>(null);
   const [body, setBody] = useState('');
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,22 +48,21 @@ export default function MessagesScreen() {
     return () => subscription.remove();
   }, []);
 
+  // A buyer_token means "I'm the buyer" - takes priority even if also logged
+  // in as a participant, since the participant branch on the server only
+  // authorizes the seller (see pages/api/catalogue/order-messages.js).
+  const auth = buyerToken ? { buyer_token: buyerToken } : { token: token || undefined };
+  const role: 'buyer' | 'seller' = buyerToken ? 'buyer' : 'seller';
+
   const messagesQuery = useQuery({
-    queryKey: ['support-messages'],
-    queryFn: () => getSupportMessages(token!),
-    enabled: !!token,
+    queryKey: ['order-messages', orderId],
+    queryFn: () => getOrderMessages(orderId, auth),
+    enabled: !!orderId,
   });
 
   async function handlePickImage() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-      allowsEditing: true,
-    });
-
-    if (!result.canceled && result.assets?.[0]?.uri) {
-      setSelectedImageUri(result.assets[0].uri);
-    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, allowsEditing: true });
+    if (!result.canceled && result.assets?.[0]?.uri) setSelectedImageUri(result.assets[0].uri);
   }
 
   async function handleSend() {
@@ -61,32 +71,22 @@ export default function MessagesScreen() {
     setError(null);
     setIsSending(true);
     try {
-      let finalBody = message;
+      let mediaUrl: string | undefined;
       if (selectedImageUri) {
-        // Upload first: a local device file:// path is meaningless once the
-        // message reaches the website or another device, so it must become a
-        // real hosted URL before the message is sent.
         const uploaded = await uploadToCloudinary(selectedImageUri);
-        if (!uploaded?.secure_url) {
-          throw new Error('Could not upload the screenshot. Please try again.');
-        }
-        finalBody = `${message ? `${message}\n\n` : ''}[Payment screenshot]\n${uploaded.secure_url}`;
+        if (!uploaded?.secure_url) throw new Error('Could not upload the image. Please try again.');
+        mediaUrl = uploaded.secure_url;
       }
-      await sendSupportMessage(token!, finalBody);
+      await sendOrderMessage(orderId, auth, message, mediaUrl);
       setBody('');
       setSelectedImageUri(null);
-      await queryClient.invalidateQueries({ queryKey: ['support-messages'] });
+      await queryClient.invalidateQueries({ queryKey: ['order-messages', orderId] });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Could not send your message.');
     } finally {
       setIsSending(false);
     }
   }
-
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-    inputRef.current?.blur();
-  };
 
   function handleDelete(id: string) {
     Alert.alert('Delete message', 'This message and any attached image will be permanently removed.', [
@@ -96,45 +96,39 @@ export default function MessagesScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteSupportMessage(token!, id);
-            await queryClient.invalidateQueries({ queryKey: ['support-messages'] });
+            await deleteOrderMessage(orderId, id, auth);
+            await queryClient.invalidateQueries({ queryKey: ['order-messages', orderId] });
           } catch (e) {
-            setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Could not delete the message.');
+            setError(e instanceof ApiError ? e.message : 'Could not delete the message.');
           }
         },
       },
     ]);
   }
 
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+    inputRef.current?.blur();
+  };
+
   return (
     <ThemedView style={styles.container}>
+      <Stack.Screen options={{ title: title ? `Chat · ${title}` : 'Order Chat' }} />
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <KeyboardAvoidingView
           style={styles.keyboardContainer}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 0}
         >
-            <View style={styles.introCard}>
-              <View style={styles.introIcon}>
-                <Ionicons name="chatbubbles" size={22} color={Palette.blue} />
+            <View style={styles.contextCard}>
+              <View style={styles.contextIcon}>
+                <Ionicons name="bag-handle" size={21} color={Palette.yellowInk} />
               </View>
-              <View style={styles.introCopy}>
-                <ThemedText type="smallBold" style={styles.introTitle}>FlyMadd Support</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary" style={styles.intro}>
-                  Send questions, screenshots, withdrawal enquiries, or payout follow-ups to the support team.
-                </ThemedText>
+              <View style={styles.contextCopy}>
+                <ThemedText type="smallBold" style={styles.contextTitle}>{role === 'seller' ? 'Buyer conversation' : 'Seller conversation'}</ThemedText>
+                <ThemedText type="small" style={styles.contextText}>Messages and delivery updates for this order.</ThemedText>
               </View>
             </View>
-
-            <Pressable onPress={() => router.push('/ai' as never)} style={styles.aiHandoff}>
-              <Image source={{ uri: BASCARDO_LOGO_URL }} style={styles.aiHandoffLogo} resizeMode="contain" />
-              <View style={styles.aiHandoffCopy}>
-                <ThemedText type="smallBold" style={styles.aiHandoffTitle}>Ask Bascardo AI</ThemedText>
-                <ThemedText type="small" style={styles.aiHandoffText}>Open your private AI business adviser</ThemedText>
-              </View>
-              <Ionicons name="chevron-forward" size={19} color={Palette.yellowInk} />
-            </Pressable>
-
             {messagesQuery.isLoading ? (
               <ActivityIndicator size="large" style={styles.loading} />
             ) : (
@@ -155,15 +149,12 @@ export default function MessagesScreen() {
                 onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
                 ListEmptyComponent={<ThemedText type="small" themeColor="textSecondary" style={styles.empty}>No messages yet.</ThemedText>}
                 renderItem={({ item }) => (
-                  <MessageRow
-                    item={item}
-                    onDelete={item.sender_type === 'participant' ? () => handleDelete(item.id) : undefined}
-                  />
+                  <OrderMessageRow item={item} isOwn={item.sender_role === role} onDelete={item.sender_role === role ? () => handleDelete(item.id) : undefined} />
                 )}
               />
             )}
 
-            <View style={[styles.composer, { borderTopColor: theme.backgroundSelected, backgroundColor: theme.backgroundElement }]}>
+            <View style={[styles.composer, { borderTopColor: theme.backgroundSelected, backgroundColor: theme.backgroundElement }]}> 
               {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
               {selectedImageUri ? (
@@ -177,7 +168,7 @@ export default function MessagesScreen() {
 
               <TextInput
                 ref={inputRef}
-                placeholder="Write a message…"
+                placeholder={role === 'seller' ? 'Message the buyer about delivery…' : 'Ask about delivery, shipping, or anything else…'}
                 placeholderTextColor={theme.textSecondary}
                 value={body}
                 onChangeText={setBody}
@@ -193,7 +184,7 @@ export default function MessagesScreen() {
                   <Ionicons name="image-outline" size={18} color={Palette.blue} />
                   <ThemedText style={styles.attachButtonText}>Image</ThemedText>
                 </Pressable>
-                <Pressable onPress={handleSend} disabled={isSending || (!body.trim() && !selectedImageUri)} style={[styles.button, { opacity: isSending || (!body.trim() && !selectedImageUri) ? 0.55 : 1 }]}>
+                <Pressable onPress={handleSend} disabled={isSending || (!body.trim() && !selectedImageUri)} style={[styles.button, { opacity: isSending || (!body.trim() && !selectedImageUri) ? 0.55 : 1 }]}> 
                   {isSending ? <ActivityIndicator color="#fff" /> : <><Ionicons name="send" size={16} color="#fff" /><ThemedText style={styles.buttonText}>Send</ThemedText></>}
                 </Pressable>
               </View>
@@ -204,42 +195,32 @@ export default function MessagesScreen() {
   );
 }
 
-function extractImageUri(body: string) {
-  const match = body.match(/(https?:\/\/[^\s]+|data:image\/[^\s]+)/i);
-  return match ? match[1] : null;
-}
-
-function MessageRow({ item, onDelete }: { item: SupportMessage; onDelete?: () => void }) {
-  const fromParticipant = item.sender_type === 'participant';
-  const isAi = item.sender_type === 'ai';
-  const isSystem = item.sender_type === 'system';
-  const sender = fromParticipant ? 'You' : isSystem ? 'Payout update' : isAi ? 'Bascardo Token AI' : 'Support';
+function OrderMessageRow({ item, isOwn, onDelete }: { item: OrderMessage; isOwn: boolean; onDelete?: () => void }) {
+  const isSeller = item.sender_role === 'seller';
+  const sender = isSeller ? 'Seller' : 'Buyer';
   const date = new Date(item.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  const imageUri = extractImageUri(item.body);
-  const textBody = imageUri ? item.body.replace(imageUri, '').trim() : item.body;
-  const bubbleColor = fromParticipant ? Palette.blue : isAi ? Palette.yellowSoft : Palette.ashSoft;
-  const textColor = fromParticipant ? Palette.white : isAi ? Palette.yellowInk : Palette.slateDark;
-  const metaColor = fromParticipant ? '#DBEAFE' : isAi ? '#92400E' : Palette.slate;
-  const senderIcon: keyof typeof Ionicons.glyphMap = fromParticipant ? 'person' : isAi ? 'sparkles' : isSystem ? 'notifications' : 'headset';
+  const bubbleColor = isOwn ? Palette.blue : Palette.ashSoft;
+  const textColor = isOwn ? Palette.white : Palette.slateDark;
+  const metaColor = isOwn ? '#DBEAFE' : Palette.slate;
 
   return (
-    <ThemedView style={[styles.messageCard, fromParticipant ? styles.messageSent : styles.messageReceived, { backgroundColor: bubbleColor }]}>
+    <ThemedView style={[styles.messageCard, isOwn ? styles.messageSent : styles.messageReceived, { backgroundColor: bubbleColor }]}> 
       <View style={styles.messageMeta}>
         <View style={styles.senderWrap}>
-          <Ionicons name={senderIcon} size={14} color={textColor} />
-          <ThemedText type="smallBold" style={{ color: textColor }}>{sender}</ThemedText>
+          <Ionicons name={isSeller ? 'storefront' : 'person'} size={14} color={textColor} />
+          <ThemedText type="smallBold" style={{ color: textColor }}>{isOwn ? `You · ${sender}` : sender}</ThemedText>
         </View>
         <View style={styles.messageMetaRight}>
           <ThemedText type="small" style={[styles.messageDate, { color: metaColor }]}>{date}</ThemedText>
           {onDelete ? (
             <Pressable onPress={onDelete} hitSlop={8} style={styles.deleteButton}>
-              <ThemedText style={[styles.deleteButtonText, { color: fromParticipant ? '#FECACA' : Palette.red }]}>Delete</ThemedText>
+              <ThemedText style={[styles.deleteButtonText, { color: isOwn ? '#FECACA' : Palette.red }]}>Delete</ThemedText>
             </Pressable>
           ) : null}
         </View>
       </View>
-      {imageUri ? <Image source={{ uri: imageUri }} style={styles.messageImage} /> : null}
-      {textBody ? <ThemedText type="small" style={[styles.messageBody, { color: textColor }]}>{textBody}</ThemedText> : null}
+      {item.media_url ? <Image source={{ uri: item.media_url }} style={styles.messageImage} /> : null}
+      {item.body ? <ThemedText type="small" style={[styles.messageBody, { color: textColor }]}>{item.body}</ThemedText> : null}
     </ThemedView>
   );
 }
@@ -248,16 +229,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
   keyboardContainer: { flex: 1 },
-  introCard: { marginHorizontal: Spacing.three, marginTop: Spacing.two, marginBottom: Spacing.one, padding: 12, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Palette.blueSoft, borderWidth: 1, borderColor: '#BFDBFE' },
-  introIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: Palette.white, alignItems: 'center', justifyContent: 'center' },
-  introCopy: { flex: 1 },
-  introTitle: { color: Palette.blueDark },
-  intro: { color: Palette.slate, lineHeight: 18 },
-  aiHandoff: { marginHorizontal: Spacing.three, marginBottom: Spacing.one, minHeight: 56, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: '#FDE68A', backgroundColor: Palette.yellowSoft, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  aiHandoffLogo: { width: 38, height: 38, borderRadius: 11 },
-  aiHandoffCopy: { flex: 1 },
-  aiHandoffTitle: { color: Palette.yellowInk },
-  aiHandoffText: { color: '#92400E' },
+  contextCard: { marginHorizontal: Spacing.three, marginTop: Spacing.two, marginBottom: Spacing.one, padding: 12, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Palette.yellowSoft, borderWidth: 1, borderColor: '#FDE68A' },
+  contextIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: Palette.white, alignItems: 'center', justifyContent: 'center' },
+  contextCopy: { flex: 1 },
+  contextTitle: { color: Palette.yellowInk },
+  contextText: { color: Palette.slate, lineHeight: 18 },
   loading: { marginTop: Spacing.six },
   messageListFlex: { flex: 1 },
   messageList: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two, paddingBottom: Spacing.three, gap: Spacing.two, flexGrow: 1, justifyContent: 'flex-end' },
@@ -302,10 +278,10 @@ const styles = StyleSheet.create({
   removeImageButton: { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
   removeImageText: { color: '#fff', fontSize: 10 },
   input: { minHeight: 56, maxHeight: 120, borderRadius: 16, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, textAlignVertical: 'top', fontSize: 15, borderWidth: 1, borderColor: Palette.ash },
-  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.one },
-  attachButton: { flex: 1, backgroundColor: Palette.blueSoft, borderRadius: 12, paddingHorizontal: Spacing.two, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
-  attachButtonText: { color: Palette.blueDark, fontWeight: '700', fontSize: 13 },
-  button: { flex: 1, backgroundColor: Palette.blue, borderRadius: 12, paddingHorizontal: Spacing.two, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5 },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+  actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.two },
+  attachButton: { flex: 1, backgroundColor: Palette.blueSoft, borderRadius: 12, paddingHorizontal: Spacing.three, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  attachButtonText: { color: Palette.blueDark, fontWeight: '700' },
+  button: { flex: 1, backgroundColor: Palette.blue, borderRadius: 12, paddingHorizontal: Spacing.four, paddingVertical: 10, minWidth: 80, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  buttonText: { color: '#fff', fontWeight: '600' },
   error: { color: '#e5484d' },
 });
