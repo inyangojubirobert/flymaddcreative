@@ -1,0 +1,135 @@
+// Attachment upload for the buyer<->seller order chat. Buyers on a catalogue
+// order are frequently guest checkouts with no participant JWT, so auth here
+// mirrors order-messages.js: either a participant JWT matching the order's
+// seller, or the order's buyer_token, proves the right to attach an image.
+import { createClient } from '@supabase/supabase-js';
+import Busboy from 'busboy';
+import { requireParticipant } from '../../../../lib/participantAuth';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
+
+const ALLOWED_IMAGE = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+export const config = {
+  api: { bodyParser: false }
+};
+
+export default async function handler(req, res) {
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const orderId = String(req.query.order_id || '');
+  const buyerToken = String(req.query.buyer_token || '');
+  if (!orderId) return res.status(400).json({ error: 'order_id is required' });
+
+  const { data: order, error: orderError } = await supabase
+    .from('catalogue_orders')
+    .select('id, buyer_token, seller_username')
+    .eq('id', orderId)
+    .maybeSingle();
+  if (orderError) return res.status(500).json({ error: 'Unable to verify order' });
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+
+  let role = null;
+  if ((req.headers.authorization || '').startsWith('Bearer ')) {
+    const participant = await requireParticipant(req, res);
+    if (!participant) return; // response already sent
+    if (participant.username !== order.seller_username) {
+      return res.status(403).json({ error: 'Not authorized for this order' });
+    }
+    role = 'seller';
+  } else if (buyerToken && buyerToken === order.buyer_token) {
+    role = 'buyer';
+  } else {
+    return res.status(401).json({ error: 'Missing or invalid authorization' });
+  }
+
+  return new Promise((resolve) => {
+    let busboy;
+    try {
+      busboy = Busboy({ headers: req.headers, limits: { fileSize: MAX_IMAGE_BYTES, files: 1 } });
+    } catch (err) {
+      res.status(400).json({ error: 'Invalid upload request: ' + err.message });
+      return resolve();
+    }
+
+    let chunks = [];
+    let mimeType = '';
+    let originalName = 'media';
+    let sizeLimitHit = false;
+    let fileReceived = false;
+
+    busboy.on('file', (_field, file, info) => {
+      fileReceived = true;
+      mimeType = info.mimeType || info.mimetype || '';
+      originalName = info.filename || 'media';
+
+      file.on('limit', () => { sizeLimitHit = true; });
+      file.on('data', (chunk) => chunks.push(chunk));
+      file.on('error', (err) => {
+        if (!res.headersSent) res.status(500).json({ error: 'File stream error: ' + err.message });
+        resolve();
+      });
+    });
+
+    busboy.on('finish', async () => {
+      if (sizeLimitHit) {
+        res.status(413).json({ error: 'Image too large. Maximum 10 MB.' });
+        return resolve();
+      }
+      if (!fileReceived || !chunks.length) {
+        res.status(400).json({ error: 'No file received.' });
+        return resolve();
+      }
+      if (!ALLOWED_IMAGE.includes(mimeType)) {
+        res.status(400).json({ error: `Unsupported file type "${mimeType}". Allowed: jpg, png, gif, webp.` });
+        return resolve();
+      }
+
+      const fileBuffer = Buffer.concat(chunks);
+      if (fileBuffer.length > MAX_IMAGE_BYTES) {
+        res.status(413).json({ error: 'Image too large. Maximum 10 MB.' });
+        return resolve();
+      }
+
+      const bucket = 'order-message-attachments';
+      const rawExt = originalName.includes('.') ? originalName.split('.').pop().toLowerCase() : '';
+      const ext = rawExt ? `.${rawExt}` : '.jpg';
+      const storagePath = `${orderId}/${role}-${Date.now()}${ext}`;
+
+      try {
+        await supabase.storage.createBucket(bucket, { public: true }).catch(() => {});
+
+        const { error: uploadErr } = await supabase.storage
+          .from(bucket)
+          .upload(storagePath, fileBuffer, { contentType: mimeType, upsert: true });
+        if (uploadErr) {
+          res.status(500).json({ error: 'Storage upload failed: ' + uploadErr.message });
+          return resolve();
+        }
+
+        const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(storagePath);
+        res.status(200).json({ public_url: urlData.publicUrl });
+      } catch (err) {
+        if (!res.headersSent) res.status(500).json({ error: 'Upload processing error: ' + err.message });
+      }
+      resolve();
+    });
+
+    busboy.on('error', (err) => {
+      if (!res.headersSent) res.status(500).json({ error: 'Form parse error: ' + err.message });
+      resolve();
+    });
+
+    req.on('data', (chunk) => busboy.write(chunk));
+    req.on('end', () => busboy.end());
+    req.on('error', (err) => {
+      if (!res.headersSent) res.status(500).json({ error: 'Request error: ' + err.message });
+      resolve();
+    });
+  });
+}
