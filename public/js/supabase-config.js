@@ -360,41 +360,37 @@
         return data;
     }
 
-    async function saveCatalogueItem(item) {
-        const supabase = getSupabaseInstance();
-        if (!supabase) throw new Error('Supabase not initialized');
-        const payload = { ...item, updated_at: new Date().toISOString() };
-        if (item.id) {
-            const { data, error } = await supabase
-                .from('catalogue_items')
-                .update(payload)
-                .eq('id', item.id)
-                .eq('seller_username', item.seller_username)
-                .select()
-                .single();
-            if (error) throw error;
-            return data;
-        } else {
-            delete payload.id;
-            const { data, error } = await supabase
-                .from('catalogue_items')
-                .insert({ ...payload, created_at: new Date().toISOString() })
-                .select()
-                .single();
-            if (error) throw error;
-            return data;
-        }
+    // Listing writes go through the authenticated listings API, which checks
+    // the seller's token, ownership, category and field values server-side.
+    async function catalogueItemsRequest(method, body) {
+        const token = localStorage.getItem('onedream_token');
+        if (!token) throw new Error('Please log in again to manage your products.');
+        const res = await fetch('/api/catalogue/items', {
+            method,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        return data;
     }
 
-    async function deleteCatalogueItem(id, seller_username) {
-        const supabase = getSupabaseInstance();
-        if (!supabase) throw new Error('Supabase not initialized');
-        const { error } = await supabase
-            .from('catalogue_items')
-            .update({ status: 'deleted' })
-            .eq('id', id)
-            .eq('seller_username', seller_username);
-        if (error) throw error;
+    async function saveCatalogueItem(item) {
+        const { id, seller_username, ...fields } = item;
+        return id
+            ? catalogueItemsRequest('PATCH', { id, ...fields })
+            : catalogueItemsRequest('POST', fields);
+    }
+
+    async function deleteCatalogueItem(id) {
+        await catalogueItemsRequest('DELETE', { id });
+    }
+
+    async function getCatalogueCategories() {
+        const res = await fetch('/api/catalogue/categories');
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Unable to load categories');
+        return data.categories || [];
     }
 
     async function createCatalogueOrder(order) {
@@ -503,6 +499,7 @@
         getCatalogueItem,
         saveCatalogueItem,
         deleteCatalogueItem,
+        getCatalogueCategories,
         createCatalogueOrder,
         getOrdersBySellerUsername,
         getOrderById,

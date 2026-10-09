@@ -755,6 +755,27 @@
                                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none">
                     </div>
 
+                    <!-- Category -->
+                    <div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Department *</label>
+                                <select id="productDepartment" onchange="renderProductCategoryOptions('')"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-yellow-500 focus:outline-none">
+                                    <option value="">Loading…</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Category *</label>
+                                <select id="productCategory"
+                                        class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-yellow-500 focus:outline-none">
+                                    <option value="">Choose a department first</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p id="productCategoryHint" class="hidden text-xs text-amber-400 mt-1"></p>
+                    </div>
+
                     <!-- Description -->
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Description</label>
@@ -792,7 +813,7 @@
                         <label class="block text-xs text-slate-400 mb-1">Status</label>
                         <select id="productStatus" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-yellow-500 focus:outline-none">
                             <option value="active">Active (visible to buyers)</option>
-                            <option value="paused">Paused (hidden from buyers)</option>
+                            <option value="paused">Paused (removed from shop listings)</option>
                         </select>
                     </div>
 
@@ -1623,6 +1644,16 @@
             return div.innerHTML;
         }
 
+        // Safe for both element text and quoted attribute values.
+        function escapeAttr(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         async function loadSupportMessages() {
             const container = document.getElementById('supportMessagesList');
             const token = localStorage.getItem('onedream_token');
@@ -2222,12 +2253,13 @@
             }
             grid.innerHTML = items.map(item => {
                 const img = item.images?.[0] || '';
+                const title = escapeAttr(item.title);
                 const statusColor = item.status === 'active' ? 'text-green-400' : 'text-slate-500';
                 return `<div class="bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700/50">
-                    ${img ? `<div class="w-full h-36 bg-slate-900 overflow-hidden"><img src="${img}" class="w-full h-full object-cover" alt="${item.title}"></div>`
+                    ${img ? `<div class="w-full h-36 bg-slate-900 overflow-hidden"><img src="${escapeAttr(img)}" class="w-full h-full object-cover" alt="${title}"></div>`
                            : `<div class="w-full h-36 bg-slate-900 flex items-center justify-center text-4xl">🛍️</div>`}
                     <div class="p-3">
-                        <p class="font-semibold text-sm truncate">${item.title}</p>
+                        <p class="font-semibold text-sm truncate">${title}</p>
                         <p class="text-yellow-400 font-bold text-sm mt-1">$${parseFloat(item.price_usd).toFixed(2)}</p>
                         <p class="text-xs ${statusColor} mt-1">${item.status === 'active' ? '● Live' : '● Paused'}</p>
                         <div class="flex gap-2 mt-3">
@@ -2422,6 +2454,52 @@
             }
         }
 
+        // ── Product category picker ────────────────────────────────────
+        let catalogueCategories = null;
+
+        function sellableCategories(departmentId) {
+            return (catalogueCategories || []).filter(c =>
+                c.parent_id === departmentId && c.is_active !== false && c.is_selectable !== false);
+        }
+
+        function renderProductCategoryOptions(selectedCategoryId) {
+            const departmentId = document.getElementById('productDepartment').value;
+            const select = document.getElementById('productCategory');
+            if (!departmentId) {
+                select.innerHTML = '<option value="">Choose a department first</option>';
+                return;
+            }
+            select.innerHTML = '<option value="">Choose a category</option>' + sellableCategories(departmentId)
+                .map(c => `<option value="${escapeAttr(c.id)}">${escapeAttr(c.name)}</option>`).join('');
+            select.value = selectedCategoryId || '';
+        }
+
+        async function prepareProductCategoryPicker(currentCategoryId) {
+            const departmentSelect = document.getElementById('productDepartment');
+            const hint = document.getElementById('productCategoryHint');
+            hint.classList.add('hidden');
+            try {
+                if (!catalogueCategories) catalogueCategories = await window.SupabaseAPI.getCatalogueCategories();
+            } catch (err) {
+                departmentSelect.innerHTML = '<option value="">Unavailable</option>';
+                hint.textContent = 'Categories could not be loaded. Close and reopen this form to try again.';
+                hint.classList.remove('hidden');
+                return;
+            }
+            const departments = catalogueCategories.filter(c => !c.parent_id && sellableCategories(c.id).length);
+            departmentSelect.innerHTML = '<option value="">Choose a department</option>' + departments
+                .map(d => `<option value="${escapeAttr(d.id)}">${escapeAttr(d.name)}</option>`).join('');
+
+            const current = catalogueCategories.find(c => c.id === currentCategoryId);
+            const currentIsSellable = current && current.parent_id && current.is_selectable !== false && current.is_active !== false;
+            departmentSelect.value = currentIsSellable ? current.parent_id : '';
+            renderProductCategoryOptions(currentIsSellable ? current.id : '');
+            if (currentCategoryId && !currentIsSellable) {
+                hint.textContent = 'This product is in a general category. Choose a specific category to save changes.';
+                hint.classList.remove('hidden');
+            }
+        }
+
         // ── Product Modal ──────────────────────────────────────────────
         function openProductModal(itemId) {
             pendingProductImages = [];
@@ -2454,6 +2532,8 @@
             } else {
                 document.getElementById('productModalTitle').textContent = 'Add Product';
             }
+            const editingItem = itemId ? catalogueItems.find(i => i.id === itemId) : null;
+            prepareProductCategoryPicker(editingItem?.category_id || '');
             document.getElementById('productModal').classList.remove('hidden');
         }
 
@@ -2464,7 +2544,7 @@
         function renderImagePreviews() {
             document.getElementById('productImagesPreview').innerHTML = pendingProductImages.map((img, i) =>
                 `<div class="relative w-16 h-16 rounded-lg overflow-hidden bg-slate-700 flex-shrink-0">
-                    <img src="${img.url}" class="w-full h-full object-cover" alt="">
+                    <img src="${escapeAttr(img.url)}" class="w-full h-full object-cover" alt="">
                     <button onclick="removeProductImage(${i})" class="absolute top-0.5 right-0.5 bg-black/70 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">✕</button>
                 </div>`
             ).join('');
@@ -2488,8 +2568,10 @@
         async function saveProduct() {
             const title = document.getElementById('productTitle').value.trim();
             const price = parseFloat(document.getElementById('productPrice').value);
+            const categoryId = document.getElementById('productCategory').value;
             if (!title) { showProductMsg('Title is required.', 'error'); return; }
             if (!price || price <= 0) { showProductMsg('Enter a valid price.', 'error'); return; }
+            if (!categoryId) { showProductMsg('Choose a department and category.', 'error'); return; }
 
             const btn = document.getElementById('saveProductBtn');
             btn.disabled = true; btn.textContent = '⏳ Saving…';
@@ -2516,9 +2598,9 @@
 
                 const editId = document.getElementById('editingProductId').value;
                 const payload = {
-                    seller_username: currentUser.username,
                     title,
                     description: document.getElementById('productDesc').value.trim(),
+                    category_id: categoryId,
                     price_usd: price,
                     images: pendingProductImages.map(i => i.url),
                     payment_methods: methods,
@@ -2549,7 +2631,7 @@
         async function confirmDeleteProduct(id) {
             if (!confirm('Remove this product from your catalogue?')) return;
             try {
-                await window.SupabaseAPI.deleteCatalogueItem(id, currentUser.username);
+                await window.SupabaseAPI.deleteCatalogueItem(id);
                 await loadCatalogue();
             } catch (e) {
                 alert('Delete failed: ' + e.message);

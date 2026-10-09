@@ -11,31 +11,46 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { requireParticipant } from '../../../lib/participantAuth';
+import { validateListingFields } from '../../../lib/catalogueListingValidation';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
-// Only these fields are ever written from client input - id, seller_username,
-// created_at, updated_at are always server-controlled.
-const EDITABLE_FIELDS = [
-  'title',
-  'description',
-  'price_usd',
-  'size',
-  'promo_video_url',
-  'images',
-  'payment_methods',
-  'status'
-];
+// Only validated listing fields are ever written from client input - id,
+// seller_username, created_at, updated_at are always server-controlled.
 
-function pickEditableFields(body) {
-  const payload = {};
-  for (const field of EDITABLE_FIELDS) {
-    if (body[field] !== undefined) payload[field] = body[field];
+async function assertCategory(categoryId, res) {
+  let { data, error } = await supabase
+    .from('catalogue_categories')
+    .select('id, is_active, is_selectable')
+    .eq('id', categoryId)
+    .maybeSingle();
+  if (error && /is_selectable/.test(error.message || '')) {
+    ({ data, error } = await supabase
+      .from('catalogue_categories')
+      .select('id, is_active')
+      .eq('id', categoryId)
+      .maybeSingle());
   }
-  return payload;
+  if (error || !data || data.is_active === false) {
+    res.status(400).json({ error: 'Choose a category from the shop list.' });
+    return true;
+  }
+  if (data.is_selectable === false) {
+    res.status(400).json({ error: 'Choose a specific category. Departments and broad buckets cannot be attached to a product.' });
+    return true;
+  }
+  const { count, error: childError } = await supabase
+    .from('catalogue_categories')
+    .select('id', { count: 'exact', head: true })
+    .eq('parent_id', categoryId);
+  if (childError || (count || 0) > 0) {
+    res.status(400).json({ error: 'Choose a category inside a department.' });
+    return true;
+  }
+  return false;
 }
 
 export default async function handler(req, res) {
@@ -44,10 +59,10 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'POST') {
-      const payload = pickEditableFields(req.body || {});
-      if (!payload.title || payload.price_usd === undefined) {
-        return res.status(400).json({ error: 'Missing required fields: title, price_usd' });
-      }
+      const { payload, error: validationError } = validateListingFields(req.body, { isCreate: true });
+      if (validationError) return res.status(400).json({ error: validationError });
+      const categoryError = await assertCategory(payload.category_id, res);
+      if (categoryError) return;
 
       const { data, error } = await supabase
         .from('catalogue_items')
@@ -72,22 +87,29 @@ export default async function handler(req, res) {
 
       const { data: existing, error: lookupError } = await supabase
         .from('catalogue_items')
-        .select('seller_username')
+        .select('seller_username, status')
         .eq('id', id)
         .single();
 
-      if (lookupError || !existing) {
+      if (lookupError || !existing || existing.status === 'deleted') {
         return res.status(404).json({ error: 'Item not found' });
       }
       if (existing.seller_username !== participant.username) {
         return res.status(403).json({ error: 'Not authorized for this item' });
       }
 
-      const payload = pickEditableFields(req.body || {});
+      const { payload, error: validationError } = validateListingFields(req.body, { isCreate: false });
+      if (validationError) return res.status(400).json({ error: validationError });
+      if (payload.category_id) {
+        const categoryError = await assertCategory(payload.category_id, res);
+        if (categoryError) return;
+      }
       const { data, error } = await supabase
         .from('catalogue_items')
         .update({ ...payload, updated_at: new Date().toISOString() })
         .eq('id', id)
+        .eq('seller_username', participant.username)
+        .neq('status', 'deleted')
         .select()
         .single();
 
@@ -118,7 +140,8 @@ export default async function handler(req, res) {
       const { error } = await supabase
         .from('catalogue_items')
         .update({ status: 'deleted', updated_at: new Date().toISOString() })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('seller_username', participant.username);
 
       if (error) {
         console.error('Catalogue item delete error:', error);
