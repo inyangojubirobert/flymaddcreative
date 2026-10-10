@@ -700,6 +700,7 @@
                 <div id="catalogueProductsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="text-center text-slate-500 text-sm py-8 col-span-2">Loading products…</div>
                 </div>
+                <div id="catalogueListingDrafts" class="space-y-3 mt-5"></div>
             </div>
 
             <!-- Orders Tab -->
@@ -729,6 +730,14 @@
                 </div>
 
                 <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Listing type *</label>
+                        <select id="productListingType" onchange="productListingType=this.value; productDraftAttributes=[]; renderProductCategoryOptions(document.getElementById('productCategory').value); void loadListingConfiguration()"
+                                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                            <option value="product">Sell a Product</option>
+                            <option value="service">Offer a Service</option>
+                        </select>
+                    </div>
                     <!-- Images -->
                     <div>
                         <label class="block text-xs text-slate-400 mb-2">Product Images (up to 4)</label>
@@ -767,11 +776,15 @@
                             </div>
                             <div>
                                 <label class="block text-xs text-slate-400 mb-1">Category *</label>
-                                <select id="productCategory"
+                                <select id="productCategory" onchange="productDraftAttributes=[]; updateProductCategoryCover(); void loadListingConfiguration()"
                                         class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-yellow-500 focus:outline-none">
                                     <option value="">Choose a department first</option>
                                 </select>
                             </div>
+                        </div>
+                        <div id="productCategoryCoverWrap" class="hidden mt-2 items-center gap-3 rounded-lg border border-slate-700 bg-slate-900/60 p-2">
+                            <img id="productCategoryCover" alt="" class="hidden h-14 w-14 rounded-md object-cover">
+                            <p id="productCategoryCoverStatus" class="text-xs text-slate-400"></p>
                         </div>
                         <p id="productCategoryHint" class="hidden text-xs text-amber-400 mt-1"></p>
                     </div>
@@ -779,17 +792,105 @@
                     <!-- Description -->
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Description</label>
-                        <textarea id="productDesc" rows="3" maxlength="500" placeholder="Describe your product…"
+                        <textarea id="productDesc" rows="3" maxlength="5000" placeholder="Describe your product or service…"
                                   class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none resize-none"></textarea>
                     </div>
 
                     <!-- Price -->
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Price (USD) *</label>
+                        <label class="block text-xs text-slate-400 mb-1">Advertised price (USD; optional for quote drafts)</label>
                         <div class="relative">
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
                             <input type="number" id="productPrice" min="0.01" step="0.01" placeholder="0.00"
                                    class="w-full bg-slate-800 border border-slate-600 rounded-lg pl-7 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Maximum advertised price (optional)</label>
+                        <input type="number" id="productPriceMax" min="0.01" step="0.01" placeholder="Leave empty for one price"
+                               class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="number" id="productMinOrderQty" min="1" step="1" placeholder="Minimum quantity (optional)"
+                               class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                        <input type="number" id="productMaxOrderQty" min="1" step="1" placeholder="Maximum quantity (optional)"
+                               class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                    </div>
+                    <div id="productStockFields" class="space-y-2">
+                        <label class="block text-xs text-slate-400">Stock description (draft metadata; checkout does not reserve stock)</label>
+                        <select id="productStockStatus" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                            <option value="">Not specified</option><option value="in_stock">In stock</option>
+                            <option value="limited">Limited</option><option value="made_to_order">Made to order</option>
+                            <option value="preorder">Preorder</option><option value="out_of_stock">Out of stock</option>
+                        </select>
+                        <input type="number" id="productStockQuantity" min="0" step="1" placeholder="Exact stock quantity (optional; draft only)"
+                               class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Pricing model</label>
+                        <select id="productPricingModel" onchange="updateListingTypeFields()"
+                                class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                            <option value="fixed">Fixed price</option>
+                            <option value="per_unit">Price per unit</option>
+                            <option value="per_session">Per session</option>
+                        </select>
+                    </div>
+                    <div id="listingCategoryAttributes" class="space-y-3"></div>
+                    <div id="productUnitField" class="hidden">
+                        <label class="block text-xs text-slate-400 mb-1">Price unit *</label>
+                        <select id="productPriceUnit" onchange="document.getElementById('productCustomUnit').classList.toggle('hidden', this.value !== 'other')" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                            <option value="">Choose a unit</option>
+                            <option value="piece">Piece</option><option value="pair">Pair</option><option value="set">Set</option>
+                            <option value="pack">Pack</option><option value="box">Box</option><option value="carton">Carton</option>
+                            <option value="dozen">Dozen</option><option value="gram">Gram</option><option value="kg">Kilogram</option>
+                            <option value="tonne">Tonne</option><option value="millilitre">Millilitre</option><option value="litre">Litre</option>
+                            <option value="gallon">Gallon</option><option value="centimetre">Centimetre</option><option value="metre">Metre</option>
+                            <option value="yard">Yard</option><option value="roll">Roll</option><option value="sq_metre">Square metre</option>
+                            <option value="sq_foot">Square foot</option><option value="bag">Bag</option><option value="bundle">Bundle</option>
+                            <option value="truckload">Truckload</option><option value="cubic_metre">Cubic metre</option>
+                            <option value="licence">Licence</option><option value="download">Download</option>
+                            <option value="subscription_period">Subscription period</option>
+                            <option value="other">Other / specify</option>
+                        </select>
+                        <input type="text" id="productCustomUnit" maxlength="20" placeholder="Specify the unit"
+                               class="hidden w-full mt-2 bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                    </div>
+                    <div id="serviceScopeFields" class="hidden space-y-2">
+                        <label class="block text-xs text-slate-400">Service scope *</label>
+                        <textarea id="serviceScope" rows="2" maxlength="2000" placeholder="What is included in the service?"
+                                  class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white"></textarea>
+                        <label class="block text-xs text-slate-400">Service terms *</label>
+                        <textarea id="serviceTerms" rows="2" maxlength="1000" placeholder="Where, when and how is it delivered?"
+                                  class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white"></textarea>
+                        <label class="block text-xs text-slate-400">Service delivery method *</label>
+                        <div class="flex flex-wrap gap-3 text-xs text-slate-300">
+                            <label><input type="checkbox" name="serviceMode" value="on_site"> At customer location</label>
+                            <label><input type="checkbox" name="serviceMode" value="at_provider"> At provider location</label>
+                            <label><input type="checkbox" name="serviceMode" value="remote"> Remote / online</label>
+                        </div>
+                        <input type="text" id="serviceArea" maxlength="300" placeholder="Service area / coverage (optional)"
+                               class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                        <input type="number" id="serviceDuration" min="1" max="100000" placeholder="Session duration in minutes (required for per-session)"
+                               class="hidden w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                        <label class="flex items-start gap-2 text-xs text-slate-300">
+                            <input type="checkbox" id="serviceScopeConfirmed" class="accent-yellow-500 mt-0.5">
+                            I confirm these scope and terms describe the complete service.
+                        </label>
+                    </div>
+                    <div id="productFulfillmentFields" class="space-y-2">
+                        <label class="block text-xs text-slate-400">Product condition</label>
+                        <select id="productCondition" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white">
+                            <option value="">Not specified</option><option value="new">New</option>
+                            <option value="used_like_new">Used - like new</option><option value="used_good">Used - good</option>
+                            <option value="used_fair">Used - fair</option><option value="refurbished">Refurbished</option>
+                            <option value="not_applicable">Not applicable</option>
+                        </select>
+                        <label class="block text-xs text-slate-400">Fulfillment method * (choose at least one)</label>
+                        <div class="flex flex-wrap gap-3 text-xs text-slate-300">
+                            <label><input type="checkbox" name="productFulfillment" value="pickup"> Local pickup</label>
+                            <label><input type="checkbox" name="productFulfillment" value="delivery"> Seller delivery</label>
+                            <label><input type="checkbox" name="productFulfillment" value="shipping"> Shipping</label>
+                            <label><input type="checkbox" name="productFulfillment" value="digital_delivery"> Digital delivery</label>
                         </div>
                     </div>
 
@@ -820,6 +921,10 @@
                     <input type="hidden" id="editingProductId">
 
                     <div class="flex gap-3 pt-2">
+                        <button onclick="saveProductDraft()" id="saveProductDraftBtn"
+                                class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 rounded-lg transition-colors">
+                            Save privately as draft
+                        </button>
                         <button onclick="saveProduct()" id="saveProductBtn"
                                 class="flex-1 bg-yellow-600 hover:bg-yellow-500 text-black font-semibold py-3 rounded-lg transition-colors">
                             💾 Save Product
@@ -2224,8 +2329,11 @@
         const BASE_URL    = 'https://www.flymaddcreative.online';
 
         let catalogueItems = [];
+        let catalogueDrafts = [];
         let pendingProductImages = []; // { url, file? }
         let currentCatTab = 'products';
+        let editingDraftId = '';
+        let productDraftAttributes = [];
 
         function switchCatTab(tab) {
             currentCatTab = tab;
@@ -2243,6 +2351,64 @@
             if (!currentUser) return;
             catalogueItems = await window.SupabaseAPI.getCatalogueByUsername(currentUser.username);
             renderCatalogueProducts(catalogueItems);
+            await loadCatalogueDrafts();
+        }
+
+        async function catalogueDraftRequest(method, body) {
+            const token = localStorage.getItem('onedream_token');
+            if (!token) throw new Error('Please sign in to manage listing drafts.');
+            const response = await fetch('/api/catalogue/drafts', {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                ...(body ? { body: JSON.stringify(body) } : {}),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Listing draft request failed.');
+            return result;
+        }
+
+        async function loadCatalogueDrafts() {
+            const container = document.getElementById('catalogueListingDrafts');
+            try {
+                const result = await catalogueDraftRequest('GET');
+                catalogueDrafts = result.drafts || [];
+                renderCatalogueDrafts();
+            } catch (error) {
+                container.innerHTML = `<p class="text-center text-red-400 text-sm">${escapeAttr(error.message || 'Saved drafts could not be loaded.')}</p>`;
+            }
+        }
+
+        function renderCatalogueDrafts() {
+            const container = document.getElementById('catalogueListingDrafts');
+            if (!catalogueDrafts.length) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = `<h3 class="text-sm font-semibold text-slate-200">Saved drafts (private)</h3>${catalogueDrafts.map(item => `
+                <div class="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <p class="font-semibold text-sm">${escapeAttr(item.title)}</p>
+                    <p class="text-xs text-slate-400 mt-1">${item.listing_type === 'service' ? 'Service' : 'Product'} · ${escapeAttr(item.pricing_model.replace(/_/g, ' '))}${item.price_usd ? ` · $${Number(item.price_usd).toFixed(2)}${item.price_max_usd ? `–$${Number(item.price_max_usd).toFixed(2)}` : ''}` : ' · Price not set'}</p>
+                    ${(item.blocking_reasons || []).map(reason => `<p class="text-xs text-amber-300 mt-1">• ${escapeAttr(reason)}</p>`).join('')}
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="openProductModal(null, '${escapeAttr(item.id)}')" class="flex-1 text-xs bg-slate-700 hover:bg-slate-600 text-white py-1.5 rounded-lg">Edit</button>
+                        <button onclick="publishProductDraft('${escapeAttr(item.id)}')" class="flex-1 text-xs bg-green-700 hover:bg-green-600 text-white py-1.5 rounded-lg">Review &amp; publish</button>
+                        <button onclick="deleteProductDraft('${escapeAttr(item.id)}')" class="text-xs bg-red-900/50 hover:bg-red-800/50 text-red-300 py-1.5 px-2 rounded-lg">Delete</button>
+                    </div>
+                </div>`).join('')}`;
+        }
+
+        async function publishProductDraft(id) {
+            openProductModal(null, id);
+        }
+
+        async function deleteProductDraft(id) {
+            if (!confirm('Delete this private listing draft?')) return;
+            try {
+                await catalogueDraftRequest('DELETE', { id });
+                await loadCatalogueDrafts();
+            } catch (error) {
+                showProductMsg(error.message || 'Draft could not be deleted.', 'error');
+            }
         }
 
         function renderCatalogueProducts(items) {
@@ -2254,13 +2420,16 @@
             grid.innerHTML = items.map(item => {
                 const img = item.images?.[0] || '';
                 const title = escapeAttr(item.title);
+                const unit = item.listing_type === 'product' && item.pricing_model === 'per_unit' && item.price_unit
+                    ? (item.price_unit.startsWith('other:') ? item.price_unit.slice(6) : item.price_unit.replace(/_/g, ' '))
+                    : item.listing_type === 'service' && item.pricing_model === 'per_session' ? 'session' : '';
                 const statusColor = item.status === 'active' ? 'text-green-400' : 'text-slate-500';
                 return `<div class="bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700/50">
                     ${img ? `<div class="w-full h-36 bg-slate-900 overflow-hidden"><img src="${escapeAttr(img)}" class="w-full h-full object-cover" alt="${title}"></div>`
                            : `<div class="w-full h-36 bg-slate-900 flex items-center justify-center text-4xl">🛍️</div>`}
                     <div class="p-3">
                         <p class="font-semibold text-sm truncate">${title}</p>
-                        <p class="text-yellow-400 font-bold text-sm mt-1">$${parseFloat(item.price_usd).toFixed(2)}</p>
+                        <p class="text-yellow-400 font-bold text-sm mt-1">$${parseFloat(item.price_usd).toFixed(2)}${unit ? ` / ${escapeAttr(unit)}` : ''}</p>
                         <p class="text-xs ${statusColor} mt-1">${item.status === 'active' ? '● Live' : '● Paused'}</p>
                         <div class="flex gap-2 mt-3">
                             <button onclick="copyProductLink('${item.id}')"
@@ -2456,10 +2625,14 @@
 
         // ── Product category picker ────────────────────────────────────
         let catalogueCategories = null;
+        let productListingType = 'product';
+        let listingConfiguration = null;
+        let listingConfigRequest = 0;
 
         function sellableCategories(departmentId) {
             return (catalogueCategories || []).filter(c =>
-                c.parent_id === departmentId && c.is_active !== false && c.is_selectable !== false);
+                c.parent_id === departmentId && c.is_active !== false && c.is_selectable !== false
+                && (c.listing_types || ['product', 'service']).includes(productListingType));
         }
 
         function renderProductCategoryOptions(selectedCategoryId) {
@@ -2467,11 +2640,192 @@
             const select = document.getElementById('productCategory');
             if (!departmentId) {
                 select.innerHTML = '<option value="">Choose a department first</option>';
+                updateProductCategoryCover();
                 return;
             }
             select.innerHTML = '<option value="">Choose a category</option>' + sellableCategories(departmentId)
                 .map(c => `<option value="${escapeAttr(c.id)}">${escapeAttr(c.name)}</option>`).join('');
             select.value = selectedCategoryId || '';
+            updateProductCategoryCover();
+        }
+
+        function updateProductCategoryCover() {
+            const wrap = document.getElementById('productCategoryCoverWrap');
+            const image = document.getElementById('productCategoryCover');
+            const status = document.getElementById('productCategoryCoverStatus');
+            const category = (catalogueCategories || []).find(c => c.id === document.getElementById('productCategory').value);
+            if (!category) {
+                wrap.classList.add('hidden');
+                wrap.classList.remove('flex');
+                image.classList.add('hidden');
+                image.removeAttribute('src');
+                return;
+            }
+
+            wrap.classList.remove('hidden');
+            wrap.classList.add('flex');
+            image.classList.add('hidden');
+            image.removeAttribute('src');
+            status.textContent = `${category.name} cover`;
+            const imageUrl = typeof category.image_url === 'string' ? category.image_url.trim() : '';
+            if (!imageUrl) {
+                status.textContent = `${category.name} has no cover image yet.`;
+                return;
+            }
+
+            let safeUrl;
+            try {
+                safeUrl = new URL(imageUrl, window.location.href);
+            } catch {
+                status.textContent = `${category.name} cover URL is invalid.`;
+                return;
+            }
+            if (!['http:', 'https:'].includes(safeUrl.protocol)) {
+                status.textContent = `${category.name} cover URL is invalid.`;
+                return;
+            }
+            image.onload = () => {
+                if (document.getElementById('productCategory').value === category.id) image.classList.remove('hidden');
+            };
+            image.onerror = () => {
+                if (document.getElementById('productCategory').value !== category.id) return;
+                image.classList.add('hidden');
+                status.textContent = `${category.name} cover image could not be loaded.`;
+            };
+            image.src = safeUrl.href;
+        }
+
+        async function loadListingConfiguration() {
+            const categoryId = document.getElementById('productCategory').value;
+            const listingType = document.getElementById('productListingType').value;
+            const hint = document.getElementById('productCategoryHint');
+            const requestId = ++listingConfigRequest;
+            listingConfiguration = null;
+            renderListingCategoryAttributes([]);
+            try {
+                const params = new URLSearchParams({ listing_type: listingType });
+                if (categoryId) params.set('category_id', categoryId);
+                const response = await fetch(`/api/catalogue/configuration?${params}`);
+                const config = await response.json();
+                if (!response.ok) throw new Error(config.error || 'Listing configuration could not be loaded.');
+                if (requestId !== listingConfigRequest) return;
+                listingConfiguration = config;
+
+                const pricing = document.getElementById('productPricingModel');
+                const selectedModel = pricing.value;
+                pricing.replaceChildren();
+                (config.pricing_models || []).forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.key;
+                    option.textContent = `${model.label}${model.checkout_compatible ? '' : ' · draft only'}`;
+                    pricing.appendChild(option);
+                });
+                if (![...pricing.options].some(option => option.value === selectedModel)) pricing.value = 'fixed';
+
+                const units = document.getElementById('productPriceUnit');
+                const selectedUnit = units.value;
+                units.replaceChildren();
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = 'Choose a unit';
+                units.appendChild(placeholder);
+                (config.units || []).forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.key;
+                    option.textContent = unit.label;
+                    units.appendChild(option);
+                });
+                const other = document.createElement('option');
+                other.value = 'other';
+                other.textContent = 'Other / specify';
+                units.appendChild(other);
+                units.value = [...units.options].some(option => option.value === selectedUnit) ? selectedUnit : '';
+
+                renderListingCategoryAttributes(config.attributes || []);
+                hint.classList.add('hidden');
+                updateListingTypeFields();
+            } catch (error) {
+                if (requestId !== listingConfigRequest) return;
+                hint.textContent = error.message || 'Listing configuration could not be loaded.';
+                hint.classList.remove('hidden');
+            }
+        }
+
+        function renderListingCategoryAttributes(definitions) {
+            const container = document.getElementById('listingCategoryAttributes');
+            container.replaceChildren();
+            definitions.forEach(definition => {
+                const field = document.createElement('div');
+                field.className = 'space-y-1';
+                const label = document.createElement('label');
+                label.className = 'block text-xs text-slate-400';
+                label.textContent = `${definition.label}${definition.is_required ? ' *' : ''}`;
+                field.appendChild(label);
+                let input;
+                if (definition.input_type === 'boolean') {
+                    input = document.createElement('input');
+                    input.type = 'checkbox';
+                } else if (definition.input_type === 'select' || definition.input_type === 'multi_select') {
+                    input = document.createElement('select');
+                    if (definition.input_type === 'multi_select') input.multiple = true;
+                    else {
+                        const placeholder = document.createElement('option');
+                        placeholder.value = '';
+                        placeholder.textContent = 'Choose an option';
+                        input.appendChild(placeholder);
+                    }
+                    (definition.options || []).forEach(raw => {
+                        const option = document.createElement('option');
+                        option.value = typeof raw === 'string' ? raw : raw.value;
+                        option.textContent = typeof raw === 'string' ? raw : raw.label;
+                        input.appendChild(option);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = definition.input_type === 'number' ? 'number' : 'text';
+                    if (definition.input_type === 'number') {
+                        if (definition.min_number !== null) input.min = definition.min_number;
+                        if (definition.max_number !== null) input.max = definition.max_number;
+                    }
+                }
+                input.dataset.attributeId = definition.id;
+                input.dataset.inputType = definition.input_type;
+                input.dataset.required = String(definition.is_required);
+                input.className = definition.input_type === 'boolean'
+                    ? 'accent-yellow-500'
+                    : 'w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white';
+                const stored = productDraftAttributes.find(attribute => attribute.attribute_id === definition.id);
+                if (stored) {
+                    if (definition.input_type === 'boolean') input.checked = stored.value === true;
+                    else if (definition.input_type === 'multi_select' && Array.isArray(stored.value)) {
+                        Array.from(input.options).forEach(option => { option.selected = stored.value.includes(option.value); });
+                    } else if (stored.value !== null && stored.value !== undefined) input.value = String(stored.value);
+                }
+                field.appendChild(input);
+                container.appendChild(field);
+            });
+        }
+
+        function collectListingCategoryAttributes() {
+            return Array.from(document.querySelectorAll('#listingCategoryAttributes [data-attribute-id]')).map(input => {
+                let value;
+                if (input.dataset.inputType === 'boolean') value = input.checked;
+                else if (input.dataset.inputType === 'multi_select') value = Array.from(input.selectedOptions).map(option => option.value);
+                else if (input.dataset.inputType === 'number') value = input.value === '' ? null : Number(input.value);
+                else value = input.value;
+                return { attribute_id: input.dataset.attributeId, value };
+            });
+        }
+
+        function updateListingTypeFields() {
+            const type = document.getElementById('productListingType').value;
+            productListingType = type;
+            const pricing = document.getElementById('productPricingModel');
+            const selectedModel = listingConfiguration?.pricing_models?.find(model => model.key === pricing.value);
+            document.getElementById('productUnitField').classList.toggle('hidden', !selectedModel?.requires_unit);
+            document.getElementById('serviceScopeFields').classList.toggle('hidden', type !== 'service');
+            document.getElementById('productFulfillmentFields').classList.toggle('hidden', type !== 'product');
+            document.getElementById('serviceDuration').classList.toggle('hidden', type !== 'service' || pricing.value !== 'per_session');
         }
 
         async function prepareProductCategoryPicker(currentCategoryId) {
@@ -2486,7 +2840,9 @@
                 hint.classList.remove('hidden');
                 return;
             }
-            const departments = catalogueCategories.filter(c => !c.parent_id && sellableCategories(c.id).length);
+            const departments = catalogueCategories.filter(c => !c.parent_id && (
+                (catalogueCategories || []).some(child => child.parent_id === c.id && child.is_active !== false && child.is_selectable !== false)
+            ));
             departmentSelect.innerHTML = '<option value="">Choose a department</option>' + departments
                 .map(d => `<option value="${escapeAttr(d.id)}">${escapeAttr(d.name)}</option>`).join('');
 
@@ -2494,19 +2850,44 @@
             const currentIsSellable = current && current.parent_id && current.is_selectable !== false && current.is_active !== false;
             departmentSelect.value = currentIsSellable ? current.parent_id : '';
             renderProductCategoryOptions(currentIsSellable ? current.id : '');
+            if (currentIsSellable && current.listing_types && !current.listing_types.includes(productListingType)) {
+                hint.textContent = 'The selected category does not support this listing type. Choose a compatible category.';
+                hint.classList.remove('hidden');
+            }
             if (currentCategoryId && !currentIsSellable) {
                 hint.textContent = 'This product is in a general category. Choose a specific category to save changes.';
                 hint.classList.remove('hidden');
             }
+            await loadListingConfiguration();
         }
 
         // ── Product Modal ──────────────────────────────────────────────
-        function openProductModal(itemId) {
+        function openProductModal(itemId, draftId = null) {
             pendingProductImages = [];
+            editingDraftId = draftId || '';
+            productDraftAttributes = [];
             document.getElementById('productTitle').value = '';
             document.getElementById('productDesc').value  = '';
             document.getElementById('productPrice').value = '';
+            document.getElementById('productPriceMax').value = '';
+            document.getElementById('productMinOrderQty').value = '';
+            document.getElementById('productMaxOrderQty').value = '';
+            document.getElementById('productStockStatus').value = '';
+            document.getElementById('productStockQuantity').value = '';
             document.getElementById('productStatus').value = 'active';
+            productListingType = 'product';
+            document.getElementById('productListingType').value = 'product';
+            document.getElementById('productPricingModel').value = 'fixed';
+            document.getElementById('productPriceUnit').value = '';
+            document.getElementById('productCustomUnit').value = '';
+            document.getElementById('productCustomUnit').classList.add('hidden');
+            document.getElementById('serviceScope').value = '';
+            document.getElementById('serviceTerms').value = '';
+            document.getElementById('serviceArea').value = '';
+            document.getElementById('serviceDuration').value = '';
+            document.getElementById('productCondition').value = '';
+            document.querySelectorAll('input[name="serviceMode"], input[name="productFulfillment"]').forEach(input => { input.checked = false; });
+            document.getElementById('serviceScopeConfirmed').checked = false;
             document.getElementById('editingProductId').value = '';
             document.getElementById('productImagesPreview').innerHTML = '';
             document.getElementById('productSaveMsg').classList.add('hidden');
@@ -2521,7 +2902,25 @@
                     document.getElementById('productTitle').value  = item.title;
                     document.getElementById('productDesc').value   = item.description || '';
                     document.getElementById('productPrice').value  = item.price_usd;
+                    productDraftAttributes = item.attributes || [];
                     document.getElementById('productStatus').value = item.status || 'active';
+                    productListingType = item.listing_type || 'product';
+                    document.getElementById('productListingType').value = productListingType;
+                    document.getElementById('productPricingModel').value = item.pricing_model || 'fixed';
+                    document.getElementById('productPriceUnit').value = item.price_unit || '';
+                    if (item.price_unit?.startsWith('other:')) {
+                        document.getElementById('productPriceUnit').value = 'other';
+                        document.getElementById('productCustomUnit').value = item.price_unit.slice(6);
+                        document.getElementById('productCustomUnit').classList.remove('hidden');
+                    }
+                    document.getElementById('serviceScope').value = item.service_scope || '';
+                    document.getElementById('serviceTerms').value = item.service_terms || '';
+                    document.getElementById('serviceArea').value = item.service_details?.service_area || '';
+                    document.getElementById('serviceDuration').value = item.service_details?.typical_duration_minutes || '';
+                    document.getElementById('productCondition').value = item.product_details?.condition || '';
+                    document.querySelectorAll('input[name="serviceMode"]').forEach(input => { input.checked = item.service_details?.service_modes?.includes(input.value) || false; });
+                    document.querySelectorAll('input[name="productFulfillment"]').forEach(input => { input.checked = item.product_details?.fulfillment_methods?.includes(input.value) || false; });
+                    document.getElementById('serviceScopeConfirmed').checked = item.service_scope_confirmed === true;
                     document.getElementById('pmPaystack').checked  = item.payment_methods?.includes('paystack') ?? true;
                     document.getElementById('pmUsdt').checked      = item.payment_methods?.includes('usdt') ?? true;
                     if (item.images?.length) {
@@ -2529,11 +2928,49 @@
                         renderImagePreviews();
                     }
                 }
+            } else if (draftId) {
+                const savedDraft = catalogueDrafts.find(item => item.id === draftId);
+                if (savedDraft) {
+                    document.getElementById('productModalTitle').textContent = 'Edit Listing Draft';
+                    document.getElementById('productTitle').value = savedDraft.title || '';
+                    document.getElementById('productDesc').value = savedDraft.description || '';
+                    document.getElementById('productPrice').value = savedDraft.price_usd ?? '';
+                    document.getElementById('productPriceMax').value = savedDraft.price_max_usd ?? '';
+                    document.getElementById('productMinOrderQty').value = savedDraft.min_order_qty ?? '';
+                    document.getElementById('productMaxOrderQty').value = savedDraft.max_order_qty ?? '';
+                    document.getElementById('productStockStatus').value = savedDraft.stock_status || '';
+                    document.getElementById('productStockQuantity').value = savedDraft.stock_quantity ?? '';
+                    productListingType = savedDraft.listing_type;
+                    document.getElementById('productListingType').value = productListingType;
+                    document.getElementById('productPricingModel').value = savedDraft.pricing_model;
+                    document.getElementById('productPriceUnit').value = savedDraft.price_unit || '';
+                    if (savedDraft.price_unit?.startsWith('other:')) {
+                        document.getElementById('productPriceUnit').value = 'other';
+                        document.getElementById('productCustomUnit').value = savedDraft.price_unit.slice(6);
+                        document.getElementById('productCustomUnit').classList.remove('hidden');
+                    }
+                    document.getElementById('serviceScope').value = savedDraft.service_scope || '';
+                    document.getElementById('serviceTerms').value = savedDraft.service_terms || '';
+                    document.getElementById('serviceArea').value = savedDraft.service_details?.service_area || '';
+                    document.getElementById('serviceDuration').value = savedDraft.service_details?.typical_duration_minutes || '';
+                    document.getElementById('productCondition').value = savedDraft.product_details?.condition || '';
+                    document.querySelectorAll('input[name="serviceMode"]').forEach(input => { input.checked = savedDraft.service_details?.service_modes?.includes(input.value) || false; });
+                    document.querySelectorAll('input[name="productFulfillment"]').forEach(input => { input.checked = savedDraft.product_details?.fulfillment_methods?.includes(input.value) || false; });
+                    document.getElementById('serviceScopeConfirmed').checked = savedDraft.service_scope_confirmed === true;
+                    productDraftAttributes = savedDraft.attributes || [];
+                    if (savedDraft.images?.length) {
+                        pendingProductImages = savedDraft.images.map(url => ({ url }));
+                        renderImagePreviews();
+                    }
+                }
             } else {
                 document.getElementById('productModalTitle').textContent = 'Add Product';
             }
             const editingItem = itemId ? catalogueItems.find(i => i.id === itemId) : null;
-            prepareProductCategoryPicker(editingItem?.category_id || '');
+            const selectedCategoryId = editingItem?.category_id || (draftId ? catalogueDrafts.find(item => item.id === draftId)?.category_id : '') || '';
+            prepareProductCategoryPicker(selectedCategoryId);
+            document.getElementById('saveProductBtn').textContent = draftId ? 'Publish Draft' : '💾 Save Product';
+            updateListingTypeFields();
             document.getElementById('productModal').classList.remove('hidden');
         }
 
@@ -2565,13 +3002,134 @@
             input.value = '';
         }
 
+        async function saveProductDraft(publishAfterSave = false) {
+            const title = document.getElementById('productTitle').value.trim();
+            const listingType = document.getElementById('productListingType').value;
+            const pricingModel = document.getElementById('productPricingModel').value;
+            const modelConfig = listingConfiguration?.pricing_models?.find(model => model.key === pricingModel);
+            if (!title) { showProductMsg('Title is required for a draft.', 'error'); return; }
+            if (!modelConfig) { showProductMsg('Choose a configured pricing model.', 'error'); return; }
+            if (modelConfig.requires_unit && !document.getElementById('productPriceUnit').value) { showProductMsg('Choose the unit used for this price.', 'error'); return; }
+            if (modelConfig.requires_unit && document.getElementById('productPriceUnit').value === 'other' && !document.getElementById('productCustomUnit').value.trim()) { showProductMsg('Specify the custom price unit.', 'error'); return; }
+            const priceRaw = document.getElementById('productPrice').value.trim();
+            const maxPriceRaw = document.getElementById('productPriceMax').value.trim();
+            const price = priceRaw ? Number(priceRaw) : null;
+            const maxPrice = maxPriceRaw ? Number(maxPriceRaw) : null;
+            if ((priceRaw && (!Number.isFinite(price) || price <= 0)) || (maxPriceRaw && (!Number.isFinite(maxPrice) || maxPrice <= 0))) {
+                showProductMsg('Prices must be positive USD amounts.', 'error'); return;
+            }
+            if (price !== null && maxPrice !== null && maxPrice < price) { showProductMsg('Maximum price must be at least the starting price.', 'error'); return; }
+
+            const btn = document.getElementById('saveProductDraftBtn');
+            const publishBtn = document.getElementById('saveProductBtn');
+            btn.disabled = true; publishBtn.disabled = true; btn.textContent = '⏳ Saving draft…';
+            try {
+                const token = localStorage.getItem('onedream_token');
+                if (!token) throw new Error('Please sign in to save listing drafts.');
+                for (const image of pendingProductImages) {
+                    if (image.file) {
+                        image.url = await window.SupabaseAPI.uploadCatalogueImage(image.file, token);
+                        delete image.file;
+                    }
+                }
+                const fulfillment = Array.from(document.querySelectorAll('input[name="productFulfillment"]:checked')).map(input => input.value);
+                const serviceModes = Array.from(document.querySelectorAll('input[name="serviceMode"]:checked')).map(input => input.value);
+                const quantityValue = id => {
+                    const raw = document.getElementById(id).value.trim();
+                    return raw ? Number(raw) : null;
+                };
+                const payload = {
+                    ...(editingDraftId ? { id: editingDraftId } : {}),
+                    title,
+                    description: document.getElementById('productDesc').value.trim(),
+                    category_id: document.getElementById('productCategory').value || null,
+                    listing_type: listingType,
+                    pricing_model: pricingModel,
+                    price_usd: price,
+                    price_max_usd: maxPrice,
+                    price_unit: modelConfig.requires_unit
+                        ? (document.getElementById('productPriceUnit').value === 'other'
+                            ? `other:${document.getElementById('productCustomUnit').value.trim()}`
+                            : document.getElementById('productPriceUnit').value)
+                        : null,
+                    min_order_qty: quantityValue('productMinOrderQty'),
+                    max_order_qty: quantityValue('productMaxOrderQty'),
+                    stock_status: document.getElementById('productStockStatus').value || null,
+                    stock_quantity: quantityValue('productStockQuantity'),
+                    service_scope: listingType === 'service' ? document.getElementById('serviceScope').value.trim() : null,
+                    service_terms: listingType === 'service' ? document.getElementById('serviceTerms').value.trim() : null,
+                    service_scope_confirmed: listingType === 'service' && document.getElementById('serviceScopeConfirmed').checked,
+                    product_details: listingType === 'product' ? {
+                        condition: document.getElementById('productCondition').value || null,
+                        fulfillment_methods: fulfillment,
+                    } : undefined,
+                    service_details: listingType === 'service' ? {
+                        service_modes: serviceModes,
+                        service_area: document.getElementById('serviceArea').value.trim() || null,
+                        typical_duration_minutes: document.getElementById('serviceDuration').value
+                            ? Number(document.getElementById('serviceDuration').value) : null,
+                    } : undefined,
+                    attributes: collectListingCategoryAttributes(),
+                    images: pendingProductImages.map(image => image.url),
+                };
+                const saved = await catalogueDraftRequest('POST', payload);
+                editingDraftId = saved.id;
+                catalogueDrafts = [saved, ...catalogueDrafts.filter(item => item.id !== saved.id)];
+                renderCatalogueDrafts();
+                if (publishAfterSave) {
+                    const paymentMethods = [];
+                    if (document.getElementById('pmPaystack').checked) paymentMethods.push('paystack');
+                    if (document.getElementById('pmUsdt').checked) paymentMethods.push('usdt');
+                    await catalogueDraftRequest('PATCH', { id: saved.id, action: 'publish', payment_methods: paymentMethods });
+                    showProductMsg('Draft published! ✓', 'success');
+                    await loadCatalogue();
+                    setTimeout(closeProductModal, 900);
+                } else {
+                    showProductMsg(`Draft saved privately.${saved.blocking_reasons?.length ? ` ${saved.blocking_reasons.join(' ')}` : ''}`, 'success');
+                }
+                return saved.id;
+            } catch (error) {
+                showProductMsg(error.message || 'Draft could not be saved.', 'error');
+                return null;
+            } finally {
+                btn.disabled = false; publishBtn.disabled = false;
+                btn.textContent = 'Save privately as draft';
+            }
+        }
+
         async function saveProduct() {
+            if (editingDraftId) {
+                await saveProductDraft(true);
+                return;
+            }
             const title = document.getElementById('productTitle').value.trim();
             const price = parseFloat(document.getElementById('productPrice').value);
             const categoryId = document.getElementById('productCategory').value;
             if (!title) { showProductMsg('Title is required.', 'error'); return; }
             if (!price || price <= 0) { showProductMsg('Enter a valid price.', 'error'); return; }
             if (!categoryId) { showProductMsg('Choose a department and category.', 'error'); return; }
+            const listingType = document.getElementById('productListingType').value;
+            const pricingModel = document.getElementById('productPricingModel').value;
+            const modelConfig = listingConfiguration?.pricing_models?.find(model => model.key === pricingModel);
+            if (!modelConfig?.checkout_compatible) { showProductMsg('This pricing configuration is not available for publishing yet.', 'error'); return; }
+            if (document.getElementById('productPriceMax').value.trim()
+                || document.getElementById('productMinOrderQty').value.trim()
+                || document.getElementById('productMaxOrderQty').value.trim()
+                || document.getElementById('productStockStatus').value
+                || document.getElementById('productStockQuantity').value.trim()) {
+                showProductMsg('Price ranges, inventory and quantity descriptions cannot be enforced by checkout. Save this listing privately as a draft.', 'error');
+                return;
+            }
+            if (modelConfig.requires_unit && !document.getElementById('productPriceUnit').value) { showProductMsg('Choose the unit used for this price.', 'error'); return; }
+            if (modelConfig.requires_unit && document.getElementById('productPriceUnit').value === 'other' && !document.getElementById('productCustomUnit').value.trim()) { showProductMsg('Specify the custom price unit.', 'error'); return; }
+            if (listingType === 'service' && (!document.getElementById('serviceScope').value.trim() || !document.getElementById('serviceTerms').value.trim() || !document.getElementById('serviceScopeConfirmed').checked)) {
+                showProductMsg('Add the complete service scope and terms, then confirm them.', 'error'); return;
+            }
+            const fulfillment = Array.from(document.querySelectorAll('input[name="productFulfillment"]:checked')).map(input => input.value);
+            const serviceModes = Array.from(document.querySelectorAll('input[name="serviceMode"]:checked')).map(input => input.value);
+            if (listingType === 'product' && !fulfillment.length) { showProductMsg('Choose at least one product fulfillment method.', 'error'); return; }
+            if (listingType === 'service' && !serviceModes.length) { showProductMsg('Choose at least one service delivery method.', 'error'); return; }
+            if (listingType === 'service' && pricingModel === 'per_session' && !(Number(document.getElementById('serviceDuration').value) > 0)) { showProductMsg('Enter a positive session duration.', 'error'); return; }
 
             const btn = document.getElementById('saveProductBtn');
             btn.disabled = true; btn.textContent = '⏳ Saving…';
@@ -2597,6 +3155,10 @@
                 if (document.getElementById('pmUsdt').checked) methods.push('usdt');
 
                 const editId = document.getElementById('editingProductId').value;
+                const categoryAttributes = collectListingCategoryAttributes();
+                const missingAttribute = Array.from(document.querySelectorAll('#listingCategoryAttributes [data-required="true"]'))
+                    .find(input => input.dataset.inputType === 'boolean' ? false : input.dataset.inputType === 'multi_select' ? !input.selectedOptions.length : !input.value);
+                if (missingAttribute) { showProductMsg('Complete all required category fields.', 'error'); return; }
                 const payload = {
                     title,
                     description: document.getElementById('productDesc').value.trim(),
@@ -2605,6 +3167,26 @@
                     images: pendingProductImages.map(i => i.url),
                     payment_methods: methods,
                     status: document.getElementById('productStatus').value,
+                    listing_type: listingType,
+                    pricing_model: pricingModel,
+                    price_unit: modelConfig.requires_unit
+                        ? (document.getElementById('productPriceUnit').value === 'other'
+                            ? `other:${document.getElementById('productCustomUnit').value.trim()}`
+                            : document.getElementById('productPriceUnit').value)
+                        : null,
+                    service_scope: listingType === 'service' ? document.getElementById('serviceScope').value.trim() : null,
+                    service_terms: listingType === 'service' ? document.getElementById('serviceTerms').value.trim() : null,
+                    service_scope_confirmed: listingType === 'service' && document.getElementById('serviceScopeConfirmed').checked,
+                    product_details: listingType === 'product' ? {
+                        condition: document.getElementById('productCondition').value || null,
+                        fulfillment_methods: fulfillment,
+                    } : undefined,
+                    service_details: listingType === 'service' ? {
+                        service_modes: serviceModes,
+                        service_area: document.getElementById('serviceArea').value.trim() || null,
+                        typical_duration_minutes: document.getElementById('serviceDuration').value ? Number(document.getElementById('serviceDuration').value) : null,
+                    } : undefined,
+                    attributes: categoryAttributes,
                 };
                 if (editId) payload.id = editId;
 

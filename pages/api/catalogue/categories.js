@@ -6,7 +6,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
-const CATEGORY_FIELDS = 'id, name, slug, icon, tint, ink, sort_order, parent_id, is_featured, is_active, is_selectable';
+const CATEGORY_FIELDS = 'id, name, slug, icon, tint, ink, sort_order, parent_id, is_featured, is_active, is_selectable, listing_types, suggested_listing_type';
+const CATEGORY_FIELDS_LEGACY = 'id, name, slug, icon, tint, ink, sort_order, parent_id, is_featured, is_active, is_selectable';
 const DEFAULT_LOOK = { icon: 'pricetag', tint: '#DBEAFE', ink: '#1E3A8A' };
 
 function slugify(name) {
@@ -30,6 +31,20 @@ export default async function handler(req, res) {
       let { data, error } = await listed(`${CATEGORY_FIELDS}, image_url, banner_title, banner_subtitle`);
       if (error && /image_url|banner_title|banner_subtitle/.test(error.message || '')) {
         ({ data, error } = await listed(CATEGORY_FIELDS));
+      }
+      if (error && /listing_types|suggested_listing_type/.test(error.message || '')) {
+        let legacy;
+        ({ data: legacy, error } = await listed(`${CATEGORY_FIELDS_LEGACY}, image_url, banner_title, banner_subtitle`));
+        if (error && /image_url|banner_title|banner_subtitle/.test(error.message || '')) {
+          ({ data: legacy, error } = await listed(CATEGORY_FIELDS_LEGACY));
+        }
+        if (!error) {
+          data = (legacy || []).map((category) => ({
+            ...category,
+            listing_types: ['product', 'service'],
+            suggested_listing_type: null,
+          }));
+        }
       }
 
       if (error) {

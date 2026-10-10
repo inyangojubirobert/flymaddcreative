@@ -1,7 +1,7 @@
 // Run: node --test __tests__/lib/catalogueListingValidation.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateListingFields, parsePriceUsd } from '../../lib/catalogueListingValidation.js';
+import { validateListingFields, validateListingDraftFields, parsePriceUsd } from '../../lib/catalogueListingValidation.js';
 
 const CATEGORY = '9b2f3c1e-0000-4000-8000-000000000001';
 const base = { title: 'Leather bag', price_usd: 15, category_id: CATEGORY };
@@ -117,4 +117,78 @@ test('length limits', () => {
   assert.ok(validateListingFields({ ...base, title: 'a'.repeat(121) }, { isCreate: true }).error);
   assert.ok(validateListingFields({ ...base, description: 'a'.repeat(5001) }, { isCreate: true }).error);
   assert.ok(validateListingFields({ ...base, images: Array(11).fill('https://x.test/a.jpg') }, { isCreate: true }).error);
+});
+
+test('new listings require an explicit product or service type when enabled', () => {
+  assert.ok(validateListingFields(base, { isCreate: true, requireListingType: true }).error);
+  assert.equal(
+    validateListingFields({ ...base, listing_type: 'service' }, { isCreate: true, requireListingType: true }).payload.listing_type,
+    'service',
+  );
+  assert.ok(validateListingFields({ ...base, listing_type: 'subscription' }, { isCreate: true, requireListingType: true }).error);
+});
+
+test('validates listing pricing metadata without accepting unknown values', () => {
+  const valid = validateListingFields({
+    ...base,
+    listing_type: 'product',
+    pricing_model: 'per_unit',
+    price_unit: 'kg',
+    product_details: { condition: 'new', fulfillment_methods: ['pickup', 'digital_delivery'] },
+    attributes: [{ custom_label: 'Pack size', value: '5 kg' }],
+  }, { isCreate: true, requireListingType: true });
+  assert.equal(valid.error, undefined);
+  assert.equal(valid.payload.pricing_model, 'per_unit');
+  assert.deepEqual(valid.payload.product_details.fulfillment_methods, ['pickup', 'digital_delivery']);
+  assert.ok(validateListingFields({ ...base, listing_type: 'product', pricing_model: 'Not a key!' }, { isCreate: true, requireListingType: true }).error);
+  assert.ok(validateListingFields({ ...base, listing_type: 'product', product_details: { condition: 'fake' } }, { isCreate: true, requireListingType: true }).error);
+});
+
+test('validates service scope, confirmation, details and typed attributes', () => {
+  const valid = validateListingFields({
+    ...base,
+    listing_type: 'service',
+    pricing_model: 'per_session',
+    service_scope: 'One 60 minute consultation with written follow-up.',
+    service_terms: 'Online appointment scheduled after contacting the provider.',
+    service_scope_confirmed: true,
+    service_details: { service_modes: ['remote'], typical_duration_minutes: 60 },
+    attributes: [{ attribute_id: 'definition-id', value: 60 }],
+  }, { isCreate: true, requireListingType: true });
+  assert.equal(valid.error, undefined);
+  assert.equal(valid.payload.service_scope_confirmed, true);
+  assert.ok(validateListingFields({ ...base, service_details: { experience_years: -1 } }, { isCreate: true }).error);
+  assert.ok(validateListingFields({ ...base, attributes: [{ custom_label: 'bad', value: { nested: true } }] }, { isCreate: true }).error);
+});
+
+test('accepts extensible listing drafts without treating them as live listings', () => {
+  const { payload, error } = validateListingDraftFields({
+    title: 'Custom furniture order',
+    listing_type: 'product',
+    pricing_model: 'custom_quote',
+    price_usd: null,
+    price_max_usd: null,
+    min_order_qty: 5,
+    stock_status: 'made_to_order',
+    stock_quantity: 0,
+    images: [],
+    product_details: { fulfillment_methods: ['delivery'] },
+    pricing_options: [{ label: 'Bulk order', price_usd: '25.50', price_unit: 'other:bundle' }],
+  });
+  assert.equal(error, undefined);
+  assert.equal(payload.price_usd, null);
+  assert.equal(payload.min_order_qty, 5);
+  assert.equal(payload.stock_status, 'made_to_order');
+  assert.deepEqual(payload.pricing_options, [{ label: 'Bulk order', price_usd: 25.5, price_unit: 'other:bundle' }]);
+});
+
+test('rejects unsafe or inconsistent listing draft values', () => {
+  const baseDraft = { title: 'Draft service', listing_type: 'service', pricing_model: 'hourly' };
+  assert.ok(validateListingDraftFields({ ...baseDraft, price_usd: -1 }).error);
+  assert.ok(validateListingDraftFields({ ...baseDraft, price_usd: 10, price_max_usd: 9 }).error);
+  assert.ok(validateListingDraftFields({ ...baseDraft, min_order_qty: 3, max_order_qty: 2 }).error);
+  assert.ok(validateListingDraftFields({ ...baseDraft, stock_status: 'available-ish' }).error);
+  assert.ok(validateListingDraftFields({ ...baseDraft, pricing_options: [{ label: '<script>' }] }).error);
+  assert.ok(validateListingDraftFields({ ...baseDraft, status: 'active' }).error);
+  assert.ok(validateListingDraftFields({ listing_type: 'service', pricing_model: 'hourly' }).error);
 });
