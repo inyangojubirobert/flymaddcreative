@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { requireParticipant } from '../../../lib/participantAuth';
+import { notifyAdminOfSupportMessage } from '../../../lib/notifyAdminSupport';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -68,6 +69,15 @@ export default async function handler(req, res) {
       .select('id, withdrawal_id, sender_type, message_type, body, read_at, created_at')
       .single();
     if (error) throw error;
+    try {
+      await notifyAdminOfSupportMessage(supabase, {
+        messageId: data.id,
+        participantId: participant.id,
+        senderName: participant.username,
+      });
+    } catch (notifyError) {
+      console.error('Admin support alert failed:', notifyError);
+    }
     return res.status(201).json({ success: true, message: data });
   } catch (error) {
     console.error('Participant message send error:', error);

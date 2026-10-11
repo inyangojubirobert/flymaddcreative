@@ -12,7 +12,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getCatalogueItem, createItemPaymentIntent, createOrder, orderAction, type CatalogueOrder } from '@/api/catalogue';
+import { cataloguePriceLabel, getCatalogueItem, createItemPaymentIntent, createOrder, orderAction, type CatalogueOrder } from '@/api/catalogue';
 import { loadRemoteConfig } from '@/lib/remote-config';
 import { ApiError } from '@/lib/api-client';
 
@@ -148,7 +148,7 @@ export default function CatalogueItemScreen() {
   if (!itemQuery.data) {
     return (
       <ThemedView style={styles.container}>
-        <ThemedText style={styles.loading}>Product not found.</ThemedText>
+        <ThemedText style={styles.loading}>Listing not found.</ThemedText>
       </ThemedView>
     );
   }
@@ -193,6 +193,9 @@ export default function CatalogueItemScreen() {
           ) : (
             <>
               {item.images?.[0] && <Image source={{ uri: item.images[0] }} style={styles.image} />}
+              <View style={styles.listingTypeBadge}>
+                <ThemedText type="smallBold" style={styles.listingTypeText}>{item.listing_type === 'service' ? 'Service' : 'Product'}</ThemedText>
+              </View>
               <ThemedText type="title" style={styles.title}>{item.title}</ThemedText>
               <ThemedText type="default" themeColor="textSecondary">{item.description}</ThemedText>
               {item.size ? (
@@ -207,7 +210,40 @@ export default function CatalogueItemScreen() {
                   <ThemedText style={styles.videoButtonText}>Watch promotional video</ThemedText>
                 </Pressable>
               ) : null}
-              <ThemedText type="smallBold" style={styles.price}>${item.price_usd.toFixed(2)}</ThemedText>
+              <ThemedText type="smallBold" style={styles.price}>{cataloguePriceLabel(item)}</ThemedText>
+              {item.listing_type === 'service' ? (
+                <ThemedView style={styles.card}>
+                  {item.service_scope ? (
+                    <>
+                      <ThemedText type="smallBold">Service scope</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">{item.service_scope}</ThemedText>
+                    </>
+                  ) : null}
+                  {item.service_terms ? (
+                    <>
+                      <ThemedText type="smallBold">Service terms</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">{item.service_terms}</ThemedText>
+                    </>
+                  ) : null}
+                  {item.service_details?.service_area ? <ThemedText type="small" themeColor="textSecondary">Coverage: {item.service_details.service_area}</ThemedText> : null}
+                  {item.service_details?.typical_duration_minutes ? <ThemedText type="small" themeColor="textSecondary">Typical duration: {item.service_details.typical_duration_minutes} minutes</ThemedText> : null}
+                </ThemedView>
+              ) : (
+                <ThemedView style={styles.card}>
+                  {item.product_details?.condition ? <ThemedText type="small" themeColor="textSecondary">Condition: {item.product_details.condition.replaceAll('_', ' ')}</ThemedText> : null}
+                  {item.product_details?.fulfillment_methods?.length ? <ThemedText type="small" themeColor="textSecondary">Fulfillment: {item.product_details.fulfillment_methods.map((methodName) => methodName.replaceAll('_', ' ')).join(', ')}</ThemedText> : null}
+                  {item.product_details?.delivery_areas ? <ThemedText type="small" themeColor="textSecondary">Delivery areas: {item.product_details.delivery_areas}</ThemedText> : null}
+                </ThemedView>
+              )}
+              {item.attributes?.length ? (
+                <ThemedView style={styles.card}>
+                  {item.attributes.map((attribute) => (
+                    <ThemedText key={attribute.id || attribute.attribute_id || attribute.custom_label} type="small" themeColor="textSecondary">
+                      {attribute.custom_label || 'Details'}: {Array.isArray(attribute.value) ? attribute.value.join(', ') : String(attribute.value ?? '')}
+                    </ThemedText>
+                  ))}
+                </ThemedView>
+              ) : null}
 
               <ThemedText type="smallBold" style={styles.sectionLabel}>Your details</ThemedText>
               <TextInput placeholder="Full name" placeholderTextColor={theme.textSecondary} value={name} onChangeText={setName} style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />
@@ -270,6 +306,8 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: 200, borderRadius: Spacing.two },
   title: { fontSize: 22, marginTop: Spacing.two },
   price: { color: '#1D4ED8', fontSize: 18 },
+  listingTypeBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: '#DBEAFE' },
+  listingTypeText: { color: '#1E3A8A', textTransform: 'capitalize' },
   sizeBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6, backgroundColor: '#FEF3C7' },
   sizeText: { color: '#713F12' },
   videoButton: { minHeight: 48, borderRadius: Spacing.two, backgroundColor: '#1D4ED8', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },

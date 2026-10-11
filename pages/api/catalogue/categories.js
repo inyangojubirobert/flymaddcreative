@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { requireParticipant } from '../../../lib/participantAuth';
+import { searchCatalogueCategories } from '../../../lib/catalogueSearch';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -22,6 +23,10 @@ function slugify(name) {
 export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
+      if (req.query.q !== undefined) {
+        if (typeof req.query.q !== 'string') return res.status(400).json({ error: 'Search must be a single string' });
+        return res.status(200).json(await searchCatalogueCategories(supabase, req.query.q));
+      }
       const listed = (fields) => supabase
         .from('catalogue_categories')
         .select(fields)

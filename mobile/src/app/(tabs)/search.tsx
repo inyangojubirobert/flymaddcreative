@@ -1,26 +1,25 @@
 import { useState } from 'react';
 import { FlatList, StyleSheet, TextInput, Pressable, ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import { CatalogueThumb } from '@/components/catalogue-visuals';
 import { BottomTabInset, Palette, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { searchParticipants } from '@/api/participants';
+import { useMarketplaceSearch } from '@/hooks/use-marketplace-search';
 
 export default function SearchScreen() {
   const theme = useTheme();
   const router = useRouter();
   const [query, setQuery] = useState('');
 
-  const searchQuery = useQuery({
-    queryKey: ['search', query],
-    queryFn: () => searchParticipants(query),
-    enabled: query.trim().length > 0,
-  });
+  const searchQuery = useMarketplaceSearch(query);
+  const participants = searchQuery.data?.participants ?? [];
+  const products = searchQuery.data?.items ?? [];
+  const categoryHits = searchQuery.categories;
 
   return (
     <ThemedView style={styles.container}>
@@ -31,14 +30,15 @@ export default function SearchScreen() {
           </View>
           <View style={styles.headerCopy}>
             <ThemedText type="title" style={styles.title}>Discover</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">Find a creator and support their dream.</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">Find creators, products, services, and categories.</ThemedText>
           </View>
         </View>
 
         <View style={[styles.searchBox, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
           <Ionicons name="search-outline" size={20} color={Palette.blue} />
           <TextInput
-            placeholder="Name, username, or voting code"
+            placeholder="Creator, product, service, or category"
+            maxLength={200}
             placeholderTextColor={theme.textSecondary}
             value={query}
             onChangeText={setQuery}
@@ -53,15 +53,65 @@ export default function SearchScreen() {
           ) : null}
         </View>
 
-        {searchQuery.isFetching && <ActivityIndicator style={styles.loading} />}
+        {searchQuery.isSearching && <ActivityIndicator style={styles.loading} />}
+        {searchQuery.degraded ? <Pressable onPress={() => searchQuery.refetch()} accessibilityRole="button"><ThemedText type="small" style={styles.sectionTitle}>Some search results are unavailable. Tap to retry.</ThemedText></Pressable> : null}
 
         <FlatList
-          data={searchQuery.data ?? []}
+          data={participants}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={<>
+
+            {categoryHits.length ? (
+              <View style={styles.section}>
+                <ThemedText type="smallBold">Categories &amp; departments</ThemedText>
+                {categoryHits.map((entry) => (
+                  <Pressable
+                    key={`${entry.kind}-${entry.id}`}
+                    onPress={() => {
+                      if (entry.kind === 'department') router.push(`/shop?department=${entry.departmentSlug}` as never);
+                      else router.push(`/shop/category/${entry.id}` as never);
+                    }}
+                    style={[styles.row, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
+                  >
+                    <CatalogueThumb imageUrl={entry.imageUrl} icon={entry.icon} tint={entry.tint} ink={entry.ink} size={42} radius={14} iconSize={20} />
+                    <View style={styles.rowText}>
+                      <ThemedText type="default" style={styles.personName}>{entry.name}</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">{entry.matchType === 'fuzzy' ? 'Suggested category · ' : ''}{entry.kind === 'department' ? 'Department' : entry.departmentName}</ThemedText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            {products.length ? (
+              <View style={styles.section}>
+                <ThemedText type="smallBold">Products &amp; services</ThemedText>
+                {products.map((product) => (
+                  <Pressable
+                    key={product.id}
+                    onPress={() => router.push(`/catalogue/item/${product.id}` as never)}
+                    style={[styles.row, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
+                  >
+                    <CatalogueThumb imageUrl={product.images?.[0]} icon="pricetag" tint="#DBEAFE" ink="#1E3A8A" size={42} radius={14} iconSize={20} />
+                    <View style={styles.rowText}>
+                      <ThemedText type="default" style={styles.personName}>{product.title}</ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        ${Number(product.price_usd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · @{product.seller_username}
+                      </ThemedText>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+
+            {query.trim() ? <ThemedText type="smallBold" style={styles.sectionTitle}>Creators</ThemedText> : null}
+          </>}
           renderItem={({ item }) => (
             <Pressable
               onPress={() => router.push(`/profile/${item.username}`)}
@@ -82,21 +132,23 @@ export default function SearchScreen() {
             </Pressable>
           )}
           ListEmptyComponent={
-            query.trim() && !searchQuery.isFetching ? (
+            query.trim() && !searchQuery.isSearching ? (
+              categoryHits.length || products.length ? null : (
               <View style={styles.emptyCard}>
                 <Ionicons name="people-outline" size={32} color={Palette.slate} />
-                <ThemedText type="smallBold">No creators found</ThemedText>
-                <ThemedText type="small" style={styles.empty} themeColor="textSecondary">Check the spelling or try a voting code.</ThemedText>
+                <ThemedText type="smallBold">{searchQuery.degraded ? 'Search is temporarily unavailable' : 'No matches found'}</ThemedText>
+                <ThemedText type="small" style={styles.empty} themeColor="textSecondary">Try a creator name, product, service, or category.</ThemedText>
               </View>
-            ) : (
+              )
+            ) : !query.trim() ? (
               <View style={styles.promptCard}>
                 <View style={styles.promptIcon}>
                   <Ionicons name="sparkles" size={25} color={Palette.yellowInk} />
                 </View>
                 <ThemedText type="smallBold" style={styles.promptTitle}>Start discovering</ThemedText>
-                <ThemedText type="small" style={styles.empty} themeColor="textSecondary">Search by name, @username, or a creator&apos;s voting code.</ThemedText>
+                <ThemedText type="small" style={styles.empty} themeColor="textSecondary">Search creators, or shop categories like Shoes and Web Development.</ThemedText>
               </View>
-            )
+            ) : null
           }
         />
       </SafeAreaView>
@@ -114,6 +166,8 @@ const styles = StyleSheet.create({
   searchBox: { minHeight: 52, borderRadius: 16, borderWidth: 1, paddingHorizontal: Spacing.three, flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   input: { flex: 1, paddingVertical: Spacing.two, fontSize: 15 },
   loading: { marginTop: Spacing.four },
+  section: { gap: Spacing.two, marginTop: Spacing.three },
+  sectionTitle: { marginBottom: Spacing.one },
   list: { gap: Spacing.two, paddingTop: Spacing.three, paddingBottom: BottomTabInset + Spacing.four, flexGrow: 1 },
   row: { flexDirection: 'row', alignItems: 'center', borderRadius: 18, borderWidth: 1, padding: 12, gap: 10, shadowColor: Palette.slateDark, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
   personIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: Palette.blueSoft, alignItems: 'center', justifyContent: 'center' },

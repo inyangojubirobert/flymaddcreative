@@ -9,7 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Palette, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/use-theme';
-import { getCatalogueByUsername, getMyOrders, type CatalogueOrder } from '@/api/catalogue';
+import { cataloguePriceLabel, getCatalogueByUsername, getMyOrders, type CatalogueOrder } from '@/api/catalogue';
 
 const ORDER_LABEL: Record<CatalogueOrder['status'], string> = {
   paid: 'Paid · awaiting delivery',
@@ -98,7 +98,7 @@ export default function ManageShopScreen() {
                   <View style={styles.productCopy}>
                     <ThemedText type="smallBold" numberOfLines={1}>{item.title}</ThemedText>
                     <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>{item.size ? `Size: ${item.size}` : item.description || 'No description'}</ThemedText>
-                    <ThemedText type="smallBold" style={styles.price}>${Number(item.price_usd).toFixed(2)} · {item.status === 'active' ? 'Live' : 'Paused'}</ThemedText>
+                    <ThemedText type="smallBold" style={styles.price}>{cataloguePriceLabel(item)} · {item.status === 'active' ? 'Live' : 'Paused'}</ThemedText>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
                 </Pressable>

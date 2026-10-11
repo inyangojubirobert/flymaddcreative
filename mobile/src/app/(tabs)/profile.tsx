@@ -159,6 +159,15 @@ export default function ProfileScreen() {
             />
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
             <ProfileAction
+              icon="notifications"
+              iconBackground={Palette.yellowSoft}
+              iconColor={Palette.yellowInk}
+              title="Admin alerts"
+              subtitle="Phone alert when someone messages support"
+              onPress={() => router.push('/admin-alerts' as never)}
+            />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <ProfileAction
               icon="help-circle"
               iconBackground={Palette.yellowSoft}
               iconColor={Palette.yellowInk}

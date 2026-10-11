@@ -8,7 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { getPublicCatalogueByUsername, type CatalogueItem } from '@/api/catalogue';
+import { cataloguePriceLabel, getPublicCatalogueByUsername, type CatalogueItem } from '@/api/catalogue';
 
 export default function SellerShopScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
@@ -46,7 +46,7 @@ export default function SellerShopScreen() {
                     {item.size ? <ThemedText type="small" themeColor="textSecondary">Size: {item.size}</ThemedText> : null}
                     {item.promo_video_url ? <View style={styles.videoBadge}><Ionicons name="play" size={11} color="#1D4ED8" /><ThemedText type="small" style={styles.videoText}>Video</ThemedText></View> : null}
                   </View>
-                  <ThemedText type="smallBold" style={styles.price}>${item.price_usd.toFixed(2)}</ThemedText>
+                  <ThemedText type="smallBold" style={styles.price}>{cataloguePriceLabel(item)}</ThemedText>
                 </ThemedView>
               </Pressable>
             )}

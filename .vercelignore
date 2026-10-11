@@ -1,8 +1,16 @@
 # The mobile app is built and distributed separately from this Next.js website.
+# Its web build is exported into public/app/ before deploying.
 
 mobile/
 
 # Generated Android distribution artifacts are not website source files.
 
-_.apk
-_.aab
+*.apk
+*.aab
+
+# Local staging, scratch and build output are not website source files.
+
+.tmp/
+tmp/
+build.log
+tsconfig.tsbuildinfo

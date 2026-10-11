@@ -3,13 +3,15 @@
 // parsing in vote/[username].tsx rely on the global URL constructor.
 import 'react-native-url-polyfill/auto';
 
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { ActivityIndicator, useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ThemedView } from '@/components/themed-view';
 import { UpdateBanner } from '@/components/UpdateBanner';
+import { loadPushNotifications } from '@/lib/push-notifications';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +38,17 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { token, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    const notifications = loadPushNotifications();
+    if (!notifications) return;
+    const subscription = notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { type?: string };
+      if (data?.type === 'admin_support') router.push('/admin-alerts' as never);
+    });
+    return () => subscription.remove();
+  }, [router]);
 
   if (isLoading) {
     return (
@@ -52,7 +65,6 @@ function RootNavigator() {
         <Stack.Screen name="profile/[username]" options={{ headerShown: true, title: '' }} />
         <Stack.Screen name="vote/[username]" options={{ headerShown: true, presentation: 'modal' }} />
         <Stack.Screen name="catalogue/[username]" options={{ headerShown: true }} />
-        <Stack.Screen name="catalogue/item/[id]" options={{ headerShown: true }} />
         <Stack.Screen name="catalogue/order-chat" options={{ headerShown: true }} />
         <Stack.Screen name="catalogue/manage" options={{ headerShown: true, title: 'My Shop' }} />
         <Stack.Screen name="catalogue/my-listings" options={{ headerShown: true }} />
@@ -72,7 +84,11 @@ function RootNavigator() {
           as merchant-login.html on the website isn't gated behind a
           participant session. This whole subtree has its own auth gate,
           see src/app/merchant/_layout.tsx. */}
+      <Stack.Screen name="shop/index" options={{ headerShown: true, title: 'Shop' }} />
+      <Stack.Screen name="shop/category/[id]" options={{ headerShown: true, title: 'Category' }} />
+      <Stack.Screen name="catalogue/item/[id]" options={{ headerShown: true }} />
       <Stack.Screen name="merchant" options={{ headerShown: false }} />
+      <Stack.Screen name="admin-alerts" options={{ headerShown: true, title: 'Admin alerts' }} />
     </Stack>
   );
 }

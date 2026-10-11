@@ -13,6 +13,10 @@
     {
       "source": "/Onedream",
       "destination": "/websiteapp"
+    },
+    {
+      "source": "/app",
+      "destination": "/app/index.html"
     }
   ],
   "headers": [

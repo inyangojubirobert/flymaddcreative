@@ -34,6 +34,12 @@ const nextConfig = {
         source: '/onedream/r/:token',
         destination: '/onedream/ref/:token',
       },
+      // Expo web app (public/app) is a single-page app; existing files
+      // under /app are served first, every other /app route loads it.
+      {
+        source: '/app/:path+',
+        destination: '/app',
+      },
       // Rewrite .html requests to public folder
       {
         source: '/:path*.html',

@@ -9,6 +9,8 @@ import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Palette, Spacing } from '@/constants/theme';
 import { BASCARDO_LOGO_URL } from '@/constants/bascardo';
 import { useTheme } from '@/hooks/use-theme';
+import { getCategories } from '@/api/catalogue';
+import { homeShortcuts } from '@/lib/catalogue-directory';
 import { getLeaderboard } from '@/api/participants';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,16 +36,22 @@ export default function HomeScreen() {
     queryFn: () => getLeaderboard(5),
   });
 
+  const categoriesQuery = useQuery({
+    queryKey: ['catalogue-categories'],
+    queryFn: getCategories,
+  });
+
   const statsQuery = useQuery({
     queryKey: ['vote-stats'],
     queryFn: () => apiFetch<VoteStats>('/api/onedream/vote-stats'),
   });
 
-  const isRefreshing = leaderboardQuery.isFetching || statsQuery.isFetching;
+  const isRefreshing = leaderboardQuery.isFetching || statsQuery.isFetching || categoriesQuery.isFetching;
 
   function refresh() {
     leaderboardQuery.refetch();
     statsQuery.refetch();
+    categoriesQuery.refetch();
   }
 
   const topLeaderboard = leaderboardQuery.data ?? [];
@@ -80,11 +88,11 @@ export default function HomeScreen() {
                 <ThemedText style={[styles.buttonText, token && styles.profileButtonText]}>{token ? 'My Profile' : 'Get Started'}</ThemedText>
               </Pressable>
               <Pressable
-                onPress={() => router.push((token ? '/search' : '/(auth)/login') as never)}
-                style={styles.heroSecondaryButton}
+                onPress={() => router.push((token ? { pathname: '/shop', params: { view: '', department: '', category: '' } } : '/(auth)/login') as never)}
+                style={[styles.heroSecondaryButton, token && styles.shopButton]}
               >
-                <Ionicons name={token ? 'search' : 'log-in-outline'} size={17} color={Palette.white} />
-                <ThemedText style={styles.heroSecondaryButtonText}>{token ? 'Explore' : 'Login'}</ThemedText>
+                <Ionicons name={token ? 'bag-handle' : 'log-in-outline'} size={17} color={Palette.white} />
+                <ThemedText style={styles.heroSecondaryButtonText}>{token ? 'Shop' : 'Login'}</ThemedText>
               </Pressable>
             </View>
           </ThemedView>
@@ -113,6 +121,36 @@ export default function HomeScreen() {
             </View>
             <Ionicons name="arrow-forward" size={20} color={Palette.yellowInk} />
           </Pressable>
+
+          <View style={styles.browseHeader}>
+            <View style={styles.sectionTitleWrap}>
+              <View style={styles.sectionIcon}><Ionicons name="bag-handle" size={18} color={Palette.blue} /></View>
+              <ThemedText type="smallBold" style={styles.sectionTitle}>Browse products</ThemedText>
+            </View>
+            <Pressable onPress={() => router.push({ pathname: '/shop', params: { view: 'directory', department: '', category: '' } } as never)} style={styles.viewAll}>
+              <ThemedText type="smallBold" style={styles.viewAllText}>View all categories</ThemedText>
+              <Ionicons name="chevron-forward" size={16} color={Palette.blue} />
+            </Pressable>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+            {homeShortcuts(categoriesQuery.data ?? []).map((link) => (
+              <CategoryTile
+                key={link.key}
+                name={link.label}
+                icon={link.icon}
+                tint={link.tint}
+                ink={link.ink}
+                onPress={() => router.push(`/shop?department=${link.departmentSlug}` as never)}
+              />
+            ))}
+            <CategoryTile
+              name="More"
+              icon="ellipsis-horizontal"
+              tint="#EDE9FE"
+              ink="#6D28D9"
+              onPress={() => router.push({ pathname: '/shop', params: { view: 'directory', department: '', category: '' } } as never)}
+            />
+          </ScrollView>
 
           <ThemedView style={styles.sectionTitleWrap}>
             <View style={styles.sectionIcon}><Ionicons name="compass" size={18} color={Palette.blue} /></View>
@@ -179,6 +217,17 @@ export default function HomeScreen() {
   );
 }
 
+function CategoryTile({ name, icon, tint, ink, onPress }: { name: string; icon: string; tint: string; ink: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.categoryTile}>
+      <View style={[styles.categoryIcon, { backgroundColor: tint }]}>
+        <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={26} color={ink} />
+      </View>
+      <ThemedText type="smallBold" numberOfLines={1} style={styles.categoryName}>{name}</ThemedText>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
@@ -204,7 +253,15 @@ const styles = StyleSheet.create({
   profileButtonText: { color: '#1F2937', fontWeight: '800' },
   secondaryButtonText: { fontWeight: '600' },
   heroSecondaryButton: { flex: 1, backgroundColor: 'rgba(14, 165, 233, 0.16)', borderColor: '#7DD3FC', borderWidth: 1, borderRadius: 14, paddingVertical: Spacing.three, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, elevation: 5, shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+  shopButton: { backgroundColor: Palette.blue, borderColor: Palette.blue },
   heroSecondaryButtonText: { color: Palette.white, fontWeight: '700' },
+  browseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  viewAll: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  viewAllText: { color: Palette.blue },
+  categoryRow: { gap: Spacing.two, paddingRight: Spacing.two },
+  categoryTile: { width: 88, alignItems: 'center', gap: 8 },
+  categoryIcon: { width: 64, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  categoryName: { fontSize: 12, lineHeight: 15, textAlign: 'center' },
   statsCard: { borderRadius: 18, padding: Spacing.three, gap: Spacing.two, backgroundColor: Palette.yellowSoft, borderWidth: 1, borderColor: '#FDE68A', flexDirection: 'row', alignItems: 'center' },
   statsIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: '#FDE68A', alignItems: 'center', justifyContent: 'center' },
   statsCopy: { flex: 1 },
