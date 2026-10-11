@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -8,7 +8,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { CatalogueBanner } from '@/components/catalogue-visuals';
-import { cataloguePriceLabel, getCategories, getShopFeed, type CatalogueItem } from '@/api/catalogue';
+import { getCategories, getShopFeed } from '@/api/catalogue';
+import { FLOATING_CART_SPACE, FloatingCart } from '@/components/floating-cart';
+import { ListingCard } from '@/components/listing-card';
 import { BottomTabInset, Palette, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { buildCatalogueDirectory, departmentForCategory } from '@/lib/catalogue-directory';
@@ -94,7 +96,7 @@ export default function CategoryScreen() {
           ) : products.length ? (
             <View style={styles.grid}>
               {products.map((item) => (
-                <ProductCard key={item.id} item={item} width={cardWidth} onPress={() => router.push(`/catalogue/item/${item.id}` as never)} />
+                <ListingCard key={item.id} item={item} width={cardWidth} />
               ))}
             </View>
           ) : (
@@ -102,43 +104,18 @@ export default function CategoryScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
+      <FloatingCart />
     </ThemedView>
-  );
-}
-
-function ProductCard({ item, width, onPress }: { item: CatalogueItem; width: number; onPress: () => void }) {
-  const theme = useTheme();
-  const photo = item.images?.[0];
-  return (
-    <Pressable onPress={onPress} style={[styles.card, { width, backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-      <View style={[styles.media, { height: Math.round(width * 0.92) }]}>
-        {photo ? <Image source={{ uri: photo }} style={styles.photo} /> : <View style={styles.photoFallback}><Ionicons name="image" size={28} color={Palette.slate} /></View>}
-        {item.promo_video_url ? <View style={styles.videoBadge}><Ionicons name="play" size={12} color="#fff" /></View> : null}
-      </View>
-      <View style={styles.cardCopy}>
-        <ThemedText type="smallBold" numberOfLines={2} style={styles.title}>{item.title}</ThemedText>
-        <ThemedText type="small" numberOfLines={1} themeColor="textSecondary">@{item.seller_username}</ThemedText>
-        <ThemedText type="smallBold" style={styles.price}>{cataloguePriceLabel(item)}</ThemedText>
-      </View>
-    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  content: { padding: Spacing.three, gap: Spacing.three, paddingBottom: BottomTabInset + Spacing.four },
+  content: { padding: Spacing.three, gap: Spacing.three, paddingBottom: BottomTabInset + FLOATING_CART_SPACE },
   searchBar: { minHeight: 46, borderRadius: 14, borderWidth: 1, paddingHorizontal: Spacing.three, flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   searchInput: { flex: 1, fontSize: 15, paddingVertical: Spacing.two },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
-  card: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
-  cardCopy: { paddingHorizontal: 10, paddingTop: 10, paddingBottom: 12, gap: 3 },
-  media: { backgroundColor: Palette.ashSoft },
-  photo: { width: '100%', height: '100%' },
-  photoFallback: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  videoBadge: { position: 'absolute', right: 8, bottom: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(15,23,42,0.72)', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 14, lineHeight: 18 },
-  price: { color: Palette.blue, fontSize: 15 },
   loading: { marginTop: Spacing.five },
   empty: { textAlign: 'center', marginTop: Spacing.five },
 });

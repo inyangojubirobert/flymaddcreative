@@ -38,8 +38,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Invalid network. Use "bsc" or "tron"' });
     }
 
-    // Calculate amount (example: $1 per vote)
-    const PRICE_PER_VOTE = 1; // USDT
+    // Calculate amount
+    const PRICE_PER_VOTE = 2; // USDT - $2 per vote, same as every other vote route
     const amount = vote_count * PRICE_PER_VOTE;
 
     // Get recipient address based on network

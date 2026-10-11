@@ -2,13 +2,10 @@
 // Handles verification for PayStack and Crypto payments
 // Used to confirm payment status before recording votes
 
-import { createClient } from '@supabase/supabase-js';
+// Read-only: it never credits votes (that is /api/onedream/vote's job).
 
-// Initialize Supabase
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
+import { getUsdToNgnRate } from '../../../lib/currency';
+import { verifyUsdtVote } from '../../../lib/voteCredits';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -52,7 +49,7 @@ export default async function handler(req, res) {
         verificationResult = await verifyPaystackPayment(refToVerify);
         break;
       case 'crypto':
-        verificationResult = await verifyCryptoPayment(refToVerify);
+        verificationResult = await verifyCryptoPayment(refToVerify, req.body.network);
         break;
       default:
         return res.status(400).json({ error: 'Unsupported payment method' });
@@ -98,8 +95,10 @@ async function verifyPaystackPayment(reference) {
       return {
         verified: true,
         status: 'succeeded',
-        amount: data.data.amount / 100 / 1600, // Convert from kobo to NGN to USD
-        currency: 'USD', // Return as USD for consistency
+        // USD amount: recorded with the charge, else converted at the rate it was charged at.
+        amount: Number(data.data.metadata?.amount_usd)
+          || (data.data.amount / 100) / (Number(data.data.metadata?.exchange_rate) || await getUsdToNgnRate()),
+        currency: 'USD', // Prices are USD; NGN is only the Paystack charge currency
         metadata: data.data.metadata,
         provider: 'paystack',
         reference: data.data.reference
@@ -117,69 +116,24 @@ async function verifyPaystackPayment(reference) {
   }
 }
 
-// ✅ Verify Crypto Payment (Simplified - in production, use blockchain APIs)
-async function verifyCryptoPayment(paymentReference) {
-  try {
-    // In production, you would:
-    // 1. Check blockchain explorers (blockchain.info, etherscan.io)
-    // 2. Use crypto payment processor APIs (Coinbase Commerce, BitPay)
-    // 3. Monitor wallet addresses for incoming transactions
-    
-    // For now, we'll simulate verification
-    // In reality, this would check the actual blockchain
-    
-    // Check if this is a valid payment reference format
-    if (!paymentReference || !paymentReference.startsWith('CRYPTO_ODI_')) {
-      return {
-        verified: false,
-        status: 'invalid_reference',
-        provider: 'crypto'
-      };
-    }
-
-    // Simulate blockchain verification (replace with real implementation)
-    const isConfirmed = await simulateCryptoVerification(paymentReference);
-
-    if (isConfirmed) {
-      return {
-        verified: true,
-        status: 'succeeded',
-        amount: 0, // Would be calculated from actual transaction
-        currency: 'BTC', // Or whatever crypto was used
-        metadata: {
-          crypto_reference: paymentReference,
-          confirmations: 3 // Simulated confirmation count
-        },
-        provider: 'crypto'
-      };
-    } else {
-      return {
-        verified: false,
-        status: 'pending',
-        provider: 'crypto',
-        message: 'Transaction not yet confirmed on blockchain'
-      };
-    }
-
-  } catch (error) {
-    throw new Error(`Crypto verification failed: ${error.message}`);
+// ✅ Verify a USDT transfer on-chain (shared verifier, no crediting)
+async function verifyCryptoPayment(txHash, network) {
+  const result = await verifyUsdtVote(txHash, network, null);
+  if (result.error) {
+    return {
+      verified: false,
+      status: result.pending ? 'pending' : 'failed',
+      provider: 'crypto',
+      message: result.error
+    };
   }
-}
-
-// 🔄 Simulate crypto verification (replace with real blockchain API calls)
-async function simulateCryptoVerification(paymentReference) {
-  // In production, replace this with actual blockchain verification:
-  
-  // For Bitcoin:
-  // const response = await fetch(`https://blockstream.info/api/tx/${txHash}`);
-  
-  // For Ethereum:
-  // const response = await fetch(`https://api.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=${txHash}`);
-  
-  // For now, simulate a 30-second confirmation delay
-  const timestamp = parseInt(paymentReference.split('_')[2]);
-  const timeElapsed = Date.now() - timestamp;
-  
-  // Simulate that crypto payments are confirmed after 30 seconds
-  return timeElapsed > 30000;
+  return {
+    verified: true,
+    status: 'succeeded',
+    amount: result.amountUsd,
+    currency: 'USD',
+    votes_available: result.voteCount,
+    metadata: { network: result.network },
+    provider: 'crypto'
+  };
 }

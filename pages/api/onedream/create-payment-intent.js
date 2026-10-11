@@ -3,6 +3,8 @@
 // $2 per vote, multiple votes allowed
 
 import { createClient } from '@supabase/supabase-js';
+import { quoteVotesNgn, recordVoteIntent } from '../../../lib/voteCredits';
+import { resolveCallbackUrl } from '../../../lib/paystackCallbackUrl';
 
 // Initialize Supabase
 const supabase = createClient(
@@ -20,11 +22,13 @@ export default async function handler(req, res) {
   try {
     const { 
       participant_id, 
-      vote_count = 1, 
-      payment_method = 'paystack' // 'paystack' or 'crypto'
+      vote_count: rawVoteCount = 1,
+      payment_method = 'paystack', // 'paystack' or 'crypto'
+      callback_url
     } = req.body;
+    const vote_count = Number(rawVoteCount);
 
-    if (!participant_id || vote_count <= 0) {
+    if (!participant_id || !Number.isInteger(vote_count) || vote_count <= 0 || vote_count > 100000) {
       return res.status(400).json({ 
         error: 'Invalid participant_id or vote_count' 
       });
@@ -54,7 +58,7 @@ export default async function handler(req, res) {
 
     switch (payment_method) {
       case 'paystack':
-        paymentData = await createPaystackPayment(amount, vote_count, participant);
+        paymentData = await createPaystackPayment(vote_count, participant, callback_url);
         // Include public key for inline checkout
         paymentData.public_key = process.env.PAYSTACK_PUBLIC_KEY || process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || '';
         break;
@@ -88,15 +92,16 @@ export default async function handler(req, res) {
 
 
 
-// ✅ PayStack Payment Intent
-async function createPaystackPayment(amount, voteCount, participant) {
+// ✅ PayStack Payment Intent - USD price converted to NGN at the live rate.
+// The intent (participant, votes, exact kobo, rate) is recorded server-side;
+// vote.js verifies the Paystack charge against it before crediting.
+async function createPaystackPayment(voteCount, participant, callbackUrl) {
   const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
-  
   if (!paystackSecretKey) {
     throw new Error('PayStack not configured - missing PAYSTACK_SECRET_KEY');
   }
 
-  // Generate truly unique reference with timestamp + random string
+  const { amountUsd, rate, amountNgn, amountKobo } = await quoteVotesNgn(voteCount);
   const uniqueRef = `ODI_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 
   const response = await fetch('https://api.paystack.co/transaction/initialize', {
@@ -107,7 +112,7 @@ async function createPaystackPayment(amount, voteCount, participant) {
     },
     body: JSON.stringify({
       email: 'support@flymaddcreative.online', // Default email for anonymous payments
-      amount: amount * 100 * 1600, // PayStack uses kobo - Convert USD to NGN (approx rate: 1 USD = 1600 NGN)
+      amount: amountKobo,
       currency: 'NGN',
       reference: uniqueRef,
       metadata: {
@@ -116,9 +121,11 @@ async function createPaystackPayment(amount, voteCount, participant) {
         participant_username: participant.username,
         vote_count: voteCount,
         vote_value: VOTE_VALUE,
+        amount_usd: amountUsd,
+        exchange_rate: rate,
         type: 'onedream_votes'
       },
-      callback_url: `${process.env.NEXT_PUBLIC_SITE_URL}/vote.html?user=${participant.username}&payment_success=true`
+      callback_url: resolveCallbackUrl(callbackUrl, `${process.env.NEXT_PUBLIC_SITE_URL}/vote.html?user=${participant.username}&payment_success=true`)
     })
   });
 
@@ -129,20 +136,25 @@ async function createPaystackPayment(amount, voteCount, participant) {
   }
 
   const data = await response.json();
+  await recordVoteIntent({
+    reference: data.data.reference,
+    participantId: participant.id,
+    voteCount,
+    amountUsd,
+    amountNgn,
+    amountKobo,
+    rate,
+  });
 
-  // Calculate amounts for frontend
-  const NGN_RATE = 1600; // 1 USD = 1600 NGN
-  const amountNGN = amount * NGN_RATE;
-  const amountKobo = amountNGN * 100;
-  
   return {
     authorization_url: data.data.authorization_url,
     access_code: data.data.access_code,
     reference: data.data.reference,
     payment_intent_id: data.data.reference,
-    amount: amount, // USD amount
-    amount_ngn: amountNGN,
+    amount: amountUsd, // USD amount
+    amount_ngn: amountNgn,
     amount_kobo: amountKobo,
+    exchange_rate: rate,
     provider_data: {
       paystack_reference: data.data.reference,
       paystack_access_code: data.data.access_code

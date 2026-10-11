@@ -1132,7 +1132,8 @@ async function waitForCryptoPayments(timeout = 5000) {
                 participant_id: paymentResult.participant_id || participantId,
                 payment_amount: paymentResult.payment_amount || amount,
                 payment_intent_id: finalPaymentIntentId,
-                vote_count: voteCount
+                vote_count: voteCount,
+                network: paymentResult.network
             });
             
             // Optionally refresh vote count display
@@ -1311,7 +1312,7 @@ async function handleCryptoPayment(participantId, voteCount, amount) {
     /**
      * Record votes after successful payment
      */
-    async function recordVotesAfterPayment({ participant_id, payment_amount, payment_intent_id, vote_count }) {
+    async function recordVotesAfterPayment({ participant_id, payment_amount, payment_intent_id, vote_count, network }) {
         // Validate required fields
         const missing = [];
         if (!participant_id) missing.push("participant_id");
@@ -1334,7 +1335,10 @@ async function handleCryptoPayment(participantId, voteCount, amount) {
             const isCrypto = payment_intent_id.startsWith('0x') || payment_intent_id.startsWith('CRYPTO_') || payment_intent_id.length === 64;
             const payment_method = isPaystack ? 'paystack' : (isCrypto ? 'crypto' : 'unknown');
             
-            const response = await fetch("/api/onedream/vote", {
+            // The server verifies the payment itself and credits votes from what
+            // was actually paid. A crypto transfer that is still confirming gets
+            // 425 - keep retrying for a few minutes instead of failing.
+            const postVote = () => fetch("/api/onedream/vote", {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
@@ -1346,13 +1350,21 @@ async function handleCryptoPayment(participantId, voteCount, amount) {
                     payment_amount,
                     payment_intent_id,
                     payment_method,
+                    network: network ? String(network).toLowerCase() : undefined,
                     vote_count: vote_count || Math.floor(Number(payment_amount) / 2) // $2 per vote
                 }),
             });
+
+            let response = await postVote();
+            for (let attempt = 0; response.status === 425 && attempt < 36; attempt++) {
+                showVoteAlert("⏳ Waiting for blockchain confirmations...", "info", 6000);
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+                response = await postVote();
+            }
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                const errorMsg = errorData.message || `Vote recording failed: ${response.statusText}`;
+                const errorMsg = errorData.message || errorData.error || `Vote recording failed: ${response.statusText}`;
                 showVoteAlert(`❌ ${errorMsg}`, "error");
                 throw new Error(errorMsg);
             }

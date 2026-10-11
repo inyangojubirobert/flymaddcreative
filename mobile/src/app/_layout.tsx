@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { CartProvider } from '@/contexts/CartContext';
 import { ThemedView } from '@/components/themed-view';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { loadPushNotifications } from '@/lib/push-notifications';
@@ -28,8 +29,10 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <RootNavigator />
-          <UpdateBanner />
+          <CartProvider>
+            <RootNavigator />
+            <UpdateBanner />
+          </CartProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
@@ -86,6 +89,7 @@ function RootNavigator() {
           see src/app/merchant/_layout.tsx. */}
       <Stack.Screen name="shop/index" options={{ headerShown: true, title: 'Shop' }} />
       <Stack.Screen name="shop/category/[id]" options={{ headerShown: true, title: 'Category' }} />
+      <Stack.Screen name="shop/cart" options={{ headerShown: true, title: 'Your cart' }} />
       <Stack.Screen name="catalogue/item/[id]" options={{ headerShown: true }} />
       <Stack.Screen name="merchant" options={{ headerShown: false }} />
       <Stack.Screen name="admin-alerts" options={{ headerShown: true, title: 'Admin alerts' }} />

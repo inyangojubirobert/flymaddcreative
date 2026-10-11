@@ -66,7 +66,7 @@ export default function BuyVotesScreen() {
     try {
       const redirectUrl = Linking.createURL('paystack-callback');
       const intent = await createPaystackIntent({
-        participant_id: buyer.id,
+        participant_id: targetId,
         vote_count: voteCount,
         callback_url: redirectUrl,
       });
@@ -84,7 +84,7 @@ export default function BuyVotesScreen() {
 
       const voteResult = await submitVote({
         token,
-        participant_id: buyer.id,
+        participant_id: targetId,
         vote_count: voteCount,
         payment_amount: amountUsd,
         payment_method: 'paystack',
@@ -100,7 +100,7 @@ export default function BuyVotesScreen() {
   }
 
   async function verifyAndCreditUsdt() {
-    if (!buyer || !token || !txHash.trim()) return;
+    if (!buyer || !token || !targetId || !txHash.trim()) return;
     setStep('usdt_verifying');
     setError(null);
     try {
@@ -124,7 +124,7 @@ export default function BuyVotesScreen() {
 
       const voteResult = await submitVote({
         token: token!,
-        participant_id: buyer.id,
+        participant_id: targetId,
         vote_count: result.payment.vote_count,
         payment_amount: result.payment.amount,
         payment_method: 'crypto',

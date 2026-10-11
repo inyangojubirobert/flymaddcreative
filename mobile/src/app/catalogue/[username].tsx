@@ -9,6 +9,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { cataloguePriceLabel, getPublicCatalogueByUsername, type CatalogueItem } from '@/api/catalogue';
+import { FLOATING_CART_SPACE, FloatingCart } from '@/components/floating-cart';
+import { CartChecker, SellerLink } from '@/components/listing-card';
 
 export default function SellerShopScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
@@ -32,6 +34,7 @@ export default function SellerShopScreen() {
             data={itemsQuery.data ?? []}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
+            ListHeaderComponent={<SellerLink username={username} prefix="View profile · @" />}
             ListEmptyComponent={<ThemedText style={styles.empty} themeColor="textSecondary">No items for sale yet.</ThemedText>}
             renderItem={({ item }) => (
               <Pressable
@@ -39,6 +42,7 @@ export default function SellerShopScreen() {
                 style={[styles.card, { backgroundColor: theme.backgroundElement }]}
               >
                 {item.images?.[0] && <Image source={{ uri: item.images[0] }} style={styles.image} />}
+                <CartChecker item={item} style={styles.checker} />
                 <ThemedView style={styles.cardText}>
                   <ThemedText type="smallBold" numberOfLines={1}>{item.title}</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>{item.description}</ThemedText>
@@ -53,6 +57,7 @@ export default function SellerShopScreen() {
           />
         )}
       </SafeAreaView>
+      <FloatingCart />
     </ThemedView>
   );
 }
@@ -61,10 +66,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, paddingHorizontal: Spacing.three },
   loading: { marginTop: Spacing.six },
-  list: { gap: Spacing.three, paddingVertical: Spacing.three },
+  list: { gap: Spacing.three, paddingTop: Spacing.three, paddingBottom: FLOATING_CART_SPACE },
   empty: { textAlign: 'center', marginTop: Spacing.six },
   card: { borderRadius: Spacing.two, overflow: 'hidden' },
   image: { width: '100%', height: 160 },
+  checker: { position: 'absolute', top: Spacing.two, right: Spacing.two },
   cardText: { padding: Spacing.three, gap: Spacing.half },
   detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   videoBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, backgroundColor: '#DBEAFE' },

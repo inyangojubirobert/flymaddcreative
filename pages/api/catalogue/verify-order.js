@@ -18,7 +18,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { getUsdToNgnRate } from '../../../lib/currency';
-import { verifyAndRecordUsdtPayment } from '../../../lib/verifyCryptoTx';
+import { claimUsdtPayment, verifyAndRecordUsdtPayment } from '../../../lib/verifyCryptoTx';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -137,6 +137,17 @@ export default async function handler(req, res) {
       if (!tx_hash) {
         return res.status(400).json({ error: 'Missing tx_hash' });
       }
+      // A transaction that already paid for a cart (cart-checkout.js) must
+      // not also pay for a single item. Ignored if the cart migration
+      // (supabase/add_cart_checkout.sql) hasn't been applied yet.
+      const { data: cartCheckout } = await supabase
+        .from('catalogue_checkouts')
+        .select('id')
+        .eq('payment_ref', tx_hash)
+        .maybeSingle();
+      if (cartCheckout) {
+        return res.status(409).json({ error: 'This transaction has already been used for another order' });
+      }
       const cryptoResult = await verifyAndRecordUsdtPayment({ txHash: tx_hash, network: req.body.network });
       if (!cryptoResult.verified) {
         return res.status(cryptoResult.status || 400).json({
@@ -146,6 +157,14 @@ export default async function handler(req, res) {
       }
       if (cryptoResult.payment.amount + 0.01 < priceUsd) {
         return res.status(400).json({ error: 'Paid amount does not match item price' });
+      }
+      // One on-chain transfer pays for one thing (votes, a cart or one order).
+      const claim = await claimUsdtPayment(tx_hash, 'catalogue_order', tx_hash);
+      const usedElsewhere = claim === 'unavailable'
+        ? !!cryptoResult.payment.user_id // pre-migration fallback: credited as votes
+        : !['claimed', 'already_claimed'].includes(claim);
+      if (usedElsewhere) {
+        return res.status(409).json({ error: 'This transaction has already been used for another payment' });
       }
       orderRecord.payment_ref = tx_hash;
       orderRecord.tx_hash = tx_hash;

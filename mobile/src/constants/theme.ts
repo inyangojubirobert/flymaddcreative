@@ -36,6 +36,8 @@ export const Palette = {
   slate: '#475569',
   slateDark: '#1E293B',
   green: '#15803D',
+  lemon: '#C6F135',
+  lemonInk: '#1A2E05',
   red: '#DC2626',
   redSoft: '#FEE2E2',
   white: '#FFFFFF',
