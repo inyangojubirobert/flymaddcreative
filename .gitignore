@@ -80,5 +80,7 @@ supabase/functions/_shared/
 .env*.local
 ".env.local" 
 
-# Expo web build, generated from mobile/ before deploying
-public/app/
+
+# Expo web build (served at /app); its bundled icons and fonts live under assets/node_modules
+!public/app/assets/node_modules/
+!public/app/assets/node_modules/**/build/

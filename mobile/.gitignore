@@ -44,6 +44,8 @@ yarn-error.*
 
 example
 
-# generated native folders
+# generated native folders (android/ is kept: it holds the release signing
+# guard and build settings, see android/BUILD_NOTES.md)
 /ios
-/android
+android/keystore.properties
+android/local.properties
