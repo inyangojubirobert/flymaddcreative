@@ -383,7 +383,7 @@
               <span class="font-semibold">${escapeText(w.participant?.name || w.username)}</span>
               <span class="bg-slate-600 px-2 py-0.5 rounded text-xs">${escapeText(w.status)}</span>
             </div>
-            <p class="text-green-300">$${Number(w.amount_usd).toFixed(2)} · ${escapeText(w.payment_method)}</p>
+            <p class="text-green-300">$${Number(w.amount_usd).toFixed(2)} · ${escapeText(w.payment_method)} · ${w.source === 'marketplace' ? 'Marketplace earnings' : 'Vote rewards'}</p>
             <p class="text-slate-400 text-xs mt-1">${date}</p>
           </div>`;
         }).join('');
@@ -421,7 +421,9 @@
               <span class="${s.color} px-2 py-0.5 rounded text-xs whitespace-nowrap">${s.label}</span>
             </div>
             <p class="text-slate-300 text-xs">${escapeText(itemTitle)}</p>
-            <p class="text-green-300">$${Number(order.amount_usd).toFixed(2)}</p>
+            <p class="text-green-300">$${Number(order.amount_usd).toFixed(2)}${order.commission_percent != null ? ` · commission ${Number(order.commission_percent)}% ($${Number(order.commission_usd).toFixed(2)}) · seller net $${Number(order.seller_net_usd).toFixed(2)}` : ''}</p>
+            <p class="text-slate-400 text-xs mt-1">Buyer: ${escapeText(order.buyer_email || '')}${order.buyer_whatsapp ? ` · ☎ ${escapeText(order.buyer_whatsapp)}` : ''}${order.delivery_address ? ` · 📦 ${escapeText(order.delivery_address)}` : ''}</p>
+            <p class="text-slate-400 text-xs">Seller: ${escapeText(order.seller_contact?.email || '')}${order.seller_contact?.phone ? ` · ☎ ${escapeText(order.seller_contact.phone)}` : ' · no phone on file'}</p>
             <p class="text-slate-400 text-xs mt-1">${date}</p>
           </div>`;
         }).join('');

@@ -70,7 +70,8 @@ export function submitCartCheckout(input: {
   payment_method: 'paystack' | 'usdt';
   buyer_name: string;
   buyer_email: string;
-  buyer_whatsapp?: string;
+  buyer_whatsapp: string;
+  delivery_address?: string;
   notes?: string;
   payment_ref?: string;
   tx_hash?: string;

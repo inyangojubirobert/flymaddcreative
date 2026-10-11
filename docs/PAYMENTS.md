@@ -100,8 +100,61 @@ Design points:
 ### 3.4 AI subscriptions
 Paystack subscriptions (priced in USD and converted via `lib/currency.js`) or Google Play billing (`lib/aiPayments.js`). They have their own webhook and aren't affected by marketplace fees.
 
-### 3.5 Withdrawals
-Participant and merchant withdrawals are balance-checked server-side with atomic SQL functions. A participant's withdrawable balance today comes from **votes** only. Releasing marketplace escrow (`status = 'released'`) **doesn't credit any balance**; seller payouts for sales are handled manually. See §5.
+### 3.5 Seller earnings (marketplace wallet)
+
+Sellers see their marketplace earnings in the profile **Wallet → Marketplace earnings** tab (app and web app). Vote rewards stay in a separate tab and a separate balance.
+
+**Commission is fixed when the order is created.** Each order stores `commission_percent`, `commission_usd` and `seller_net_usd`, and the database enforces `commission + net = sale price`. The rate comes from `marketplace_fee_settings.seller_commission_percent` (default 5%), so changing it never alters past sales. The buyer service charge is separate and never reaches the seller.
+
+**Balances are computed from the orders themselves** (`seller_earnings_summary()`), so there's no second running total to drift:
+
+| Order status | Wallet shows it as | Withdrawable? |
+|---|---|---|
+| `paid`, `pending_verification` | **Awaiting buyer**: net earnings visible, with a notice that the buyer hasn't confirmed delivery | No |
+| `disputed` | **On hold** | No |
+| `buyer_confirmed`, `released` | **Completed** | Yes |
+| refunded / cancelled | Not counted. If already withdrawn, the balance shows as owed and blocks withdrawals. | — |
+
+Each sale lists the listing, order reference, quantity, selling price, commission (% and amount), net earnings, state and dates. Every status change is recorded in `catalogue_order_events`, an append-only audit trail.
+
+Orders created before the ledger launched have no commission recorded. They are **not counted**, because they were settled manually. To bring an unpaid one into the ledger, set its `commission_percent` (e.g. `0`).
+
+**Sellers can't release their own escrow.** Only the buyer's token can confirm delivery or raise a dispute. Sellers never receive that token: it's stripped from their order list, and the database lockdown stops anyone else reading it.
+
+### 3.6 Withdrawals
+
+Both balances use the existing `participant_withdrawals` table and the existing admin workflow, with a `source` column (`votes` | `marketplace`) keeping them apart.
+
+1. The seller requests an amount up to their withdrawable balance (`POST /api/onedream/marketplace-wallet`). `request_seller_withdrawal()` locks the seller's row, recomputes the balance and **reserves the amount immediately**, so a second request can't spend the same money.
+2. Admins get a phone alert, and the request appears in the admin inbox and the Withdrawals screen, labelled *Marketplace earnings* or *Vote rewards*, with the seller's private phone.
+3. The admin moves it to processing, then either **claimed** (paid: payout type, currency, amount and reference are required) or **rejected**, which returns the amount to the balance. A paid request can't be paid again.
+4. The seller gets a message at each step. Money is never sent automatically.
+
+### 3.7 Contacts and privacy
+
+| Contact | Collected | Who can see it |
+|---|---|---|
+| Seller phone / WhatsApp | My Shop. **Required in the app before publishing a listing.** Stored in `participant_private_contacts`. | The seller and admins |
+| Buyer phone / WhatsApp | Checkout (**required** in the app) | That order's seller and admins |
+| Delivery address | Checkout, for physical products | That order's seller and admins |
+
+None of these appear in public profile, listing or search APIs. In a multi-seller cart, each seller sees only their own order.
+
+Orders are read only through the API:
+- the buyer's order view, using their token: `GET /api/catalogue/order`
+- the seller's own orders: `GET /api/catalogue/orders`
+- admins: `GET /api/admin/orders`
+
+Once `supabase/lockdown_catalogue_orders_read.sql` is applied, `catalogue_orders` is no longer publicly readable.
+
+### 3.8 Buyer–seller chat
+
+`order_messages` holds one chat per order: buyer and seller only, available once payment is verified. The buyer is identified by their order token, and the seller by their login, which must match the order's seller. *Message seller* (buyer success screen) and *Message buyer* (My Orders / My Shop) open the same conversation.
+
+Known gaps:
+- No push notification for new chat messages.
+- A guest buyer needs their order link (*Copy link* on the success screen) to return to the chat.
+- The full loop needs testing on a real low-value order before launch (§5.3).
 
 ---
 
@@ -129,6 +182,8 @@ The quote, the charge and the verification all read the same policy (`lib/market
 Run these in the Supabase SQL editor. Check that each one's final verification query returns `ok = true` on every row, because the editor doesn't always apply a pasted script atomically.
 1. `supabase/add_cart_checkout.sql`: cart checkout, the USDT registry, and the atomic checkout function. **Applied 2026-10-11.**
 2. `supabase/add_marketplace_fee_settings.sql`: the fee settings table, plus `fee_cap_usd` on checkouts.
+3. `supabase/add_seller_earnings.sql`: commission on orders, the order audit trail, withdrawal `source`, `request_seller_withdrawal()`, and private contacts. **Run it before deploying the code that uses it.**
+4. `supabase/lockdown_catalogue_orders_read.sql`: makes orders private. **Run only after** the website version that reads orders through the API is deployed.
 
 ---
 
@@ -160,21 +215,20 @@ Illustrative, at **₦1,500 = $1**. Charges are in USD, and naira is shown becau
 |---|---|---|
 | 1 | Buyer service charge on cart checkouts, set in the database | ✅ Built |
 | 2 | Same charge on **single-listing checkout**, so buying one item isn't a way around it. This changes the live website checkout too (or the website's Buy button goes through the cart). | Next |
-| 3 | **Seller commission (5%)**, taken at escrow release | Needs the seller earnings ledger (below) |
+| 3 | **Seller commission (5%)** and seller earnings ledger, with marketplace withdrawals | ✅ Built: run `add_seller_earnings.sql` (see §4), then test with a real low-value order |
 | 4 | **High-value and professional services:** a checkout ceiling (e.g. $2,000), and a quote → milestone-escrow flow above it | Design needed |
 | 5 | **Measure** cart-to-paid conversion, average basket and abandonment at the summary step | Add analytics events |
 
-**Seller commission — prerequisites**
-1. A `seller_earnings` ledger. On release, credit `amount_usd × (1 − commission)` and record the commission separately. Refunds write reversing entries, and the ledger is reconciled against the funds actually held (Paystack balance and the USDT wallet).
-2. Record the commission % **on each order at purchase time**.
-3. Make the seller's withdrawable balance include released sales.
-4. Tell sellers before it applies: show "You'll receive $X" on the listing form and in the order view, and apply it only to orders placed after the announced date.
+**Before switching commission on for real sales**
+1. Announce the 5% commission to sellers. Only orders placed after the migration carry a commission.
+2. Run one real low-value purchase end to end: pay, seller sees the buyer's contact and messages them, buyer confirms, earnings become withdrawable, seller requests a withdrawal, admin marks it paid.
+3. Reconcile regularly: total seller net earnings for completed orders, minus paid withdrawals, should match the money held (Paystack balance plus the USDT wallet, minus platform revenue).
 
 ### 5.4 Decisions
 
 | Decision | Recommendation |
 |---|---|
-| Seller payouts: automatic or manual? | **Manual approval for now**; automate once the ledger and reconciliation exist |
+| Seller payouts: automatic or manual? | **Manual approval** (built that way). Consider automation only after reconciliation is routine. |
 | Exchange-rate fallback | Refuse to charge if no rate is newer than about 24 h, instead of using the hardcoded last-resort rate |
 | Service charge on partial refunds | Record each order's share of the fee when the order is created, and refund that share when *that* order is refunded because of the seller |
 | When fees count as revenue | **Pending** until the order is released, realised only then. Refunds reverse the pending amount. |
@@ -200,3 +254,6 @@ Illustrative, at **₦1,500 = $1**. Charges are in USD, and naira is shown becau
 | Callback allow-list | `lib/paystackCallbackUrl.js` |
 | Migrations | `supabase/add_cart_checkout.sql`, `supabase/add_marketplace_fee_settings.sql` |
 | App — cart | `mobile/src/contexts/CartContext.tsx`, `mobile/src/api/cart.ts`, `mobile/src/components/floating-cart.tsx`, `listing-card.tsx`, `mobile/src/app/shop/cart.tsx` |
+| Seller earnings | `lib/sellerEarnings.js`, `pages/api/onedream/marketplace-wallet.js`, `lib/withdrawalAlerts.js`, `mobile/src/app/wallet.tsx` |
+| Private contacts | `pages/api/onedream/private-contact.js`, `mobile/src/components/seller-contact.tsx` |
+| Order reads | `pages/api/catalogue/order.js` (buyer), `orders.js` (seller), `pages/api/admin/orders.js` |

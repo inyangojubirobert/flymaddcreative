@@ -1,7 +1,7 @@
-import { FlatList, StyleSheet, Pressable, ActivityIndicator, Alert, RefreshControl, View } from 'react-native';
+import { FlatList, StyleSheet, Pressable, ActivityIndicator, Alert, RefreshControl, View, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedView } from '@/components/themed-view';
@@ -9,8 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Palette, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { getMyOrders, orderAction, type CatalogueOrder } from '@/api/catalogue';
-import { ApiError } from '@/lib/api-client';
+import { getMyOrders, type CatalogueOrder } from '@/api/catalogue';
 
 const STATUS_LABEL: Record<CatalogueOrder['status'], string> = {
   paid: '💰 Paid – Awaiting Delivery',
@@ -23,7 +22,6 @@ const STATUS_LABEL: Record<CatalogueOrder['status'], string> = {
 export default function MyOrdersScreen() {
   const { token } = useAuth();
   const theme = useTheme();
-  const queryClient = useQueryClient();
   const router = useRouter();
 
   const ordersQuery = useQuery({
@@ -32,22 +30,11 @@ export default function MyOrdersScreen() {
     enabled: !!token,
   });
 
-  async function releaseFunds(order: CatalogueOrder) {
-    if (!token) return;
-    Alert.alert('Release funds?', 'This confirms the buyer has received their order and cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Release',
-        onPress: async () => {
-          try {
-            await orderAction({ order_id: order.id, action: 'release_funds', token });
-            queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-          } catch (e) {
-            Alert.alert('Failed', e instanceof ApiError ? e.message : 'Please try again.');
-          }
-        },
-      },
-    ]);
+  function contactBuyer(order: CatalogueOrder, via: 'whatsapp' | 'call') {
+    const number = String(order.buyer_whatsapp || '').replace(/[^\d+]/g, '');
+    if (!number) return;
+    const url = via === 'whatsapp' ? `https://wa.me/${number.replace(/^\+/, '')}` : `tel:${number}`;
+    Linking.openURL(url).catch(() => Alert.alert('Could not open', number));
   }
 
   return (
@@ -90,7 +77,28 @@ export default function MyOrdersScreen() {
                     {item.payment_ref ? ` · ${item.payment_ref.slice(-10)}` : item.tx_hash ? ` · ${item.tx_hash.slice(-10)}` : ''}
                   </ThemedText>
                 </View>
+                {item.commission_percent != null ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {item.quantity && item.quantity > 1 ? `Qty ${item.quantity} · ` : ''}One Dream commission {Number(item.commission_percent)}% (−${Number(item.commission_usd).toFixed(2)}) · You earn ${Number(item.seller_net_usd).toFixed(2)}
+                  </ThemedText>
+                ) : null}
+                {item.buyer_whatsapp || item.delivery_address ? (
+                  <View style={styles.contactBox}>
+                    <ThemedText type="small" themeColor="textSecondary">Buyer contact · private to you and support</ThemedText>
+                    {item.buyer_whatsapp ? <ThemedText type="smallBold">☎ {item.buyer_whatsapp}</ThemedText> : null}
+                    {item.delivery_address ? <ThemedText type="small">📦 {item.delivery_address}</ThemedText> : null}
+                    {item.buyer_whatsapp ? (
+                      <View style={styles.contactActions}>
+                        <Pressable onPress={() => contactBuyer(item, 'whatsapp')} style={styles.contactButton}><Ionicons name="logo-whatsapp" size={15} color={Palette.green} /><ThemedText type="smallBold" style={{ color: Palette.green }}>WhatsApp</ThemedText></Pressable>
+                        <Pressable onPress={() => contactBuyer(item, 'call')} style={styles.contactButton}><Ionicons name="call" size={15} color={Palette.blue} /><ThemedText type="smallBold" style={{ color: Palette.blue }}>Call</ThemedText></Pressable>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
                 <View style={styles.statusBadge}><ThemedText type="smallBold" style={styles.statusText}>{STATUS_LABEL[item.status]}</ThemedText></View>
+                {['paid', 'pending_verification'].includes(item.status) && item.commission_percent != null ? (
+                  <ThemedText type="small" style={styles.pendingNote}>Your buyer has not confirmed delivery yet. These earnings show in your wallet but become withdrawable once the buyer confirms.</ThemedText>
+                ) : null}
                 <Pressable
                   onPress={() => router.push({ pathname: '/catalogue/order-chat', params: { orderId: item.id, title: item.catalogue_items?.title ?? 'Item' } })}
                   style={styles.messageButton}
@@ -98,12 +106,12 @@ export default function MyOrdersScreen() {
                   <Ionicons name="chatbubble" size={16} color="#fff" />
                   <ThemedText style={styles.messageButtonText}>Message buyer</ThemedText>
                 </Pressable>
-                {item.status === 'buyer_confirmed' && (
-                  <Pressable onPress={() => releaseFunds(item)} style={styles.releaseButton}>
-                    <Ionicons name="checkmark-circle" size={17} color="#fff" />
-                    <ThemedText style={styles.releaseButtonText}>Release funds to me</ThemedText>
+                {['buyer_confirmed', 'released'].includes(item.status) && item.commission_percent != null ? (
+                  <Pressable onPress={() => router.push('/wallet' as never)} style={styles.releaseButton}>
+                    <Ionicons name="wallet" size={17} color="#fff" />
+                    <ThemedText style={styles.releaseButtonText}>Earnings withdrawable · open wallet</ThemedText>
                   </Pressable>
-                )}
+                ) : null}
               </ThemedView>
             )}
           />
@@ -130,6 +138,10 @@ const styles = StyleSheet.create({
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statusBadge: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5, backgroundColor: '#ECFCCB' },
   statusText: { color: '#3F6212', fontSize: 11 },
+  contactBox: { borderRadius: 12, backgroundColor: Palette.ashSoft, padding: Spacing.two, gap: 3 },
+  contactActions: { flexDirection: 'row', gap: Spacing.two, marginTop: 4 },
+  contactButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: Palette.white },
+  pendingNote: { color: Palette.yellowInk, backgroundColor: Palette.yellowSoft, borderRadius: 10, padding: Spacing.two },
   releaseButton: { backgroundColor: '#15803d', borderRadius: Spacing.two, paddingVertical: Spacing.two, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, marginTop: Spacing.two },
   releaseButtonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   messageButton: { backgroundColor: '#1D4ED8', borderRadius: Spacing.two, paddingVertical: Spacing.two, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, marginTop: Spacing.one },

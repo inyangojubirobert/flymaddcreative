@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     let query = supabase
       .from('participant_withdrawals')
       .select([
-        'id', 'username', 'amount_usd', 'payment_method', 'payment_details', 'status', 'created_at',
+        'id', 'username', 'amount_usd', 'payment_method', 'payment_details', 'status', 'created_at', 'source',
         'payout_type', 'payout_currency', 'payout_network', 'payout_reference', 'payout_amount',
         'payout_confirmed_at', 'claimed_at', 'claimed_by', 'admin_note'
       ].join(','))
@@ -47,6 +47,15 @@ export default async function handler(req, res) {
         .in('username', usernames);
       if (participantsError) throw participantsError;
       participantsByUsername = new Map((participants || []).map(row => [row.username, row]));
+      const { data: contacts } = await supabase
+        .from('participant_private_contacts')
+        .select('participant_id, phone, whatsapp')
+        .in('participant_id', (participants || []).map(row => row.id));
+      const contactById = new Map((contacts || []).map(row => [row.participant_id, row]));
+      for (const row of participantsByUsername.values()) {
+        row.phone = contactById.get(row.id)?.phone || null;
+        row.whatsapp = contactById.get(row.id)?.whatsapp || null;
+      }
     }
 
     const rows = (withdrawals || []).map(withdrawal => ({

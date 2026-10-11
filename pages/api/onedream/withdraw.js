@@ -7,6 +7,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { requireParticipant } from '../../../lib/participantAuth';
+import { alertAdminsOfWithdrawal } from '../../../lib/withdrawalAlerts';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -56,6 +57,15 @@ export default async function handler(req, res) {
 
     const result = Array.isArray(data) ? data[0] : data;
 
+    const { data: profile } = await supabase.from('participants').select('id, name, username').eq('id', participant.id).single();
+    await alertAdminsOfWithdrawal(supabase, {
+      participant: profile || participant,
+      withdrawalId: result?.withdrawal_id,
+      amountUsd: amount,
+      source: 'votes',
+      method,
+    });
+
     return res.status(200).json({
       success: true,
       withdrawal_id: result?.withdrawal_id,
@@ -91,6 +101,7 @@ async function handleGet(req, res) {
       .from('participant_withdrawals')
       .select('*')
       .eq('username', participant.username)
+      .eq('source', 'votes') // marketplace withdrawals: /api/onedream/marketplace-wallet
       .order('created_at', { ascending: false });
 
     if (withdrawalsError) {

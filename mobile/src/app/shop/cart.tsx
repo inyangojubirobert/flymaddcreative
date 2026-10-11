@@ -42,6 +42,7 @@ export default function CartScreen() {
   const [name, setName] = useState(participant?.name ?? '');
   const [email, setEmail] = useState(participant?.email ?? '');
   const [whatsapp, setWhatsapp] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [selectedMethod, setMethod] = useState<PayMethod>('paystack');
   const [txHash, setTxHash] = useState('');
   const [cryptoAddress, setCryptoAddress] = useState('');
@@ -92,8 +93,11 @@ export default function CartScreen() {
   }, [cart.lines, quote]);
 
   const stale = quoteQuery.isFetching || quoteQuery.isPlaceholderData;
+  // Physical products need somewhere to deliver; services are arranged in chat.
+  const needsDelivery = (quote?.lines ?? []).some((line) => line.listing_type !== 'service');
+  const contactOk = whatsapp.replace(/\D/g, '').length >= 7 && (!needsDelivery || deliveryAddress.trim().length >= 5);
   const canPay = !!quote && quote.checkout_enabled && !quote.has_problems && !stale && quote.total_usd > 0
-    && !!name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && !processing;
+    && !!name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && contactOk && !processing;
 
   function handleFailure(e: unknown) {
     const message = e instanceof ApiError ? e.message : 'Checkout failed. Please try again.';
@@ -117,7 +121,8 @@ export default function CartScreen() {
         payment_ref: reference,
         buyer_name: name.trim(),
         buyer_email: email.trim(),
-        buyer_whatsapp: whatsapp.trim() || undefined,
+        buyer_whatsapp: whatsapp.trim(),
+        delivery_address: needsDelivery ? deliveryAddress.trim() : undefined,
       }));
     } catch (e) {
       handleFailure(e);
@@ -165,7 +170,8 @@ export default function CartScreen() {
         lines: requestLines,
         buyer_name: name.trim(),
         buyer_email: email.trim(),
-        buyer_whatsapp: whatsapp.trim() || undefined,
+        buyer_whatsapp: whatsapp.trim(),
+        delivery_address: needsDelivery ? deliveryAddress.trim() : undefined,
       });
       if (done.pending) {
         setNotice(done.error || 'Your transaction is still confirming on-chain. Submit again in a minute.');
@@ -265,7 +271,11 @@ export default function CartScreen() {
           <ThemedText type="smallBold">Your details</ThemedText>
           <TextInput placeholder="Full name" placeholderTextColor={theme.textSecondary} value={name} onChangeText={setName} style={input} />
           <TextInput placeholder="Email" placeholderTextColor={theme.textSecondary} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={input} />
-          <TextInput placeholder="WhatsApp (optional)" placeholderTextColor={theme.textSecondary} value={whatsapp} onChangeText={setWhatsapp} keyboardType="phone-pad" style={input} />
+          <TextInput placeholder="Phone / WhatsApp" placeholderTextColor={theme.textSecondary} value={whatsapp} onChangeText={setWhatsapp} keyboardType="phone-pad" style={input} />
+          {needsDelivery ? (
+            <TextInput placeholder="Delivery address" placeholderTextColor={theme.textSecondary} value={deliveryAddress} onChangeText={setDeliveryAddress} multiline style={[input, styles.addressInput]} />
+          ) : null}
+          <ThemedText type="small" themeColor="textSecondary">Shared only with the seller of each item and One Dream support, to deliver and follow up on your order.</ThemedText>
 
           <ThemedText type="smallBold">Payment method</ThemedText>
           <View style={styles.methodRow}>
@@ -492,6 +502,7 @@ const styles = StyleSheet.create({
   methodChip: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 9 },
   usdt: { gap: Spacing.two },
   address: { fontSize: 13 },
+  addressInput: { minHeight: 64, textAlignVertical: 'top' },
   payButton: { minHeight: 54, borderRadius: 999, backgroundColor: Palette.lemon, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.four, elevation: 4, shadowColor: '#1A2E05', shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
   payButtonText: { color: Palette.lemonInk, fontWeight: '800', fontSize: 16 },
   primaryButton: { backgroundColor: Palette.blue, borderRadius: 999, paddingVertical: 14, paddingHorizontal: Spacing.four },

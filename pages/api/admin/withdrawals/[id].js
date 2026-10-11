@@ -29,7 +29,7 @@ export default async function handler(req, res) {
   try {
     const { data: existing, error: existingError } = await supabase
       .from('participant_withdrawals')
-      .select('id, username, amount_usd, status')
+      .select('id, username, amount_usd, status, source')
       .eq('id', id)
       .maybeSingle();
 
@@ -40,6 +40,7 @@ export default async function handler(req, res) {
     }
 
     const adminNote = cleanString(req.body?.admin_note, 2000) || null;
+    const label = existing.source === 'marketplace' ? 'marketplace earnings withdrawal' : 'withdrawal request';
     const update = { status: nextStatus, admin_note: adminNote };
     let confirmationMessage;
 
@@ -71,11 +72,11 @@ export default async function handler(req, res) {
         claimed_at: now,
         claimed_by: admin.id
       });
-      confirmationMessage = `Your withdrawal request for $${Number(existing.amount_usd).toFixed(2)} has been confirmed as claimed. Payout: ${payoutType} ${payoutAmount} ${payoutCurrency}${payoutNetwork ? ` on ${payoutNetwork}` : ''}. Reference: ${payoutReference}.`;
+      confirmationMessage = `Your ${label} for $${Number(existing.amount_usd).toFixed(2)} has been confirmed as claimed. Payout: ${payoutType} ${payoutAmount} ${payoutCurrency}${payoutNetwork ? ` on ${payoutNetwork}` : ''}. Reference: ${payoutReference}.`;
     } else if (nextStatus === 'processing') {
-      confirmationMessage = `Your withdrawal request for $${Number(existing.amount_usd).toFixed(2)} is now being processed.`;
+      confirmationMessage = `Your ${label} for $${Number(existing.amount_usd).toFixed(2)} is now being processed.`;
     } else {
-      confirmationMessage = `Your withdrawal request for $${Number(existing.amount_usd).toFixed(2)} was not approved. ${adminNote || 'Please contact support if you have a question.'}`;
+      confirmationMessage = `Your ${label} for $${Number(existing.amount_usd).toFixed(2)} was not approved. ${adminNote || 'Please contact support if you have a question.'}`;
     }
 
     const { data: withdrawal, error: updateError } = await supabase

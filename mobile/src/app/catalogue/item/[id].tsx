@@ -38,6 +38,7 @@ export default function CatalogueItemScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [txHash, setTxHash] = useState('');
   const [cryptoAddress, setCryptoAddress] = useState('');
   const [step, setStep] = useState<Step>('form');
@@ -79,6 +80,7 @@ export default function CatalogueItemScreen() {
         buyer_name: name.trim(),
         buyer_email: email.trim(),
         buyer_whatsapp: whatsapp.trim() || undefined,
+        delivery_address: deliveryAddress.trim() || undefined,
         payment_method: 'paystack',
         payment_ref: reference,
       });
@@ -101,6 +103,7 @@ export default function CatalogueItemScreen() {
         buyer_name: name.trim(),
         buyer_email: email.trim(),
         buyer_whatsapp: whatsapp.trim() || undefined,
+        delivery_address: deliveryAddress.trim() || undefined,
         payment_method: 'usdt',
         network: method === 'usdt_bsc' ? 'bsc' : 'tron',
         tx_hash: txHash.trim(),
@@ -156,7 +159,10 @@ export default function CatalogueItemScreen() {
   const item = itemQuery.data;
   const canPaystack = item.payment_methods?.includes('paystack') ?? true;
   const canUsdt = item.payment_methods?.includes('usdt') ?? true;
-  const canSubmit = name.trim() && email.trim();
+  const needsDelivery = item.listing_type !== 'service';
+  // Private to the seller and support: needed to deliver and follow up.
+  const canSubmit = name.trim() && email.trim() && whatsapp.replace(/\D/g, '').length >= 7
+    && (!needsDelivery || deliveryAddress.trim().length >= 5);
 
   return (
     <ThemedView style={styles.container}>
@@ -248,7 +254,11 @@ export default function CatalogueItemScreen() {
               <ThemedText type="smallBold" style={styles.sectionLabel}>Your details</ThemedText>
               <TextInput placeholder="Full name" placeholderTextColor={theme.textSecondary} value={name} onChangeText={setName} style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />
               <TextInput placeholder="Email" placeholderTextColor={theme.textSecondary} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />
-              <TextInput placeholder="WhatsApp (optional)" placeholderTextColor={theme.textSecondary} value={whatsapp} onChangeText={setWhatsapp} style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />
+              <TextInput placeholder="Phone / WhatsApp" placeholderTextColor={theme.textSecondary} value={whatsapp} onChangeText={setWhatsapp} keyboardType="phone-pad" style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />
+              {needsDelivery ? (
+                <TextInput placeholder="Delivery address" placeholderTextColor={theme.textSecondary} value={deliveryAddress} onChangeText={setDeliveryAddress} multiline style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement, minHeight: 64, textAlignVertical: 'top' }]} />
+              ) : null}
+              <ThemedText type="small" themeColor="textSecondary">Shared only with the seller and One Dream support to deliver and follow up on your order.</ThemedText>
 
               <ThemedText type="smallBold" style={styles.sectionLabel}>Payment method</ThemedText>
               <ThemedView style={styles.methodRow}>

@@ -23,6 +23,7 @@ import { getUsdToNgnRate, usdToKobo } from '../../../lib/currency';
 import { verifyAndRecordUsdtPayment } from '../../../lib/verifyCryptoTx';
 import { cartCheckoutReady, normalizeCartLines, priceCart } from '../../../lib/catalogueCart';
 import { toCents } from '../../../lib/marketplaceFees';
+import { commissionFields, sellerCommissionPercent } from '../../../lib/sellerEarnings';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -43,8 +44,13 @@ export default async function handler(req, res) {
     const buyerEmail = typeof req.body?.buyer_email === 'string' ? req.body.buyer_email.trim().toLowerCase().slice(0, 200) : '';
     const buyerWhatsapp = typeof req.body?.buyer_whatsapp === 'string' ? req.body.buyer_whatsapp.trim().slice(0, 40) : '';
 
+    const deliveryAddress = typeof req.body?.delivery_address === 'string' ? req.body.delivery_address.trim().slice(0, 500) : '';
     if (!buyerName || !EMAIL_RE.test(buyerEmail)) {
       return res.status(400).json({ error: 'Enter your name and a valid email' });
+    }
+    // Private to this order's seller and admins - needed to deliver and follow up.
+    if (buyerWhatsapp.replace(/\D/g, '').length < 7) {
+      return res.status(400).json({ error: 'Enter a phone or WhatsApp number the seller can reach you on' });
     }
     if (!['paystack', 'usdt'].includes(payment_method)) {
       return res.status(400).json({ error: 'Invalid payment_method' });
@@ -58,6 +64,7 @@ export default async function handler(req, res) {
       buyer_email: buyerEmail,
       buyer_whatsapp: buyerWhatsapp || null,
       notes: typeof notes === 'string' && notes.trim() ? notes.trim().slice(0, 500) : null,
+      delivery_address: deliveryAddress || null,
     };
     let checkoutRecord;
 
@@ -251,6 +258,7 @@ async function buildOrderRows(checkout) {
     .in('id', lines.map((line) => line.item_id));
   if (itemsError) throw itemsError;
   const sellerByItem = new Map((items || []).map((item) => [String(item.id), item.seller_username]));
+  const commissionPercent = await sellerCommissionPercent(supabase);
 
   const now = new Date().toISOString();
   return lines.map((line, index) => {
@@ -263,7 +271,10 @@ async function buildOrderRows(checkout) {
       buyer_email: checkout.buyer_email,
       buyer_whatsapp: checkout.buyer_whatsapp,
       notes: checkout.notes,
+      delivery_address: checkout.delivery_address,
       amount_usd: line.line_total_usd,
+      // Seller commission fixed at purchase time (seller earnings ledger).
+      ...commissionFields(line.line_total_usd, commissionPercent),
       unit_price_usd: line.unit_price_usd,
       quantity: line.quantity,
       payment_method: checkout.payment_method,

@@ -304,8 +304,9 @@
     }
 
     function calcTotalWithdrawn(withdrawals) {
+        // Vote rewards only - marketplace earnings withdrawals have their own balance.
         return withdrawals
-            .filter(w => w.status !== 'rejected')
+            .filter(w => w.status !== 'rejected' && (w.source || 'votes') === 'votes')
             .reduce((sum, w) => sum + parseFloat(w.amount_usd || 0), 0);
     }
 
@@ -406,41 +407,37 @@
         return data;
     }
 
+    // Orders are private (buyer contacts + confirmation tokens), so they are
+    // read through the API, never directly from the table.
     async function getOrdersBySellerUsername(username) {
-        const supabase = getSupabaseInstance();
-        if (!supabase) return [];
-        const { data, error } = await supabase
-            .from('catalogue_orders')
-            .select('*, catalogue_items(title)')
-            .eq('seller_username', username)
-            .order('created_at', { ascending: false });
-        if (error) return [];
-        return data || [];
+        const token = localStorage.getItem('onedream_token');
+        if (!token) return [];
+        const res = await fetch('/api/catalogue/orders', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return [];
+        const data = await res.json().catch(() => ({}));
+        return (data.orders || []).filter(order => order.seller_username === username);
     }
 
-    async function getOrderById(orderId) {
-        const supabase = getSupabaseInstance();
-        if (!supabase) return null;
-        const { data, error } = await supabase
-            .from('catalogue_orders')
-            .select('*, catalogue_items(title, images, price_usd, seller_username)')
-            .eq('id', orderId)
-            .single();
-        if (error) return null;
-        return data;
+    async function getOrderById(orderId, buyerToken) {
+        if (!buyerToken) return null;
+        const res = await fetch(`/api/catalogue/order?order_id=${encodeURIComponent(orderId)}&buyer_token=${encodeURIComponent(buyerToken)}`);
+        if (!res.ok) return null;
+        const data = await res.json().catch(() => ({}));
+        return data.order || null;
     }
 
+    // Sellers can only mark their own buyer-confirmed orders as released.
     async function updateOrderStatus(orderId, status) {
-        const supabase = getSupabaseInstance();
-        if (!supabase) throw new Error('Supabase not initialized');
-        const { data, error } = await supabase
-            .from('catalogue_orders')
-            .update({ status, updated_at: new Date().toISOString() })
-            .eq('id', orderId)
-            .select()
-            .single();
-        if (error) throw error;
-        return data;
+        if (status !== 'released') throw new Error('Unsupported order status change');
+        const token = localStorage.getItem('onedream_token');
+        const res = await fetch('/api/catalogue/order-action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ order_id: orderId, action: 'release_funds' })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not update order');
+        return data.order;
     }
 
     async function uploadCatalogueImage(file, token) {

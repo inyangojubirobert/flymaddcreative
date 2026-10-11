@@ -10,6 +10,8 @@ import { Palette, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/use-theme';
 import { cataloguePriceLabel, getCatalogueByUsername, getMyOrders, type CatalogueOrder } from '@/api/catalogue';
+import { getMarketplaceWallet } from '@/api/wallet';
+import { SellerContactCard } from '@/components/seller-contact';
 
 const ORDER_LABEL: Record<CatalogueOrder['status'], string> = {
   paid: 'Paid · awaiting delivery',
@@ -36,6 +38,13 @@ export default function ManageShopScreen() {
     enabled: !!token,
   });
 
+  const earningsQuery = useQuery({
+    queryKey: ['marketplace-wallet'],
+    queryFn: () => getMarketplaceWallet(token!),
+    enabled: !!token,
+  });
+  const earnings = earningsQuery.data;
+
   const products = productsQuery.data ?? [];
   const orders = ordersQuery.data ?? [];
   const activeProducts = products.filter((item) => item.status === 'active').length;
@@ -47,6 +56,7 @@ export default function ManageShopScreen() {
   function refresh() {
     void productsQuery.refetch();
     void ordersQuery.refetch();
+    void earningsQuery.refetch();
   }
 
   return (
@@ -86,6 +96,23 @@ export default function ManageShopScreen() {
             <Metric icon="bag-check" label="Orders" value={String(orders.length)} tint={Palette.yellowSoft} ink={Palette.yellowInk} />
             <Metric icon="cash" label="Paid sales" value={`$${paidRevenue.toFixed(2)}`} tint="#DCFCE7" ink={Palette.green} />
           </View>
+
+          <Pressable onPress={() => router.push('/wallet' as never)} style={[styles.earningsCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+            <View style={styles.earningsRow}>
+              <View style={styles.earningsCol}>
+                <ThemedText type="small" themeColor="textSecondary">Withdrawable</ThemedText>
+                <ThemedText type="subtitle" style={styles.earningsAvailable}>${(earnings?.available_usd ?? 0).toFixed(2)}</ThemedText>
+              </View>
+              <View style={styles.earningsCol}>
+                <ThemedText type="small" themeColor="textSecondary">Awaiting buyer</ThemedText>
+                <ThemedText type="subtitle" style={styles.earningsPending}>${(earnings?.pending_earnings_usd ?? 0).toFixed(2)}</ThemedText>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+            </View>
+            <ThemedText type="small" themeColor="textSecondary">Marketplace earnings after commission · open your wallet to withdraw</ThemedText>
+          </Pressable>
+
+          <SellerContactCard />
 
           <SectionHeading icon="grid" title="Catalogue" action="Manage listings" onPress={() => router.push('/catalogue/my-listings' as never)} />
           {productsQuery.isLoading ? <ActivityIndicator color={Palette.blue} /> : products.length ? (
@@ -160,6 +187,11 @@ function SectionHeading({ icon, title, action, onPress }: { icon: keyof typeof I
 }
 
 const styles = StyleSheet.create({
+  earningsCard: { borderRadius: 18, borderWidth: 1, padding: Spacing.three, gap: Spacing.two },
+  earningsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  earningsCol: { flex: 1, gap: 2 },
+  earningsAvailable: { color: Palette.green },
+  earningsPending: { color: Palette.yellowInk },
   container: { flex: 1 },
   safeArea: { flex: 1 },
   content: { padding: Spacing.three, paddingBottom: Spacing.five, gap: Spacing.three },

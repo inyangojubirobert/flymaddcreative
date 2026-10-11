@@ -1,15 +1,13 @@
-// Ownership-checked read of a seller's own catalogue orders. catalogue_orders
-// has a blanket "select using (true)" RLS policy (see
-// supabase/lockdown_catalogue_orders_rls.sql) - it has to stay open because
-// the buyer-confirmation-link flow only has an anon key and a buyer_token,
-// no login. That same openness means anyone with the anon key can currently
-// list every seller's orders, not just their own, if they read the table
-// directly. This route gives the mobile app (and any future website update)
-// a properly scoped alternative to public/js/supabase-config.js's
-// getOrdersBySellerUsername(), which reads the wide-open table unscoped.
+// A seller's own catalogue orders (participant login), including the buyer's
+// private contact and delivery details needed to fulfil each order, plus the
+// commission/net figures for the earnings ledger. Never returns buyer_token:
+// that token authorises the buyer's confirm/dispute actions.
+// Only rows for this seller are returned, so in a multi-seller cart each
+// seller sees only their own order.
 
 import { createClient } from '@supabase/supabase-js';
 import { requireParticipant } from '../../../lib/participantAuth';
+import { SELLER_ORDER_FIELDS } from '../../../lib/sellerEarnings';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -27,7 +25,7 @@ export default async function handler(req, res) {
   try {
     const { data, error } = await supabase
       .from('catalogue_orders')
-      .select('*, catalogue_items(title)')
+      .select(`${SELLER_ORDER_FIELDS}, catalogue_items(title, images)`)
       .eq('seller_username', participant.username)
       .order('created_at', { ascending: false });
 

@@ -12,6 +12,7 @@ import { Palette, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { cataloguePriceLabel, getCatalogueByUsername, getCatalogueDrafts, getCategories, getCatalogueListingConfiguration, createCategory, createItem, updateItem, deleteItem, saveCatalogueDraft, publishCatalogueDraft, deleteCatalogueDraft, uploadCatalogueMedia, type CatalogueItem, type CatalogueListingDraft, type CatalogueListingType, type CatalogueProductDetails, type CatalogueServiceDetails } from '@/api/catalogue';
+import { SellerContactCard, useSellerContact } from '@/components/seller-contact';
 import { ApiError } from '@/lib/api-client';
 import { buildCatalogueDirectory, canSell, departmentForCategory } from '@/lib/catalogue-directory';
 
@@ -52,6 +53,7 @@ const EMPTY_DRAFT: Draft = { title: '', description: '', size: '', category_id: 
 
 export default function MyListingsScreen() {
   const { participant, token } = useAuth();
+  const sellerContact = useSellerContact();
   const theme = useTheme();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -87,6 +89,7 @@ export default function MyListingsScreen() {
   }
 
   async function handleSave() {
+    if (draft && !draft.id && !sellerContact.requireContact()) return;
     if (!draft || !token) return;
     const price = parseFloat(draft.price_usd);
     if (!draft.title.trim() || !Number.isFinite(price) || price <= 0) {
@@ -272,6 +275,7 @@ export default function MyListingsScreen() {
 
   async function handlePublishDraft() {
     if (!draft || !token) return;
+    if (!sellerContact.requireContact()) return;
     setIsSaving(true);
     try {
       const saved = await saveCurrentDraft();
@@ -465,6 +469,7 @@ export default function MyListingsScreen() {
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: 'My Listings' }} />
       <SafeAreaView style={styles.safeArea}>
+        {sellerContact.hasContact || sellerContact.isLoading ? null : <SellerContactCard />}
         <Pressable onPress={() => openEditor()} style={styles.addButton}>
           <ThemedText style={styles.addButtonText}>+ New Listing</ThemedText>
         </Pressable>
@@ -490,7 +495,7 @@ export default function MyListingsScreen() {
                   </Pressable>
                   <Pressable
                     onPress={() => {
-                      if (!token) return;
+                      if (!token || !sellerContact.requireContact()) return;
                       setIsSaving(true);
                       void publishCatalogueDraft(token, item.id).then(refresh).catch((error) => {
                         Alert.alert('Draft not published', error instanceof ApiError ? error.message : 'Please try again.');

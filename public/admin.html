@@ -236,7 +236,7 @@
         const date = new Date(row.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
         return `<button onclick="selectWithdrawal('${row.id}')" class="w-full rounded-xl border p-3 text-left transition ${selected ? 'border-green-500 bg-green-900/20' : 'border-slate-700 bg-slate-800/50 hover:border-slate-500'}">
           <div class="flex items-start justify-between gap-3"><span class="font-semibold">${escapeAdminText(participant.name || row.username)}</span><span class="rounded-full bg-slate-700 px-2 py-1 text-xs">${escapeAdminText(row.status)}</span></div>
-          <p class="mt-1 text-sm text-green-300">$${Number(row.amount_usd).toFixed(2)} · ${escapeAdminText(row.payment_method)}</p>
+          <p class="mt-1 text-sm text-green-300">$${Number(row.amount_usd).toFixed(2)} · ${escapeAdminText(row.payment_method)} · <span class="${row.source === 'marketplace' ? 'text-lime-300' : 'text-sky-300'}">${row.source === 'marketplace' ? 'Marketplace earnings' : 'Vote rewards'}</span></p>
           <p class="mt-1 text-xs text-slate-400">${escapeAdminText(participant.email || '')} · ${date}</p>
         </button>`;
       }).join('');
@@ -250,9 +250,9 @@
       document.getElementById('withdrawalDetailEmpty').classList.add('hidden');
       document.getElementById('withdrawalDetail').classList.remove('hidden');
       document.getElementById('detailName').textContent = participant.name || row.username;
-      document.getElementById('detailContact').textContent = `${participant.email || 'No email'} · @${row.username}`;
+      document.getElementById('detailContact').textContent = `${participant.email || 'No email'} · @${row.username}${participant.phone ? ` · ☎ ${participant.phone}` : ''}${participant.whatsapp && participant.whatsapp !== participant.phone ? ` · WhatsApp ${participant.whatsapp}` : ''}`;
       document.getElementById('detailStatus').textContent = row.status;
-      document.getElementById('detailAmount').textContent = `$${Number(row.amount_usd).toFixed(2)}`;
+      document.getElementById('detailAmount').textContent = `$${Number(row.amount_usd).toFixed(2)} (${row.source === 'marketplace' ? 'marketplace earnings' : 'vote rewards'})`;
       document.getElementById('detailMethod').textContent = row.payment_method;
       document.getElementById('detailPaymentDetails').textContent = row.payment_details;
       document.getElementById('adminNote').value = row.admin_note || '';

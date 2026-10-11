@@ -19,6 +19,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { getUsdToNgnRate } from '../../../lib/currency';
 import { claimUsdtPayment, verifyAndRecordUsdtPayment } from '../../../lib/verifyCryptoTx';
+import { commissionFields, sellerCommissionPercent } from '../../../lib/sellerEarnings';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -69,7 +70,10 @@ export default async function handler(req, res) {
       buyer_whatsapp: buyer_whatsapp || null,
       amount_usd: priceUsd,
       payment_method,
-      notes: notes || null
+      notes: notes || null,
+      delivery_address: typeof req.body.delivery_address === 'string' ? req.body.delivery_address.trim().slice(0, 500) || null : null,
+      // Seller commission fixed at purchase time (seller earnings ledger).
+      ...commissionFields(priceUsd, await sellerCommissionPercent(supabase))
     };
 
     if (payment_method === 'paystack') {

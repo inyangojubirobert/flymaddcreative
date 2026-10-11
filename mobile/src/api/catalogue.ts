@@ -129,8 +129,14 @@ export type CatalogueOrder = {
   payment_ref?: string | null;
   tx_hash?: string | null;
   status: 'paid' | 'pending_verification' | 'buyer_confirmed' | 'disputed' | 'released';
-  buyer_token: string;
+  buyer_token?: string; // only on the buyer's own copy - never sent to sellers
   notes?: string;
+  delivery_address?: string | null;
+  quantity?: number;
+  commission_percent?: number | null;
+  commission_usd?: number | null;
+  seller_net_usd?: number | null;
+  buyer_confirmed_at?: string | null;
   created_at: string;
   catalogue_items?: { title: string; images?: string[]; price_usd?: number; seller_username?: string };
 };
@@ -357,6 +363,7 @@ export async function createOrder(input: {
   buyer_name: string;
   buyer_email: string;
   buyer_whatsapp?: string;
+  delivery_address?: string;
   notes?: string;
   payment_method: 'paystack' | 'usdt';
   network?: 'bsc' | 'tron';

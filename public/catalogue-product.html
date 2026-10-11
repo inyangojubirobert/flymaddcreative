@@ -510,7 +510,7 @@ function copyProductLink() {
 async function showOrderConfirm(orderId, token) {
     document.getElementById('loadingState').classList.add('hidden');
     try {
-        const order = await window.SupabaseAPI.getOrderById(orderId);
+        const order = await window.SupabaseAPI.getOrderById(orderId, token);
         if (!order || order.buyer_token !== token) { showError(); return; }
         lastBuyerToken = token;
         lastOrderId = orderId;
