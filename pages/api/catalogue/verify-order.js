@@ -17,6 +17,7 @@
 // from the client.
 
 import { createClient } from '@supabase/supabase-js';
+import { DIGITAL_CHECKOUT_MESSAGE, digitalItemIds } from '../../../lib/digitalGuard';
 import { getUsdToNgnRate } from '../../../lib/currency';
 import { claimUsdtPayment, verifyAndRecordUsdtPayment } from '../../../lib/verifyCryptoTx';
 import { commissionFields, sellerCommissionPercent } from '../../../lib/sellerEarnings';
@@ -59,6 +60,9 @@ export default async function handler(req, res) {
 
     if (itemError || !item || item.status === 'deleted') {
       return res.status(404).json({ error: 'Product not found' });
+    }
+    if ((await digitalItemIds(supabase, [item.id])).size) {
+      return res.status(409).json({ error: DIGITAL_CHECKOUT_MESSAGE });
     }
 
     const priceUsd = parseFloat(item.price_usd);

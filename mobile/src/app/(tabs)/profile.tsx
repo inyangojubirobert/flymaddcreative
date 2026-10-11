@@ -113,6 +113,24 @@ export default function ProfileScreen() {
             />
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
             <ProfileAction
+              icon="library"
+              iconBackground={Palette.blueSoft}
+              iconColor={Palette.blue}
+              title="My library"
+              subtitle="E-books, music and videos you own - offline too"
+              onPress={() => router.push('/library' as never)}
+            />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <ProfileAction
+              icon="megaphone"
+              iconBackground={Palette.lemon}
+              iconColor={Palette.lemonInk}
+              title="Promote & advertise"
+              subtitle="Sponsored ads and listing boosts, with views and clicks"
+              onPress={() => router.push('/promote' as never)}
+            />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <ProfileAction
               icon="sparkles"
               imageUri={BASCARDO_LOGO_URL}
               iconBackground={Palette.yellowSoft}

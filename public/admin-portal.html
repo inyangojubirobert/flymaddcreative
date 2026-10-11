@@ -48,6 +48,8 @@
         <button onclick="switchTab('messages')" class="tab-button active px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">💬 Messages</button>
         <button onclick="switchTab('withdrawals')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">💰 Withdrawals</button>
         <button onclick="switchTab('orders')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🛍️ Orders</button>
+        <button onclick="switchTab('ads')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">📣 Ads</button>
+        <button onclick="switchTab('digital')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">📚 Digital</button>
       </div>
 
       <!-- Messages Tab -->
@@ -115,6 +117,109 @@
           <div id="ordersList" class="space-y-3 max-h-96 overflow-y-auto">
             <p class="text-slate-500">Loading orders…</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Digital Tab -->
+      <div id="digitalTab" class="hidden space-y-4">
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+            <h2 class="text-xl font-bold">Digital products</h2>
+            <div class="flex gap-2">
+              <select id="digitalView" onchange="loadDigital()" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+                <option value="queue">Awaiting review</option>
+                <option value="published">On sale</option>
+                <option value="all">All</option>
+              </select>
+              <button onclick="syncDigitalRefunds()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Sync Play refunds</button>
+              <button onclick="loadDigital()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Refresh</button>
+            </div>
+          </div>
+          <div id="digitalProducts" class="space-y-3"><p class="text-slate-500">Loading…</p></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <div>
+              <h2 class="text-lg font-bold">Google Play price tiers</h2>
+              <p class="text-xs text-slate-400">Each tier is one consumable product in Play Console (same id, same USD price). Sellers pick a tier; the purchase is bound to the item and buyer.</p>
+            </div>
+            <button onclick="checkDigitalTiers()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded whitespace-nowrap">Check Google Play</button>
+          </div>
+          <div id="digitalTiers" class="overflow-x-auto"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-1">Seller digital earnings</h2>
+          <p class="text-xs text-slate-400 mb-3">Separate from marketplace escrow. Pay cleared amounts after reconciling with Google Play's payout, then record the reference here.</p>
+          <div id="digitalEarnings" class="text-xs"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-1">Give a copy</h2>
+          <p class="text-xs text-slate-400 mb-3">Testing or review copies. Unpaid: no seller earning is created.</p>
+          <div class="flex flex-wrap gap-2">
+            <input id="digitalGrantUser" placeholder="username" class="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1">
+            <input id="digitalGrantItem" placeholder="listing id (uuid)" class="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1 w-72">
+            <input id="digitalGrantNote" placeholder="reason (required)" class="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1 flex-1 min-w-[160px]">
+            <button onclick="grantDigital()" class="text-sm bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Grant</button>
+          </div>
+          <h3 class="text-sm font-semibold mt-5 mb-2">Recent licences</h3>
+          <div id="digitalLicenses" class="space-y-1 text-xs text-slate-300"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <div>
+              <h2 class="text-lg font-bold">Creator subscriptions &amp; website payments</h2>
+              <p class="text-xs text-slate-400">Google Play subscription products per monthly price, in slots (one live subscription per product per user, so each slot lets a user follow one more creator at that price). Each needs one active monthly base plan at the same USD price.</p>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="loadDigitalSubs(true)" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded whitespace-nowrap">Check Google Play</button>
+              <button onclick="runDigitalBillingSync()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded whitespace-nowrap">Run billing sync</button>
+            </div>
+          </div>
+          <div id="digitalSubProducts" class="overflow-x-auto"></div>
+          <h3 class="text-sm font-semibold mt-5 mb-2">Recent subscriptions</h3>
+          <div id="digitalSubs" class="space-y-1 text-xs text-slate-300"></div>
+          <h3 class="text-sm font-semibold mt-5 mb-2">Recent website (Paystack) payments</h3>
+          <div id="digitalPayments" class="space-y-1 text-xs text-slate-300"></div>
+        </div>
+      </div>
+
+      <!-- Ads Tab -->
+      <div id="adsTab" class="hidden space-y-4">
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+            <h2 class="text-xl font-bold">Advertising & Boosts</h2>
+            <div class="flex gap-2">
+              <select id="adsView" onchange="loadAds()" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+                <option value="queue">Awaiting review</option>
+                <option value="live">Live</option>
+                <option value="all">All</option>
+              </select>
+              <button onclick="syncAdRefunds()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Sync Play refunds</button>
+              <button onclick="recheckAllLinks()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Re-check links</button>
+              <button onclick="loadAds()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Refresh</button>
+            </div>
+          </div>
+          <div id="adsCampaigns" class="space-y-3"><p class="text-slate-500">Loading…</p></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-1">Packages</h2>
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <p class="text-xs text-slate-400">Prices in USD. Each package sells once its product id here exists and is active in Play Console (same id, same price). Edits only affect new purchases.</p>
+            <button onclick="checkPlayBilling()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded whitespace-nowrap">Check Google Play</button>
+          </div>
+          <div id="adsPackages" class="space-y-2 overflow-x-auto"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-1">Grant a package</h2>
+          <p class="text-xs text-slate-400 mb-3">For testing, compensation or partners. Recorded as unpaid.</p>
+          <div class="flex flex-wrap gap-2">
+            <input id="grantUsername" placeholder="username" class="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1">
+            <select id="grantPackage" class="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1"></select>
+            <input id="grantNote" placeholder="reason (required)" class="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1 flex-1 min-w-[160px]">
+            <button onclick="grantAdPackage()" class="text-sm bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Grant</button>
+          </div>
+          <h3 class="text-sm font-semibold mt-5 mb-2">Recent purchases & grants</h3>
+          <div id="adsEntitlements" class="space-y-1 text-xs text-slate-300"></div>
         </div>
       </div>
     </div>
@@ -208,6 +313,8 @@
       if (tab === 'messages') loadMessages();
       if (tab === 'withdrawals') loadWithdrawals();
       if (tab === 'orders') loadOrders();
+      if (tab === 'ads') loadAds();
+      if (tab === 'digital') { loadDigital(); loadDigitalSubs(false); }
     }
 
     let activeParticipantId = null;
@@ -431,6 +538,417 @@
         container.innerHTML = `<p class="text-red-400">Error: ${escapeText(err.message)}</p>`;
       }
     }
+
+    // ---------------------------------------------------------------------
+    // Advertising & boosts
+    // ---------------------------------------------------------------------
+    const adState = { packages: [], billing: {} };
+    const playStateLabel = {
+      unconfigured: ['bg-slate-600', 'No product id'],
+      not_found: ['bg-yellow-700', 'Not in Play Console'],
+      inactive: ['bg-yellow-700', 'Inactive in Play'],
+      active: ['bg-green-700', 'Purchasable'],
+      check_failed: ['bg-red-800', 'Check failed'],
+    };
+    const adBadge = { pending_review: 'bg-yellow-700', active: 'bg-green-700', completed: 'bg-blue-700', rejected: 'bg-red-800', suspended: 'bg-red-800', revoked: 'bg-slate-600', draft: 'bg-slate-600', paused: 'bg-slate-600' };
+
+    function adMediaHtml(m) {
+      const url = escapeText(m.url || '');
+      const meta = `${escapeText(m.status)} · ${escapeText(m.format)} · ${(m.bytes / 1048576).toFixed(1)} MB${m.duration_seconds ? ` · ${Math.round(m.duration_seconds)}s` : ''}`;
+      const tone = m.status === 'approved' ? 'text-green-300' : m.status === 'rejected' ? 'text-red-300' : 'text-yellow-300';
+      const view = m.resource_type === 'video'
+        ? `<video src="${url}" poster="${escapeText(m.poster || '')}" controls preload="none" class="w-48 h-28 rounded bg-black"></video>`
+        : `<a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" class="w-48 h-28 object-cover rounded"></a>`;
+      const withdraw = m.status === 'approved'
+        ? `<button onclick="withdrawAdMedia('${m.id}')" class="text-[10px] bg-red-900 hover:bg-red-800 px-2 py-0.5 rounded">Withdraw</button>` : '';
+      return `<div class="space-y-1">${view}<div class="text-[10px] ${tone}">${meta}</div>${withdraw}</div>`;
+    }
+
+    function adDestinationHtml(c) {
+      if (c.destination_type === 'listing') return `Listing: ${escapeText(c.listing_title || '')}`;
+      if (c.destination_type === 'profile') return 'Advertiser shop page';
+      const redirect = c.destination_final_url && c.destination_final_url !== c.destination_url
+        ? `<div class="text-[11px] text-amber-300 break-all">Redirects to: ${escapeText(c.destination_final_url)}</div>` : '';
+      const checked = c.destination_checked_at ? `Link checked ${new Date(c.destination_checked_at).toLocaleString()}` : 'Link NOT checked';
+      return `<a class="text-sky-300 underline break-all" href="${escapeText(c.destination_url)}" target="_blank" rel="noopener noreferrer nofollow">${escapeText(c.destination_url)}</a>${redirect}<div class="text-[11px] text-slate-400">${checked}</div>`;
+    }
+
+    function adActionsHtml(c) {
+      if (c.status === 'pending_review') {
+        const recheckPending = c.destination_type === 'external'
+          ? `<button onclick="recheckAdLink('${c.id}')" class="bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded">Re-check link</button>` : '';
+        return `<button onclick="reviewAd('${c.id}','approve')" class="bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Approve (incl. media)</button>
+          <button onclick="reviewAd('${c.id}','reject')" class="bg-red-800 hover:bg-red-700 px-3 py-1 rounded">Request changes</button>${recheckPending}`;
+      }
+      const extend = c.starts_at ? `<button onclick="extendAd('${c.id}')" class="bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded">Extend (compensation)</button>` : '';
+      const recheck = c.destination_type === 'external' && ['active', 'pending_review'].includes(c.status)
+        ? `<button onclick="recheckAdLink('${c.id}')" class="bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded">Re-check link</button>` : '';
+      if (c.status === 'active') return `<button onclick="reviewAd('${c.id}','suspend')" class="bg-red-800 hover:bg-red-700 px-3 py-1 rounded">Suspend</button>${extend}${recheck}`;
+      if (c.status === 'suspended') return `<button onclick="reviewAd('${c.id}','reinstate')" class="bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded">Reinstate</button>`;
+      return '';
+    }
+
+    async function loadAds() {
+      const box = document.getElementById('adsCampaigns');
+      box.innerHTML = '<p class="text-slate-500">Loading…</p>';
+      try {
+        const data = await adminFetch(`/api/admin/ads?view=${document.getElementById('adsView').value}`);
+        adState.packages = data.packages || [];
+        renderAdPackages();
+        document.getElementById('adsEntitlements').innerHTML = (data.entitlements || []).map(e => {
+          const paid = e.is_paid ? `paid $${Number(e.price_usd).toFixed(2)} (${escapeText(e.provider)}${e.order_id ? ' ' + escapeText(e.order_id) : ''})` : 'granted';
+          return `<div>${new Date(e.created_at).toLocaleDateString()} · @${escapeText(e.participants?.username || '?')} · ${escapeText(e.package_id)} · ${paid} · ${escapeText(e.status)}</div>`;
+        }).join('') || '<div class="text-slate-500">None yet.</div>';
+
+        const campaigns = data.campaigns || [];
+        if (!campaigns.length) { box.innerHTML = '<p class="text-slate-500">Nothing here.</p>'; return; }
+        box.innerHTML = campaigns.map(c => `<div class="rounded-lg bg-slate-700/50 border border-slate-600/50 p-4 text-sm space-y-2">
+            <div class="flex justify-between gap-2">
+              <div><span class="font-semibold">${escapeText(c.title)}</span> <span class="text-slate-400">· ${escapeText(c.kind)} · ${escapeText(c.package_id)} · @${escapeText(c.owner?.username || '')}</span></div>
+              <span class="${adBadge[c.state] || 'bg-slate-600'} px-2 py-0.5 rounded text-xs whitespace-nowrap">${escapeText(c.state)}</span>
+            </div>
+            ${c.body ? `<p class="text-slate-300">${escapeText(c.body)}</p>` : ''}
+            ${c.cta_label ? `<p class="text-xs text-slate-400">Button: ${escapeText(c.cta_label)}</p>` : ''}
+            <div class="text-xs">${adDestinationHtml(c)}</div>
+            <div class="text-xs text-slate-400">Placements: ${escapeText((c.placements || []).join(', '))}${c.starts_at ? ` · ${new Date(c.starts_at).toLocaleString()} → ${new Date(c.ends_at).toLocaleString()}` : ''}</div>
+            ${c.media?.length ? `<div class="flex flex-wrap gap-3">${c.media.map(adMediaHtml).join('')}</div>` : ''}
+            ${c.review_note ? `<p class="text-xs text-amber-300">Note: ${escapeText(c.review_note)}</p>` : ''}
+            <div class="flex gap-2 text-xs">${adActionsHtml(c)}</div>
+          </div>`).join('');
+      } catch (err) {
+        box.innerHTML = `<p class="text-red-400">Error: ${escapeText(err.message)}</p>`;
+      }
+    }
+
+    async function reviewAd(id, action) {
+      let note = null;
+      if (action === 'approve') {
+        if (!confirm('Approve this campaign and its media? It goes live immediately.')) return;
+      } else {
+        note = prompt(action === 'reinstate' ? 'Note (optional)' : 'Reason shown to the advertiser');
+        if (note === null || (action !== 'reinstate' && !note.trim())) return;
+      }
+      try {
+        await adminFetch('/api/admin/ads/review', { method: 'POST', body: JSON.stringify({ target: 'campaign', id, action, note, approve_media: action === 'approve' }) });
+        loadAds();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function extendAd(id) {
+      const hours = prompt('Hours to add (compensation for downtime or a wrongful suspension)');
+      if (!hours) return;
+      const note = prompt('Reason (recorded in the history)');
+      if (!note || !note.trim()) return;
+      try {
+        const result = await adminFetch('/api/admin/ads/review', { method: 'POST', body: JSON.stringify({ target: 'campaign', id, action: 'extend', hours: Number(hours), note }) });
+        alert(`Now ends ${new Date(result.ends_at).toLocaleString()}`);
+        loadAds();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function withdrawAdMedia(id) {
+      const note = prompt('Why is this creative being withdrawn? Live campaigns using it will be suspended.');
+      if (!note || !note.trim()) return;
+      try {
+        await adminFetch('/api/admin/ads/review', { method: 'POST', body: JSON.stringify({ target: 'media', id, action: 'reject', note }) });
+        loadAds();
+      } catch (err) { alert(err.message); }
+    }
+
+    function renderAdPackages() {
+      document.getElementById('grantPackage').innerHTML = adState.packages.map(p => `<option value="${escapeText(p.id)}">${escapeText(p.name)}</option>`).join('');
+      const rows = adState.packages.map(p => {
+        const id = escapeText(p.id);
+        const cell = (f, value, width) => `<td><input data-pkg="${id}" data-f="${f}" value="${escapeText(String(value))}" class="${width} bg-slate-700 rounded px-1"></td>`;
+        return `<tr class="border-t border-slate-700">
+          <td class="py-1 pr-2">${escapeText(p.name)} <span class="text-slate-500">${escapeText(p.kind)}</span></td>
+          ${cell('price_usd', Number(p.price_usd), 'w-16')}
+          ${cell('duration_hours', p.duration_hours, 'w-16')}
+          ${cell('max_creatives', p.max_creatives, 'w-12')}
+          ${cell('priority', p.priority, 'w-12')}
+          <td><input data-pkg="${id}" data-f="google_play_product_id" value="${escapeText(p.google_play_product_id || '')}" placeholder="not set" class="w-44 bg-slate-700 rounded px-1"></td>
+          <td>${playStatusHtml(p.id)}</td>
+          <td><input type="checkbox" data-pkg="${id}" data-f="is_active" ${p.is_active ? 'checked' : ''}></td>
+          <td><button onclick="saveAdPackage('${id}')" class="bg-slate-600 hover:bg-slate-500 px-2 py-0.5 rounded">Save</button></td>
+        </tr>`;
+      }).join('');
+      document.getElementById('adsPackages').innerHTML = `<table class="w-full text-xs"><thead class="text-slate-400 text-left"><tr>
+          <th class="py-1">Package</th><th>Price $</th><th>Hours</th><th>Creatives</th><th>Priority</th><th>Google Play product id</th><th>Play status</th><th>Active</th><th></th>
+        </tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function playStatusHtml(packageId) {
+      const s = adState.billing[packageId];
+      if (!s) return '<span class="text-slate-500">—</span>';
+      const [cls, label] = playStateLabel[s.state] || ['bg-slate-600', s.state];
+      const price = s.play_price ? ` ${Number(s.play_price.amount).toFixed(2)} ${escapeText(s.play_price.currency || '')}` : '';
+      const mismatch = s.price_matches === false ? ' <span class="text-red-300">price differs</span>' : '';
+      return `<span class="${cls} px-1.5 py-0.5 rounded" title="${escapeText(s.detail || '')}">${label}</span><span class="text-slate-400">${price}</span>${mismatch}`;
+    }
+
+    async function checkPlayBilling() {
+      try {
+        const data = await adminFetch('/api/admin/ads/billing-status');
+        adState.billing = Object.fromEntries((data.packages || []).map(p => [p.id, p]));
+        renderAdPackages();
+        if (data.paused) alert('Note: PROMOTIONAL_BILLING_PAUSED is on - sales are paused.');
+      } catch (err) { alert(err.message); }
+    }
+
+    async function recheckAdLink(id) {
+      try {
+        const r = await adminFetch('/api/admin/ads/review', { method: 'POST', body: JSON.stringify({ target: 'campaign', id, action: 'recheck_link' }) });
+        alert(`Link check: ${r.outcome}${r.reason ? ' - ' + r.reason : ''}${r.final_url ? '\nFinal URL: ' + r.final_url : ''}`);
+        loadAds();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function recheckAllLinks() {
+      try {
+        const r = await adminFetch('/api/admin/ads/recheck-links', { method: 'POST', body: '{}' });
+        alert(`Checked ${r.checked}: ${r.ok || 0} fine, ${r.sent_to_review || 0} sent to review, ${r.suspended || 0} suspended, ${r.updated || 0} updated.`);
+        loadAds();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function saveAdPackage(id) {
+      const body = { id };
+      document.querySelectorAll(`[data-pkg="${CSS.escape(id)}"]`).forEach(input => {
+        const f = input.dataset.f;
+        if (input.type === 'checkbox') body[f] = input.checked;
+        else if (['price_usd', 'duration_hours', 'max_creatives', 'priority'].includes(f)) body[f] = Number(input.value);
+        else body[f] = input.value.trim();
+      });
+      try {
+        await adminFetch('/api/admin/ads/packages', { method: 'PATCH', body: JSON.stringify(body) });
+        alert('Saved');
+        loadAds();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function grantAdPackage() {
+      const body = {
+        username: document.getElementById('grantUsername').value,
+        package_id: document.getElementById('grantPackage').value,
+        note: document.getElementById('grantNote').value,
+      };
+      try {
+        await adminFetch('/api/admin/ads/grant', { method: 'POST', body: JSON.stringify(body) });
+        alert('Granted');
+        document.getElementById('grantNote').value = '';
+        loadAds();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function syncAdRefunds() {
+      try {
+        const result = await adminFetch('/api/admin/ads/sync-voided', { method: 'POST', body: JSON.stringify({ days: 30 }) });
+        alert(`Checked ${result.checked} voided Google Play purchases; ${result.revoked} package(s) ended.`);
+        loadAds();
+      } catch (err) { alert(err.message); }
+    }
+
+
+    // ---------------------------------------------------------------------
+    // Digital products
+    // ---------------------------------------------------------------------
+    const digitalState = { tiers: [], tierStatus: {} };
+
+    async function loadDigital() {
+      const box = document.getElementById('digitalProducts');
+      box.innerHTML = '<p class="text-slate-500">Loading…</p>';
+      try {
+        const data = await adminFetch(`/api/admin/digital?view=${document.getElementById('digitalView').value}`);
+        digitalState.tiers = data.tiers || [];
+        renderDigitalTiers();
+        document.getElementById('digitalEarnings').innerHTML = (data.seller_earnings || []).map(s =>
+          `<div class="flex flex-wrap items-center gap-2 py-1 border-t border-slate-700">
+            <span class="font-semibold">@${escapeText(s.seller_username)}</span>
+            <span class="text-green-300">cleared $${s.cleared_usd.toFixed(2)}</span>
+            <span class="text-yellow-300">on hold $${s.pending_usd.toFixed(2)}</span>
+            <span class="text-slate-400">paid $${s.paid_out_usd.toFixed(2)}</span>
+            ${s.cleared_usd > 0 ? `<button onclick="recordDigitalPayout('${escapeText(s.seller_username)}', ${s.cleared_usd})" class="ml-auto bg-green-800 hover:bg-green-700 px-2 py-0.5 rounded">Record payout</button>` : ''}
+          </div>`).join('') || '<div class="text-slate-500">No digital sales yet.</div>';
+        document.getElementById('digitalLicenses').innerHTML = (data.licenses || []).map(l =>
+          `<div class="flex gap-2 items-center">${new Date(l.created_at).toLocaleDateString()} · @${escapeText(l.participants?.username || '?')} · ${escapeText(l.provider || '')} · ${l.is_paid ? `$${Number(l.price_usd).toFixed(2)} ${escapeText(l.order_id || '')}` : 'granted'} · ${escapeText(l.status)}${l.status === 'active' ? ` <button onclick="revokeDigitalLicense('${l.id}')" class="ml-auto bg-red-900 hover:bg-red-800 px-2 rounded">End</button>` : ''}</div>`).join('') || '<div class="text-slate-500">None yet.</div>';
+
+        const products = data.products || [];
+        if (!products.length) { box.innerHTML = '<p class="text-slate-500">Nothing here.</p>'; return; }
+        box.innerHTML = products.map(p => {
+          const preview = p.preview?.type === 'pages'
+            ? `<div class="flex gap-2 overflow-x-auto">${p.preview.pages.map(u => `<img src="${escapeText(u)}" class="h-40 rounded bg-white">`).join('')}</div>`
+            : p.preview ? (p.preview.type === 'audio'
+              ? `<audio src="${escapeText(p.preview.url)}" controls preload="none"></audio>`
+              : `<video src="${escapeText(p.preview.url)}" controls preload="none" class="w-64 rounded bg-black"></video>`) : '';
+          const files = (p.files || []).map(f => `<div class="text-xs text-slate-300">${escapeText(f.title || f.kind)} · ${escapeText(f.format)} · ${(f.bytes / 1048576).toFixed(1)} MB${f.pages ? ` · ${f.pages} pages` : ''}${f.duration_seconds ? ` · ${Math.round(f.duration_seconds / 60)} min` : ''} · ${escapeText(f.status)}</div>`).join('');
+          const actions = p.status === 'pending_review'
+            ? `<button onclick="reviewDigital('${p.item_id}','approve')" class="bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Approve & publish</button>
+               <button onclick="reviewDigital('${p.item_id}','reject')" class="bg-red-800 hover:bg-red-700 px-3 py-1 rounded">Request changes</button>`
+            : p.status === 'published' ? `<button onclick="reviewDigital('${p.item_id}','suspend')" class="bg-red-800 hover:bg-red-700 px-3 py-1 rounded">Take off sale</button>`
+            : p.status === 'suspended' ? `<button onclick="reviewDigital('${p.item_id}','reinstate')" class="bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded">Put back on sale</button>` : '';
+          return `<div class="rounded-lg bg-slate-700/50 border border-slate-600/50 p-4 text-sm space-y-2">
+            <div class="flex justify-between gap-2">
+              <div><span class="font-semibold">${escapeText(p.title)}</span> <span class="text-slate-400">· ${escapeText(p.kind)} · $${Number(p.price_usd || 0).toFixed(2)} · @${escapeText(p.seller_username)}</span></div>
+              <span class="bg-slate-600 px-2 py-0.5 rounded text-xs">${escapeText(p.status)}</span>
+            </div>
+            <div class="text-xs ${p.rights_confirmed ? 'text-green-300' : 'text-red-300'}">${p.rights_confirmed ? 'Seller confirmed rights' : 'Rights NOT confirmed'}</div>
+            ${files}
+            ${preview}
+            ${p.review_note ? `<p class="text-xs text-amber-300">Note: ${escapeText(p.review_note)}</p>` : ''}
+            <div class="flex gap-2 text-xs">${actions}</div>
+          </div>`;
+        }).join('');
+      } catch (err) {
+        box.innerHTML = `<p class="text-red-400">Error: ${escapeText(err.message)}</p>`;
+      }
+    }
+
+    async function reviewDigital(itemId, action) {
+      let note = '';
+      if (action === 'approve' || action === 'reinstate') {
+        if (!confirm(action === 'approve' ? 'Approve and put this on sale? Check the preview and rights first.' : 'Put this back on sale?')) return;
+      } else {
+        note = prompt('Reason shown to the seller') || '';
+        if (!note.trim()) return;
+      }
+      try {
+        await adminFetch('/api/admin/digital/review', { method: 'POST', body: JSON.stringify({ item_id: itemId, action, note }) });
+        loadDigital();
+      } catch (err) { alert(err.message); }
+    }
+
+    function renderDigitalTiers() {
+      const label = { unconfigured: ['bg-slate-600', 'No product id'], not_found: ['bg-yellow-700', 'Not in Play Console'], inactive: ['bg-yellow-700', 'Inactive in Play'], active: ['bg-green-700', 'Purchasable'], check_failed: ['bg-red-800', 'Check failed'] };
+      document.getElementById('digitalTiers').innerHTML = `<table class="w-full text-xs"><thead class="text-slate-400 text-left"><tr><th class="py-1">Price</th><th>Google Play product id</th><th>Play status</th><th>Active</th><th></th></tr></thead><tbody>${
+        digitalState.tiers.map(t => {
+          const s = digitalState.tierStatus[t.id];
+          const [cls, text] = s ? (label[s.state] || ['bg-slate-600', s.state]) : ['', ''];
+          const status = s ? `<span class="${cls} px-1.5 py-0.5 rounded" title="${escapeText(s.detail || '')}">${text}</span>${s.price_matches === false ? ' <span class="text-red-300">price differs</span>' : ''}` : '<span class="text-slate-500">—</span>';
+          return `<tr class="border-t border-slate-700">
+            <td class="py-1">$${Number(t.price_usd).toFixed(2)}</td>
+            <td><input data-tier="${escapeText(t.id)}" value="${escapeText(t.google_play_product_id || '')}" placeholder="not set" class="w-52 bg-slate-700 rounded px-1"></td>
+            <td>${status}</td>
+            <td><input type="checkbox" data-tier-active="${escapeText(t.id)}" ${t.is_active ? 'checked' : ''}></td>
+            <td><button onclick="saveDigitalTier('${escapeText(t.id)}')" class="bg-slate-600 hover:bg-slate-500 px-2 py-0.5 rounded">Save</button></td>
+          </tr>`;
+        }).join('')}</tbody></table>`;
+    }
+
+    async function checkDigitalTiers() {
+      try {
+        const data = await adminFetch('/api/admin/digital/tiers');
+        digitalState.tiers = data.tiers || [];
+        digitalState.tierStatus = Object.fromEntries(digitalState.tiers.map(t => [t.id, t]));
+        renderDigitalTiers();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function saveDigitalTier(id) {
+      const productId = document.querySelector(`[data-tier="${CSS.escape(id)}"]`).value.trim();
+      const active = document.querySelector(`[data-tier-active="${CSS.escape(id)}"]`).checked;
+      try {
+        await adminFetch('/api/admin/digital/tiers', { method: 'PATCH', body: JSON.stringify({ id, google_play_product_id: productId, is_active: active }) });
+        alert('Saved');
+      } catch (err) { alert(err.message); }
+    }
+
+    async function grantDigital() {
+      const body = { username: document.getElementById('digitalGrantUser').value, item_id: document.getElementById('digitalGrantItem').value.trim(), note: document.getElementById('digitalGrantNote').value };
+      try {
+        await adminFetch('/api/admin/digital/grant', { method: 'POST', body: JSON.stringify(body) });
+        alert('Granted');
+        loadDigital();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function syncDigitalRefunds() {
+      try {
+        const r = await adminFetch('/api/admin/digital/sync-voided', { method: 'POST', body: JSON.stringify({ days: 30 }) });
+        alert(`Checked ${r.checked} voided Google Play purchases; ${r.revoked} licence(s) ended.`);
+        loadDigital();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function revokeDigitalLicense(id) {
+      const reason = prompt('End this licence now. Reason (shown to the buyer). This does not refund money - refund in Google Play / Paystack.');
+      if (!reason || !reason.trim()) return;
+      try {
+        await adminFetch('/api/admin/digital/revoke', { method: 'POST', body: JSON.stringify({ license_id: id, reason }) });
+        loadDigital();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function loadDigitalSubs(check) {
+      const box = document.getElementById('digitalSubProducts');
+      box.innerHTML = '<p class="text-slate-500 text-xs">Loading…</p>';
+      try {
+        const data = await adminFetch(`/api/admin/digital/subscriptions${check ? '?check=1' : ''}`);
+        const label = { unconfigured: ['bg-slate-600', 'No product id'], not_found: ['bg-yellow-700', 'Not in Play Console'], inactive: ['bg-yellow-700', 'No active monthly plan'], ambiguous: ['bg-red-800', 'Several monthly plans'], active: ['bg-green-700', 'Purchasable'], check_failed: ['bg-red-800', 'Check failed'] };
+        box.innerHTML = `<table class="w-full text-xs"><thead class="text-slate-400 text-left"><tr><th class="py-1">Price / month</th><th>Slot</th><th>Google Play product id</th><th>Play status</th><th>Active</th><th></th></tr></thead><tbody>${
+          (data.products || []).map(p => {
+            const [cls, text] = p.state ? (label[p.state] || ['bg-slate-600', p.state]) : ['', ''];
+            const status = p.state ? `<span class="${cls} px-1.5 py-0.5 rounded" title="${escapeText(p.detail || '')}">${text}</span>${p.price_matches === false ? ' <span class="text-red-300">price differs</span>' : ''}` : '<span class="text-slate-500">—</span>';
+            return `<tr class="border-t border-slate-700"><td class="py-1">$${Number(p.price_usd).toFixed(2)}</td><td>${p.slot}</td>
+              <td><input data-subprod="${escapeText(p.id)}" value="${escapeText(p.google_play_product_id || '')}" placeholder="not set" class="w-56 bg-slate-700 rounded px-1"></td>
+              <td>${status}</td><td><input type="checkbox" data-subprod-active="${escapeText(p.id)}" ${p.is_active ? 'checked' : ''}></td>
+              <td><button onclick="saveDigitalSubProduct('${escapeText(p.id)}')" class="bg-slate-600 hover:bg-slate-500 px-2 py-0.5 rounded">Save</button></td></tr>`;
+          }).join('')}</tbody></table>
+          <div class="flex flex-wrap gap-2 mt-2 text-xs">${(data.tiers || []).map(t => `<button onclick="addDigitalSubSlot('${escapeText(t.id)}')" class="bg-slate-700 hover:bg-slate-600 px-2 py-0.5 rounded">+ slot at $${Number(t.price_usd).toFixed(2)}</button>`).join('')}</div>
+          <p class="text-xs text-slate-400 mt-2">${data.plans.filter(p => p.is_active).length} creator plan(s) on · website card payments ${data.paystack_configured ? 'configured' : '<span class="text-red-300">not configured (PAYSTACK_SECRET_KEY)</span>'}</p>`;
+        document.getElementById('digitalSubs').innerHTML = (data.subscriptions || []).map(s =>
+          `<div class="flex gap-2 items-center">${new Date(s.created_at).toLocaleDateString()} · @${escapeText(s.participants?.username || '?')} → @${escapeText(s.creator_username)} · ${escapeText(s.provider)} · $${Number(s.price_usd).toFixed(2)} · ${escapeText(s.status)}${s.auto_renew ? '' : ' (not renewing)'} · until ${new Date(s.current_period_end).toLocaleDateString()}${s.last_renewal_error ? ` · <span class="text-red-300">${escapeText(s.last_renewal_error)}</span>` : ''}${['active', 'past_due'].includes(s.status) ? ` <button onclick="endDigitalSub('${s.id}')" class="ml-auto bg-red-900 hover:bg-red-800 px-2 rounded">End</button>` : ''}</div>`).join('') || '<div class="text-slate-500">None yet.</div>';
+        document.getElementById('digitalPayments').innerHTML = (data.payments || []).map(p =>
+          `<div>${new Date(p.created_at).toLocaleString()} · @${escapeText(p.participants?.username || '?')} · ${escapeText(p.purpose)} ${p.creator_username ? '@' + escapeText(p.creator_username) : ''} · $${Number(p.price_usd).toFixed(2)} (₦${(Number(p.amount_kobo) / 100).toLocaleString()}) · <span class="${p.status === 'paid' ? 'text-green-300' : p.status === 'refund_pending' ? 'text-red-300' : 'text-slate-400'}">${escapeText(p.status)}</span>${p.failure ? ' · ' + escapeText(p.failure) : ''} · ${escapeText(p.reference)}</div>`).join('') || '<div class="text-slate-500">None yet.</div>';
+      } catch (err) {
+        box.innerHTML = `<p class="text-red-400 text-xs">${escapeText(err.message)} (run supabase/add_digital_phase2.sql first)</p>`;
+      }
+    }
+
+    async function saveDigitalSubProduct(id) {
+      const productId = document.querySelector(`[data-subprod="${CSS.escape(id)}"]`).value.trim();
+      const active = document.querySelector(`[data-subprod-active="${CSS.escape(id)}"]`).checked;
+      try {
+        await adminFetch('/api/admin/digital/subscriptions', { method: 'PATCH', body: JSON.stringify({ id, google_play_product_id: productId, is_active: active }) });
+        alert('Saved');
+      } catch (err) { alert(err.message); }
+    }
+
+    async function addDigitalSubSlot(tierId) {
+      if (!confirm('Add one more Google Play subscription product (slot) at this price? Create it in Play Console with the id shown.')) return;
+      try {
+        await adminFetch('/api/admin/digital/subscriptions', { method: 'POST', body: JSON.stringify({ action: 'add_slot', tier_id: tierId }) });
+        loadDigitalSubs(false);
+      } catch (err) { alert(err.message); }
+    }
+
+    async function endDigitalSub(id) {
+      const reason = prompt('End this subscription now. Reason? (No refund is issued here.)');
+      if (!reason || !reason.trim()) return;
+      try {
+        await adminFetch('/api/admin/digital/subscriptions', { method: 'POST', body: JSON.stringify({ action: 'end', subscription_id: id, reason }) });
+        loadDigitalSubs(false);
+      } catch (err) { alert(err.message); }
+    }
+
+    async function runDigitalBillingSync() {
+      if (!confirm('Run the digital billing job now? It confirms website payments, applies refunds, and CHARGES saved cards for website subscriptions due within a day.')) return;
+      try {
+        const r = await adminFetch('/api/admin/digital/billing-sync', { method: 'POST', body: JSON.stringify({ days: 30 }) });
+        alert(JSON.stringify(r, null, 2));
+        loadDigital(); loadDigitalSubs(false);
+      } catch (err) { alert(err.message); }
+    }
+
+    async function recordDigitalPayout(seller, amount) {
+      const reference = prompt(`Payout of $${amount.toFixed(2)} to @${seller}. Enter the transfer reference after paying:`);
+      if (!reference || !reference.trim()) return;
+      try {
+        const r = await adminFetch('/api/admin/digital/payouts', { method: 'POST', body: JSON.stringify({ seller_username: seller, reference }) });
+        alert(`Recorded $${r.total_usd.toFixed(2)} for ${r.sales} sale(s).`);
+        loadDigital();
+      } catch (err) { alert(err.message); }
+    }
+
 
     // Check if already logged in
     if (state.token) {

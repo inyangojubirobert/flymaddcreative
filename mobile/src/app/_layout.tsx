@@ -77,6 +77,12 @@ function RootNavigator() {
         <Stack.Screen name="ai" options={{ headerShown: true, title: 'Bascardo AI' }} />
         <Stack.Screen name="ai-subscription" options={{ headerShown: true, title: 'AI Subscription' }} />
         <Stack.Screen name="faq" options={{ headerShown: true, title: 'Help & FAQ' }} />
+        <Stack.Screen name="promote/index" options={{ headerShown: true, title: 'Promote' }} />
+        <Stack.Screen name="promote/campaign" options={{ headerShown: true, title: 'Campaign' }} />
+        <Stack.Screen name="library/index" options={{ headerShown: true, title: 'My Library' }} />
+        <Stack.Screen name="library/[licenseId]" options={{ headerShown: true, title: '' }} />
+        <Stack.Screen name="catalogue/digital/[itemId]" options={{ headerShown: true, title: 'Sell as digital' }} />
+        <Stack.Screen name="catalogue/digital/subscription" options={{ headerShown: true, title: 'Monthly subscription' }} />
       </Stack.Protected>
       <Stack.Protected guard={!token}>
         <Stack.Screen name="index" />

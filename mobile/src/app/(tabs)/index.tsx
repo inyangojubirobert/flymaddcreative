@@ -1,4 +1,5 @@
 import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { SponsoredBanner } from '@/components/sponsored';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -121,6 +122,8 @@ export default function HomeScreen() {
             </View>
             <Ionicons name="arrow-forward" size={20} color={Palette.yellowInk} />
           </Pressable>
+
+          <SponsoredBanner placement="home" />
 
           <View style={styles.browseHeader}>
             <View style={styles.sectionTitleWrap}>

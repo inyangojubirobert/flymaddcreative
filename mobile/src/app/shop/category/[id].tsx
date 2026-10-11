@@ -11,6 +11,7 @@ import { CatalogueBanner } from '@/components/catalogue-visuals';
 import { getCategories, getShopFeed } from '@/api/catalogue';
 import { FLOATING_CART_SPACE, FloatingCart } from '@/components/floating-cart';
 import { ListingCard } from '@/components/listing-card';
+import { SponsoredAdCard, useSponsored } from '@/components/sponsored';
 import { BottomTabInset, Palette, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { buildCatalogueDirectory, departmentForCategory } from '@/lib/catalogue-directory';
@@ -44,6 +45,9 @@ export default function CategoryScreen() {
   const cardWidth = Math.floor((width - Spacing.three * 2 - Spacing.three) / 2);
   const needle = query.trim().toLowerCase();
   const searchQuery = useMarketplaceSearch(categoryId ? query : '', { categoryId });
+  const sponsored = useSponsored('category', { ads: 1, boosts: 4, categoryId });
+  const boosted = (sponsored.data?.boosted ?? []).filter(({ listing }) => !needle
+    || [listing.title, listing.description].some((text) => (text || '').toLowerCase().includes(needle)));
   const products = marketplaceItems({
     remote: searchQuery.data?.items, cached: itemsQuery.data, query,
     useLocal: searchQuery.useLocalItems, scopeIds: categoryId ? [categoryId] : [],
@@ -85,6 +89,7 @@ export default function CategoryScreen() {
           </View>
 
           {searchQuery.degraded ? <ThemedText type="small">Some results are unavailable. Pull to retry.</ThemedText> : null}
+          {sponsored.data?.ads?.[0] ? <SponsoredAdCard ad={sponsored.data.ads[0]} placement="category" /> : null}
           <ThemedText type="smallBold">{products.length ? `${products.length} listing${products.length === 1 ? '' : 's'}` : 'Listings'}</ThemedText>
 
           {(needle ? searchQuery.isSearching : itemsQuery.isLoading) || categoriesQuery.isLoading ? (
@@ -95,6 +100,9 @@ export default function CategoryScreen() {
             <ThemedText style={styles.empty}>Couldn&apos;t load listings. Pull to retry.</ThemedText>
           ) : products.length ? (
             <View style={styles.grid}>
+              {boosted.map((boost) => (
+                <ListingCard key={`boost-${boost.campaign_id}`} item={boost.listing} width={cardWidth} sponsored={{ campaignId: boost.campaign_id, placement: 'category' }} />
+              ))}
               {products.map((item) => (
                 <ListingCard key={item.id} item={item} width={cardWidth} />
               ))}

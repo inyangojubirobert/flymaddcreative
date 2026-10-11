@@ -11,6 +11,7 @@
 // payment server-side regardless of what the client claims.
 
 import { createClient } from '@supabase/supabase-js';
+import { DIGITAL_CHECKOUT_MESSAGE, digitalItemIds } from '../../../lib/digitalGuard';
 import { getUsdToNgnRate, usdToKobo, usdToNgn } from '../../../lib/currency';
 import { resolveCallbackUrl } from '../../../lib/paystackCallbackUrl';
 
@@ -38,6 +39,9 @@ export default async function handler(req, res) {
 
     if (itemError || !item || item.status === 'deleted') {
       return res.status(404).json({ error: 'Product not found' });
+    }
+    if ((await digitalItemIds(supabase, [item.id])).size) {
+      return res.status(409).json({ error: DIGITAL_CHECKOUT_MESSAGE });
     }
 
     const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;

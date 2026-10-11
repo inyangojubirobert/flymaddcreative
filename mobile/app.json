@@ -2,7 +2,7 @@
   "expo": {
     "name": "One Dream Initiative",
     "slug": "onedream-mobile",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "flymaddcreative",
@@ -13,7 +13,7 @@
     },
     "android": {
       "package": "com.flymaddcreative.onedream",
-      "versionCode": 18,
+      "versionCode": 19,
       "adaptiveIcon": {
         "backgroundColor": "#04457B",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -44,7 +44,14 @@
           "color": "#04457B"
         }
       ],
-      "react-native-iap"
+      "react-native-iap",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false
+        }
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

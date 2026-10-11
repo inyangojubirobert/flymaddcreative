@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FlatList, StyleSheet, Pressable, TextInput, ActivityIndicator, Alert, Modal, ScrollView, Switch, Image, View, KeyboardAvoidingView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -54,6 +54,7 @@ const EMPTY_DRAFT: Draft = { title: '', description: '', size: '', category_id: 
 export default function MyListingsScreen() {
   const { participant, token } = useAuth();
   const sellerContact = useSellerContact();
+  const router = useRouter();
   const theme = useTheme();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -545,6 +546,11 @@ export default function MyListingsScreen() {
                   >
                     <ThemedText type="small">Edit</ThemedText>
                   </Pressable>
+                  {(item.listing_type ?? 'product') === 'product' ? (
+                    <Pressable onPress={() => router.push(`/catalogue/digital/${item.id}` as never)} style={styles.editButton}>
+                      <ThemedText type="small" style={{ color: Palette.blue }}>Sell as digital</ThemedText>
+                    </Pressable>
+                  ) : null}
                   <Pressable onPress={() => handleDelete(item)} style={styles.editButton}>
                     <ThemedText type="small" style={{ color: '#e5484d' }}>Delete</ThemedText>
                   </Pressable>

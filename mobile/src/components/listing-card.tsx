@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,18 +9,33 @@ import { Palette } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { MAX_CART_LINES, useCart } from '@/contexts/CartContext';
 import { useTheme } from '@/hooks/use-theme';
+import { trackAdEvent, type AdPlacement } from '@/api/ads';
+import { SponsoredTag } from '@/components/sponsored';
 
-/** Marketplace grid card: opens the listing, toggles it in the cart, links to the seller. */
-export function ListingCard({ item, width }: { item: CatalogueItem; width: number }) {
+/**
+ * Marketplace grid card: opens the listing, toggles it in the cart, links to
+ * the seller. `sponsored` marks a paid listing boost: it is labelled and its
+ * impressions/clicks are counted for the seller's campaign.
+ */
+export function ListingCard({ item, width, sponsored }: { item: CatalogueItem; width: number; sponsored?: { campaignId: string; placement: AdPlacement } }) {
   const theme = useTheme();
   const router = useRouter();
   const photo = item.images?.[0];
+  useEffect(() => {
+    if (sponsored) trackAdEvent(sponsored.campaignId, 'impression', sponsored.placement);
+  }, [sponsored?.campaignId, sponsored?.placement]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <Pressable onPress={() => router.push(`/catalogue/item/${item.id}` as never)} style={[styles.card, { width, backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+    <Pressable
+      onPress={() => {
+        if (sponsored) trackAdEvent(sponsored.campaignId, 'click', sponsored.placement);
+        router.push(`/catalogue/item/${item.id}` as never);
+      }}
+      style={[styles.card, { width, backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
       <View style={[styles.media, { height: Math.round(width * 0.92) }]}>
         {photo ? <Image source={{ uri: photo }} style={styles.photo} /> : <View style={styles.photoFallback}><Ionicons name="image" size={28} color={Palette.slate} /></View>}
         {item.promo_video_url ? <View style={styles.videoBadge}><Ionicons name="play" size={12} color="#fff" /></View> : null}
         <CartChecker item={item} style={styles.checker} />
+        {sponsored ? <SponsoredTag /> : null}
       </View>
       <View style={styles.cardCopy}>
         <ThemedText type="smallBold" numberOfLines={2} style={styles.title}>{item.title}</ThemedText>

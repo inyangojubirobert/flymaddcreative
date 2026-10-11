@@ -192,6 +192,7 @@
                     <span id="payBtnText">Select Payment Method</span>
                 </button>
                 <div id="payMsg" class="hidden mt-3 p-3 rounded-lg text-sm text-center"></div>
+                <div id="digitalBox" class="hidden mt-3 space-y-3"></div>
             </div>
         </div>
     </div>
@@ -281,8 +282,92 @@ async function loadProduct(id) {
         currentItem = await window.SupabaseAPI.getCatalogueItem(id);
         if (!currentItem || currentItem.status === 'deleted') { showError(); return; }
         renderProduct(currentItem);
+        // Digital products never go through the marketplace checkout above
+        // (no escrow order, no charge started there). They are bought with
+        // their own card checkout (or Google Play in the app) and delivered
+        // to the buyer's Library.
+        const token = localStorage.getItem('onedream_token');
+        const digital = await fetch('/api/digital/product?item_id=' + encodeURIComponent(id), token ? { headers: { Authorization: 'Bearer ' + token } } : {})
+            .then(r => r.ok ? r.json() : {}).catch(() => ({}));
+        if (digital.product) {
+            currentItem.isDigital = true;
+            const btn = document.getElementById('payBtn');
+            btn.disabled = true;
+            btn.classList.add('hidden');
+            renderDigitalBox(digital, token);
+            const ref = new URLSearchParams(window.location.search).get('reference');
+            if (ref && /^dgp_[a-f0-9]{24}$/.test(ref) && token) confirmDigitalPayment(ref, token);
+        }
     } catch (e) {
         showError();
+    }
+}
+
+function digitalButton(label, onclick, primary) {
+    return '<button onclick="' + onclick + '" class="w-full py-3 rounded-xl font-bold ' + (primary ? 'pay-btn text-black' : 'bg-slate-700 hover:bg-slate-600 text-white') + '">' + label + '</button>';
+}
+
+function renderDigitalBox(d, token) {
+    const box = document.getElementById('digitalBox');
+    const p = d.product;
+    const kind = { ebook: 'e-book', audio: 'audio', video: 'video' }[p.kind] || p.kind;
+    const library = '<a href="/app/library" class="block text-center w-full py-3 rounded-xl font-bold pay-btn text-black">Open your Library</a>';
+    let html = '<p class="text-sm text-slate-300">Digital ' + kind + ' · instant access in your One Dream Library (web app or Android app).</p>';
+    if (d.owned) {
+        html += library;
+    } else if (d.is_seller) {
+        html += '<p class="text-sm text-slate-400">This is your product. Manage it in the One Dream app.</p>';
+    } else if (d.subscription && d.subscription.subscribed) {
+        html += '<p class="text-sm text-green-300">Included in your @' + escapeHtml(d.subscription.creator_username) + ' subscription.</p>' + library;
+    } else if (!token) {
+        html += '<a href="/login.html?redirect=' + encodeURIComponent(location.pathname + location.search) + '" class="block text-center w-full py-3 rounded-xl font-bold pay-btn text-black">Log in to buy</a>';
+    } else if (!d.web_payment) {
+        html += '<p class="text-sm text-slate-400">Card payments for digital products are not available right now. You can buy it in the One Dream Android app.</p>';
+    } else {
+        html += digitalButton('Buy with card · $' + Number(p.price_usd).toFixed(2) + ' (charged in NGN)', "startDigitalCheckout('purchase')", true);
+        if (d.subscription) {
+            html += '<div class="rounded-xl bg-slate-800 border border-slate-700 p-3 space-y-2"><p class="text-sm font-semibold">Or subscribe to @' + escapeHtml(d.subscription.creator_username) + '</p>'
+                + '<p class="text-xs text-slate-400">$' + Number(d.subscription.price_usd).toFixed(2) + '/month for this and everything else they include. Renews monthly on your card; cancel any time in your Library and keep access until the month ends.</p>'
+                + (d.subscription.description ? '<p class="text-xs text-slate-300">' + escapeHtml(d.subscription.description) + '</p>' : '')
+                + digitalButton('Subscribe · $' + Number(d.subscription.price_usd).toFixed(2) + '/month', "startDigitalCheckout('subscription', '" + encodeURIComponent(d.subscription.creator_username) + "')", false) + '</div>';
+        }
+    }
+    box.innerHTML = html;
+    box.classList.remove('hidden');
+}
+
+function escapeHtml(text) {
+    return String(text || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+async function startDigitalCheckout(purpose, creator) {
+    const token = localStorage.getItem('onedream_token');
+    if (!token) { location.href = '/login.html'; return; }
+    showPayMsg('Starting secure card payment…', 'info');
+    try {
+        const body = purpose === 'purchase' ? { purpose, item_id: currentItem.id } : { purpose, creator_username: decodeURIComponent(creator) };
+        body.callback_url = location.origin + location.pathname + '?item=' + encodeURIComponent(currentItem.id);
+        const res = await fetch('/api/digital/paystack-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not start the payment');
+        location.href = data.authorization_url;
+    } catch (e) {
+        showPayMsg(e.message, 'error');
+    }
+}
+
+async function confirmDigitalPayment(reference, token, attempt = 0) {
+    showPayMsg('Confirming your payment…', 'info');
+    try {
+        const res = await fetch('/api/digital/paystack-verify', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ reference }) });
+        const data = await res.json();
+        if (res.status === 202 && attempt < 5) { setTimeout(() => confirmDigitalPayment(reference, token, attempt + 1), 3000); return; }
+        if (!res.ok || !data.success) throw new Error(data.error || 'Payment not completed');
+        showPayMsg(data.purpose === 'subscription' ? 'Subscription active! Everything it includes is in your Library.' : 'Payment confirmed! It is in your Library.', 'success');
+        history.replaceState(null, '', location.pathname + '?item=' + encodeURIComponent(currentItem.id));
+        loadProduct(currentItem.id);
+    } catch (e) {
+        showPayMsg(e.message + ' (reference ' + reference + ')', 'error');
     }
 }
 
@@ -388,6 +473,7 @@ function copyUsdtAddress() {
 // Pay handler
 // ──────────────────────────────────────────────
 async function handlePay() {
+    if (currentItem && currentItem.isDigital) { showPayMsg('Use the digital product buttons below.', 'error'); return; }
     if (!selectedMethod) { showPayMsg('Please select a payment method.', 'error'); return; }
     const name    = document.getElementById('buyerName').value.trim();
     const email   = document.getElementById('buyerEmail').value.trim();
@@ -495,6 +581,7 @@ function showPayMsg(msg, type) {
     el.textContent = msg;
     el.className = `mt-3 p-3 rounded-lg text-sm text-center ${type === 'success'
         ? 'bg-green-900/50 text-green-300 border border-green-700/50'
+        : type === 'info' ? 'bg-slate-800 text-slate-200 border border-slate-600'
         : 'bg-red-900/50 text-red-300 border border-red-700/50'}`;
     el.classList.remove('hidden');
     setTimeout(() => el.classList.add('hidden'), 7000);

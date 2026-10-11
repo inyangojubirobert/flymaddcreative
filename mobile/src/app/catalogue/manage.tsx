@@ -83,6 +83,12 @@ export default function ManageShopScreen() {
               <Ionicons name="add-circle" size={19} color="#1F2937" />
               <ThemedText style={styles.primaryButtonText}>{products.length ? 'Add or edit products' : 'Create first product'}</ThemedText>
             </Pressable>
+            {activeProducts > 0 ? (
+              <Pressable onPress={() => router.push('/promote' as never)} style={styles.outlineButton}>
+                <Ionicons name="rocket" size={18} color={Palette.blueDark} />
+                <ThemedText style={styles.outlineButtonText}>Boost a listing</ThemedText>
+              </Pressable>
+            ) : null}
             {products.length > 0 ? (
               <Pressable onPress={() => router.push(`/catalogue/${username}` as never)} style={styles.outlineButton}>
                 <Ionicons name="eye" size={18} color={Palette.blueDark} />

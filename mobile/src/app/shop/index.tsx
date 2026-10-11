@@ -8,9 +8,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { CatalogueBanner, CatalogueThumb } from '@/components/catalogue-visuals';
-import { getCategories, getShopFeed } from '@/api/catalogue';
+import { getCategories, getShopFeed, type CatalogueItem } from '@/api/catalogue';
 import { FLOATING_CART_SPACE, FloatingCart } from '@/components/floating-cart';
 import { ListingCard } from '@/components/listing-card';
+import { SponsoredAdCard, useSponsored } from '@/components/sponsored';
 import { BottomTabInset, Palette, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { buildCatalogueDirectory, categorySearchText, featuredEntries, hasListingKinds, type ListingKind, type ShopDepartment } from '@/lib/catalogue-directory';
@@ -74,6 +75,9 @@ export default function ShopScreen() {
   const cardWidth = Math.floor((width - Spacing.three * 2 - Spacing.three) / 2);
   const needle = query.trim().toLowerCase();
   const categoryText = categorySearchText(categoriesQuery.data ?? []);
+  // Sponsored: one ad banner + up to 4 boosted listings (search only shows relevant boosts).
+  const sponsoredPlacement = needle ? 'search' : 'shop';
+  const sponsored = useSponsored(sponsoredPlacement, { ads: 1, boosts: 4 });
   const products = marketplaceItems({
     remote: searchQuery.data?.items, cached: itemsQuery.data, query,
     useLocal: searchQuery.useLocalItems, scopeIds, listingType, categoryText,
@@ -177,6 +181,7 @@ export default function ShopScreen() {
                 </ScrollView>
               )}
 
+              {sponsored.data?.ads?.[0] && !browsingDirectory ? <SponsoredAdCard ad={sponsored.data.ads[0]} placement={sponsoredPlacement} /> : null}
               <ThemedText type="smallBold">{galleryTitle}</ThemedText>
               {feed === 'popular' && !department ? (
                 <ThemedText type="small" themeColor="textSecondary">Latest live listings until a popularity ranking is available.</ThemedText>
@@ -193,6 +198,9 @@ export default function ShopScreen() {
                 <ThemedText style={styles.empty}>Couldn&apos;t load the shop. Pull to retry.</ThemedText>
               ) : products.length ? (
                 <View style={styles.grid}>
+                  {boostedFor(sponsored.data?.boosted, products, needle, scopeIds).map((boost) => (
+                    <ListingCard key={`boost-${boost.campaign_id}`} item={boost.listing} width={cardWidth} sponsored={{ campaignId: boost.campaign_id, placement: sponsoredPlacement }} />
+                  ))}
                   {products.map((item) => (
                     <ListingCard key={item.id} item={item} width={cardWidth} />
                   ))}
@@ -207,6 +215,13 @@ export default function ShopScreen() {
       <FloatingCart />
     </ThemedView>
   );
+}
+
+/** Boosted listings that fit the current view, shown before (not duplicated in) the regular grid. */
+function boostedFor(boosted: { campaign_id: string; listing: CatalogueItem }[] | undefined, products: CatalogueItem[], needle: string, scopeIds: string[] | null) {
+  return (boosted ?? []).filter(({ listing }) =>
+    (!scopeIds || scopeIds.includes(listing.category_id || ''))
+    && (!needle || [listing.title, listing.description].some((text) => (text || '').toLowerCase().includes(needle))));
 }
 
 function paramValue(value: string | string[] | undefined) {

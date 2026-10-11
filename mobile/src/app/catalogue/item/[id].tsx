@@ -14,6 +14,7 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { cataloguePriceLabel, getCatalogueItem, createItemPaymentIntent, createOrder, orderAction, type CatalogueOrder } from '@/api/catalogue';
 import { loadRemoteConfig } from '@/lib/remote-config';
+import { DigitalProductPanel, useDigitalProduct } from '@/components/digital-product';
 import { ApiError } from '@/lib/api-client';
 
 type PayMethod = 'paystack' | 'usdt_bsc' | 'usdt_tron';
@@ -33,6 +34,9 @@ export default function CatalogueItemScreen() {
   const router = useRouter();
 
   const itemQuery = useQuery({ queryKey: ['catalogue-item', id], queryFn: () => getCatalogueItem(id), enabled: !!id });
+  // Digital products are bought with Google Play and delivered to the Library, not through this checkout.
+  const digitalQuery = useDigitalProduct(id);
+  const digital = digitalQuery.data?.product ?? null;
 
   const [selectedMethod, setMethod] = useState<PayMethod>('paystack');
   const [name, setName] = useState('');
@@ -251,6 +255,11 @@ export default function CatalogueItemScreen() {
                 </ThemedView>
               ) : null}
 
+              {digital ? (
+                <DigitalProductPanel product={digital} owned={!!digitalQuery.data?.owned} licenseId={digitalQuery.data?.license_id ?? null} isSeller={!!digitalQuery.data?.is_seller}
+                  webPayment={!!digitalQuery.data?.web_payment} subscription={digitalQuery.data?.subscription ?? null} />
+              ) : null}
+              {digital || digitalQuery.isLoading ? null : (<>
               <ThemedText type="smallBold" style={styles.sectionLabel}>Your details</ThemedText>
               <TextInput placeholder="Full name" placeholderTextColor={theme.textSecondary} value={name} onChangeText={setName} style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />
               <TextInput placeholder="Email" placeholderTextColor={theme.textSecondary} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />
@@ -299,6 +308,7 @@ export default function CatalogueItemScreen() {
                   <ThemedText type="small" themeColor="textSecondary">USDT orders are manually verified by the seller before delivery.</ThemedText>
                 </ThemedView>
               )}
+              </>)}
             </>
           )}
         </ScrollView>

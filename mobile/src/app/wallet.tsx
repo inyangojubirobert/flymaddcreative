@@ -19,6 +19,7 @@ import {
   type MarketplaceSale,
 } from '@/api/wallet';
 import { ApiError } from '@/lib/api-client';
+import { DigitalEarningsPanel } from '@/components/digital-earnings';
 
 // Two balances, kept separate in accounting and shown side by side:
 //   Marketplace earnings - sales after One Dream's commission; withdrawable
@@ -26,7 +27,7 @@ import { ApiError } from '@/lib/api-client';
 //   Vote rewards         - $1 per vote received.
 // The server recomputes every balance before accepting a withdrawal.
 
-type Tab = 'marketplace' | 'votes';
+type Tab = 'marketplace' | 'digital' | 'votes';
 
 const usd = (value: number) => `$${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -52,10 +53,11 @@ export default function WalletScreen() {
       <Stack.Screen options={{ title: 'Wallet' }} />
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <View style={styles.tabs}>
-          <TabButton label="Marketplace earnings" icon="storefront" selected={tab === 'marketplace'} onPress={() => setTab('marketplace')} />
-          <TabButton label="Vote rewards" icon="trophy" selected={tab === 'votes'} onPress={() => setTab('votes')} />
+          <TabButton label="Marketplace" icon="storefront" selected={tab === 'marketplace'} onPress={() => setTab('marketplace')} />
+          <TabButton label="Digital" icon="library" selected={tab === 'digital'} onPress={() => setTab('digital')} />
+          <TabButton label="Votes" icon="trophy" selected={tab === 'votes'} onPress={() => setTab('votes')} />
         </View>
-        {tab === 'marketplace' ? <MarketplaceWallet /> : <VoteWallet />}
+        {tab === 'marketplace' ? <MarketplaceWallet /> : tab === 'digital' ? <DigitalEarningsPanel /> : <VoteWallet />}
       </SafeAreaView>
     </ThemedView>
   );

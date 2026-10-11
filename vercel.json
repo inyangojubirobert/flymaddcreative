@@ -33,5 +33,23 @@
         }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/admin/ads/sync-voided",
+      "schedule": "15 3 * * *"
+    },
+    {
+      "path": "/api/admin/ads/recheck-links",
+      "schedule": "45 3 * * *"
+    },
+    {
+      "path": "/api/admin/digital/sync-voided",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/admin/digital/billing-sync",
+      "schedule": "40 3 * * *"
+    }
   ]
 }
