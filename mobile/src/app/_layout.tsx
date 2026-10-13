@@ -5,14 +5,22 @@ import 'react-native-url-polyfill/auto';
 
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
-import { ActivityIndicator, useColorScheme } from 'react-native';
+import { ActivityIndicator, Platform } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { ThemedView } from '@/components/themed-view';
 import { UpdateBanner } from '@/components/UpdateBanner';
+import { WebAlertHost } from '@/components/web-alert-host';
+import { WebShell } from '@/components/web-shell';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { loadPushNotifications } from '@/lib/push-notifications';
+
+// Web: when a payment window (Paystack) returns to the app, hand the result
+// back to the page that opened it and close the window. No-op on native.
+WebBrowser.maybeCompleteAuthSession();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,15 +31,25 @@ const queryClient = new QueryClient({
   },
 });
 
+// Web: screens are transparent over the website-style page gradient; headers are glass.
+const WebNavigationTheme = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: 'transparent', card: 'rgba(15, 23, 42, 0.82)', border: 'rgba(255, 255, 255, 0.1)', primary: '#FACC15' },
+};
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const navigationTheme = Platform.OS === 'web' ? WebNavigationTheme : colorScheme === 'dark' ? DarkTheme : DefaultTheme;
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navigationTheme}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <CartProvider>
-            <RootNavigator />
+            <WebShell>
+              <RootNavigator />
+            </WebShell>
             <UpdateBanner />
+            <WebAlertHost />
           </CartProvider>
         </AuthProvider>
       </QueryClientProvider>

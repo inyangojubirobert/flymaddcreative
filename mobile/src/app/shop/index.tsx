@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ import { ListingCard } from '@/components/listing-card';
 import { SponsoredAdCard, useSponsored } from '@/components/sponsored';
 import { BottomTabInset, Palette, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useGridCardWidth } from '@/hooks/use-content-width';
 import { buildCatalogueDirectory, categorySearchText, featuredEntries, hasListingKinds, type ListingKind, type ShopDepartment } from '@/lib/catalogue-directory';
 
 import { useMarketplaceSearch } from '@/hooks/use-marketplace-search';
@@ -32,7 +33,7 @@ export default function ShopScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ category?: string; department?: string; view?: string }>();
-  const { width } = useWindowDimensions();
+  const cardWidth = useGridCardWidth({ padding: Spacing.three, gap: Spacing.three });
   const [departmentSlug, setDepartmentSlug] = useState<string | null>(paramValue(params.department));
   const [showDirectory, setShowDirectory] = useState(paramValue(params.view) === 'directory');
   const [feed, setFeed] = useState<ShopFeed>('foryou');
@@ -72,7 +73,6 @@ export default function ShopScreen() {
     enabled: !browsingDirectory && !emptyScope && (!!department || feed !== 'following'),
   });
 
-  const cardWidth = Math.floor((width - Spacing.three * 2 - Spacing.three) / 2);
   const needle = query.trim().toLowerCase();
   const categoryText = categorySearchText(categoriesQuery.data ?? []);
   // Sponsored: one ad banner + up to 4 boosted listings (search only shows relevant boosts).

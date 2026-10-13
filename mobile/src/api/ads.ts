@@ -21,6 +21,8 @@ export type AdPackage = {
   highlight: string | null;
   purchasable: boolean;
   google_play_product_id: string | null;
+  /** Web app: can be bought by card (Paystack). */
+  card_purchasable?: boolean;
 };
 
 export type AdMedia = {
@@ -44,7 +46,7 @@ export type AdEntitlement = {
   package: Pick<AdPackage, 'id' | 'kind' | 'name' | 'price_usd' | 'duration_hours' | 'max_creatives' | 'placements' | 'priority' | 'allow_external_link'>;
   status: 'available' | 'used' | 'refunded' | 'revoked';
   is_paid: boolean;
-  provider: 'google_play' | 'admin_grant';
+  provider: 'google_play' | 'paystack' | 'admin_grant';
   order_id: string | null;
   price_usd: number | null;
   revoke_reason: string | null;
@@ -182,6 +184,16 @@ export async function uploadAdMedia(
     body: { public_id: uploaded.public_id, resource_type: file.type },
   });
   return registered.media;
+}
+
+// --- Website card payments (Paystack) - web app only -----------------------------
+
+export function startAdCardCheckout(token: string, input: { package_id: string; callback_url?: string }): Promise<{ authorization_url: string; reference: string; amount_ngn: number; price_usd: number }> {
+  return apiFetch('/api/ads/paystack-checkout', { method: 'POST', token, body: input });
+}
+
+export function verifyAdCardCheckout(token: string, reference: string): Promise<{ success?: boolean; pending?: boolean; refunded?: boolean; error?: string; entitlement_id?: string }> {
+  return apiFetch('/api/ads/paystack-verify', { method: 'POST', token, body: { reference } });
 }
 
 export function verifyAdPurchase(token: string, input: { productId: string; purchaseToken: string }): Promise<{ success: boolean; entitlement_id?: string; pending?: boolean; error?: string }> {

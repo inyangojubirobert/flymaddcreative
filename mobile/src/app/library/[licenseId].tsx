@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ import { ThemedView } from '@/components/themed-view';
 import { getLibrary, openLibraryEntry, parseLibraryEntryId, type LicenseAccess } from '@/api/digital';
 import { Palette, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { useContentWidth } from '@/hooks/use-content-width';
 import { useTheme } from '@/hooks/use-theme';
 import { ApiError } from '@/lib/api-client';
 import {
@@ -197,7 +198,7 @@ function EncryptedPage({ entryId, name, width }: { entryId: string; name: string
 }
 
 function PageReader({ entryId, pages, offline }: { entryId: string; pages: string[]; offline: boolean }) {
-  const { width } = useWindowDimensions();
+  const width = Math.min(useContentWidth(), 820);
   const [page, setPage] = useState(1);
   return (
     <View style={styles.flex}>

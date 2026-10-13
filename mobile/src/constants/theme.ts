@@ -15,17 +15,28 @@ export const Colors = {
     backgroundSelected: '#E8EEF6',
     textSecondary: '#5B6678',
   },
-  dark: {
-    text: '#F8FAFC',
-    background: '#0F172A',
-    backgroundElement: '#1E293B',
-    backgroundSelected: '#334155',
-    textSecondary: '#CBD5E1',
-  },
-} as const;
+  // The hosted web app always uses this scheme, styled like the website:
+  // screens are transparent over the page's navy gradient, cards are glass.
+  dark: Platform.OS === 'web'
+    ? {
+        text: '#F8FAFC',
+        background: 'transparent',
+        backgroundElement: 'rgba(255, 255, 255, 0.07)',
+        backgroundSelected: 'rgba(255, 255, 255, 0.16)',
+        textSecondary: '#CBD5E1',
+      }
+    : {
+        text: '#F8FAFC',
+        background: '#0F172A',
+        backgroundElement: '#1E293B',
+        backgroundSelected: '#334155',
+        textSecondary: '#CBD5E1',
+      },
+};
 
 export const Palette = {
-  blue: '#1D4ED8',
+  // Brighter on the web app's navy background, where #1D4ED8 text is too dark.
+  blue: Platform.OS === 'web' ? '#3B82F6' : '#1D4ED8',
   blueDark: '#1E3A8A',
   blueSoft: '#DBEAFE',
   yellow: '#F59E0B',
@@ -41,7 +52,7 @@ export const Palette = {
   red: '#DC2626',
   redSoft: '#FEE2E2',
   white: '#FFFFFF',
-} as const;
+};
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
@@ -80,5 +91,9 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+export const BottomTabInset = Platform.select({ ios: 50, android: 80, web: 84 }) ?? 0;
 export const MaxContentWidth = 800;
+/** Widest the hosted web app's content column gets on desktop. */
+export const WebMaxWidth = 1180;
+/** Viewport width from which the web app switches to the desktop layout (top navigation). */
+export const WebDesktopBreakpoint = 900;

@@ -4,9 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Palette } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useIsDesktopWeb } from '@/hooks/use-content-width';
 
 export default function TabsLayout() {
   const theme = useTheme();
+  // Desktop web uses the top navigation (components/web-shell.web.tsx) instead.
+  const desktopWeb = useIsDesktopWeb();
 
   return (
     <Tabs
@@ -15,8 +18,8 @@ export default function TabsLayout() {
         tabBarActiveTintColor: Palette.blue,
         tabBarInactiveTintColor: theme.textSecondary,
         tabBarActiveBackgroundColor: Palette.blueSoft,
-        tabBarStyle: {
-          backgroundColor: theme.backgroundElement,
+        tabBarStyle: desktopWeb ? { display: 'none' } : {
+          backgroundColor: Platform.OS === 'web' ? 'rgba(15, 23, 42, 0.94)' : theme.backgroundElement,
           position: 'absolute',
           left: 12,
           right: 12,
@@ -24,7 +27,7 @@ export default function TabsLayout() {
           borderRadius: 24,
           height: 68,
           borderTopWidth: 1,
-          borderColor: Palette.ash,
+          borderColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.12)' : Palette.ash,
           paddingHorizontal: 6,
           paddingTop: 5,
           paddingBottom: 5,

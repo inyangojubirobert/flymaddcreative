@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { ActivityIndicator, Alert, Image, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -10,7 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { PromoStoreProvider, type PromoStore } from '@/components/promo-billing';
 import {
-  deleteAdMedia, formatDuration, getAdMedia, getAdPackages, getMyAds, uploadAdMedia,
+  deleteAdMedia, formatDuration, getAdMedia, getAdPackages, getMyAds, startAdCardCheckout, uploadAdMedia, verifyAdCardCheckout,
   type AdCampaign, type AdEntitlement, type AdMedia, type AdPackage, type CampaignState,
 } from '@/api/ads';
 import { Palette, Spacing } from '@/constants/theme';
@@ -72,6 +74,7 @@ function PackagesTab() {
   const paused = !!packagesQuery.data?.billing?.paused;
   const anyPurchasable = packages.some((p) => p.purchasable);
   const useStore = Platform.OS === 'android' && anyPurchasable;
+  const cardStore = useCardStore(() => void queryClient.invalidateQueries({ queryKey: ['my-ads'] }));
 
   const content = (store: PromoStore | null) => (
     <ScrollView
@@ -100,7 +103,7 @@ function PackagesTab() {
           <ThemedText type="small" style={styles.noticeText}>Buying packages is paused for a moment. Your packages and campaigns are not affected.</ThemedText>
         </View>
       ) : null}
-      {anyPurchasable && Platform.OS !== 'android' ? (
+      {anyPurchasable && Platform.OS === 'ios' ? (
         <View style={styles.notice}>
           <Ionicons name="logo-google-playstore" size={18} color={Palette.blueDark} />
           <ThemedText type="small" style={styles.noticeText}>Packages are bought in the One Dream Android app. Campaigns you create there appear here too.</ThemedText>
@@ -124,6 +127,7 @@ function PackagesTab() {
     </ScrollView>
   );
 
+  if (Platform.OS === 'web') return content(cardStore);
   if (!useStore) return content(null);
   return (
     <PromoStoreProvider packages={packages} onGranted={() => void queryClient.invalidateQueries({ queryKey: ['my-ads'] })}>
@@ -136,10 +140,11 @@ function PackageCard({ pkg, store }: { pkg: AdPackage; store: PromoStore | null 
   const theme = useTheme();
   const popular = !!pkg.highlight;
   const playPrice = store?.priceFor(pkg);
-  const canBuy = !!store && pkg.purchasable && !!playPrice;
+  const canBuy = !!store && !!playPrice && (Platform.OS === 'web' || pkg.purchasable);
   const busy = store?.busyPackageId === pkg.id;
   // Each package is independent: one not yet set up in Play Console doesn't block the others.
-  const label = canBuy ? `Buy · ${playPrice}`
+  const label = canBuy ? (Platform.OS === 'web' ? `Pay by card · ${playPrice}` : `Buy · ${playPrice}`)
+    : Platform.OS === 'web' ? 'Not available right now'
     : !pkg.purchasable ? 'Not available right now'
       : Platform.OS !== 'android' ? 'Buy in the Android app'
         : !store?.ready ? 'Connecting to Google Play…'
@@ -175,6 +180,46 @@ function PackageCard({ pkg, store }: { pkg: AdPackage; store: PromoStore | null 
   );
 }
 
+/**
+ * Web app: packages are paid by card through Paystack (NGN at the live rate).
+ * The server grants the package only after Paystack confirms the payment.
+ */
+function useCardStore(onGranted: () => void): PromoStore {
+  const { token } = useAuth();
+  const [busyPackageId, setBusy] = useState<string | null>(null);
+  const price = (pkg: AdPackage) => `$${pkg.price_usd % 1 ? pkg.price_usd.toFixed(2) : pkg.price_usd}`;
+
+  async function buy(pkg: AdPackage) {
+    if (!token) return;
+    setBusy(pkg.id);
+    try {
+      const redirectUrl = Linking.createURL('paystack-callback');
+      const intent = await startAdCardCheckout(token, { package_id: pkg.id, callback_url: redirectUrl });
+      const result = await WebBrowser.openAuthSessionAsync(intent.authorization_url, redirectUrl);
+      const returned = result.type === 'success' && result.url ? new URL(result.url).searchParams.get('reference') : null;
+      // Even if the payment window was closed, the payment may have gone through: check it.
+      const verified = await verifyAdCardCheckout(token, returned || intent.reference);
+      if (verified.pending) {
+        Alert.alert('Payment not completed', 'If you paid, your package appears here shortly.');
+        return;
+      }
+      onGranted();
+      Alert.alert('Package ready', 'Create your campaign from "Your packages".');
+    } catch (error) {
+      Alert.alert('Payment not completed', error instanceof ApiError ? error.message : 'Please try again.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return {
+    ready: true,
+    busyPackageId,
+    priceFor: (pkg) => (pkg.card_purchasable ? price(pkg) : null),
+    buy: (pkg) => void buy(pkg),
+  };
+}
+
 const ENTITLEMENT_LABEL: Record<AdEntitlement['status'], string> = {
   available: 'Ready to use',
   used: 'Used for a campaign',
@@ -192,7 +237,7 @@ function PurchaseHistory({ entitlements }: { entitlements: AdEntitlement[] }) {
           <View style={styles.flex}>
             <ThemedText type="smallBold">{e.package.name}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              {new Date(e.created_at).toLocaleDateString()} · {e.is_paid ? `Google Play${e.order_id ? ` · ${e.order_id}` : ''}` : 'Granted by One Dream'}
+              {new Date(e.created_at).toLocaleDateString()} · {!e.is_paid ? 'Granted by One Dream' : e.provider === 'paystack' ? 'Card (website)' : `Google Play${e.order_id ? ` · ${e.order_id}` : ''}`}
             </ThemedText>
             {e.revoke_reason ? <ThemedText type="small" style={{ color: Palette.red }}>{e.revoke_reason}</ThemedText> : null}
           </View>
@@ -372,7 +417,7 @@ const styles = StyleSheet.create({
   pkgHead: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
   pkgName: { fontSize: 17 },
   priceBox: { alignItems: 'flex-end' },
-  price: { fontSize: 26, lineHeight: 30, fontWeight: '800', color: Palette.blueDark },
+  price: { fontSize: 26, lineHeight: 30, fontWeight: '800', color: Platform.OS === 'web' ? '#FDE047' : Palette.blueDark },
   benefit: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   buy: { marginTop: 4, borderRadius: 999, paddingVertical: 12, alignItems: 'center', backgroundColor: Palette.blue },
   buyPopular: { backgroundColor: Palette.lemon },

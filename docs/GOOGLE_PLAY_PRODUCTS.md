@@ -32,10 +32,18 @@ Do not modify these.
 
 | Package | Product ID (placeholder) | Price (USD) | What the buyer gets |
 |---|---|---|---|
-| Starter Ads | `onedream_ad_starter` | **$10.00** | 3 days, 1 creative, shop and category placements |
-| Growth Ads | `onedream_ad_growth` | **$20.00** | 7 days, 2 creatives, home, shop and category |
-| Premium Ads | `onedream_ad_premium` | **$40.00** | 15 days, 3 creatives, all placements |
-| Business Ads | `onedream_ad_business` | **$75.00** | 30 days, 5 creatives, all placements, top priority |
+| Starter Ads | `onedream_ad_starters` ✅ created | **$10.00** | 3 days, 1 creative, shop and category placements |
+| Growth Ads | `onedream_ads_growth` ✅ created | **$20.00** | 7 days, 2 creatives, home, shop and category |
+| Premium Ads | `onedream_ad_premium` ✅ created | **$40.00** | 15 days, 3 creatives, all placements |
+| Business Ads | `onedream_ad_business` ✅ created | **$75.00** | 30 days, 5 creatives, all placements |
+| Bronze Ads | `onedream_ad_bronze` | **$100.00** | 30 days, 6 creatives, all placements, priority 50 |
+| Silver Ads | `onedream_ad_silver` | **$200.00** | 30 days, 7 creatives, all placements, priority 65 |
+| Gold Ads | `onedream_ad_gold` | **$500.00** | 30 days, 8 creatives, all placements, priority 80 |
+| Platinum Ads | `onedream_ad_platinum` | **$999.99** | 30 days, 10 creatives, all placements, priority 100 (max) |
+
+Ads are picked at random, weighted by priority, so priority 100 is shown about 2.5x as often as Business (40) and 10x as often as Starter (10) when competing for the same slot.
+
+Starter and Growth were created in Play Console as `onedream_ad_starters` / `onedream_ads_growth` (Play IDs can't be renamed). `supabase/add_ad_tier_packages.sql` points the packages at those IDs and adds Bronze to Platinum.
 
 ## 3. Listing boost packages — one-time products (consumable)
 
@@ -94,9 +102,9 @@ Suggested Play Console name: "Creator subscription — $4.99/month". Description
 - **no free trial or introductory offer.** The app refuses to sell a subscription with zero or several monthly base plans, or with an intro price;
 - grace period and account hold: Google's defaults are fine.
 
-**Total to create: 7 promotional products + 17 digital tiers = 24 one-time products, plus 18 creator subscriptions** (and the 2 existing AI subscriptions).
+**Total to create: 11 promotional products + 17 digital tiers = 28 one-time products, plus 18 creator subscriptions** (and the 2 existing AI subscriptions).
 
-**Website:** the same creator subscriptions and digital items can be bought by card (Paystack, charged in NGN at the live rate) on the website and in the web app. That needs no Play Console setup, only `PAYSTACK_SECRET_KEY` (already set). Website subscriptions renew by charging the saved card once a month, from the daily billing job.
+**Website:** advertising and boost packages (`supabase/add_ads_paystack.sql`), creator subscriptions and digital items can all be bought by card (Paystack, charged in NGN at the live rate) on the website and in the web app. That needs no Play Console setup, only `PAYSTACK_SECRET_KEY` (already set). Website subscriptions renew by charging the saved card once a month, from the daily billing job.
 
 ---
 

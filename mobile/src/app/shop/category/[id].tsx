@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ import { ListingCard } from '@/components/listing-card';
 import { SponsoredAdCard, useSponsored } from '@/components/sponsored';
 import { BottomTabInset, Palette, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useGridCardWidth } from '@/hooks/use-content-width';
 import { buildCatalogueDirectory, departmentForCategory } from '@/lib/catalogue-directory';
 
 import { useMarketplaceSearch } from '@/hooks/use-marketplace-search';
@@ -24,7 +25,7 @@ export default function CategoryScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const categoryId = Array.isArray(id) ? id[0] : id;
-  const { width } = useWindowDimensions();
+  const cardWidth = useGridCardWidth({ padding: Spacing.three, gap: Spacing.three });
   const [query, setQuery] = useState('');
 
   const categoriesQuery = useQuery({
@@ -42,7 +43,6 @@ export default function CategoryScreen() {
     enabled: !!categoryId,
   });
 
-  const cardWidth = Math.floor((width - Spacing.three * 2 - Spacing.three) / 2);
   const needle = query.trim().toLowerCase();
   const searchQuery = useMarketplaceSearch(categoryId ? query : '', { categoryId });
   const sponsored = useSponsored('category', { ads: 1, boosts: 4, categoryId });

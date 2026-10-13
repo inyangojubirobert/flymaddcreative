@@ -1,4 +1,4 @@
-import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -196,8 +196,9 @@ const styles = StyleSheet.create({
   earningsCard: { borderRadius: 18, borderWidth: 1, padding: Spacing.three, gap: Spacing.two },
   earningsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   earningsCol: { flex: 1, gap: 2 },
-  earningsAvailable: { color: Palette.green },
-  earningsPending: { color: Palette.yellowInk },
+  // Web sits on navy: the light-theme inks are too dark there.
+  earningsAvailable: { color: Platform.OS === 'web' ? '#4ADE80' : Palette.green },
+  earningsPending: { color: Platform.OS === 'web' ? '#FCD34D' : Palette.yellowInk },
   container: { flex: 1 },
   safeArea: { flex: 1 },
   content: { padding: Spacing.three, paddingBottom: Spacing.five, gap: Spacing.three },

@@ -4,16 +4,29 @@
 // these tokens authorize money-moving actions (release_funds, withdraw).
 
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
+// expo-secure-store has no web implementation. The hosted web app (/app) runs
+// on the website's origin, so it uses localStorage - with the same
+// 'onedream_token' key the website's login writes, so one sign-in covers both.
+const store = Platform.OS === 'web'
+  ? {
+      getItemAsync: async (key: string) => globalThis.localStorage?.getItem(key) ?? null,
+      setItemAsync: async (key: string, value: string) => { globalThis.localStorage?.setItem(key, value); },
+      deleteItemAsync: async (key: string) => { globalThis.localStorage?.removeItem(key); },
+    }
+  : SecureStore;
 
 const PARTICIPANT_TOKEN_KEY = 'onedream_token';
 const PARTICIPANT_SNAPSHOT_KEY = 'onedream_participant_snapshot';
+const WEBSITE_USER_KEY = 'onedream_user';
 const MERCHANT_TOKEN_KEY = 'merchant_token';
 const MERCHANT_SNAPSHOT_KEY = 'merchant_snapshot';
 
 export const participantTokenStorage = {
-  get: () => SecureStore.getItemAsync(PARTICIPANT_TOKEN_KEY),
-  set: (token: string) => SecureStore.setItemAsync(PARTICIPANT_TOKEN_KEY, token),
-  clear: () => SecureStore.deleteItemAsync(PARTICIPANT_TOKEN_KEY),
+  get: () => store.getItemAsync(PARTICIPANT_TOKEN_KEY),
+  set: (token: string) => store.setItemAsync(PARTICIPANT_TOKEN_KEY, token),
+  clear: () => store.deleteItemAsync(PARTICIPANT_TOKEN_KEY),
 };
 
 // GET /api/onedream/verify.js only confirms a token is valid ({userId, email}) -
@@ -25,17 +38,28 @@ export const participantTokenStorage = {
 // sensitive (name/username/vote count are already public data).
 export const participantSnapshotStorage = {
   get: async <T,>(): Promise<T | null> => {
-    const raw = await SecureStore.getItemAsync(PARTICIPANT_SNAPSHOT_KEY);
-    return raw ? (JSON.parse(raw) as T) : null;
+    // On web, fall back to the profile the website's login stored ({ id, username, ... }).
+    const raw = await store.getItemAsync(PARTICIPANT_SNAPSHOT_KEY)
+      ?? (Platform.OS === 'web' ? await store.getItemAsync(WEBSITE_USER_KEY) : null);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as T & { username?: string };
+      return parsed?.username ? parsed : null;
+    } catch {
+      return null;
+    }
   },
-  set: (snapshot: unknown) => SecureStore.setItemAsync(PARTICIPANT_SNAPSHOT_KEY, JSON.stringify(snapshot)),
-  clear: () => SecureStore.deleteItemAsync(PARTICIPANT_SNAPSHOT_KEY),
+  set: (snapshot: unknown) => store.setItemAsync(PARTICIPANT_SNAPSHOT_KEY, JSON.stringify(snapshot)),
+  clear: async () => {
+    await store.deleteItemAsync(PARTICIPANT_SNAPSHOT_KEY);
+    if (Platform.OS === 'web') await store.deleteItemAsync(WEBSITE_USER_KEY);
+  },
 };
 
 export const merchantTokenStorage = {
-  get: () => SecureStore.getItemAsync(MERCHANT_TOKEN_KEY),
-  set: (token: string) => SecureStore.setItemAsync(MERCHANT_TOKEN_KEY, token),
-  clear: () => SecureStore.deleteItemAsync(MERCHANT_TOKEN_KEY),
+  get: () => store.getItemAsync(MERCHANT_TOKEN_KEY),
+  set: (token: string) => store.setItemAsync(MERCHANT_TOKEN_KEY, token),
+  clear: () => store.deleteItemAsync(MERCHANT_TOKEN_KEY),
 };
 
 // There's no working merchant equivalent of /api/onedream/verify.js (the
@@ -46,9 +70,9 @@ export const merchantTokenStorage = {
 // MerchantAuthContext clears both on the first 401 from a real request.
 export const merchantSnapshotStorage = {
   get: async <T,>(): Promise<T | null> => {
-    const raw = await SecureStore.getItemAsync(MERCHANT_SNAPSHOT_KEY);
+    const raw = await store.getItemAsync(MERCHANT_SNAPSHOT_KEY);
     return raw ? (JSON.parse(raw) as T) : null;
   },
-  set: (snapshot: unknown) => SecureStore.setItemAsync(MERCHANT_SNAPSHOT_KEY, JSON.stringify(snapshot)),
-  clear: () => SecureStore.deleteItemAsync(MERCHANT_SNAPSHOT_KEY),
+  set: (snapshot: unknown) => store.setItemAsync(MERCHANT_SNAPSHOT_KEY, JSON.stringify(snapshot)),
+  clear: () => store.deleteItemAsync(MERCHANT_SNAPSHOT_KEY),
 };
