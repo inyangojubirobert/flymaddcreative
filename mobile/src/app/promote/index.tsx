@@ -18,20 +18,12 @@ import {
 import { Palette, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/use-theme';
+import { STATE_BADGE } from '@/components/ad-state';
 import { ApiError } from '@/lib/api-client';
 
 type Tab = 'packages' | 'campaigns' | 'media';
 
-const STATE_BADGE: Record<CampaignState, { label: string; bg: string; ink: string }> = {
-  draft: { label: 'Draft', bg: Palette.ashSoft, ink: Palette.slate },
-  pending_review: { label: 'In review', bg: Palette.yellowSoft, ink: Palette.yellowInk },
-  active: { label: 'Live', bg: '#DCFCE7', ink: Palette.green },
-  paused: { label: 'Paused', bg: Palette.ashSoft, ink: Palette.slate },
-  rejected: { label: 'Needs changes', bg: Palette.redSoft, ink: Palette.red },
-  suspended: { label: 'Suspended', bg: Palette.redSoft, ink: Palette.red },
-  revoked: { label: 'Ended (refunded)', bg: Palette.ashSoft, ink: Palette.slate },
-  completed: { label: 'Completed', bg: Palette.blueSoft, ink: Palette.blueDark },
-};
+
 
 const MEDIA_BADGE: Record<AdMedia['status'], { label: string; ink: string }> = {
   pending: { label: 'Awaiting review', ink: Palette.yellowInk },
@@ -270,6 +262,7 @@ function CampaignsTab() {
 
 function CampaignRow({ campaign, onPress }: { campaign: AdCampaign; onPress: () => void }) {
   const theme = useTheme();
+  const router = useRouter();
   const badge = STATE_BADGE[campaign.state];
   const ctr = campaign.impressions ? `${((campaign.clicks / campaign.impressions) * 100).toFixed(1)}%` : '—';
   const thumb = campaign.media[0];
@@ -299,6 +292,16 @@ function CampaignRow({ campaign, onPress }: { campaign: AdCampaign; onPress: () 
       </ThemedText>
       {campaign.review_note && ['rejected', 'suspended', 'revoked'].includes(campaign.state) ? (
         <ThemedText type="small" style={{ color: Palette.red }}>{campaign.review_note}</ThemedText>
+      ) : null}
+      {campaign.state !== 'draft' ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: '/promote/analytics', params: { campaignId: campaign.id } } as never)}
+          style={styles.analyticsButton}
+        >
+          <Ionicons name="stats-chart" size={15} color={Palette.blueDark} />
+          <ThemedText type="smallBold" style={styles.analyticsButtonText}>View analytics</ThemedText>
+        </Pressable>
       ) : null}
     </Pressable>
   );
@@ -431,6 +434,8 @@ const styles = StyleSheet.create({
   badge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4 },
   badgeText: { fontSize: 11 },
   stats: { flexDirection: 'row', gap: Spacing.two },
+  analyticsButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 40, borderRadius: 999, backgroundColor: Palette.blueSoft },
+  analyticsButtonText: { color: Palette.blueDark },
   stat: { flex: 1, borderRadius: 12, padding: Spacing.two, backgroundColor: Palette.ashSoft, alignItems: 'center' },
   uploadRow: { flexDirection: 'row', gap: Spacing.two },
   upload: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 48, borderRadius: 14, backgroundColor: Palette.blueSoft },

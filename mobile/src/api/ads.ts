@@ -97,6 +97,61 @@ export function getAdPackages(): Promise<{ billing: { enabled: boolean; paused: 
   return apiFetch('/api/ads/packages');
 }
 
+export type AnalyticsRange = '7d' | '30d' | 'lifetime';
+
+type Counts = { impressions: number; clicks: number; ctr: number | null };
+
+export type CampaignAnalytics = {
+  campaign: {
+    id: string;
+    kind: 'ad' | 'boost';
+    title: string;
+    state: CampaignState;
+    review_note: string | null;
+    submitted_at: string | null;
+    starts_at: string | null;
+    ends_at: string | null;
+    /** Live: until ends_at. Paused: frozen. Not started: the purchased duration. */
+    remaining_ms: number;
+    counting: boolean;
+    not_started?: boolean;
+  };
+  package: {
+    id: string;
+    name: string;
+    duration_hours: number | null;
+    max_creatives: number | null;
+    placements: string[];
+    priority: number;
+    entry_priority: number;
+    top_priority: number;
+    relative_weight: number | null;
+  };
+  analytics: {
+    range: AnalyticsRange;
+    time_zone: string;
+    from: string;
+    to: string;
+    totals: Counts;
+    lifetime: Counts;
+    daily: { date: string; impressions: number; clicks: number }[];
+    placements: ({ placement: AdPlacement | 'other' } & Counts)[];
+  };
+  server_now: string;
+};
+
+/** One of your campaigns' real impressions and clicks; days follow your time zone. */
+export function getCampaignAnalytics(token: string, campaignId: string, range: AnalyticsRange): Promise<CampaignAnalytics> {
+  let timeZone = 'UTC';
+  try {
+    timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    // Older JS engines without Intl time zones: fall back to UTC days.
+  }
+  const query = new URLSearchParams({ id: campaignId, range, tz: timeZone });
+  return apiFetch(`/api/ads/campaign-analytics?${query}`, { token });
+}
+
 export function getMyAds(token: string): Promise<{ entitlements: AdEntitlement[]; campaigns: AdCampaign[] }> {
   return apiFetch('/api/ads/campaigns', { token });
 }

@@ -210,6 +210,16 @@
           <div id="adsPackages" class="space-y-2 overflow-x-auto"></div>
         </div>
         <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <div>
+              <h2 class="text-lg font-bold">Package value check</h2>
+              <p class="text-xs text-slate-400">Compares active packages in price order (ads and boosts separately). A dearer package should never have fewer creatives, a shorter duration, lower priority or miss a placement a cheaper one has. Warnings only: nothing is changed automatically.</p>
+            </div>
+            <button onclick="loadPackageValue()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded whitespace-nowrap">Re-check</button>
+          </div>
+          <div id="adsPackageValue" class="space-y-2 text-xs"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
           <h2 class="text-lg font-bold mb-1">Grant a package</h2>
           <p class="text-xs text-slate-400 mb-3">For testing, compensation or partners. Recorded as unpaid.</p>
           <div class="flex flex-wrap gap-2">
@@ -595,6 +605,7 @@
         const data = await adminFetch(`/api/admin/ads?view=${document.getElementById('adsView').value}`);
         adState.packages = data.packages || [];
         renderAdPackages();
+        loadPackageValue();
         document.getElementById('adsEntitlements').innerHTML = (data.entitlements || []).map(e => {
           const paid = e.is_paid ? `paid $${Number(e.price_usd).toFixed(2)} (${escapeText(e.provider)}${e.order_id ? ' ' + escapeText(e.order_id) : ''})` : 'granted';
           return `<div>${new Date(e.created_at).toLocaleDateString()} · @${escapeText(e.participants?.username || '?')} · ${escapeText(e.package_id)} · ${paid} · ${escapeText(e.status)}</div>`;
@@ -709,6 +720,43 @@
         const r = await adminFetch('/api/admin/ads/recheck-links', { method: 'POST', body: '{}' });
         alert(`Checked ${r.checked}: ${r.ok || 0} fine, ${r.sent_to_review || 0} sent to review, ${r.suspended || 0} suspended, ${r.updated || 0} updated.`);
         loadAds();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function loadPackageValue() {
+      const box = document.getElementById('adsPackageValue');
+      try {
+        const data = await adminFetch('/api/admin/ads/package-value');
+        const warnings = data.warnings || [];
+        if (!warnings.length) { box.innerHTML = '<p class="text-green-400">Every package offers at least as much as each cheaper one.</p>'; return; }
+        const setup = data.exceptions_available ? '' : '<p class="text-amber-300">Marking exceptions needs supabase/add_ad_package_value_exceptions.sql to be run.</p>';
+        box.innerHTML = setup + `<p class="text-slate-300">${data.open} open warning(s), ${warnings.length - data.open} marked intentional.</p>` + warnings.map(w => {
+          const args = [w.package_id, w.compared_package_id, w.rule].map(v => `'${escapeText(v)}'`).join(',');
+          const action = w.exception
+            ? `<span class="text-slate-400">Intentional: ${escapeText(w.exception.note)}${w.exception.acknowledged_by ? ` (${escapeText(w.exception.acknowledged_by)})` : ''}</span> <button onclick="clearPackageException(${args})" class="bg-slate-600 hover:bg-slate-500 px-2 py-0.5 rounded">Undo</button>`
+            : data.exceptions_available ? `<button onclick="markPackageException(${args})" class="bg-slate-600 hover:bg-slate-500 px-2 py-0.5 rounded">Mark intentional</button>` : '';
+          return `<div class="rounded bg-slate-700/50 border ${w.exception ? 'border-slate-600/50' : 'border-amber-600/60'} p-2 flex flex-wrap justify-between gap-2">
+            <span class="${w.exception ? 'text-slate-400' : 'text-amber-200'}">${escapeText(w.message)}</span><span>${action}</span></div>`;
+        }).join('');
+      } catch (err) {
+        box.innerHTML = `<p class="text-red-400">Error: ${escapeText(err.message)}</p>`;
+      }
+    }
+
+    async function markPackageException(packageId, comparedId, rule) {
+      const note = prompt('Why is this difference intentional? (shown to other admins)');
+      if (!note || !note.trim()) return;
+      try {
+        await adminFetch('/api/admin/ads/package-value', { method: 'POST', body: JSON.stringify({ package_id: packageId, compared_package_id: comparedId, rule, note }) });
+        loadPackageValue();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function clearPackageException(packageId, comparedId, rule) {
+      const query = new URLSearchParams({ package_id: packageId, compared_package_id: comparedId, rule });
+      try {
+        await adminFetch(`/api/admin/ads/package-value?${query}`, { method: 'DELETE' });
+        loadPackageValue();
       } catch (err) { alert(err.message); }
     }
 
