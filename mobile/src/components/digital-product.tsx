@@ -351,7 +351,16 @@ function GoogleSubscribeButton({ creator, onDone }: { creator: string; onDone: (
       const offer = candidate ? monthlyGoogleOffer(candidate) : undefined;
       if (!candidate || !offer) {
         setBusy(false);
-        Alert.alert('Not available right now', 'Subscriptions at this price are being set up in Google Play. Please try again later.');
+        const configured = productIds.filter((id) => subscriptions.some((p) => p.id === id));
+        if (configured.length && configured.every((id) => held.has(id))) {
+          // Every slot at this price is already a live subscription on this Google account.
+          Alert.alert(
+            'Limit reached at this price',
+            `Google Play allows ${configured.length} creator subscription${configured.length === 1 ? '' : 's'} at $${plan.price_usd.toFixed(2)}/month per account, and you already have ${configured.length === 1 ? 'it' : 'all of them'}. A slot frees up when one of those subscriptions ends.`,
+          );
+        } else {
+          Alert.alert('Not available right now', 'Subscriptions at this price are being set up in Google Play. Please try again later.');
+        }
         return;
       }
       if (candidate.currency === 'USD' && typeof candidate.price === 'number' && Math.abs(candidate.price - plan.price_usd) > 0.01) {
