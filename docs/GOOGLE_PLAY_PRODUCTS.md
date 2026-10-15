@@ -1,6 +1,6 @@
-# Google Play products — what's left to set up
+# Google Play products — setup reference
 
-_Checked against Play Console on 2026-10-15. **Still to add: 18 creator subscriptions.** The 17 digital price tiers were created and activated on 2026-10-15._
+_Checked against Play Console on 2026-10-15. **Every product is now created and active.** The 17 digital price tiers and 18 creator subscriptions were created through the API on 2026-10-15._
 
 The product IDs below are already stored in the database and used by the app. Create them in Play Console **exactly as written**, or create your own and type yours into the admin portal. Either way, no code change, rebuild or redeploy is needed. Until a product exists in Play Console, the app shows it as "Awaiting Google Play configuration"; the others are unaffected.
 
@@ -51,7 +51,7 @@ Created with `node scripts/create-google-play-products.mjs`, which creates any m
 
 You don't need to mark them consumable: the server consumes each purchase after granting it.
 
-## 2. Creator subscriptions — 18 subscriptions ⬜ to add
+## 2. Creator subscriptions — 18 subscriptions ✅ live (2026-10-15)
 
 Creators sell a monthly subscription that unlocks every digital product they include. A creator picks a **price**, and subscribers buy a product at that price. Google's own purchase record stores **which subscriber** and **which creator** it is for.
 
@@ -68,7 +68,7 @@ Creators sell a monthly subscription that unlocks every digital product they inc
 
 **Name:** `Creator subscription — $4.99/month` (the row's price). **Description:** `Monthly access to one creator's digital products in One Dream.`
 
-Play Console → **Monetize with Play → Products → Subscriptions → Create subscription**. Each one needs **exactly one base plan**:
+Created with `node scripts/create-google-play-subscriptions.mjs` (`--dry-run`, `--only <id>`), which skips active ones and activates a base plan left in draft. To recreate one by hand: Play Console → **Monetize with Play → Products → Subscriptions → Create subscription**. Each one needs **exactly one base plan** (ID `monthly`):
 - auto-renewing, billing period **1 month**;
 - United States price **exactly as in the table**;
 - **no free trial or introductory offer.** The app refuses to sell a subscription with zero or several monthly base plans, or with an intro price;
