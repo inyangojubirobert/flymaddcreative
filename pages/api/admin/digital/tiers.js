@@ -21,7 +21,7 @@ export default async function handler(req, res) {
           ...tier,
           state: status.state,
           play_price: status.price,
-          price_matches: status.price?.currency === 'USD' ? Math.abs(status.price.amount - Number(tier.price_usd)) < 0.01 : null,
+          price_matches: status.price?.currency === 'USD' ? Math.round(status.price.amount * 100) === Math.round(Number(tier.price_usd) * 100) : null,
           detail: status.detail,
         };
       }));

@@ -23,7 +23,7 @@ export default async function handler(req, res) {
       const productId = String(pkg.google_play_product_id || '').trim();
       if (!productId) return { ...pkg, state: 'unconfigured', play_price: null, price_matches: null, detail: 'No product id entered' };
       const status = await getPlayProductStatus(productId);
-      const priceMatches = status.price?.currency === 'USD' ? Math.abs(status.price.amount - Number(pkg.price_usd)) < 0.01 : null;
+      const priceMatches = status.price?.currency === 'USD' ? Math.round(status.price.amount * 100) === Math.round(Number(pkg.price_usd) * 100) : null;
       return { ...pkg, state: status.state, play_price: status.price, price_matches: priceMatches, detail: status.detail };
     }));
     return res.status(200).json({ paused: promotionalBillingPaused(), packages: rows });

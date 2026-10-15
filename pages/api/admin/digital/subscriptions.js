@@ -33,7 +33,7 @@ export default async function handler(req, res) {
           if (!p.google_play_product_id) return { ...p, state: 'unconfigured' };
           const status = await getPlaySubscriptionStatus(p.google_play_product_id);
           return { ...p, state: status.state, play_price: status.price, detail: status.detail,
-            price_matches: status.price ? Math.abs(status.price.amount - priceOf[p.tier_id]) < 0.01 : null };
+            price_matches: status.price ? Math.round(status.price.amount * 100) === Math.round(Number(priceOf[p.tier_id]) * 100) : null };
         }));
       }
       return res.status(200).json({
