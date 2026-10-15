@@ -682,7 +682,8 @@
       if (!s) return '<span class="text-slate-500">—</span>';
       const [cls, label] = playStateLabel[s.state] || ['bg-slate-600', s.state];
       const price = s.play_price ? ` ${Number(s.play_price.amount).toFixed(2)} ${escapeText(s.play_price.currency || '')}` : '';
-      const mismatch = s.price_matches === false ? ' <span class="text-red-300">price differs</span>' : '';
+      const mismatch = (s.price_matches === false ? ' <span class="text-red-300">price differs</span>' : '')
+        + (s.state === 'check_failed' && s.detail ? ` <span class="text-red-300">${escapeText(s.detail)}</span>` : '');
       return `<span class="${cls} px-1.5 py-0.5 rounded" title="${escapeText(s.detail || '')}">${label}</span><span class="text-slate-400">${price}</span>${mismatch}`;
     }
 
@@ -823,7 +824,7 @@
         digitalState.tiers.map(t => {
           const s = digitalState.tierStatus[t.id];
           const [cls, text] = s ? (label[s.state] || ['bg-slate-600', s.state]) : ['', ''];
-          const status = s ? `<span class="${cls} px-1.5 py-0.5 rounded" title="${escapeText(s.detail || '')}">${text}</span>${s.price_matches === false ? ' <span class="text-red-300">price differs</span>' : ''}` : '<span class="text-slate-500">—</span>';
+          const status = s ? `<span class="${cls} px-1.5 py-0.5 rounded" title="${escapeText(s.detail || '')}">${text}</span>${s.price_matches === false ? ' <span class="text-red-300">price differs</span>' : ''}${s.state === 'check_failed' && s.detail ? ` <span class="text-red-300">${escapeText(s.detail)}</span>` : ''}` : '<span class="text-slate-500">—</span>';
           return `<tr class="border-t border-slate-700">
             <td class="py-1">$${Number(t.price_usd).toFixed(2)}</td>
             <td><input data-tier="${escapeText(t.id)}" value="${escapeText(t.google_play_product_id || '')}" placeholder="not set" class="w-52 bg-slate-700 rounded px-1"></td>
@@ -887,7 +888,7 @@
         box.innerHTML = `<table class="w-full text-xs"><thead class="text-slate-400 text-left"><tr><th class="py-1">Price / month</th><th>Slot</th><th>Google Play product id</th><th>Play status</th><th>Active</th><th></th></tr></thead><tbody>${
           (data.products || []).map(p => {
             const [cls, text] = p.state ? (label[p.state] || ['bg-slate-600', p.state]) : ['', ''];
-            const status = p.state ? `<span class="${cls} px-1.5 py-0.5 rounded" title="${escapeText(p.detail || '')}">${text}</span>${p.price_matches === false ? ' <span class="text-red-300">price differs</span>' : ''}` : '<span class="text-slate-500">—</span>';
+            const status = p.state ? `<span class="${cls} px-1.5 py-0.5 rounded" title="${escapeText(p.detail || '')}">${text}</span>${p.price_matches === false ? ' <span class="text-red-300">price differs</span>' : ''}${p.state === 'check_failed' && p.detail ? ` <span class="text-red-300">${escapeText(p.detail)}</span>` : ''}` : '<span class="text-slate-500">—</span>';
             return `<tr class="border-t border-slate-700"><td class="py-1">$${Number(p.price_usd).toFixed(2)}</td><td>${p.slot}</td>
               <td><input data-subprod="${escapeText(p.id)}" value="${escapeText(p.google_play_product_id || '')}" placeholder="not set" class="w-56 bg-slate-700 rounded px-1"></td>
               <td>${status}</td><td><input type="checkbox" data-subprod-active="${escapeText(p.id)}" ${p.is_active ? 'checked' : ''}></td>

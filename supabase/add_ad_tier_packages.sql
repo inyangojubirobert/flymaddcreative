@@ -1,5 +1,5 @@
 -- ============================================================================
--- Advertising: Bronze / Silver / Gold / Platinum ad packages ($100-$999.99),
+-- Advertising: Bronze / Silver / Gold ad packages ($100-$400),
 -- and the Play Console product IDs actually created for Starter and Growth
 -- (onedream_ad_starters, onedream_ads_growth - Play IDs can't be renamed).
 --
@@ -14,11 +14,14 @@ values
    '["30 days across all eligible placements", "6 creatives (image or video)", "1.25x the exposure of Business Ads", "External link + analytics"]', null, 50, 'onedream_ad_bronze'),
   ('silver_ads', 'ad', 'Silver Ads', 'Be seen more often, all month', 200, 720, 7, '{home,shop,search,category}', 65, true,
    '["30 days across all eligible placements", "7 creatives (image or video)", "1.6x the exposure of Business Ads", "External link + analytics"]', null, 60, 'onedream_ad_silver'),
-  ('gold_ads', 'ad', 'Gold Ads', 'Premium exposure, all month', 500, 720, 8, '{home,shop,search,category}', 80, true,
-   '["30 days across all eligible placements", "8 creatives (image or video)", "2x the exposure of Business Ads", "External link + analytics"]', null, 70, 'onedream_ad_gold'),
-  ('platinum_ads', 'ad', 'Platinum Ads', 'Maximum exposure, all month', 999.99, 720, 10, '{home,shop,search,category}', 100, true,
-   '["30 days across all eligible placements", "10 creatives (image or video)", "Highest exposure: 2.5x Business Ads", "External link + analytics"]', 'Top tier', 80, 'onedream_ad_platinum')
+  ('gold_ads', 'ad', 'Gold Ads', 'Premium exposure, all month', 400, 720, 8, '{home,shop,search,category}', 80, true,
+   '["30 days across all eligible placements", "8 creatives (image or video)", "2x the exposure of Business Ads", "External link + analytics"]', 'Top tier', 70, 'onedream_ad_gold')
 on conflict (id) do nothing;
+
+-- Google Play caps Gold at $400; Platinum ($999.99) couldn't be registered.
+update advertising_packages set price_usd = 400, highlight = 'Top tier', updated_at = now()
+where id = 'gold_ads' and price_usd = 500;
+delete from advertising_packages where id = 'platinum_ads';
 
 -- Business Ads is no longer the top tier.
 update advertising_packages
