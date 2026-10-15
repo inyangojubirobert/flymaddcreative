@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { API_BASE_URL, ApiError, apiFetch } from '../lib/api-client';
 import { getAdViewerId } from '../lib/ad-viewer';
 import type { CatalogueItem } from './catalogue';
@@ -207,7 +209,7 @@ type SignedUpload = {
 /** Signed upload straight to Cloudinary, then server verification. */
 export async function uploadAdMedia(
   token: string,
-  file: { uri: string; mimeType?: string | null; fileName?: string | null; fileSize?: number | null; duration?: number | null; type: 'image' | 'video' },
+  file: { uri: string; mimeType?: string | null; fileName?: string | null; fileSize?: number | null; duration?: number | null; type: 'image' | 'video'; /** Web: the picked File. */ file?: Blob | null },
 ): Promise<AdMedia> {
   const signed = await apiFetch<SignedUpload>('/api/ads/media-sign', { method: 'POST', token, body: { resource_type: file.type } });
   if (file.fileSize && file.fileSize > signed.max_bytes) {
@@ -218,12 +220,17 @@ export async function uploadAdMedia(
     throw new ApiError(`Videos must be ${signed.max_seconds} seconds or shorter`, 400, null);
   }
 
+  const name = file.fileName || `ad-${Date.now()}.${file.type === 'video' ? 'mp4' : 'jpg'}`;
+  const mimeType = file.mimeType || (file.type === 'video' ? 'video/mp4' : 'image/jpeg');
   const form = new FormData();
-  form.append('file', {
-    uri: file.uri,
-    name: file.fileName || `ad-${Date.now()}.${file.type === 'video' ? 'mp4' : 'jpg'}`,
-    type: file.mimeType || (file.type === 'video' ? 'video/mp4' : 'image/jpeg'),
-  } as never);
+  if (Platform.OS === 'web') {
+    // Browsers need a real Blob: the picker gives a blob:/data: URI, and a
+    // { uri, name, type } object would be sent as the text "[object Object]".
+    const blob = file.file ?? await (await fetch(file.uri)).blob();
+    form.append('file', blob, name);
+  } else {
+    form.append('file', { uri: file.uri, name, type: mimeType } as never);
+  }
   for (const key of ['api_key', 'signature', 'allowed_formats', 'folder', 'public_id', 'timestamp', 'type'] as const) {
     form.append(key, String(signed[key]));
   }

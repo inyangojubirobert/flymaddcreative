@@ -325,7 +325,7 @@ function MediaTab() {
     if (!asset) return;
     setUploading(type);
     try {
-      await uploadAdMedia(token, { uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName, fileSize: asset.fileSize, duration: asset.duration, type });
+      await uploadAdMedia(token, { uri: asset.uri, mimeType: asset.mimeType, fileName: asset.fileName, fileSize: asset.fileSize, duration: asset.duration, type, file: asset.file });
       void queryClient.invalidateQueries({ queryKey: ['ad-media'] });
     } catch (error) {
       Alert.alert('Upload failed', error instanceof ApiError ? error.message : 'Please try again.');
