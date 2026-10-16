@@ -259,7 +259,10 @@ export default function CatalogueItemScreen() {
                 <DigitalProductPanel product={digital} owned={!!digitalQuery.data?.owned} licenseId={digitalQuery.data?.license_id ?? null} isSeller={!!digitalQuery.data?.is_seller}
                   webPayment={!!digitalQuery.data?.web_payment} subscription={digitalQuery.data?.subscription ?? null} />
               ) : null}
-              {digital || digitalQuery.isLoading ? null : (<>
+              {!digital && !digitalQuery.isLoading && item.status !== 'active' ? (
+                <ThemedText type="small" themeColor="textSecondary">This listing is not available for purchase right now.</ThemedText>
+              ) : null}
+              {digital || digitalQuery.isLoading || item.status !== 'active' ? null : (<>
               <ThemedText type="smallBold" style={styles.sectionLabel}>Your details</ThemedText>
               <TextInput placeholder="Full name" placeholderTextColor={theme.textSecondary} value={name} onChangeText={setName} style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />
               <TextInput placeholder="Email" placeholderTextColor={theme.textSecondary} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />

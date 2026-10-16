@@ -1,5 +1,21 @@
+// Canonical merchant registration endpoint - used by the website
+// (public/merchant-register.html), the web app at /app and the APK
+// (mobile/src/api/merchants.ts). pages/api/merchant/register.js re-exports
+// this handler so older callers get identical behavior.
+//
+// Response shape (both clients depend on it):
+//   { success, message, merchant: { ...merchant, token, referral_link: <full_link string|null> },
+//     referral_link: { id, link_code, full_link, is_active } | null }
+// The token payload matches pages/api/merchants/login.js ({ id, email,
+// type: 'merchant' }) so lib/merchantAuth.js accepts it on the dashboard,
+// links, withdraw and profile routes.
+
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import { getJwtSecret } from '../../../lib/jwtSecret';
+import { checkRateLimit } from '../../../lib/onedreamHelpers';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -10,117 +26,153 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Same MERCH-XXXXXXXX format as pages/api/merchants/[id]/links.js, which is
+// what registration.html's ?ref= handling expects.
+function generateLinkCode() {
+  return 'MERCH-' + crypto.randomBytes(5).toString('hex').toUpperCase().substring(0, 8);
+}
+
+// Some environments have a DB trigger that creates the first referral link
+// on insert; others don't. Use the trigger's link if present, otherwise
+// create one so every new merchant leaves registration with a link.
+async function ensureReferralLink(merchant) {
+  const { data: existing, error: fetchError } = await supabase
+    .from('merchant_referral_links')
+    .select('id, link_code, full_link, is_active')
+    .eq('merchant_id', merchant.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (fetchError) console.error('Error fetching referral link:', fetchError);
+  if (existing) return existing;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.flymaddcreative.online';
+
+  // Retry on the (unlikely) chance of a link_code collision.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const linkCode = generateLinkCode();
+    const { data: link, error } = await supabase
+      .from('merchant_referral_links')
+      .insert({
+        merchant_id: merchant.id,
+        link_code: linkCode,
+        full_link: `${siteUrl}/registration.html?ref=${linkCode}`,
+        description: `Referral link for ${merchant.merchant_name}`,
+        is_active: true,
+        clicks_count: 0,
+        registrations_count: 0
+      })
+      .select('id, link_code, full_link, is_active')
+      .single();
+
+    if (!error) return link;
+    if (error.code !== '23505') {
+      console.error('Error creating referral link:', error);
+      return null;
+    }
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, message: 'Method not allowed' });
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+
+  // Best effort (per serverless instance): slows scripted sign-ups.
+  const clientIp = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
+  if (!checkRateLimit(`merchant_register_${clientIp}`, 5, 10 * 60 * 1000)) {
+    return res.status(429).json({ success: false, error: 'Too many sign-up attempts. Please wait a few minutes and try again.' });
   }
 
   try {
-    const { merchant_name, email, company_name, wallet_address, password } = req.body;
+    const { merchant_name, email, company_name, wallet_address, password } = req.body || {};
 
-    if (!merchant_name || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields'
-      });
+    if (typeof merchant_name !== 'string' || !merchant_name.trim()
+      || typeof email !== 'string' || !email.trim()
+      || typeof password !== 'string' || !password) {
+      return res.status(400).json({ success: false, error: 'Merchant name, email and password are required' });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid email format'
-      });
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, error: 'Invalid email format' });
     }
 
     if (password.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password must be at least 8 characters'
-      });
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
     }
 
-    // Check if email already exists
-    const { data: existingMerchant } = await supabase
+    if (merchant_name.trim().length > 100 || (typeof company_name === 'string' && company_name.trim().length > 150)) {
+      return res.status(400).json({ success: false, error: 'Name or company name is too long' });
+    }
+
+    // limit(1) + maybeSingle: .single() errored on zero rows and on
+    // duplicate rows, and the duplicate case slipped past this check.
+    const { data: existingMerchant, error: existingError } = await supabase
       .from('referral_merchants')
       .select('id')
-      .eq('email', email.toLowerCase().trim())
-      .single();
+      .eq('email', normalizedEmail)
+      .limit(1)
+      .maybeSingle();
 
+    if (existingError) throw existingError;
     if (existingMerchant) {
-      return res.status(409).json({
-        success: false,
-        message: 'Email already registered'
-      });
+      return res.status(409).json({ success: false, error: 'Email already registered. Please log in instead.' });
     }
 
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    const passwordHash = await bcrypt.hash(password, 10);
 
     const { data: merchant, error: insertError } = await supabase
       .from('referral_merchants')
       .insert({
         merchant_name: merchant_name.trim(),
-        email: email.toLowerCase().trim(),
-        company_name: company_name?.trim() || null,
-        wallet_address: wallet_address?.trim() || null,
-        password_hash: passwordHash
+        email: normalizedEmail,
+        company_name: typeof company_name === 'string' ? company_name.trim() || null : null,
+        wallet_address: typeof wallet_address === 'string' ? wallet_address.trim() || null : null,
+        password_hash: passwordHash,
+        total_tokens_earned: 0,
+        available_tokens: 0,
+        status: 'active'
       })
       .select('id, merchant_name, email, company_name, wallet_address, total_tokens_earned, available_tokens, status, created_at')
       .single();
 
     if (insertError) {
-      console.error('Supabase insert error:', insertError);
-
-      if (insertError.message && insertError.message.includes('password_hash')) {
-        return res.status(500).json({
-          success: false,
-          message: 'Server misconfiguration: merchant password storage is not set up. Please add a password_hash column to referral_merchants.'
-        });
+      if (insertError.code === '23505') {
+        return res.status(409).json({ success: false, error: 'Email already registered. Please log in instead.' });
       }
-
-      if (insertError.code === '23505' && insertError.message.includes('email')) {
-        return res.status(409).json({
-          success: false,
-          message: 'Email already registered'
-        });
-      }
-
       throw insertError;
     }
 
-    const { data: referralLink, error: linkError } = await supabase
-      .from('merchant_referral_links')
-      .select('id, link_code, full_link, is_active')
-      .eq('merchant_id', merchant.id)
-      .single();
+    const referralLink = await ensureReferralLink(merchant);
 
-    if (linkError) {
-      console.error('Error fetching referral link:', linkError);
-    }
+    const token = jwt.sign(
+      { id: merchant.id, email: merchant.email, type: 'merchant' },
+      getJwtSecret(),
+      { expiresIn: '7d' }
+    );
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Merchant registered successfully',
       merchant: {
-        id: merchant.id,
-        merchant_name: merchant.merchant_name,
-        email: merchant.email,
-        company_name: merchant.company_name,
-        wallet_address: merchant.wallet_address,
-        total_tokens_earned: merchant.total_tokens_earned,
-        available_tokens: merchant.available_tokens,
-        status: merchant.status,
-        created_at: merchant.created_at
+        ...merchant,
+        token,
+        referral_link: referralLink?.full_link || null
       },
       referral_link: referralLink || null
     });
-
   } catch (error) {
     console.error('Merchant registration error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return res.status(500).json({ success: false, error: 'Registration failed. Please try again.' });
   }
 }

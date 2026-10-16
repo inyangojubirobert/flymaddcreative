@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { DIGITAL_CHECKOUT_MESSAGE, digitalItemIds } from '../../../lib/digitalGuard';
 import { getUsdToNgnRate, usdToKobo, usdToNgn } from '../../../lib/currency';
 import { resolveCallbackUrl } from '../../../lib/paystackCallbackUrl';
+import { singleItemPurchaseProblem } from '../../../lib/catalogueCart';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -33,12 +34,18 @@ export default async function handler(req, res) {
 
     const { data: item, error: itemError } = await supabase
       .from('catalogue_items')
-      .select('id, title, price_usd, seller_username, status')
+      .select('*')
       .eq('id', item_id)
-      .single();
+      .maybeSingle();
 
     if (itemError || !item || item.status === 'deleted') {
       return res.status(404).json({ error: 'Product not found' });
+    }
+    // Paused listings, missing/zero/NaN prices and sellers who turned card
+    // payments off are refused here, not just hidden in the UI.
+    const purchaseProblem = singleItemPurchaseProblem(item, 'paystack');
+    if (purchaseProblem) {
+      return res.status(409).json({ error: purchaseProblem });
     }
     if ((await digitalItemIds(supabase, [item.id])).size) {
       return res.status(409).json({ error: DIGITAL_CHECKOUT_MESSAGE });

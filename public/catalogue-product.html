@@ -137,8 +137,11 @@
                 </div>
             </div>
 
+            <div id="unavailableNotice" class="hidden glass rounded-2xl p-6 mb-4 text-center text-slate-300">
+                This listing is not available for purchase right now.
+            </div>
             <!-- Payment method -->
-            <div class="glass rounded-2xl p-6 mb-4">
+            <div id="checkoutPanel" class="glass rounded-2xl p-6 mb-4">
                 <h3 class="font-semibold mb-4">Choose Payment Method</h3>
                 <div class="grid grid-cols-2 gap-3 mb-5" id="methodCards"></div>
 
@@ -380,6 +383,13 @@ function renderProduct(item) {
     document.getElementById('productPrice').textContent = '$' + parseFloat(item.price_usd).toFixed(2);
     document.getElementById('productDesc').textContent  = item.description || '';
 
+    // Paused listings stay viewable by link but can't be bought
+    // (verify-order.js refuses them too).
+    if (item.status !== 'active') {
+        document.getElementById('checkoutPanel').classList.add('hidden');
+        document.getElementById('unavailableNotice').classList.remove('hidden');
+    }
+
     // Payment badges
     const methods = item.payment_methods || ['paystack', 'usdt'];
     document.getElementById('productPaymentBadges').innerHTML = [
@@ -502,7 +512,9 @@ async function payWithPaystack(name, email, wapp, notes) {
             email,
             amount: amountKobo,
             currency: 'NGN',
-            metadata: { item_id: currentItem.id, buyer_name: name },
+            // type + exchange_rate are what verify-order.js checks; without
+            // `type` every card purchase here was refused after the charge.
+            metadata: { type: 'catalogue_purchase', item_id: currentItem.id, buyer_name: name, exchange_rate: rate },
             // Paystack's inline.js rejects an async function here ("Attribute
             // callback must be a valid function") - it must stay synchronous,
             // with the async work run separately inside it.

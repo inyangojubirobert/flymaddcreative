@@ -1,13 +1,13 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
+import { getJwtSecret } from '../../../lib/jwtSecret';
+import { checkRateLimit } from '../../../lib/onedreamHelpers';
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-
-const JWT_SECRET = process.env.JWT_SECRET || 'onedream_secret_2024';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,8 +19,14 @@ export default async function handler(req, res) {
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
 
+    // Best effort (per serverless instance): slows password guessing.
+    const clientIp = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
+    if (!checkRateLimit(`merchant_login_${clientIp}`, 10, 10 * 60 * 1000)) {
+        return res.status(429).json({ success: false, error: 'Too many login attempts. Please wait a few minutes and try again.' });
+    }
+
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body || {};
 
         if (!email?.trim() || !password) {
             return res.status(400).json({ success: false, error: 'Email and password are required' });
@@ -33,7 +39,8 @@ export default async function handler(req, res) {
             .from('referral_merchants')
             .select('*')
             .eq('email', normalizedEmail)
-            .single();
+            .limit(1)
+            .maybeSingle();
 
         if (error || !merchant) {
             return res.status(401).json({ success: false, error: 'Invalid email or password' });
@@ -64,7 +71,7 @@ export default async function handler(req, res) {
         // Sign JWT
         const token = jwt.sign(
             { id: merchant.id, email: merchant.email, type: 'merchant' },
-            JWT_SECRET,
+            getJwtSecret(),
             { expiresIn: '7d' }
         );
 

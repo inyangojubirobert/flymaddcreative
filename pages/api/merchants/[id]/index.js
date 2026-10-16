@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { requireMerchantOwnership } from '../../../../lib/merchantAuth';
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -14,6 +15,7 @@ export default async function handler(req, res) {
     if (req.method !== 'PATCH') return res.status(405).json({ success: false, error: 'Method not allowed' });
 
     const { id } = req.query;
+    if (!requireMerchantOwnership(req, res, id)) return;
     const { merchant_name, company_name, wallet_address } = req.body;
 
     try {

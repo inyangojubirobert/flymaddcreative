@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { requireMerchant } from '../../../../lib/merchantAuth';
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -13,6 +14,9 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'PATCH') return res.status(405).json({ success: false, error: 'Method not allowed' });
 
+    const merchant = requireMerchant(req, res);
+    if (!merchant) return;
+
     const { linkId } = req.query;
     const { is_active } = req.body;
 
@@ -25,6 +29,7 @@ export default async function handler(req, res) {
             .from('merchant_referral_links')
             .update({ is_active })
             .eq('id', linkId)
+            .eq('merchant_id', merchant.id)
             .select('id, link_code, is_active')
             .single();
 

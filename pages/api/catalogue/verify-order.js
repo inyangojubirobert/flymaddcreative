@@ -21,6 +21,7 @@ import { DIGITAL_CHECKOUT_MESSAGE, digitalItemIds } from '../../../lib/digitalGu
 import { getUsdToNgnRate } from '../../../lib/currency';
 import { claimUsdtPayment, verifyAndRecordUsdtPayment } from '../../../lib/verifyCryptoTx';
 import { commissionFields, sellerCommissionPercent } from '../../../lib/sellerEarnings';
+import { singleItemPurchaseProblem } from '../../../lib/catalogueCart';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -54,12 +55,34 @@ export default async function handler(req, res) {
 
     const { data: item, error: itemError } = await supabase
       .from('catalogue_items')
-      .select('id, price_usd, seller_username, status')
+      .select('*')
       .eq('id', item_id)
-      .single();
+      .maybeSingle();
 
     if (itemError || !item || item.status === 'deleted') {
       return res.status(404).json({ error: 'Product not found' });
+    }
+    // Checked before any payment is verified or a USDT transfer is claimed,
+    // so a refused order leaves the transaction unused. A Paystack charge
+    // that already went through is refunded/handled by support with its ref.
+    const purchaseProblem = singleItemPurchaseProblem(item, payment_method);
+    if (purchaseProblem) {
+      // A retry for an order that already exists still returns that order,
+      // even if the listing was paused after it was bought.
+      const existingRef = payment_method === 'paystack' ? payment_ref : tx_hash;
+      if (existingRef) {
+        const { data: existingOrder } = await supabase
+          .from('catalogue_orders')
+          .select('*, catalogue_items(title, images, price_usd, seller_username)')
+          .eq('payment_ref', existingRef)
+          .eq('item_id', item.id)
+          .maybeSingle();
+        if (existingOrder) return res.status(200).json(existingOrder);
+      }
+      const ref = payment_method === 'paystack' ? payment_ref : tx_hash;
+      return res.status(409).json({
+        error: ref ? `${purchaseProblem}. If you were charged, contact support with reference ${ref}.` : purchaseProblem
+      });
     }
     if ((await digitalItemIds(supabase, [item.id])).size) {
       return res.status(409).json({ error: DIGITAL_CHECKOUT_MESSAGE });
@@ -126,7 +149,13 @@ export default async function handler(req, res) {
       }
 
       const amountNGN = verifyData.data.amount / 100;
-      const rate = verifyData.data.metadata?.exchange_rate || await getUsdToNgnRate();
+      // The website's inline popup sets metadata in the browser, so the
+      // stated rate is only trusted within 5% of the live rate.
+      const liveRate = await getUsdToNgnRate();
+      const statedRate = Number(verifyData.data.metadata?.exchange_rate);
+      const rate = Number.isFinite(statedRate) && Math.abs(statedRate - liveRate) / liveRate <= 0.05
+        ? statedRate
+        : liveRate;
       const expectedNGN = priceUsd * rate;
 
       // 2% tolerance for rate drift between when the charge was built and now.

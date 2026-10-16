@@ -166,7 +166,7 @@
                         required
                     />
                     <label for="terms" class="text-sm text-gray-600">
-                        I agree to the <a href="#" class="text-indigo-600 hover:text-indigo-500">Terms of Service</a> and <a href="#" class="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
+                        I agree to the <a href="/merchant-program.html" target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-500">Merchant Program Rules</a> and <a href="/privacy-policy.html" target="_blank" rel="noopener" class="text-indigo-600 hover:text-indigo-500">Privacy Policy</a>
                     </label>
                 </div>
 
@@ -219,7 +219,7 @@
             <div id="referralLinkBox" class="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-6 mb-6 hidden">
                 <h3 class="text-lg font-semibold text-indigo-900 mb-3">🔗 Your Unique Referral Link</h3>
                 <div id="referralLinkDisplay" class="bg-white p-3 rounded-lg border border-indigo-200 mb-3 font-mono text-sm break-all"></div>
-                <button onclick="copyReferralLink()" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition font-medium">
+                <button type="button" onclick="copyReferralLink(this)" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition font-medium">
                     Copy Link
                 </button>
             </div>
@@ -249,8 +249,8 @@
 
             <!-- Action Buttons -->
             <div class="space-y-3">
-                <a href="/merchant-login.html" class="block w-full bg-indigo-600 text-white text-center py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition">
-                    Go to Login →
+                <a href="/merchant-dashboard.html" id="continueLink" class="block w-full bg-indigo-600 text-white text-center py-3 px-4 rounded-lg font-medium hover:bg-indigo-700 transition">
+                    Go to Dashboard →
                 </a>
                 <a href="/" class="block w-full bg-gray-100 text-gray-700 text-center py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition">
                     Back to Home
@@ -260,7 +260,7 @@
     </div>
 
     <script>
-        const API_URL = '/api/merchant/register';
+        const API_URL = '/api/merchants/register';
         // Toggle password visibility
         function togglePassword(inputId, iconId) {
             const input = document.getElementById(inputId);
@@ -349,7 +349,7 @@
             }
             
             if (!terms) {
-                alert('Please agree to the Terms of Service');
+                showError('Please agree to the Merchant Program Rules and Privacy Policy');
                 return;
             }
             
@@ -367,78 +367,51 @@
             `;
             
             try {
-                // REAL API CALL - Replace mock with actual fetch
-             const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-        merchant_name: merchantName,
-        email: email,
-        company_name: companyName,
-        password: password
-    })
-});
-                
-                const data = await response.json();
-                
-        if (response.ok && data.success) {
-    // Show success card with real referral link
-    document.getElementById('registrationCard').style.display = 'none';
-    document.getElementById('successCard').classList.remove('hidden');
-    document.getElementById('referralLinkBox').classList.remove('hidden');
-    
-    // Display the actual referral link from the API response
-    // Check all possible locations where the referral link might be
-    let referralLinkText = 'Referral link generated';
-    
-    if (data.merchant?.referral_link) {
-        // Case 1: merchant.referral_link (from your updated API)
-        referralLinkText = data.merchant.referral_link;
-    } else if (data.referral_link?.full_link) {
-        // Case 2: referral_link.full_link (from original API)
-        referralLinkText = data.referral_link.full_link;
-    } else if (data.referral_link) {
-        // Case 3: direct referral_link string
-        referralLinkText = data.referral_link;
-    }
-    
-    document.getElementById('referralLinkDisplay').textContent = referralLinkText;
-    
-    // Save merchant data to localStorage for session
-    if (data.merchant) {
-        // Save token if available
-        if (data.merchant.token) {
-            localStorage.setItem('merchantToken', data.merchant.token);
-        }
-        
-        // Save email (from merchant object or fallback to form email)
-        localStorage.setItem('merchantEmail', data.merchant.email || email);
-        
-        // Save merchant name (from merchant object or fallback to form name)
-        localStorage.setItem('merchantName', data.merchant.merchant_name || merchantName);
-        
-        // Save merchant ID if available
-        if (data.merchant.id) {
-            localStorage.setItem('merchantId', data.merchant.id);
-        }
-    } else {
-        // Fallback to form data if merchant object not available
-        localStorage.setItem('merchantEmail', email);
-        localStorage.setItem('merchantName', merchantName);
-    }
-    
-    console.log('Registration successful:', data);
-    
-} else {
-    // Show error message from API - check both error and message fields
-    const errorMsg = data.error || data.message || 'Registration failed. Please try again.';
-    showError(errorMsg);
-    btn.disabled = false;
-    btn.innerHTML = 'Register as Merchant';
-}
-                
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        merchant_name: merchantName,
+                        email: email,
+                        company_name: companyName,
+                        password: password
+                    })
+                });
+
+                // A crashed function or proxy error can return HTML, not JSON.
+                const data = await response.json().catch(() => ({}));
+
+                if (response.ok && data.success) {
+                    const merchant = data.merchant || {};
+                    const referralLinkText = merchant.referral_link
+                        || data.referral_link?.full_link
+                        || null;
+
+                    document.getElementById('registrationCard').style.display = 'none';
+                    document.getElementById('successCard').classList.remove('hidden');
+                    if (referralLinkText) {
+                        document.getElementById('referralLinkDisplay').textContent = referralLinkText;
+                        document.getElementById('referralLinkBox').classList.remove('hidden');
+                    }
+
+                    // Same keys merchant-login.html writes and merchant-dashboard.html reads,
+                    // so the merchant lands on the dashboard already signed in.
+                    if (merchant.token && merchant.id) {
+                        localStorage.setItem('merchantToken', merchant.token);
+                        localStorage.setItem('merchantId', merchant.id);
+                    } else {
+                        // No session returned - fall back to the login page.
+                        const continueLink = document.getElementById('continueLink');
+                        continueLink.href = '/merchant-login.html';
+                        continueLink.textContent = 'Go to Login →';
+                    }
+                    localStorage.setItem('merchantEmail', merchant.email || email);
+                    localStorage.setItem('merchantName', merchant.merchant_name || merchantName);
+                } else {
+                    showError(data.error || data.message || 'Registration failed. Please try again.');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Register as Merchant';
+                }
             } catch (error) {
                 console.error('Registration error:', error);
                 
@@ -470,10 +443,13 @@
             container.classList.add('hidden');
         }
 
-        function copyReferralLink() {
+        function copyReferralLink(btn) {
             const linkText = document.getElementById('referralLinkDisplay').textContent;
+            if (!navigator.clipboard) {
+                alert('Copy not supported here. Please copy the link manually.');
+                return;
+            }
             navigator.clipboard.writeText(linkText).then(() => {
-                const btn = event.target;
                 const originalText = btn.textContent;
                 btn.textContent = 'Copied!';
                 btn.classList.add('bg-green-600');
