@@ -15,6 +15,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { cataloguePriceLabel, getCatalogueItem, createItemPaymentIntent, createOrder, orderAction, type CatalogueOrder } from '@/api/catalogue';
 import { loadRemoteConfig } from '@/lib/remote-config';
 import { DigitalProductPanel, useDigitalProduct } from '@/components/digital-product';
+import { AppreciationPrompt } from '@/components/gift-art';
 import { ApiError } from '@/lib/api-client';
 
 type PayMethod = 'paystack' | 'usdt_bsc' | 'usdt_tron';
@@ -199,6 +200,7 @@ export default function CatalogueItemScreen() {
               {order.status === 'buyer_confirmed' && (
                 <ThemedText type="small" themeColor="textSecondary">Thank you! Funds will be released to the seller.</ThemedText>
               )}
+              <AppreciationPrompt order={order} sellerUsername={item.seller_username} />
             </ThemedView>
           ) : (
             <>

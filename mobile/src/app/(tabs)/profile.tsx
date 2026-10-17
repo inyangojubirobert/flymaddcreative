@@ -168,6 +168,24 @@ export default function ProfileScreen() {
             />
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
             <ProfileAction
+              icon="gift"
+              iconBackground={Palette.yellowSoft}
+              iconColor={Palette.yellowInk}
+              title="Dream Coins & gifts"
+              subtitle="Appreciate sellers, see gifts you've received"
+              onPress={() => router.push('/gifts' as never)}
+            />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <ProfileAction
+              icon="medal"
+              iconBackground="#ECFCCB"
+              iconColor="#3F6212"
+              title="Rewards & recognition"
+              subtitle="Seller badges, programmes and leaderboards"
+              onPress={() => router.push('/rewards' as never)}
+            />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <ProfileAction
               icon="chatbubbles"
               iconBackground={Palette.ashSoft}
               iconColor={Palette.slate}

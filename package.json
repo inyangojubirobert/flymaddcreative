@@ -15,7 +15,8 @@
     "test:db": "node scripts/test-db.mjs",
     "test:subscriptions": "node --experimental-vm-modules --test scripts/test-google-play-subscriptions.mjs scripts/test-ai-subscription-currency.mjs",
     "check:google-play": "node scripts/check-google-play-readiness.mjs",
-    "migrate:add-password-hash": "node scripts/add-password-hash-column.mjs"
+    "migrate:add-password-hash": "node scripts/add-password-hash-column.mjs",
+    "test:dream-coins": "node --test scripts/test-dream-coins.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",

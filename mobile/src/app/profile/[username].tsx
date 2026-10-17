@@ -82,6 +82,10 @@ export default function ParticipantProfileScreen() {
           <Pressable onPress={() => router.push(`/catalogue/${participant.username}`)} style={styles.shopButton}>
             <ThemedText style={styles.shopButtonText}>🛍️ View Shop</ThemedText>
           </Pressable>
+
+          <Pressable onPress={() => router.push(`/gifts/recognition/${participant.username}` as never)} style={styles.shopButton}>
+            <ThemedText style={styles.shopButtonText}>🎁 Appreciation & gifts</ThemedText>
+          </Pressable>
         </ScrollView>
       </SafeAreaView>
     </ThemedView>

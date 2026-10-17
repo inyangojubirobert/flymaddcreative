@@ -50,6 +50,7 @@
         <button onclick="switchTab('orders')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🛍️ Orders</button>
         <button onclick="switchTab('ads')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">📣 Ads</button>
         <button onclick="switchTab('digital')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">📚 Digital</button>
+        <button onclick="switchTab('gifts')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🎁 Gifts & Rewards</button>
       </div>
 
       <!-- Messages Tab -->
@@ -180,6 +181,77 @@
           <div id="digitalSubs" class="space-y-1 text-xs text-slate-300"></div>
           <h3 class="text-sm font-semibold mt-5 mb-2">Recent website (Paystack) payments</h3>
           <div id="digitalPayments" class="space-y-1 text-xs text-slate-300"></div>
+        </div>
+      </div>
+
+      <!-- Gifts & Rewards Tab -->
+      <div id="giftsTab" class="hidden space-y-4">
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+            <h2 class="text-xl font-bold">Dream Coins & Virtual Gifts</h2>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="syncCoinRefunds()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Sync Play refunds</button>
+              <button onclick="checkCoinBilling()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Check Google Play</button>
+              <select id="giftExportType" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+                <option value="purchases">Purchases</option><option value="gifts">Gifts</option><option value="ledger">Ledger</option><option value="audit">Admin audit</option>
+              </select>
+              <button onclick="exportGifting()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Export CSV (90 days)</button>
+              <button onclick="loadGifts()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Refresh</button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 mb-3">Coins have no cash value and are never withdrawable. Gifts are recognition only - they are not votes, prize entries or seller earnings.</p>
+          <div id="giftsSummary" class="text-sm text-slate-300 mb-3"></div>
+          <h3 class="text-sm font-semibold mb-2">Signals to review</h3>
+          <div id="giftsSignals" class="space-y-1 text-xs"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-1">Coin packages</h2>
+          <p class="text-xs text-slate-400 mb-3">Buyers pay Google Play's localized price for each product id; the reference price is for planning only. Enable multi-quantity in Play Console only after a multi-quantity test purchase credits correctly.</p>
+          <div id="coinPackages" class="space-y-2 overflow-x-auto text-xs"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-1">Gift catalogue</h2>
+          <p class="text-xs text-slate-400 mb-3">Artwork: an https image link (Cloudinary) or an emoji. Changes apply to new gifts only.</p>
+          <div id="giftCatalogue" class="space-y-2 overflow-x-auto text-xs"></div>
+          <div class="flex flex-wrap gap-2 mt-3">
+            <input id="newGiftId" placeholder="id (e.g. thank_you_cake)" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+            <input id="newGiftName" placeholder="name" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+            <input id="newGiftEmoji" placeholder="emoji" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 w-16">
+            <input id="newGiftCost" type="number" min="1" placeholder="coins" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 w-24">
+            <button onclick="createGift()" class="text-xs bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Add gift</button>
+          </div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-3">Account actions</h2>
+          <div class="flex flex-wrap gap-2">
+            <input id="giftActionUser" placeholder="username" class="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1">
+            <input id="giftActionCoins" type="number" placeholder="coins (+/-)" class="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1 w-28">
+            <input id="giftActionReason" placeholder="reason (required)" class="text-sm bg-slate-700 border border-slate-600 rounded px-2 py-1 flex-1 min-w-[160px]">
+            <button onclick="giftAccountAction('adjust_coins')" class="text-sm bg-slate-600 hover:bg-slate-500 px-3 py-1 rounded">Adjust coins</button>
+            <button onclick="giftAccountAction('suspend')" class="text-sm bg-red-900 hover:bg-red-800 px-3 py-1 rounded">Suspend gifting</button>
+            <button onclick="giftAccountAction('restore')" class="text-sm bg-green-800 hover:bg-green-700 px-3 py-1 rounded">Restore</button>
+          </div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-2">Recent purchases</h2>
+          <div id="coinPurchases" class="space-y-1 text-xs text-slate-300"></div>
+          <h2 class="text-lg font-bold mt-5 mb-2">Recent gifts</h2>
+          <div id="giftTransfers" class="space-y-1 text-xs text-slate-300"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-1">Recognition programmes</h2>
+          <p class="text-xs text-slate-400 mb-3">Non-cash only (badges, features, platform benefits). Cash rewards need a separate approval and compliance review.</p>
+          <div id="rewardPrograms" class="space-y-2 text-xs"></div>
+          <div class="flex flex-wrap gap-2 mt-3">
+            <select id="awardProgram" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1"></select>
+            <input id="awardUser" placeholder="username" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+            <input id="awardTitle" placeholder="award title" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+            <input id="awardPeriod" placeholder="period e.g. 2026-10" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 w-32">
+            <button onclick="grantAward()" class="text-xs bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Award</button>
+          </div>
+          <div id="rewardAwards" class="space-y-1 text-xs text-slate-300 mt-3"></div>
+          <h3 class="text-sm font-semibold mt-5 mb-2">Admin audit log</h3>
+          <div id="giftAudit" class="space-y-1 text-xs text-slate-400"></div>
         </div>
       </div>
 
@@ -325,6 +397,7 @@
       if (tab === 'orders') loadOrders();
       if (tab === 'ads') loadAds();
       if (tab === 'digital') { loadDigital(); loadDigitalSubs(false); }
+      if (tab === 'gifts') loadGifts();
     }
 
     let activeParticipantId = null;
@@ -797,6 +870,178 @@
       } catch (err) { alert(err.message); }
     }
 
+
+    // ---------------------------------------------------------------------
+    // Dream Coins, gifts & recognition
+    // ---------------------------------------------------------------------
+    const giftState = { billing: {} };
+    const when = (d) => d ? new Date(d).toLocaleString() : '';
+
+    async function loadGifts() {
+      const summary = document.getElementById('giftsSummary');
+      summary.textContent = 'Loading…';
+      try {
+        const d = await adminFetch('/api/admin/gifts');
+        summary.innerHTML = `Coin sales: <b class="${d.billing_enabled ? 'text-green-400' : 'text-amber-300'}">${d.billing_enabled ? 'ON' : 'OFF (DREAM_COINS_ENABLED)'}</b>
+          · last 100 purchases: ${d.totals.recent_purchases} (${d.totals.recent_coins_issued.toLocaleString()} coins)
+          · last 100 gifts: ${d.totals.recent_coins_spent.toLocaleString()} coins
+          · limits: ${d.limits.perHour} gifts/hour, ${d.limits.coinsPerDay.toLocaleString()} coins/day per sender`;
+        document.getElementById('giftsSignals').innerHTML = d.signals.map(s =>
+          `<div class="rounded bg-slate-700/50 border border-amber-600/50 p-2"><span class="text-amber-200">${escapeText(s.type.replace('_', ' '))}</span> · @${escapeText(s.username || '?')} · ${escapeText(s.detail)}</div>`).join('') || '<p class="text-green-400">Nothing unusual.</p>';
+
+        document.getElementById('coinPackages').innerHTML = `<table class="min-w-full"><tr class="text-slate-400 text-left"><th>Play product id</th><th>Name</th><th>Coins/unit</th><th>Ref $</th><th>Highlight</th><th>Order</th><th>Active</th><th>Google Play</th><th></th></tr>` +
+          d.packages.map(p => {
+            const a = `data-coinpkg="${escapeText(p.id)}"`;
+            const s = giftState.billing[p.id];
+            const play = s ? `${escapeText(s.state)}${s.play_price ? ` ${Number(s.play_price.amount).toFixed(2)} ${escapeText(s.play_price.currency)}` : ''}` : '—';
+            return `<tr class="border-t border-slate-700"><td class="py-1 pr-2">${escapeText(p.google_play_product_id)}</td>
+              <td><input ${a} data-f="name" value="${escapeText(p.name)}" class="bg-slate-700 rounded px-1 w-24"></td>
+              <td><input ${a} data-f="coins_per_unit" type="number" value="${p.coins_per_unit}" class="bg-slate-700 rounded px-1 w-20"></td>
+              <td><input ${a} data-f="reference_price_usd" value="${p.reference_price_usd ?? ''}" class="bg-slate-700 rounded px-1 w-16"></td>
+              <td><input ${a} data-f="highlight" value="${escapeText(p.highlight || '')}" class="bg-slate-700 rounded px-1 w-20"></td>
+              <td><input ${a} data-f="sort_order" type="number" value="${p.sort_order}" class="bg-slate-700 rounded px-1 w-14"></td>
+              <td><input ${a} data-f="is_active" type="checkbox" ${p.is_active ? 'checked' : ''}></td>
+              <td>${play}</td>
+              <td><button onclick="saveCoinPackage('${escapeText(p.id)}')" class="bg-slate-600 hover:bg-slate-500 px-2 rounded">Save</button></td></tr>`;
+          }).join('') + '</table>';
+
+        document.getElementById('giftCatalogue').innerHTML = `<table class="min-w-full"><tr class="text-slate-400 text-left"><th>Gift</th><th>Name</th><th>Emoji</th><th>Image URL</th><th>Coins</th><th>Category</th><th>Priority</th><th>Active</th><th></th></tr>` +
+          d.gifts.map(g => {
+            const a = `data-gift="${escapeText(g.id)}"`;
+            return `<tr class="border-t border-slate-700"><td class="py-1 pr-2">${escapeText(g.id)}</td>
+              <td><input ${a} data-f="name" value="${escapeText(g.name)}" class="bg-slate-700 rounded px-1 w-32"></td>
+              <td><input ${a} data-f="emoji" value="${escapeText(g.emoji || '')}" class="bg-slate-700 rounded px-1 w-12"></td>
+              <td><input ${a} data-f="image_url" value="${escapeText(g.image_url || '')}" class="bg-slate-700 rounded px-1 w-40"></td>
+              <td><input ${a} data-f="coin_cost" type="number" value="${g.coin_cost}" class="bg-slate-700 rounded px-1 w-20"></td>
+              <td><input ${a} data-f="category" value="${escapeText(g.category)}" class="bg-slate-700 rounded px-1 w-24"></td>
+              <td><input ${a} data-f="display_priority" type="number" value="${g.display_priority}" class="bg-slate-700 rounded px-1 w-14"></td>
+              <td><input ${a} data-f="is_active" type="checkbox" ${g.is_active ? 'checked' : ''}></td>
+              <td><button onclick="saveGift('${escapeText(g.id)}')" class="bg-slate-600 hover:bg-slate-500 px-2 rounded">Save</button></td></tr>`;
+          }).join('') + '</table>';
+
+        document.getElementById('coinPurchases').innerHTML = d.purchases.map(p =>
+          `<div>${when(p.created_at)} · @${escapeText(p.participant?.username || '?')} · ${escapeText(p.package_id)} × ${p.quantity} = ${p.total_coins.toLocaleString()} coins · ${escapeText(p.order_id || '')}${p.is_test ? ' · TEST' : ''} · ${escapeText(p.status)}${p.reversed_quantity ? ` (${p.reversed_quantity} reversed)` : ''} · ${escapeText(p.consumption_state)}</div>`).join('') || '<div class="text-slate-500">None yet.</div>';
+        document.getElementById('giftTransfers').innerHTML = d.transfers.map(t =>
+          `<div class="flex flex-wrap gap-2 items-center">${when(t.created_at)} · @${escapeText(t.sender?.username || '?')} → @${escapeText(t.recipient?.username || '?')} · ${t.quantity} × ${escapeText(t.gift_snapshot?.name || t.gift_id)} (${t.coins_spent} coins)${t.verified_buyer ? ' · verified buyer' : ''}${t.message ? ` · “${escapeText(t.message)}”` : ''} · ${escapeText(t.status)}
+            ${t.status === 'sent' ? `<button onclick="reverseGift('${t.id}')" class="ml-auto bg-red-900 hover:bg-red-800 px-2 rounded">Reverse</button>` : ''}</div>`).join('') || '<div class="text-slate-500">None yet.</div>';
+
+        document.getElementById('rewardPrograms').innerHTML = d.programs.map(p =>
+          `<div class="rounded bg-slate-700/40 p-2 flex flex-wrap gap-2 items-center"><b>${escapeText(p.name)}</b><span class="text-slate-400">${escapeText(p.audience)} · ${escapeText(p.reward_type)} · ${escapeText(JSON.stringify(p.criteria))}</span>
+            <button onclick="toggleProgram('${escapeText(p.id)}', ${!p.is_active})" class="ml-auto ${p.is_active ? 'bg-slate-600' : 'bg-green-800'} px-2 rounded">${p.is_active ? 'Deactivate' : 'Activate'}</button></div>`).join('');
+        document.getElementById('awardProgram').innerHTML = d.programs.map(p => `<option value="${escapeText(p.id)}">${escapeText(p.name)}</option>`).join('');
+        document.getElementById('rewardAwards').innerHTML = d.awards.map(a =>
+          `<div class="flex gap-2 items-center">${when(a.created_at)} · @${escapeText(a.participant?.username || '?')} · ${escapeText(a.title)} (${escapeText(a.program_id)}, ${escapeText(a.period)}) · ${escapeText(a.status)}
+            ${a.status === 'awarded' ? `<button onclick="revokeAward('${a.id}')" class="ml-auto bg-red-900 hover:bg-red-800 px-2 rounded">Revoke</button>` : ''}</div>`).join('') || '<div class="text-slate-500">No awards yet.</div>';
+        document.getElementById('giftAudit').innerHTML = d.audit.map(a =>
+          `<div>${when(a.created_at)} · ${escapeText(a.action)} · ${escapeText(a.target_type)} ${escapeText(a.target_id || '')} · ${escapeText(JSON.stringify(a.details))}</div>`).join('') || '<div>No admin actions yet.</div>';
+      } catch (err) {
+        summary.innerHTML = `<span class="text-red-400">Error: ${escapeText(err.message)}</span>`;
+      }
+    }
+
+    function collectGiftForm(attr, id) {
+      const body = { id };
+      document.querySelectorAll(`[${attr}="${CSS.escape(id)}"]`).forEach(input => {
+        const f = input.dataset.f;
+        if (input.type === 'checkbox') body[f] = input.checked;
+        else if (input.type === 'number') body[f] = Number(input.value);
+        else body[f] = input.value.trim();
+      });
+      return body;
+    }
+
+    async function saveCoinPackage(id) {
+      try { await adminFetch('/api/admin/gifts/packages', { method: 'PATCH', body: JSON.stringify(collectGiftForm('data-coinpkg', id)) }); alert('Saved'); loadGifts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function saveGift(id) {
+      try { await adminFetch('/api/admin/gifts/catalogue', { method: 'PATCH', body: JSON.stringify(collectGiftForm('data-gift', id)) }); alert('Saved'); loadGifts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function createGift() {
+      const body = {
+        id: document.getElementById('newGiftId').value.trim(),
+        name: document.getElementById('newGiftName').value.trim(),
+        emoji: document.getElementById('newGiftEmoji').value.trim() || null,
+        coin_cost: Number(document.getElementById('newGiftCost').value),
+      };
+      try { await adminFetch('/api/admin/gifts/catalogue', { method: 'POST', body: JSON.stringify(body) }); loadGifts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function checkCoinBilling() {
+      try {
+        const d = await adminFetch('/api/admin/gifts/billing-status');
+        giftState.billing = Object.fromEntries(d.packages.map(p => [p.id, p]));
+        loadGifts();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function syncCoinRefunds() {
+      try {
+        const r = await adminFetch('/api/admin/gifts/sync-voided', { method: 'POST', body: JSON.stringify({ days: 30 }) });
+        alert(`Checked ${r.checked} voided Google Play purchases; ${r.applied} coin reversal(s), ${r.coins_reversed} coins.`);
+        loadGifts();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function reverseGift(id) {
+      const reason = prompt('Why is this gift being reversed? (coins go back to the sender)');
+      if (!reason || reason.trim().length < 3) return;
+      try { await adminFetch('/api/admin/gifts/actions', { method: 'POST', body: JSON.stringify({ action: 'reverse_gift', gift_transaction_id: id, reason }) }); loadGifts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function giftAccountAction(action) {
+      const body = {
+        action,
+        username: document.getElementById('giftActionUser').value.trim(),
+        reason: document.getElementById('giftActionReason').value.trim(),
+        coins: Number(document.getElementById('giftActionCoins').value),
+        request_key: crypto.randomUUID(),
+      };
+      if (action === 'adjust_coins' && !confirm(`Adjust @${body.username} by ${body.coins} coins?`)) return;
+      try { await adminFetch('/api/admin/gifts/actions', { method: 'POST', body: JSON.stringify(body) }); alert('Done'); loadGifts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function toggleProgram(id, isActive) {
+      try { await adminFetch('/api/admin/gifts/rewards', { method: 'PATCH', body: JSON.stringify({ target: 'program', id, is_active: isActive }) }); loadGifts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function grantAward() {
+      const body = {
+        target: 'award',
+        program_id: document.getElementById('awardProgram').value,
+        username: document.getElementById('awardUser').value.trim(),
+        title: document.getElementById('awardTitle').value.trim(),
+        period: document.getElementById('awardPeriod').value.trim() || undefined,
+      };
+      try { await adminFetch('/api/admin/gifts/rewards', { method: 'POST', body: JSON.stringify(body) }); loadGifts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function revokeAward(id) {
+      const note = prompt('Reason for revoking this award?');
+      if (!note) return;
+      try { await adminFetch('/api/admin/gifts/rewards', { method: 'PATCH', body: JSON.stringify({ target: 'award', id, status: 'revoked', note }) }); loadGifts(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function exportGifting() {
+      const type = document.getElementById('giftExportType').value;
+      try {
+        const response = await fetch(`/api/admin/gifts/export?type=${encodeURIComponent(type)}&days=90`, { headers: { Authorization: `Bearer ${state.token}` } });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Export failed');
+        const url = URL.createObjectURL(await response.blob());
+        const link = Object.assign(document.createElement('a'), { href: url, download: `dream-${type}.csv` });
+        link.click();
+        URL.revokeObjectURL(url);
+      } catch (err) { alert(err.message); }
+    }
 
     // ---------------------------------------------------------------------
     // Digital products

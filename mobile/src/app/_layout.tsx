@@ -102,6 +102,10 @@ function RootNavigator() {
         <Stack.Screen name="library/[licenseId]" options={{ headerShown: true, title: '' }} />
         <Stack.Screen name="catalogue/digital/[itemId]" options={{ headerShown: true, title: 'Sell as digital' }} />
         <Stack.Screen name="catalogue/digital/subscription" options={{ headerShown: true, title: 'Monthly subscription' }} />
+        <Stack.Screen name="gifts/index" options={{ headerShown: true, title: 'Dream Coins & Gifts' }} />
+        <Stack.Screen name="gifts/send" options={{ headerShown: true, title: 'Send a gift' }} />
+        <Stack.Screen name="gifts/recognition/[username]" options={{ headerShown: true, title: 'Appreciation' }} />
+        <Stack.Screen name="rewards" options={{ headerShown: true, title: 'Rewards & Recognition' }} />
       </Stack.Protected>
       <Stack.Protected guard={!token}>
         <Stack.Screen name="index" />

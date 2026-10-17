@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { SellerLink } from '@/components/listing-card';
+import { AppreciationPrompt } from '@/components/gift-art';
 import { createCartPaymentIntent, getCartQuote, submitCartCheckout, type CartCheckoutResult, type CartQuoteLine } from '@/api/cart';
 import { orderAction, type CatalogueOrder } from '@/api/catalogue';
 import { Palette, Spacing } from '@/constants/theme';
@@ -461,6 +462,7 @@ function CheckoutComplete({ result, onContinue }: { result: CartCheckoutResult; 
                   <ThemedText type="smallBold" style={{ color: Palette.white }}>Message seller</ThemedText>
                 </Pressable>
               </View>
+              <AppreciationPrompt order={order} sellerUsername={order.seller_username} />
             </View>
           ))}
 
