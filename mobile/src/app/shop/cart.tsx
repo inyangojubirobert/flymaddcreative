@@ -15,6 +15,8 @@ import { AppreciationPrompt } from '@/components/gift-art';
 import { recordAffiliateIntent } from '@/lib/affiliate-attribution';
 import { createCartPaymentIntent, getCartQuote, submitCartCheckout, type CartCheckoutResult, type CartQuoteLine } from '@/api/cart';
 import { orderAction, type CatalogueOrder } from '@/api/catalogue';
+import { getQuote, useCurrencies, type Quote } from '@/api/marketplace';
+import { formatMinor } from '@/lib/money';
 import { Palette, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { MAX_LINE_QUANTITY, useCart, type CartLine } from '@/contexts/CartContext';
@@ -66,12 +68,30 @@ export default function CartScreen() {
   });
   const quote = quoteQuery.data;
 
+  // P7: with multi-currency listings on, the buyer pays one stored quote in
+  // one currency (naira by Paystack, or US dollars in USDT), fixed until it
+  // expires. It is refreshed shortly before then, but not while a payment
+  // made from it is being confirmed.
+  const multiCurrency = !!useCurrencies().data?.listing_currencies_enabled;
+  const fixedQuery = useQuery({
+    queryKey: ['checkout-quote', quoteKey],
+    queryFn: async () => (await getQuote({
+      lines: requestLines,
+      client_key: `cart_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`,
+    })).quote,
+    enabled: multiCurrency && requestLines.length > 0 && !result && !pendingPayment && !processing,
+    refetchInterval: (q) => (q.state.data ? Math.max(5_000, new Date(q.state.data.expires_at).getTime() - Date.now() - 60_000) : false),
+    retry: false,
+  });
+  const fixed: Quote | undefined = multiCurrency ? fixedQuery.data : undefined;
+  const payLabel = fixed ? formatMinor(fixed.total_minor, fixed.checkout_currency) : quote ? usd(quote.total_usd) : '';
+
   const { syncFromQuote } = cart;
   useEffect(() => {
     if (quote) syncFromQuote(quote.lines);
   }, [quote, syncFromQuote]);
 
-  const allowed = quote?.payment_methods ?? ['paystack', 'usdt'];
+  const allowed = fixed ? [fixed.checkout_route] : quote?.payment_methods ?? ['paystack', 'usdt'];
   const method: PayMethod = !allowed.includes('paystack') && selectedMethod === 'paystack' ? 'usdt_bsc'
     : !allowed.includes('usdt') && selectedMethod !== 'paystack' ? 'paystack'
       : selectedMethod;
@@ -99,12 +119,16 @@ export default function CartScreen() {
   const needsDelivery = (quote?.lines ?? []).some((line) => line.listing_type !== 'service');
   const contactOk = whatsapp.replace(/\D/g, '').length >= 7 && (!needsDelivery || deliveryAddress.trim().length >= 5);
   const canPay = !!quote && quote.checkout_enabled && !quote.has_problems && !stale && quote.total_usd > 0
+    && (!multiCurrency || (!!fixed && !fixedQuery.isFetching))
     && !!name.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && contactOk && !processing;
 
   function handleFailure(e: unknown) {
     const message = e instanceof ApiError ? e.message : 'Checkout failed. Please try again.';
     setError(message);
-    if (e instanceof ApiError && e.status === 409) void quoteQuery.refetch();
+    if (e instanceof ApiError && e.status === 409) {
+      void quoteQuery.refetch();
+      if (multiCurrency) void fixedQuery.refetch();
+    }
   }
 
   function complete(done: CartCheckoutResult) {
@@ -139,7 +163,7 @@ export default function CartScreen() {
     setNotice(null);
     try {
       const redirectUrl = Linking.createURL('paystack-callback');
-      const intent = await createCartPaymentIntent({ lines: requestLines, buyer_email: email.trim(), callback_url: redirectUrl });
+      const intent = await createCartPaymentIntent({ lines: requestLines, buyer_email: email.trim(), callback_url: redirectUrl, quote_id: fixed?.id });
       recordAffiliateIntent({ paymentRef: intent.reference, method: 'paystack', itemIds: requestLines.map((line) => line.item_id) });
       setPendingPayment({ reference: intent.reference, returned: false });
       const browser = await WebBrowser.openAuthSessionAsync(intent.authorization_url, redirectUrl);
@@ -172,6 +196,7 @@ export default function CartScreen() {
         network: method === 'usdt_bsc' ? 'bsc' : 'tron',
         tx_hash: txHash.trim(),
         lines: requestLines,
+        quote_id: fixed?.id,
         buyer_name: name.trim(),
         buyer_email: email.trim(),
         buyer_whatsapp: whatsapp.trim(),
@@ -240,6 +265,12 @@ export default function CartScreen() {
               <Pressable onPress={() => quoteQuery.refetch()}>
                 <ThemedText style={styles.error}>Couldn&apos;t price your cart. Tap to retry.</ThemedText>
               </Pressable>
+            ) : multiCurrency && fixedQuery.isError ? (
+              <Pressable onPress={() => fixedQuery.refetch()}>
+                <ThemedText style={styles.error}>{fixedQuery.error instanceof ApiError ? fixedQuery.error.message : 'Couldn\u2019t price your cart.'} Tap to retry.</ThemedText>
+              </Pressable>
+            ) : fixed ? (
+              <QuoteSummary quote={fixed} count={cart.count} feePercent={quote?.fee_policy.percent ?? 0} />
             ) : quote ? (
               <>
                 <SummaryRow label={`Items (${cart.count})`} value={usd(quote.subtotal_usd)} />
@@ -312,12 +343,12 @@ export default function CartScreen() {
           {pendingPayment?.returned ? null : method === 'paystack' ? (
             <Pressable onPress={payWithPaystack} disabled={!canPay} style={[styles.payButton, !canPay && styles.disabled]}>
               {processing ? <ActivityIndicator color={Palette.lemonInk} /> : (
-                <ThemedText style={styles.payButtonText}>Pay {quote ? usd(quote.total_usd) : ''} with Paystack</ThemedText>
+                <ThemedText style={styles.payButtonText}>Pay {payLabel} with Paystack</ThemedText>
               )}
             </Pressable>
           ) : (
             <View style={styles.usdt}>
-              <ThemedText type="small">Send exactly {quote ? usd(quote.total_usd) : '…'} in USDT ({method === 'usdt_bsc' ? 'BEP-20' : 'TRC-20'}) to:</ThemedText>
+              <ThemedText type="small">Send exactly {payLabel || '…'} in USDT ({method === 'usdt_bsc' ? 'BEP-20' : 'TRC-20'}) to:</ThemedText>
               <Pressable onPress={() => { if (cryptoAddress) { void Clipboard.setStringAsync(cryptoAddress); Alert.alert('Copied', 'Wallet address copied.'); } }} style={input}>
                 <ThemedText type="code" style={styles.address}>{cryptoAddress || 'Loading address…'}</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">Tap to copy</ThemedText>
@@ -332,6 +363,32 @@ export default function CartScreen() {
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
+  );
+}
+
+/** P7: the stored quote the buyer pays: one currency, rates fixed until it expires. */
+function QuoteSummary({ quote, count, feePercent }: { quote: Quote; count: number; feePercent: number }) {
+  const cur = quote.checkout_currency;
+  const converted = quote.lines.filter((l) => l.listing_currency !== cur && l.rate_per_usd);
+  const theme = useTheme();
+  return (
+    <>
+      <SummaryRow label={`Items (${count})`} value={formatMinor(quote.subtotal_minor, cur)} />
+      <SummaryRow label="Service charge" hint={feePercent > 0 ? `${feePercent}% of items` : 'No service charge'} value={formatMinor(quote.service_fee_minor, cur)} />
+      <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+      <SummaryRow label="Total" value={formatMinor(quote.total_minor, cur)} strong />
+      {[...new Set(converted.map((l) => l.listing_currency))].map((code) => {
+        const l = converted.find((x) => x.listing_currency === code)!;
+        return (
+          <ThemedText key={code} type="small" themeColor="textSecondary">
+            {code} prices converted at {Number(l.rate_per_usd).toLocaleString('en-US', { maximumFractionDigits: 6 })} {code} per $1 (rate published {new Date(l.rate_published_at ?? quote.expires_at).toLocaleDateString()}).
+          </ThemedText>
+        );
+      })}
+      <ThemedText type="small" themeColor="textSecondary">
+        {cur === 'NGN' ? 'Charged in naira, exactly as listed.' : 'Paid in USDT.'} This price is held until {new Date(quote.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.
+      </ThemedText>
+    </>
   );
 }
 

@@ -23,19 +23,24 @@ export default async function handler(req, res) {
   const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 250) : 100;
 
   try {
-    let query = supabase
-      .from('participant_withdrawals')
-      .select([
-        'id', 'username', 'amount_usd', 'payment_method', 'payment_details', 'status', 'created_at', 'source',
-        'payout_type', 'payout_currency', 'payout_network', 'payout_reference', 'payout_amount',
-        'payout_confirmed_at', 'claimed_at', 'claimed_by', 'admin_note'
-      ].join(','))
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const columns = [
+      'id', 'username', 'amount_usd', 'payment_method', 'payment_details', 'status', 'created_at', 'source',
+      'payout_type', 'payout_currency', 'payout_network', 'payout_reference', 'payout_amount',
+      'payout_confirmed_at', 'claimed_at', 'claimed_by', 'admin_note'
+    ];
+    const list = (cols) => {
+      let query = supabase
+        .from('participant_withdrawals')
+        .select(cols.join(','))
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      if (requestedStatus !== 'all') query = query.eq('status', requestedStatus);
+      return query;
+    };
 
-    if (requestedStatus !== 'all') query = query.eq('status', requestedStatus);
-
-    const { data: withdrawals, error: withdrawalsError } = await query;
+    // amount_ngn / currency exist once P8 + P9's SQL is applied.
+    let { data: withdrawals, error: withdrawalsError } = await list([...columns, 'amount_ngn', 'currency']);
+    if (withdrawalsError?.code === '42703') ({ data: withdrawals, error: withdrawalsError } = await list(columns));
     if (withdrawalsError) throw withdrawalsError;
 
     const usernames = [...new Set((withdrawals || []).map(row => row.username).filter(Boolean))];

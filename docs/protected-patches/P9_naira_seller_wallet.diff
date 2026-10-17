@@ -1,0 +1,259 @@
+--- a/pages/api/onedream/marketplace-wallet.js
++++ b/pages/api/onedream/marketplace-wallet.js
+@@ -9,4 +9,8 @@
+ //         seller and reserves the amount at once; admins approve, reject or
+ //         mark it paid through the existing withdrawal workflow.
++//
++// P9: naira-settled sales (multi-currency listings) have their own balance,
++// `naira`, paid out in naira through the same manual withdrawal workflow
++// (POST with currency: 'NGN'). The USD figures exclude them (P8).
+ //
+ // Earnings become withdrawable only once the buyer confirms delivery. Vote
+@@ -35,5 +39,5 @@
+     if (req.method === 'POST') return await requestWithdrawal(req, res, participant);
+ 
+-    const [summaryResult, ordersResult, withdrawalsResult, legacyResult] = await Promise.all([
++    const [summaryResult, ordersResult, withdrawalsResult, legacyResult, nairaResult] = await Promise.all([
+       supabase.rpc('seller_earnings_summary', { p_username: participant.username }),
+       supabase
+@@ -46,5 +50,5 @@
+       supabase
+         .from('participant_withdrawals')
+-        .select('id, amount_usd, payment_method, status, created_at, payout_reference, payout_confirmed_at, admin_note')
++        .select('id, amount_usd, amount_ngn, currency, payment_method, status, created_at, payout_reference, payout_confirmed_at, admin_note')
+         .eq('username', participant.username)
+         .eq('source', 'marketplace')
+@@ -55,4 +59,5 @@
+         .eq('seller_username', participant.username)
+         .is('commission_percent', null),
++      supabase.rpc('seller_earnings_summary_ngn', { p_username: participant.username }),
+     ]);
+     for (const result of [summaryResult, ordersResult, withdrawalsResult]) {
+@@ -61,4 +66,13 @@
+ 
+     const s = (Array.isArray(summaryResult.data) ? summaryResult.data[0] : summaryResult.data) || {};
++    if (nairaResult.error) throw nairaResult.error;
++    const n = (Array.isArray(nairaResult.data) ? nairaResult.data[0] : nairaResult.data) || {};
++    // Each sale in the currency it settles in (frozen at checkout).
++    const orderIds = (ordersResult.data || []).map((order) => order.id);
++    const { data: snapshots, error: snapshotError } = orderIds.length
++      ? await supabase.from('order_financial_snapshots').select('order_id, settlement_currency, charged_minor, commission_minor, seller_earnings_minor').in('order_id', orderIds)
++      : { data: [] };
++    if (snapshotError) throw snapshotError;
++    const snapshotByOrder = new Map((snapshots || []).map((row) => [row.order_id, row]));
+     const sales = (ordersResult.data || []).map((order) => ({
+       order_id: order.id,
+@@ -77,4 +91,5 @@
+       buyer_confirmed_at: order.buyer_confirmed_at,
+       disputed_at: order.disputed_at,
++      ...settledIn(snapshotByOrder.get(order.id)),
+     }));
+ 
+@@ -92,4 +107,15 @@
+       balance_owed_usd: money(s.available_usd) < 0 ? money(-s.available_usd) : 0,
+       legacy_orders: legacyResult.count || 0,
++      naira: {
++        completed_sales_ngn: money(n.completed_gross_ngn),
++        commission_deducted_ngn: money(n.commission_ngn),
++        pending_earnings_ngn: money(n.pending_net_ngn),
++        pending_orders: Number(n.pending_count) || 0,
++        on_hold_ngn: money(n.on_hold_net_ngn),
++        withdrawals_pending_ngn: money(n.withdrawals_pending_ngn),
++        withdrawals_paid_ngn: money(n.withdrawals_paid_ngn),
++        available_ngn: Math.max(0, money(n.available_ngn)),
++        balance_owed_ngn: money(n.available_ngn) < 0 ? money(-n.available_ngn) : 0,
++      },
+       sales,
+       withdrawals: withdrawalsResult.data || [],
+@@ -108,5 +134,6 @@
+   if (!method || !details) return res.status(400).json({ error: 'Enter a payout method and account/wallet details' });
+ 
+-  const { data, error } = await supabase.rpc('request_seller_withdrawal', {
++  const naira = req.body?.currency === 'NGN';
++  const { data, error } = await supabase.rpc(naira ? 'request_seller_withdrawal_ngn' : 'request_seller_withdrawal', {
+     p_participant_id: participant.id,
+     p_amount: amount,
+@@ -124,12 +151,33 @@
+ 
+   const { data: profile } = await supabase.from('participants').select('id, name, username').eq('id', participant.id).single();
++  let alertUsd = amount;
++  if (naira) {
++    const { data: row } = await supabase.from('participant_withdrawals').select('amount_usd').eq('id', result?.withdrawal_id).maybeSingle();
++    alertUsd = Number(row?.amount_usd) || 0;
++  }
+   await alertAdminsOfWithdrawal(supabase, {
+     participant: profile || participant,
+     withdrawalId: result?.withdrawal_id,
+-    amountUsd: amount,
++    amountUsd: alertUsd,
+     source: 'marketplace',
+-    method,
++    method: naira ? `${method} - pay NGN ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} (naira earnings)` : method,
+   });
+ 
+-  return res.status(200).json({ success: true, withdrawal_id: result?.withdrawal_id, available_usd: money(result?.available_balance) });
++  return res.status(200).json({
++    success: true,
++    withdrawal_id: result?.withdrawal_id,
++    currency: naira ? 'NGN' : 'USD',
++    ...(naira ? { available_ngn: money(result?.available_balance) } : { available_usd: money(result?.available_balance) }),
++  });
+ }
++
++/** P9: a sale's figures in its settlement currency, from the frozen snapshot (USD when there is none). */
++function settledIn(snapshot) {
++  if (!snapshot || snapshot.settlement_currency === 'USD') return { settlement_currency: 'USD' };
++  return {
++    settlement_currency: snapshot.settlement_currency,
++    gross_local: Number(snapshot.charged_minor) / 100,
++    commission_local: Number(snapshot.commission_minor) / 100,
++    net_local: Number(snapshot.seller_earnings_minor) / 100,
++  };
++}
+--- a/pages/api/admin/withdrawals/index.js
++++ b/pages/api/admin/withdrawals/index.js
+@@ -27,5 +27,5 @@
+       .from('participant_withdrawals')
+       .select([
+-        'id', 'username', 'amount_usd', 'payment_method', 'payment_details', 'status', 'created_at', 'source',
++        'id', 'username', 'amount_usd', 'amount_ngn', 'currency', 'payment_method', 'payment_details', 'status', 'created_at', 'source',
+         'payout_type', 'payout_currency', 'payout_network', 'payout_reference', 'payout_amount',
+         'payout_confirmed_at', 'claimed_at', 'claimed_by', 'admin_note'
+--- a/public/admin-portal.html
++++ b/public/admin-portal.html
+@@ -676,5 +676,5 @@
+               <span class="bg-slate-600 px-2 py-0.5 rounded text-xs">${escapeText(w.status)}</span>
+             </div>
+-            <p class="text-green-300">$${Number(w.amount_usd).toFixed(2)} · ${escapeText(w.payment_method)} · ${w.source === 'marketplace' ? 'Marketplace earnings' : 'Vote rewards'}</p>
++            <p class="text-green-300">${w.currency === 'NGN' ? `PAY ₦${Number(w.amount_ngn).toLocaleString('en-US', { minimumFractionDigits: 2 })} (≈ $${Number(w.amount_usd).toFixed(2)})` : `$${Number(w.amount_usd).toFixed(2)}`} · ${escapeText(w.payment_method)} · ${w.source === 'marketplace' ? 'Marketplace earnings' : 'Vote rewards'}</p>
+             <p class="text-slate-400 text-xs mt-1">${date}</p>
+           </div>`;
+--- a/mobile/src/api/wallet.ts
++++ b/mobile/src/api/wallet.ts
+@@ -48,4 +48,9 @@
+   buyer_confirmed_at: string | null;
+   disputed_at: string | null;
++  /** P9: naira-settled sales carry their real figures here (the *_usd fields are equivalents). */
++  settlement_currency?: 'USD' | 'NGN';
++  gross_local?: number;
++  commission_local?: number;
++  net_local?: number;
+ };
+ 
+@@ -53,4 +58,6 @@
+   id: string;
+   amount_usd: number;
++  amount_ngn?: number | null;
++  currency?: 'USD' | 'NGN';
+   payment_method: string;
+   status: 'pending' | 'processing' | 'claimed' | 'paid' | 'rejected';
+@@ -74,4 +81,9 @@
+   balance_owed_usd: number;
+   legacy_orders: number;
++  /** P9: naira earnings (multi-currency listings), withdrawn in naira. */
++  naira?: {
++    completed_sales_ngn: number; commission_deducted_ngn: number; pending_earnings_ngn: number; pending_orders: number;
++    on_hold_ngn: number; withdrawals_pending_ngn: number; withdrawals_paid_ngn: number; available_ngn: number; balance_owed_ngn: number;
++  };
+   sales: MarketplaceSale[];
+   withdrawals: MarketplaceWithdrawal[];
+@@ -84,6 +96,6 @@
+ export function requestMarketplaceWithdrawal(
+   token: string,
+-  input: { amount: number; method: string; details: string }
+-): Promise<{ success: boolean; withdrawal_id: string; available_usd: number }> {
++  input: { amount: number; method: string; details: string; currency?: 'USD' | 'NGN' }
++): Promise<{ success: boolean; withdrawal_id: string; available_usd?: number; available_ngn?: number }> {
+   return apiFetch('/api/onedream/marketplace-wallet', { method: 'POST', token, body: input });
+ }
+--- a/mobile/src/app/wallet.tsx
++++ b/mobile/src/app/wallet.tsx
+@@ -31,4 +31,5 @@
+ 
+ const usd = (value: number) => `$${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
++const ngn = (value: number) => `₦${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+ 
+ const LEDGER_BADGE: Record<LedgerState, { label: string; bg: string; ink: string }> = {
+@@ -124,4 +125,28 @@
+       />
+ 
++      {data.naira && (data.naira.completed_sales_ngn > 0 || data.naira.pending_earnings_ngn > 0 || data.naira.withdrawals_paid_ngn > 0) ? (
++        <>
++          <ThemedText type="smallBold" style={styles.sectionTitle}>Naira earnings</ThemedText>
++          <ThemedText type="small" themeColor="textSecondary">Sales of listings priced in naira are paid in naira and withdrawn in naira, separately from your dollar balance.</ThemedText>
++          <View style={styles.grid}>
++            <Stat label="Withdrawable" value={ngn(data.naira.available_ngn)} />
++            <Stat label="Awaiting confirmation" value={ngn(data.naira.pending_earnings_ngn)} />
++            <Stat label="One Dream commission" value={`−${ngn(data.naira.commission_deducted_ngn)}`} />
++            <Stat label="Withdrawn" value={ngn(data.naira.withdrawals_paid_ngn)} />
++          </View>
++          {data.naira.balance_owed_ngn > 0 ? (
++            <Notice tone="danger" text={`An order was refunded after it was withdrawn, so ${ngn(data.naira.balance_owed_ngn)} will be deducted from your next naira earnings.`} />
++          ) : null}
++          <WithdrawForm
++            available={data.naira.available_ngn}
++            queryKey="marketplace-wallet"
++            format={ngn}
++            currencyLabel="NGN"
++            submit={(input) => requestMarketplaceWithdrawal(token!, { ...input, currency: 'NGN' })}
++            emptyText="Naira withdrawals open as soon as a buyer confirms delivery of one of your naira sales."
++          />
++        </>
++      ) : null}
++
+       <ThemedText type="smallBold" style={styles.sectionTitle}>Sales</ThemedText>
+       {data.sales.length ? data.sales.map((sale) => <SaleRow key={sale.order_id} sale={sale} />) : (
+@@ -138,5 +163,5 @@
+         <View key={w.id} style={[styles.historyRow, { backgroundColor: theme.backgroundElement }]}>
+           <View style={styles.flex}>
+-            <ThemedText type="smallBold">{usd(w.amount_usd)} · {w.payment_method}</ThemedText>
++            <ThemedText type="smallBold">{w.currency === 'NGN' && w.amount_ngn ? ngn(w.amount_ngn) : usd(w.amount_usd)} · {w.payment_method}</ThemedText>
+             <ThemedText type="small" themeColor="textSecondary">
+               {new Date(w.created_at).toLocaleDateString()}{w.payout_reference ? ` · Ref ${w.payout_reference}` : ''}{w.admin_note && w.status === 'rejected' ? ` · ${w.admin_note}` : ''}
+@@ -153,4 +178,6 @@
+   const theme = useTheme();
+   const badge = LEDGER_BADGE[sale.ledger_state];
++  // P9: naira sales show their real naira figures.
++  const money = (local: number | undefined, dollars: number) => (sale.settlement_currency === 'NGN' && local !== undefined ? ngn(local) : usd(dollars));
+   return (
+     <View style={[styles.sale, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+@@ -164,7 +191,7 @@
+         </View>
+       </View>
+-      <Line label="Selling price" value={usd(sale.gross_usd)} />
+-      <Line label={`One Dream commission (${sale.commission_percent}%)`} value={`−${usd(sale.commission_usd)}`} />
+-      <Line label={sale.ledger_state === 'withdrawable' ? 'Net earnings' : 'Pending net earnings'} value={usd(sale.net_usd)} strong />
++      <Line label="Selling price" value={money(sale.gross_local, sale.gross_usd)} />
++      <Line label={`One Dream commission (${sale.commission_percent}%)`} value={`−${money(sale.commission_local, sale.commission_usd)}`} />
++      <Line label={sale.ledger_state === 'withdrawable' ? 'Net earnings' : 'Pending net earnings'} value={money(sale.net_local, sale.net_usd)} strong />
+       {sale.ledger_state === 'pending' ? (
+         <ThemedText type="small" style={styles.pendingText}>Buyer has not confirmed delivery. Visible, but not yet withdrawable.</ThemedText>
+@@ -214,7 +241,9 @@
+ }
+ 
+-function WithdrawForm({ available, queryKey, submit, emptyText }: {
++function WithdrawForm({ available, queryKey, submit, emptyText, format = usd, currencyLabel = 'USD' }: {
+   available: number;
+   queryKey: string;
++  format?: (value: number) => string;
++  currencyLabel?: string;
+   submit: (input: { amount: number; method: string; details: string }) => Promise<unknown>;
+   emptyText: string;
+@@ -234,5 +263,5 @@
+     const amountNum = Math.round(parseFloat(amount) * 100) / 100;
+     if (!amountNum || amountNum <= 0) return setError('Enter a valid amount.');
+-    if (amountNum > available) return setError(`The most you can withdraw is ${usd(available)}.`);
++    if (amountNum > available) return setError(`The most you can withdraw is ${format(available)}.`);
+     if (!method.trim() || !details.trim()) return setError('Enter a payout method and account or wallet details.');
+     setIsSubmitting(true);
+@@ -262,8 +291,8 @@
+   return (
+     <View style={[styles.form, { backgroundColor: theme.backgroundElement }]}>
+-      <ThemedText type="smallBold">Request a withdrawal · up to {usd(available)}</ThemedText>
++      <ThemedText type="smallBold">Request a withdrawal · up to {format(available)}</ThemedText>
+       {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
+       {message ? <ThemedText style={styles.success}>{message}</ThemedText> : null}
+-      <TextInput placeholder="Amount (USD)" placeholderTextColor={theme.textSecondary} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" style={input} />
++      <TextInput placeholder={`Amount (${currencyLabel})`} placeholderTextColor={theme.textSecondary} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" style={input} />
+       <TextInput placeholder="Payout method (e.g. Bank transfer, USDT)" placeholderTextColor={theme.textSecondary} value={method} onChangeText={setMethod} style={input} />
+       <TextInput placeholder="Account / wallet details" placeholderTextColor={theme.textSecondary} value={details} onChangeText={setDetails} multiline style={[input, styles.textArea]} />

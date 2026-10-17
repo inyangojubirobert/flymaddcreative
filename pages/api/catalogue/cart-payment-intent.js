@@ -8,6 +8,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { getUsdToNgnRate, usdToKobo, usdToNgn } from '../../../lib/currency';
 import { resolveCallbackUrl } from '../../../lib/paystackCallbackUrl';
+import { QuoteError, bindQuotePayment, loadQuoteForPayment, multiCurrencyCheckoutActive, quotePaystackMetadata } from '../../../lib/quoteCheckout';
 import { cartCheckoutReady, normalizeCartLines, priceCart } from '../../../lib/catalogueCart';
 
 const supabase = createClient(
@@ -41,13 +42,19 @@ export default async function handler(req, res) {
     if (quote.has_problems) {
       return res.status(409).json({ error: 'Some listings in your cart changed. Review your cart and try again.', quote });
     }
-    if (!quote.payment_methods.includes('paystack')) {
+    // P7: with multi-currency listings on, the buyer pays the stored quote:
+    // naira listings only, charged exactly in naira with no conversion.
+    const mcQuote = (await multiCurrencyCheckoutActive(normalized.lines))
+      ? await loadQuoteForPayment(req.body?.quote_id, { route: 'paystack', lines: normalized.lines })
+      : null;
+    if (!mcQuote && !quote.payment_methods.includes('paystack')) {
       return res.status(400).json({ error: 'A listing in your cart does not accept Paystack. Pay with USDT or remove it.' });
     }
 
     const totalUsd = quote.total_usd;
-    const amountKobo = usdToKobo(totalUsd, rate);
+    const amountKobo = mcQuote ? Number(mcQuote.total_minor) : usdToKobo(totalUsd, rate);
     const reference = `CART_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`;
+    if (mcQuote) await bindQuotePayment(mcQuote.id, reference);
 
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -60,7 +67,7 @@ export default async function handler(req, res) {
         amount: amountKobo,
         currency: 'NGN',
         reference,
-        metadata: {
+        metadata: mcQuote ? quotePaystackMetadata(mcQuote) : {
           type: 'catalogue_cart',
           lines: quote.lines.map((line) => ({
             item_id: line.item_id,
@@ -92,10 +99,12 @@ export default async function handler(req, res) {
       subtotal_usd: quote.subtotal_usd,
       service_fee_usd: quote.service_fee_usd,
       total_usd: totalUsd,
-      amount_ngn: usdToNgn(totalUsd, rate),
+      amount_ngn: mcQuote ? Number(mcQuote.total_minor) / 100 : usdToNgn(totalUsd, rate),
+      quote_id: mcQuote?.id ?? null,
       exchange_rate: rate,
     });
   } catch (error) {
+    if (error instanceof QuoteError) return res.status(409).json({ error: error.message, code: error.code });
     console.error('catalogue/cart-payment-intent error:', error);
     return res.status(500).json({ error: 'Failed to create payment intent' });
   }

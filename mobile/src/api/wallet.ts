@@ -47,11 +47,18 @@ export type MarketplaceSale = {
   created_at: string;
   buyer_confirmed_at: string | null;
   disputed_at: string | null;
+  /** P9: naira-settled sales carry their real figures here (the *_usd fields are equivalents). */
+  settlement_currency?: 'USD' | 'NGN';
+  gross_local?: number;
+  commission_local?: number;
+  net_local?: number;
 };
 
 export type MarketplaceWithdrawal = {
   id: string;
   amount_usd: number;
+  amount_ngn?: number | null;
+  currency?: 'USD' | 'NGN';
   payment_method: string;
   status: 'pending' | 'processing' | 'claimed' | 'paid' | 'rejected';
   created_at: string;
@@ -73,6 +80,11 @@ export type MarketplaceWallet = {
   available_usd: number;
   balance_owed_usd: number;
   legacy_orders: number;
+  /** P9: naira earnings (multi-currency listings), withdrawn in naira. */
+  naira?: {
+    completed_sales_ngn: number; commission_deducted_ngn: number; pending_earnings_ngn: number; pending_orders: number;
+    on_hold_ngn: number; withdrawals_pending_ngn: number; withdrawals_paid_ngn: number; available_ngn: number; balance_owed_ngn: number;
+  };
   sales: MarketplaceSale[];
   withdrawals: MarketplaceWithdrawal[];
 };
@@ -83,8 +95,8 @@ export function getMarketplaceWallet(token: string): Promise<MarketplaceWallet> 
 
 export function requestMarketplaceWithdrawal(
   token: string,
-  input: { amount: number; method: string; details: string }
-): Promise<{ success: boolean; withdrawal_id: string; available_usd: number }> {
+  input: { amount: number; method: string; details: string; currency?: 'USD' | 'NGN' }
+): Promise<{ success: boolean; withdrawal_id: string; available_usd?: number; available_ngn?: number }> {
   return apiFetch('/api/onedream/marketplace-wallet', { method: 'POST', token, body: input });
 }
 

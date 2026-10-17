@@ -1,4 +1,5 @@
 import { getSupabase } from '../lib/supabase';
+import { formatMinor } from '../lib/money';
 import { API_BASE_URL, ApiError, apiFetch } from '../lib/api-client';
 
 export type CatalogueCategory = {
@@ -59,6 +60,9 @@ export type CatalogueItem = {
   title: string;
   description: string;
   price_usd: number;
+  /** Seller's chosen currency and exact price in its minor units (multi-currency listings). */
+  listing_currency?: string;
+  listing_price_minor?: number | null;
   size?: string | null;
   category_id?: string | null;
   promo_video_url?: string | null;
@@ -106,7 +110,10 @@ export type CatalogueListingDraft = {
 };
 
 export function cataloguePriceLabel(item: CatalogueItem): string {
-  const amount = `$${Number(item.price_usd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // The seller's own currency and price are authoritative; USD listings keep using price_usd.
+  const amount = item.listing_currency && item.listing_currency !== 'USD' && item.listing_price_minor
+    ? formatMinor(item.listing_price_minor, item.listing_currency)
+    : `$${Number(item.price_usd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (item.listing_type === 'product' && item.pricing_model === 'per_unit' && item.price_unit) {
     const unit = item.price_unit.startsWith('other:') ? item.price_unit.slice(6).trim() : item.price_unit.replaceAll('_', ' ');
     return `${amount} / ${unit}`;
@@ -269,9 +276,18 @@ export function getShopFeed(categoryIds?: string[] | null) {
   return getShopItems(categoryIds);
 }
 
+let hasCurrencyColumns: boolean | null = null;
+
 export async function getShopItems(categoryIds?: string[] | null): Promise<CatalogueItem[]> {
   const supabase = await getSupabase();
-  const fields = 'id, seller_username, title, description, price_usd, size, category_id, promo_video_url, images, payment_methods, status, created_at, listing_type, pricing_model, price_unit';
+  const baseFields = 'id, seller_username, title, description, price_usd, size, category_id, promo_video_url, images, payment_methods, status, created_at, listing_type, pricing_model, price_unit';
+  // Listing currency columns exist once supabase/add_multicurrency_listings.sql is applied.
+  let fields = `${baseFields}, listing_currency, listing_price_minor`;
+  if (hasCurrencyColumns === null) {
+    const probe = await supabase.from('catalogue_items').select('listing_currency').limit(1);
+    hasCurrencyColumns = !(probe.error && /listing_currency/.test(probe.error.message || ''));
+  }
+  if (!hasCurrencyColumns) fields = baseFields;
   let query = supabase
     .from('catalogue_items')
     .select(fields)
@@ -293,7 +309,8 @@ export async function getShopItems(categoryIds?: string[] | null): Promise<Catal
     return (fallbackResult.data as CatalogueItem[]) || [];
   }
   if (error) throw error;
-  return (data as CatalogueItem[]) || [];
+  // `fields` is built at runtime, so the row type can't be inferred.
+  return (data as unknown as CatalogueItem[]) || [];
 }
 
 export async function getCatalogueItem(id: string): Promise<CatalogueItem | null> {

@@ -17,7 +17,9 @@ import { loadRemoteConfig } from '@/lib/remote-config';
 import { DigitalProductPanel, useDigitalProduct } from '@/components/digital-product';
 import { AppreciationPrompt } from '@/components/gift-art';
 import { recordAffiliateIntent, rememberAffiliateToken } from '@/lib/affiliate-attribution';
+import { PriceEquivalent } from '@/components/price-equivalent';
 import { ApiError } from '@/lib/api-client';
+import { useCart } from '@/contexts/CartContext';
 
 type PayMethod = 'paystack' | 'usdt_bsc' | 'usdt_tron';
 type Step = 'form' | 'processing' | 'usdt_pending_hash' | 'order_created' | 'error';
@@ -34,6 +36,7 @@ export default function CatalogueItemScreen() {
   const { id, aff } = useLocalSearchParams<{ id: string; aff?: string }>();
   const theme = useTheme();
   const router = useRouter();
+  const cart = useCart();
 
   // Arrived through a partner's link: keep the attribution token for checkout.
   useEffect(() => {
@@ -170,6 +173,8 @@ export default function CatalogueItemScreen() {
   }
 
   const item = itemQuery.data;
+  // Priced in another currency: paid from a checkout quote in the cart, not here.
+  const nonUsd = !!item.listing_currency && item.listing_currency !== 'USD';
   const canPaystack = item.payment_methods?.includes('paystack') ?? true;
   const canUsdt = item.payment_methods?.includes('usdt') ?? true;
   const needsDelivery = item.listing_type !== 'service';
@@ -231,6 +236,7 @@ export default function CatalogueItemScreen() {
                 </Pressable>
               ) : null}
               <ThemedText type="smallBold" style={styles.price}>{cataloguePriceLabel(item)}</ThemedText>
+              <PriceEquivalent item={item} />
               {item.listing_type === 'service' ? (
                 <ThemedView style={styles.card}>
                   {item.service_scope ? (
@@ -272,7 +278,17 @@ export default function CatalogueItemScreen() {
               {!digital && !digitalQuery.isLoading && item.status !== 'active' ? (
                 <ThemedText type="small" themeColor="textSecondary">This listing is not available for purchase right now.</ThemedText>
               ) : null}
-              {digital || digitalQuery.isLoading || item.status !== 'active' ? null : (<>
+              {!digital && !digitalQuery.isLoading && item.status === 'active' && nonUsd ? (
+                <ThemedView style={styles.card}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    This listing is priced in {item.listing_currency}. It is paid through the cart, where the exact amount is fixed for you before you pay.
+                  </ThemedText>
+                  <Pressable onPress={() => { if (!cart.has(item.id)) cart.toggle(item); router.push('/shop/cart' as never); }} style={styles.primaryButton}>
+                    <ThemedText style={styles.primaryButtonText}>{cart.has(item.id) ? 'Go to cart' : 'Add to cart and check out'}</ThemedText>
+                  </Pressable>
+                </ThemedView>
+              ) : null}
+              {digital || digitalQuery.isLoading || item.status !== 'active' || nonUsd ? null : (<>
               <ThemedText type="smallBold" style={styles.sectionLabel}>Your details</ThemedText>
               <TextInput placeholder="Full name" placeholderTextColor={theme.textSecondary} value={name} onChangeText={setName} style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />
               <TextInput placeholder="Email" placeholderTextColor={theme.textSecondary} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]} />

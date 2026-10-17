@@ -9,6 +9,10 @@
 //         seller and reserves the amount at once; admins approve, reject or
 //         mark it paid through the existing withdrawal workflow.
 //
+// P9: naira-settled sales (multi-currency listings) have their own balance,
+// `naira`, paid out in naira through the same manual withdrawal workflow
+// (POST with currency: 'NGN'). The USD figures exclude them (P8).
+//
 // Earnings become withdrawable only once the buyer confirms delivery. Vote
 // rewards are separate (/api/onedream/withdraw).
 
@@ -34,7 +38,15 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'POST') return await requestWithdrawal(req, res, participant);
 
-    const [summaryResult, ordersResult, withdrawalsResult, legacyResult] = await Promise.all([
+    const withdrawalsFor = (columns) => supabase
+        .from('participant_withdrawals')
+        .select(columns)
+        .eq('username', participant.username)
+        .eq('source', 'marketplace')
+        .order('created_at', { ascending: false });
+    const LEGACY_WITHDRAWAL_COLUMNS = 'id, amount_usd, payment_method, status, created_at, payout_reference, payout_confirmed_at, admin_note';
+    // eslint-disable-next-line prefer-const
+    let [summaryResult, ordersResult, withdrawalsResult, legacyResult, nairaResult] = await Promise.all([
       supabase.rpc('seller_earnings_summary', { p_username: participant.username }),
       supabase
         .from('catalogue_orders')
@@ -43,23 +55,31 @@ export default async function handler(req, res) {
         .not('commission_percent', 'is', null)
         .order('created_at', { ascending: false })
         .limit(200),
-      supabase
-        .from('participant_withdrawals')
-        .select('id, amount_usd, payment_method, status, created_at, payout_reference, payout_confirmed_at, admin_note')
-        .eq('username', participant.username)
-        .eq('source', 'marketplace')
-        .order('created_at', { ascending: false }),
+      withdrawalsFor(`${LEGACY_WITHDRAWAL_COLUMNS}, amount_ngn, currency`),
       supabase
         .from('catalogue_orders')
         .select('id', { count: 'exact', head: true })
         .eq('seller_username', participant.username)
         .is('commission_percent', null),
+      supabase.rpc('seller_earnings_summary_ngn', { p_username: participant.username }),
     ]);
+    // Before P8/P9's SQL is applied the naira columns and function don't exist yet:
+    // keep serving the USD wallet exactly as before.
+    if (withdrawalsResult.error?.code === '42703') withdrawalsResult = await withdrawalsFor(LEGACY_WITHDRAWAL_COLUMNS);
     for (const result of [summaryResult, ordersResult, withdrawalsResult]) {
       if (result.error) throw result.error;
     }
 
     const s = (Array.isArray(summaryResult.data) ? summaryResult.data[0] : summaryResult.data) || {};
+    if (nairaResult.error) console.error('marketplace-wallet: naira wallet unavailable (P9 SQL not applied?):', nairaResult.error.message);
+    const n = nairaResult.error ? null : (Array.isArray(nairaResult.data) ? nairaResult.data[0] : nairaResult.data) || {};
+    // Each sale in the currency it settles in (frozen at checkout).
+    const orderIds = (ordersResult.data || []).map((order) => order.id);
+    const { data: snapshots, error: snapshotError } = orderIds.length
+      ? await supabase.from('order_financial_snapshots').select('order_id, settlement_currency, charged_minor, commission_minor, seller_earnings_minor').in('order_id', orderIds)
+      : { data: [] };
+    if (snapshotError) throw snapshotError;
+    const snapshotByOrder = new Map((snapshots || []).map((row) => [row.order_id, row]));
     const sales = (ordersResult.data || []).map((order) => ({
       order_id: order.id,
       item_id: order.item_id,
@@ -76,6 +96,7 @@ export default async function handler(req, res) {
       created_at: order.created_at,
       buyer_confirmed_at: order.buyer_confirmed_at,
       disputed_at: order.disputed_at,
+      ...settledIn(snapshotByOrder.get(order.id)),
     }));
 
     return res.status(200).json({
@@ -91,6 +112,17 @@ export default async function handler(req, res) {
       available_usd: Math.max(0, money(s.available_usd)),
       balance_owed_usd: money(s.available_usd) < 0 ? money(-s.available_usd) : 0,
       legacy_orders: legacyResult.count || 0,
+      naira: n ? {
+        completed_sales_ngn: money(n.completed_gross_ngn),
+        commission_deducted_ngn: money(n.commission_ngn),
+        pending_earnings_ngn: money(n.pending_net_ngn),
+        pending_orders: Number(n.pending_count) || 0,
+        on_hold_ngn: money(n.on_hold_net_ngn),
+        withdrawals_pending_ngn: money(n.withdrawals_pending_ngn),
+        withdrawals_paid_ngn: money(n.withdrawals_paid_ngn),
+        available_ngn: Math.max(0, money(n.available_ngn)),
+        balance_owed_ngn: money(n.available_ngn) < 0 ? money(-n.available_ngn) : 0,
+      } : undefined,
       sales,
       withdrawals: withdrawalsResult.data || [],
     });
@@ -107,7 +139,8 @@ async function requestWithdrawal(req, res, participant) {
   if (!(amount > 0)) return res.status(400).json({ error: 'Enter a valid amount' });
   if (!method || !details) return res.status(400).json({ error: 'Enter a payout method and account/wallet details' });
 
-  const { data, error } = await supabase.rpc('request_seller_withdrawal', {
+  const naira = req.body?.currency === 'NGN';
+  const { data, error } = await supabase.rpc(naira ? 'request_seller_withdrawal_ngn' : 'request_seller_withdrawal', {
     p_participant_id: participant.id,
     p_amount: amount,
     p_method: method,
@@ -123,13 +156,34 @@ async function requestWithdrawal(req, res, participant) {
   const result = Array.isArray(data) ? data[0] : data;
 
   const { data: profile } = await supabase.from('participants').select('id, name, username').eq('id', participant.id).single();
+  let alertUsd = amount;
+  if (naira) {
+    const { data: row } = await supabase.from('participant_withdrawals').select('amount_usd').eq('id', result?.withdrawal_id).maybeSingle();
+    alertUsd = Number(row?.amount_usd) || 0;
+  }
   await alertAdminsOfWithdrawal(supabase, {
     participant: profile || participant,
     withdrawalId: result?.withdrawal_id,
-    amountUsd: amount,
+    amountUsd: alertUsd,
     source: 'marketplace',
-    method,
+    method: naira ? `${method} - pay NGN ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} (naira earnings)` : method,
   });
 
-  return res.status(200).json({ success: true, withdrawal_id: result?.withdrawal_id, available_usd: money(result?.available_balance) });
+  return res.status(200).json({
+    success: true,
+    withdrawal_id: result?.withdrawal_id,
+    currency: naira ? 'NGN' : 'USD',
+    ...(naira ? { available_ngn: money(result?.available_balance) } : { available_usd: money(result?.available_balance) }),
+  });
+}
+
+/** P9: a sale's figures in its settlement currency, from the frozen snapshot (USD when there is none). */
+function settledIn(snapshot) {
+  if (!snapshot || snapshot.settlement_currency === 'USD') return { settlement_currency: 'USD' };
+  return {
+    settlement_currency: snapshot.settlement_currency,
+    gross_local: Number(snapshot.charged_minor) / 100,
+    commission_local: Number(snapshot.commission_minor) / 100,
+    net_local: Number(snapshot.seller_earnings_minor) / 100,
+  };
 }

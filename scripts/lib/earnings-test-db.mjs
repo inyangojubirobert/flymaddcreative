@@ -8,6 +8,8 @@ export const MIGRATIONS = [
   'add_earnings_and_payouts.sql',
   'add_gift_revenue_sharing.sql',
   'add_affiliate_marketplace.sql',
+  'add_multicurrency_listings.sql',
+  'fix_multicurrency_review.sql',
 ];
 
 export async function earningsTestDb() {
@@ -25,6 +27,9 @@ export async function earningsTestDb() {
     create table catalogue_orders (id uuid primary key default gen_random_uuid(), item_id uuid, seller_username text, buyer_name text,
       buyer_email text, amount_usd numeric, commission_usd numeric, seller_net_usd numeric, status text, payment_ref text,
       checkout_id uuid, quantity integer default 1, unit_price_usd numeric, created_at timestamptz default now(), updated_at timestamptz default now());
+    -- Existing production table used by lib/currency.js (Paystack NGN conversion): must not be touched.
+    create table exchange_rates (id bigserial primary key, base text, target text, rate numeric, fetched_at timestamptz default now());
+    insert into exchange_rates (base, target, rate) values ('USD', 'NGN', 1600);
   `);
   const results = {};
   for (const name of MIGRATIONS) {

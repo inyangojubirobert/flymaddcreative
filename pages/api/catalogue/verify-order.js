@@ -87,6 +87,11 @@ export default async function handler(req, res) {
     if ((await digitalItemIds(supabase, [item.id])).size) {
       return res.status(409).json({ error: DIGITAL_CHECKOUT_MESSAGE });
     }
+    // P7: a listing priced in another currency is charged from a checkout
+    // quote, which these single-listing routes don't use.
+    if (item.listing_currency && item.listing_currency !== 'USD') {
+      return res.status(409).json({ error: 'Add this listing to your cart to pay in its currency.' });
+    }
 
     const priceUsd = parseFloat(item.price_usd);
     let orderRecord = {

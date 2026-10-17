@@ -52,6 +52,7 @@
         <button onclick="switchTab('digital')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">📚 Digital</button>
         <button onclick="switchTab('gifts')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🎁 Gifts & Rewards</button>
         <button onclick="switchTab('earnings')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🤝 Partners & Payouts</button>
+        <button onclick="switchTab('currency')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">💱 Currencies</button>
       </div>
 
       <!-- Messages Tab -->
@@ -250,6 +251,36 @@
           <div id="earnRewards" class="space-y-1 text-xs text-slate-300"></div>
           <h3 class="text-sm font-semibold mt-4 mb-1">Admin audit</h3>
           <div id="earnAudit" class="space-y-1 text-xs text-slate-400"></div>
+        </div>
+      </div>
+
+      <!-- Currencies Tab -->
+      <div id="currencyTab" class="hidden space-y-4">
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+            <h2 class="text-xl font-bold">Listing currencies</h2>
+            <button onclick="currencyRefreshRates()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Refresh rates now</button>
+          </div>
+          <p class="text-xs text-slate-400 mb-3">Sellers choose the currency of each listing. Naira listings are paid by Paystack in naira and settle in naira. Every other currency is paid in USDT at its US-dollar value, fixed in a checkout quote, and settles in US dollars.
+            Switching listing currencies on also needs protected patches P7 + P8 applied and deployed (docs/protected-patches).</p>
+          <div id="curSummary" class="text-sm text-slate-300 mb-3">Loading…</div>
+          <div id="curSettings" class="grid md:grid-cols-2 gap-2 text-xs mb-2"></div>
+          <button onclick="currencySaveSettings()" class="text-xs bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Save settings</button>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Currencies</h3>
+          <div id="curList" class="space-y-1 text-xs text-slate-300"></div>
+          <div class="flex flex-wrap gap-2 mt-2 text-xs">
+            <input id="curNewCode" placeholder="Code (e.g. KES)" class="bg-slate-700 border border-slate-600 rounded px-2 py-1 w-28">
+            <input id="curNewName" placeholder="Name" class="bg-slate-700 border border-slate-600 rounded px-2 py-1 w-40">
+            <input id="curNewSymbol" placeholder="Symbol" class="bg-slate-700 border border-slate-600 rounded px-2 py-1 w-20">
+            <input id="curNewUnits" type="number" value="2" title="Decimal places" class="bg-slate-700 border border-slate-600 rounded px-2 py-1 w-16">
+            <button onclick="currencyAdd()" class="bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Add currency (USDT route)</button>
+          </div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Rate history (units per US$1)</h3>
+          <div id="curHistory" class="space-y-1 text-xs text-slate-400 max-h-48 overflow-auto"></div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Recent checkout quotes</h3>
+          <div id="curQuotes" class="space-y-1 text-xs text-slate-300 max-h-48 overflow-auto"></div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Frozen order snapshots</h3>
+          <div id="curSnapshots" class="space-y-1 text-xs text-slate-300 max-h-48 overflow-auto"></div>
         </div>
       </div>
 
@@ -468,6 +499,7 @@
       if (tab === 'digital') { loadDigital(); loadDigitalSubs(false); }
       if (tab === 'gifts') loadGifts();
       if (tab === 'earnings') loadEarnings();
+      if (tab === 'currency') loadCurrency();
     }
 
     let activeParticipantId = null;
@@ -643,7 +675,7 @@
               <span class="font-semibold">${escapeText(w.participant?.name || w.username)}</span>
               <span class="bg-slate-600 px-2 py-0.5 rounded text-xs">${escapeText(w.status)}</span>
             </div>
-            <p class="text-green-300">$${Number(w.amount_usd).toFixed(2)} · ${escapeText(w.payment_method)} · ${w.source === 'marketplace' ? 'Marketplace earnings' : 'Vote rewards'}</p>
+            <p class="text-green-300">${w.currency === 'NGN' ? `PAY ₦${Number(w.amount_ngn).toLocaleString('en-US', { minimumFractionDigits: 2 })} (≈ $${Number(w.amount_usd).toFixed(2)})` : `$${Number(w.amount_usd).toFixed(2)}`} · ${escapeText(w.payment_method)} · ${w.source === 'marketplace' ? 'Marketplace earnings' : 'Vote rewards'}</p>
             <p class="text-slate-400 text-xs mt-1">${date}</p>
           </div>`;
         }).join('');
@@ -1055,6 +1087,78 @@
       if (decision === 'rejected' && !note) return;
       try { await adminFetch('/api/admin/earnings/payouts', { method: 'POST', body: JSON.stringify({ target: 'payee', party_type: partyType, party_id: partyId, decision, note }) }); loadEarnings(); }
       catch (err) { alert(err.message); }
+    }
+
+    // --- Currencies ---------------------------------------------------------
+    const minorMoney = (minor, code, units = 2) => `${escapeText(code)} ${(Number(minor) / 10 ** units).toLocaleString('en-US', { minimumFractionDigits: units, maximumFractionDigits: units })}`;
+    const CUR_FIELDS = [
+      ['quote_ttl_seconds', 'Naira quote valid for (seconds)'], ['usdt_quote_ttl_seconds', 'USDT quote valid for (seconds)'],
+      ['max_rate_age_seconds', 'Refuse rates older than (seconds)'], ['max_rate_jump_percent', 'Refuse a rate that moves more than (%)'],
+    ];
+    let curState = null;
+
+    async function loadCurrency() {
+      const summary = document.getElementById('curSummary');
+      summary.textContent = 'Loading…';
+      try {
+        const d = await adminFetch('/api/admin/currency');
+        curState = d;
+        const s = d.settings;
+        summary.innerHTML = `Listing currencies: <b class="${s.listing_currencies_enabled ? 'text-green-400' : 'text-amber-300'}">${s.listing_currencies_enabled ? 'ON' : 'off (USD only)'}</b>
+          · rates: ${Object.entries(d.rates || {}).map(([k, r]) => `${escapeText(k)} ${escapeText(Number(r.rate).toLocaleString('en-US', { maximumFractionDigits: 6 }))} (${when(r.published_at)})`).join(' · ') || '<span class="text-amber-300">none yet</span>'}`;
+        document.getElementById('curSettings').innerHTML =
+          `<label class="flex items-center gap-2 md:col-span-2"><input type="checkbox" id="curEnabled" ${s.listing_currencies_enabled ? 'checked' : ''}> Let sellers list in naira and other currencies (needs P7 + P8)</label>` +
+          CUR_FIELDS.map(([k, label]) => `<label class="flex items-center gap-2"><span class="w-64">${escapeText(label)}</span><input data-cur="${k}" type="number" value="${escapeText(s[k] ?? '')}" class="bg-slate-700 rounded px-1 w-28"></label>`).join('');
+        document.getElementById('curList').innerHTML = d.currencies.map(c => `<div class="flex flex-wrap gap-2 items-center">${escapeText(c.symbol)} <b>${escapeText(c.code)}</b> · ${escapeText(c.name)} · ${c.minor_units} decimals · pays by ${escapeText(c.checkout_route)} · settles in ${escapeText(c.settlement_currency)} · ${c.is_enabled ? '<span class="text-green-400">enabled</span>' : '<span class="text-slate-500">disabled</span>'}
+          ${['NGN', 'USD'].includes(c.code) ? '' : `<button onclick="currencyToggle('${escapeText(c.code)}')" class="ml-auto bg-slate-600 px-2 rounded">${c.is_enabled ? 'Disable' : 'Enable'}</button>`}</div>`).join('');
+        document.getElementById('curHistory').innerHTML = d.history.map(r => `<div>${when(r.source_published_at)} · ${escapeText(r.quote)} ${escapeText(r.rate)} · ${escapeText(r.source)} (fetched ${when(r.fetched_at)})</div>`).join('') || '<div>No rates stored yet. Press Refresh rates now.</div>';
+        document.getElementById('curQuotes').innerHTML = d.quotes.map(q => `<div>${when(q.quoted_at)} · ${minorMoney(q.total_minor, q.checkout_currency)} by ${escapeText(q.checkout_route)} · ${escapeText(q.status)}${q.payment_ref ? ` · ref ${escapeText(q.payment_ref)}` : ''} · expires ${when(q.expires_at)}</div>`).join('') || '<div class="text-slate-500">No quotes yet.</div>';
+        document.getElementById('curSnapshots').innerHTML = d.snapshots.map(x => `<div>${when(x.created_at)} · order ${escapeText(String(x.order_id).slice(0, 8))} · listed ${minorMoney(x.listing_line_minor, x.listing_currency)}${x.rate_per_usd ? ` @ ${escapeText(x.rate_per_usd)}/$1` : ''} · charged ${minorMoney(x.charged_minor, x.checkout_currency)} · commission ${minorMoney(x.commission_minor, x.settlement_currency)} · seller ${minorMoney(x.seller_earnings_minor, x.settlement_currency)}</div>`).join('') || '<div class="text-slate-500">No orders from quotes yet.</div>';
+      } catch (err) {
+        summary.innerHTML = `<span class="text-red-400">Error: ${escapeText(err.message)}</span>`;
+      }
+    }
+
+    async function currencyRefreshRates() {
+      try {
+        const r = await adminFetch('/api/admin/currency', { method: 'POST', body: JSON.stringify({ action: 'refresh_rates' }) });
+        alert(r.refused?.length ? `Stored ${r.stored?.length || 0}; refused ${r.refused.map(x => `${x.code} (${x.reason})`).join(', ')}` : 'Rates refreshed');
+        loadCurrency();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function currencySaveSettings() {
+      const body = {};
+      CUR_FIELDS.forEach(([k]) => { body[k] = Number(document.querySelector(`[data-cur="${k}"]`).value); });
+      const enabled = document.getElementById('curEnabled').checked;
+      if (enabled !== !!curState?.settings?.listing_currencies_enabled) {
+        if (enabled) {
+          const typed = prompt('Listing currencies change how buyers pay. Only switch on after protected patches P7 and P8 are applied and deployed.\nType P7_P8_APPLIED to confirm.');
+          if (typed !== 'P7_P8_APPLIED') return;
+          body.confirm = typed;
+        }
+        body.listing_currencies_enabled = enabled;
+      }
+      try {
+        await adminFetch('/api/admin/currency', { method: 'PATCH', body: JSON.stringify(body) });
+        loadCurrency();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function currencyToggle(code) {
+      const c = curState.currencies.find(x => x.code === code);
+      try {
+        await adminFetch('/api/admin/currency', { method: 'POST', body: JSON.stringify({ action: 'save_currency', ...c, is_enabled: !c.is_enabled }) });
+        loadCurrency();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function currencyAdd() {
+      const v = (id) => document.getElementById(id).value.trim();
+      try {
+        await adminFetch('/api/admin/currency', { method: 'POST', body: JSON.stringify({ action: 'save_currency', code: v('curNewCode'), name: v('curNewName'), symbol: v('curNewSymbol'), minor_units: Number(v('curNewUnits')), is_enabled: true }) });
+        loadCurrency();
+      } catch (err) { alert(err.message); }
     }
 
     async function earnAction(action, ids, needsReason) {

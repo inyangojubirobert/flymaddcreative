@@ -1,6 +1,8 @@
 -- ============================================================================
 -- Rollback for add_affiliate_marketplace.sql, add_gift_revenue_sharing.sql and
 -- add_earnings_and_payouts.sql (in that order). Removes only those objects.
+-- If add_multicurrency_listings.sql was applied, run
+-- rollback_multicurrency_listings.sql first.
 -- ============================================================================
 -- First choice is always the switches, not this script: in the admin portal
 -- (Partners & Payouts) turn off gift_earnings_enabled and payouts_enabled.
@@ -22,6 +24,9 @@ begin
   end if;
   if to_regclass('public.payout_requests') is not null and exists (select 1 from payout_requests) then
     raise exception 'Payout requests exist - settle and export them first';
+  end if;
+  if to_regclass('public.marketplace_currencies') is not null then
+    raise exception 'Run supabase/rollback_multicurrency_listings.sql first';
   end if;
 end $$;
 

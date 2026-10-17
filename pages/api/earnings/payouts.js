@@ -1,7 +1,8 @@
 // Withdrawal requests for partner & creator earnings. A separate queue from
 // every existing withdrawal (votes, marketplace, merchant tokens).
 //   GET                                                      mine
-//   POST   { as?, source, amount_usd, client_request_id }    request (moves available -> reserved)
+//   POST   { as?, source, currency?, amount_usd, client_request_id }    request (moves available -> reserved);
+//          amount_usd is the amount in that currency (NGN or USD)
 //   DELETE ?id=                                              cancel a request not yet approved
 // Closed unless earnings_settings.payouts_enabled AND PAYOUTS_PROVIDER_LIVE=true.
 // Admins approve and record the transfer (pages/api/admin/earnings/payouts.js).
@@ -45,6 +46,7 @@ export default async function handler(req, res) {
       if (!/^[A-Za-z0-9_-]{8,80}$/.test(key)) return res.status(400).json({ error: 'client_request_id is required' });
       const { data, error } = await earningsDb.rpc('payout_request_create', {
         p_party_type: who.type, p_party_id: who.id, p_source: source, p_amount: amount, p_client_request_id: key,
+        p_currency: req.body?.currency === 'NGN' ? 'NGN' : 'USD',
       });
       if (error) {
         const reply = payoutErrorReply(error.message);

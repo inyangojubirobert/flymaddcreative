@@ -30,6 +30,7 @@ import { DigitalEarningsPanel } from '@/components/digital-earnings';
 type Tab = 'marketplace' | 'digital' | 'votes';
 
 const usd = (value: number) => `$${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const ngn = (value: number) => `₦${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const LEDGER_BADGE: Record<LedgerState, { label: string; bg: string; ink: string }> = {
   withdrawable: { label: 'Completed', bg: '#DCFCE7', ink: Palette.green },
@@ -123,6 +124,30 @@ function MarketplaceWallet() {
         emptyText="Withdrawals open as soon as a buyer confirms delivery of one of your sales."
       />
 
+      {data.naira && (data.naira.completed_sales_ngn > 0 || data.naira.pending_earnings_ngn > 0 || data.naira.withdrawals_paid_ngn > 0) ? (
+        <>
+          <ThemedText type="smallBold" style={styles.sectionTitle}>Naira earnings</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">Sales of listings priced in naira are paid in naira and withdrawn in naira, separately from your dollar balance.</ThemedText>
+          <View style={styles.grid}>
+            <Stat label="Withdrawable" value={ngn(data.naira.available_ngn)} />
+            <Stat label="Awaiting confirmation" value={ngn(data.naira.pending_earnings_ngn)} />
+            <Stat label="One Dream commission" value={`−${ngn(data.naira.commission_deducted_ngn)}`} />
+            <Stat label="Withdrawn" value={ngn(data.naira.withdrawals_paid_ngn)} />
+          </View>
+          {data.naira.balance_owed_ngn > 0 ? (
+            <Notice tone="danger" text={`An order was refunded after it was withdrawn, so ${ngn(data.naira.balance_owed_ngn)} will be deducted from your next naira earnings.`} />
+          ) : null}
+          <WithdrawForm
+            available={data.naira.available_ngn}
+            queryKey="marketplace-wallet"
+            format={ngn}
+            currencyLabel="NGN"
+            submit={(input) => requestMarketplaceWithdrawal(token!, { ...input, currency: 'NGN' })}
+            emptyText="Naira withdrawals open as soon as a buyer confirms delivery of one of your naira sales."
+          />
+        </>
+      ) : null}
+
       <ThemedText type="smallBold" style={styles.sectionTitle}>Sales</ThemedText>
       {data.sales.length ? data.sales.map((sale) => <SaleRow key={sale.order_id} sale={sale} />) : (
         <ThemedText type="small" themeColor="textSecondary">No sales yet. Paid orders appear here with your commission and net earnings.</ThemedText>
@@ -137,7 +162,7 @@ function MarketplaceWallet() {
       {data.withdrawals.length ? data.withdrawals.map((w) => (
         <View key={w.id} style={[styles.historyRow, { backgroundColor: theme.backgroundElement }]}>
           <View style={styles.flex}>
-            <ThemedText type="smallBold">{usd(w.amount_usd)} · {w.payment_method}</ThemedText>
+            <ThemedText type="smallBold">{w.currency === 'NGN' && w.amount_ngn ? ngn(w.amount_ngn) : usd(w.amount_usd)} · {w.payment_method}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {new Date(w.created_at).toLocaleDateString()}{w.payout_reference ? ` · Ref ${w.payout_reference}` : ''}{w.admin_note && w.status === 'rejected' ? ` · ${w.admin_note}` : ''}
             </ThemedText>
@@ -152,6 +177,8 @@ function MarketplaceWallet() {
 function SaleRow({ sale }: { sale: MarketplaceSale }) {
   const theme = useTheme();
   const badge = LEDGER_BADGE[sale.ledger_state];
+  // P9: naira sales show their real naira figures.
+  const money = (local: number | undefined, dollars: number) => (sale.settlement_currency === 'NGN' && local !== undefined ? ngn(local) : usd(dollars));
   return (
     <View style={[styles.sale, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
       <View style={styles.saleHead}>
@@ -163,9 +190,9 @@ function SaleRow({ sale }: { sale: MarketplaceSale }) {
           <ThemedText type="smallBold" style={[styles.badgeText, { color: badge.ink }]}>{badge.label}</ThemedText>
         </View>
       </View>
-      <Line label="Selling price" value={usd(sale.gross_usd)} />
-      <Line label={`One Dream commission (${sale.commission_percent}%)`} value={`−${usd(sale.commission_usd)}`} />
-      <Line label={sale.ledger_state === 'withdrawable' ? 'Net earnings' : 'Pending net earnings'} value={usd(sale.net_usd)} strong />
+      <Line label="Selling price" value={money(sale.gross_local, sale.gross_usd)} />
+      <Line label={`One Dream commission (${sale.commission_percent}%)`} value={`−${money(sale.commission_local, sale.commission_usd)}`} />
+      <Line label={sale.ledger_state === 'withdrawable' ? 'Net earnings' : 'Pending net earnings'} value={money(sale.net_local, sale.net_usd)} strong />
       {sale.ledger_state === 'pending' ? (
         <ThemedText type="small" style={styles.pendingText}>Buyer has not confirmed delivery. Visible, but not yet withdrawable.</ThemedText>
       ) : null}
@@ -213,9 +240,11 @@ function VoteWallet() {
   );
 }
 
-function WithdrawForm({ available, queryKey, submit, emptyText }: {
+function WithdrawForm({ available, queryKey, submit, emptyText, format = usd, currencyLabel = 'USD' }: {
   available: number;
   queryKey: string;
+  format?: (value: number) => string;
+  currencyLabel?: string;
   submit: (input: { amount: number; method: string; details: string }) => Promise<unknown>;
   emptyText: string;
 }) {
@@ -233,7 +262,7 @@ function WithdrawForm({ available, queryKey, submit, emptyText }: {
     setMessage(null);
     const amountNum = Math.round(parseFloat(amount) * 100) / 100;
     if (!amountNum || amountNum <= 0) return setError('Enter a valid amount.');
-    if (amountNum > available) return setError(`The most you can withdraw is ${usd(available)}.`);
+    if (amountNum > available) return setError(`The most you can withdraw is ${format(available)}.`);
     if (!method.trim() || !details.trim()) return setError('Enter a payout method and account or wallet details.');
     setIsSubmitting(true);
     try {
@@ -261,10 +290,10 @@ function WithdrawForm({ available, queryKey, submit, emptyText }: {
   const input = [styles.input, { color: theme.text, backgroundColor: theme.background, borderColor: theme.backgroundSelected }];
   return (
     <View style={[styles.form, { backgroundColor: theme.backgroundElement }]}>
-      <ThemedText type="smallBold">Request a withdrawal · up to {usd(available)}</ThemedText>
+      <ThemedText type="smallBold">Request a withdrawal · up to {format(available)}</ThemedText>
       {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
       {message ? <ThemedText style={styles.success}>{message}</ThemedText> : null}
-      <TextInput placeholder="Amount (USD)" placeholderTextColor={theme.textSecondary} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" style={input} />
+      <TextInput placeholder={`Amount (${currencyLabel})`} placeholderTextColor={theme.textSecondary} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" style={input} />
       <TextInput placeholder="Payout method (e.g. Bank transfer, USDT)" placeholderTextColor={theme.textSecondary} value={method} onChangeText={setMethod} style={input} />
       <TextInput placeholder="Account / wallet details" placeholderTextColor={theme.textSecondary} value={details} onChangeText={setDetails} multiline style={[input, styles.textArea]} />
       <Pressable onPress={handleSubmit} disabled={isSubmitting} style={[styles.submitButton, isSubmitting && styles.disabled]}>

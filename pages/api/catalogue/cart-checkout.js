@@ -24,6 +24,10 @@ import { verifyAndRecordUsdtPayment } from '../../../lib/verifyCryptoTx';
 import { cartCheckoutReady, normalizeCartLines, priceCart } from '../../../lib/catalogueCart';
 import { toCents } from '../../../lib/marketplaceFees';
 import { commissionFields, sellerCommissionPercent } from '../../../lib/sellerEarnings';
+import {
+  QuoteError, applyQuoteToOrders, bindQuotePayment, freezeByPaymentRef, loadQuoteForPayment,
+  multiCurrencyCheckoutActive, paymentMatchesQuote, quoteCheckoutRecord,
+} from '../../../lib/quoteCheckout';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -67,6 +71,8 @@ export default async function handler(req, res) {
       delivery_address: deliveryAddress || null,
     };
     let checkoutRecord;
+    // P7: the stored quote this payment was made from (multi-currency checkout).
+    let mcQuote = null;
 
     if (payment_method === 'paystack') {
       if (!payment_ref) return res.status(400).json({ error: 'Missing payment_ref' });
@@ -100,7 +106,16 @@ export default async function handler(req, res) {
       const rate = Number(meta.exchange_rate);
       const expectedKobo = usdToKobo(Number(meta.total_usd), rate);
       const paidKobo = Number(verifyData.data.amount);
-      if (!(expectedKobo > 0) || Math.abs(paidKobo - expectedKobo) / expectedKobo > 0.02) {
+      // P7: a quote payment must be for that quote's reference and its exact naira total.
+      // The buyer has already paid, so an expired quote is still honoured.
+      if (meta.quote_id) {
+        mcQuote = await loadQuoteForPayment(meta.quote_id, { route: 'paystack', allowExpired: true });
+        if (mcQuote.payment_ref !== payment_ref) return res.status(400).json({ error: 'This payment does not belong to its checkout quote' });
+        if (!paymentMatchesQuote(mcQuote, { paystackKobo: paidKobo })) {
+          console.error('Cart checkout quote amount mismatch', { paidKobo, quoteKobo: mcQuote.total_minor, payment_ref });
+          return res.status(400).json({ error: 'Paid amount does not match cart total' });
+        }
+      } else if (!(expectedKobo > 0) || Math.abs(paidKobo - expectedKobo) / expectedKobo > 0.02) {
         console.error('Cart checkout amount mismatch', { paidKobo, expectedKobo, payment_ref });
         return res.status(400).json({ error: 'Paid amount does not match cart total' });
       }
@@ -137,12 +152,22 @@ export default async function handler(req, res) {
 
       const normalized = normalizeCartLines(lines);
       if (normalized.error) return res.status(400).json({ error: normalized.error });
+      // P7: the transfer pays the stored USD quote. The quote must be open
+      // when the transaction is first submitted; it is then bound to the
+      // transaction, so retries while it confirms still use the same price.
+      if (await multiCurrencyCheckoutActive(normalized.lines)) {
+        mcQuote = await loadQuoteForPayment(req.body?.quote_id, { route: 'usdt', lines: normalized.lines, allowExpired: true });
+        if (mcQuote.payment_ref !== txHash) {
+          if (new Date(mcQuote.expires_at).getTime() < Date.now()) throw new QuoteError('quote_expired', 'This price quote has expired. Refresh the checkout to get a new one.');
+          await bindQuotePayment(mcQuote.id, txHash);
+        }
+      }
       const rate = await getUsdToNgnRate();
       const quote = await priceCart(supabase, normalized.lines, rate);
       if (quote.has_problems) {
         return res.status(409).json({ error: 'Some listings in your cart changed. Review your cart and try again.', quote });
       }
-      if (!quote.payment_methods.includes('usdt')) {
+      if (!mcQuote && !quote.payment_methods.includes('usdt')) {
         return res.status(400).json({ error: 'A listing in your cart does not accept USDT' });
       }
 
@@ -158,8 +183,9 @@ export default async function handler(req, res) {
       if (cryptoResult.payment.consumed_for || cryptoResult.payment.user_id) {
         return res.status(409).json({ error: 'This transaction has already been used for another payment' });
       }
-      if (Number(cryptoResult.payment.amount) + 0.01 < quote.total_usd) {
-        return res.status(400).json({ error: `Transaction amount is less than the cart total of $${quote.total_usd.toFixed(2)}` });
+      if (mcQuote ? !paymentMatchesQuote(mcQuote, { usdtAmount: cryptoResult.payment.amount }) : Number(cryptoResult.payment.amount) + 0.01 < quote.total_usd) {
+        const dueUsd = mcQuote ? Number(mcQuote.total_minor) / 100 : quote.total_usd;
+        return res.status(400).json({ error: `Transaction amount is less than the cart total of $${dueUsd.toFixed(2)}` });
       }
 
       checkoutRecord = {
@@ -179,12 +205,15 @@ export default async function handler(req, res) {
       };
     }
 
+    // P7: the quote's frozen amounts replace the live USD pricing.
+    if (mcQuote) Object.assign(checkoutRecord, quoteCheckoutRecord(mcQuote));
+
     // Checkout row, USDT claim and every order are written in ONE database
     // transaction (create_cart_checkout in supabase/add_cart_checkout.sql):
     // either the buyer gets all their orders or nothing is recorded and the
     // same payment reference can safely be retried.
     const fullCheckout = { ...checkoutRecord, ...buyer, status: 'paid' };
-    const orderRows = await buildOrderRows(fullCheckout);
+    const orderRows = mcQuote ? applyQuoteToOrders(await buildOrderRows(fullCheckout), mcQuote) : await buildOrderRows(fullCheckout);
     const { data: written, error: writeError } = await supabase.rpc('create_cart_checkout', {
       p_checkout: fullCheckout,
       p_orders: orderRows,
@@ -199,9 +228,12 @@ export default async function handler(req, res) {
 
     const checkout = await findCheckout(fullCheckout.payment_ref);
     if (!checkout) throw new Error(`Checkout ${written?.checkout_id} not readable after write`);
+    // P7: frozen financial snapshot per order (no-op without a quote).
+    await freezeByPaymentRef(checkout.payment_ref, await ordersFor(checkout));
     if (!written?.created) return respondWithExisting(res, checkout, buyerEmail);
     return res.status(200).json({ checkout: publicCheckout(checkout), orders: await ordersFor(checkout) });
   } catch (error) {
+    if (error instanceof QuoteError) return res.status(409).json({ error: error.message, code: error.code });
     console.error('catalogue/cart-checkout error:', error);
     return res.status(500).json({ error: 'Checkout failed. If you were charged, contact support with your payment reference.' });
   }
@@ -236,6 +268,8 @@ async function respondWithExisting(res, checkout, buyerEmail) {
   if (String(checkout.buyer_email).toLowerCase() !== buyerEmail) {
     return res.status(409).json({ error: 'This payment has already been used' });
   }
+  // P7: completes a snapshot an earlier attempt may have missed.
+  await freezeByPaymentRef(checkout.payment_ref, await ordersFor(checkout));
   return res.status(200).json({ checkout: publicCheckout(checkout), orders: await ordersFor(checkout) });
 }
 

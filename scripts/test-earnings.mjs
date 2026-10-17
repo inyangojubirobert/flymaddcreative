@@ -607,6 +607,8 @@ test('rollback: refuses once money is recorded; on a clean database it removes o
 
   const fresh = await earningsTestDb();
   try {
+    await fails(fresh.db.exec(rollback), /rollback_multicurrency_listings/);
+    await fresh.db.exec(await fs.readFile(new URL('../supabase/rollback_multicurrency_listings.sql', import.meta.url), 'utf8'));
     await fresh.db.exec(rollback);
     assert.equal((await fresh.db.query(`select to_regclass('public.partner_ledger') as t`)).rows[0].t, null);
     await fresh.db.exec(await fs.readFile(new URL('../supabase/add_dream_coins_gifting.sql', import.meta.url), 'utf8'));

@@ -1,0 +1,137 @@
+--- a/pages/api/catalogue/cart-payment-intent.js
++++ b/pages/api/catalogue/cart-payment-intent.js
+@@ -10,2 +10,3 @@
+ import { resolveCallbackUrl } from '../../../lib/paystackCallbackUrl';
++import { QuoteError, bindQuotePayment, loadQuoteForPayment, multiCurrencyCheckoutActive, quotePaystackMetadata } from '../../../lib/quoteCheckout';
+ import { cartCheckoutReady, normalizeCartLines, priceCart } from '../../../lib/catalogueCart';
+@@ -43,3 +44,8 @@
+     }
+-    if (!quote.payment_methods.includes('paystack')) {
++    // P7: with multi-currency listings on, the buyer pays the stored quote:
++    // naira listings only, charged exactly in naira with no conversion.
++    const mcQuote = (await multiCurrencyCheckoutActive())
++      ? await loadQuoteForPayment(req.body?.quote_id, { route: 'paystack', lines: normalized.lines })
++      : null;
++    if (!mcQuote && !quote.payment_methods.includes('paystack')) {
+       return res.status(400).json({ error: 'A listing in your cart does not accept Paystack. Pay with USDT or remove it.' });
+@@ -48,4 +54,5 @@
+     const totalUsd = quote.total_usd;
+-    const amountKobo = usdToKobo(totalUsd, rate);
++    const amountKobo = mcQuote ? Number(mcQuote.total_minor) : usdToKobo(totalUsd, rate);
+     const reference = `CART_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`;
++    if (mcQuote) await bindQuotePayment(mcQuote.id, reference);
+ 
+@@ -62,3 +69,3 @@
+         reference,
+-        metadata: {
++        metadata: mcQuote ? quotePaystackMetadata(mcQuote) : {
+           type: 'catalogue_cart',
+@@ -94,3 +101,4 @@
+       total_usd: totalUsd,
+-      amount_ngn: usdToNgn(totalUsd, rate),
++      amount_ngn: mcQuote ? Number(mcQuote.total_minor) / 100 : usdToNgn(totalUsd, rate),
++      quote_id: mcQuote?.id ?? null,
+       exchange_rate: rate,
+@@ -98,2 +106,3 @@
+   } catch (error) {
++    if (error instanceof QuoteError) return res.status(409).json({ error: error.message, code: error.code });
+     console.error('catalogue/cart-payment-intent error:', error);
+--- a/pages/api/catalogue/cart-checkout.js
++++ b/pages/api/catalogue/cart-checkout.js
+@@ -26,2 +26,6 @@
+ import { commissionFields, sellerCommissionPercent } from '../../../lib/sellerEarnings';
++import {
++  QuoteError, applyQuoteToOrders, bindQuotePayment, freezeByPaymentRef, loadQuoteForPayment,
++  multiCurrencyCheckoutActive, paymentMatchesQuote, quoteCheckoutRecord,
++} from '../../../lib/quoteCheckout';
+ 
+@@ -69,2 +73,4 @@
+     let checkoutRecord;
++    // P7: the stored quote this payment was made from (multi-currency checkout).
++    let mcQuote = null;
+ 
+@@ -102,3 +108,12 @@
+       const paidKobo = Number(verifyData.data.amount);
+-      if (!(expectedKobo > 0) || Math.abs(paidKobo - expectedKobo) / expectedKobo > 0.02) {
++      // P7: a quote payment must be for that quote's reference and its exact naira total.
++      // The buyer has already paid, so an expired quote is still honoured.
++      if (meta.quote_id) {
++        mcQuote = await loadQuoteForPayment(meta.quote_id, { route: 'paystack', allowExpired: true });
++        if (mcQuote.payment_ref !== payment_ref) return res.status(400).json({ error: 'This payment does not belong to its checkout quote' });
++        if (!paymentMatchesQuote(mcQuote, { paystackKobo: paidKobo })) {
++          console.error('Cart checkout quote amount mismatch', { paidKobo, quoteKobo: mcQuote.total_minor, payment_ref });
++          return res.status(400).json({ error: 'Paid amount does not match cart total' });
++        }
++      } else if (!(expectedKobo > 0) || Math.abs(paidKobo - expectedKobo) / expectedKobo > 0.02) {
+         console.error('Cart checkout amount mismatch', { paidKobo, expectedKobo, payment_ref });
+@@ -139,2 +154,12 @@
+       if (normalized.error) return res.status(400).json({ error: normalized.error });
++      // P7: the transfer pays the stored USD quote. The quote must be open
++      // when the transaction is first submitted; it is then bound to the
++      // transaction, so retries while it confirms still use the same price.
++      if (await multiCurrencyCheckoutActive()) {
++        mcQuote = await loadQuoteForPayment(req.body?.quote_id, { route: 'usdt', lines: normalized.lines, allowExpired: true });
++        if (mcQuote.payment_ref !== txHash) {
++          if (new Date(mcQuote.expires_at).getTime() < Date.now()) throw new QuoteError('quote_expired', 'This price quote has expired. Refresh the checkout to get a new one.');
++          await bindQuotePayment(mcQuote.id, txHash);
++        }
++      }
+       const rate = await getUsdToNgnRate();
+@@ -144,3 +169,3 @@
+       }
+-      if (!quote.payment_methods.includes('usdt')) {
++      if (!mcQuote && !quote.payment_methods.includes('usdt')) {
+         return res.status(400).json({ error: 'A listing in your cart does not accept USDT' });
+@@ -160,4 +185,5 @@
+       }
+-      if (Number(cryptoResult.payment.amount) + 0.01 < quote.total_usd) {
+-        return res.status(400).json({ error: `Transaction amount is less than the cart total of $${quote.total_usd.toFixed(2)}` });
++      if (mcQuote ? !paymentMatchesQuote(mcQuote, { usdtAmount: cryptoResult.payment.amount }) : Number(cryptoResult.payment.amount) + 0.01 < quote.total_usd) {
++        const dueUsd = mcQuote ? Number(mcQuote.total_minor) / 100 : quote.total_usd;
++        return res.status(400).json({ error: `Transaction amount is less than the cart total of $${dueUsd.toFixed(2)}` });
+       }
+@@ -181,2 +207,5 @@
+ 
++    // P7: the quote's frozen amounts replace the live USD pricing.
++    if (mcQuote) Object.assign(checkoutRecord, quoteCheckoutRecord(mcQuote));
++
+     // Checkout row, USDT claim and every order are written in ONE database
+@@ -186,3 +215,3 @@
+     const fullCheckout = { ...checkoutRecord, ...buyer, status: 'paid' };
+-    const orderRows = await buildOrderRows(fullCheckout);
++    const orderRows = mcQuote ? applyQuoteToOrders(await buildOrderRows(fullCheckout), mcQuote) : await buildOrderRows(fullCheckout);
+     const { data: written, error: writeError } = await supabase.rpc('create_cart_checkout', {
+@@ -201,2 +230,4 @@
+     if (!checkout) throw new Error(`Checkout ${written?.checkout_id} not readable after write`);
++    // P7: frozen financial snapshot per order (no-op without a quote).
++    await freezeByPaymentRef(checkout.payment_ref, await ordersFor(checkout));
+     if (!written?.created) return respondWithExisting(res, checkout, buyerEmail);
+@@ -204,2 +235,3 @@
+   } catch (error) {
++    if (error instanceof QuoteError) return res.status(409).json({ error: error.message, code: error.code });
+     console.error('catalogue/cart-checkout error:', error);
+@@ -238,2 +270,4 @@
+   }
++  // P7: completes a snapshot an earlier attempt may have missed.
++  await freezeByPaymentRef(checkout.payment_ref, await ordersFor(checkout));
+   return res.status(200).json({ checkout: publicCheckout(checkout), orders: await ordersFor(checkout) });
+--- a/pages/api/catalogue/create-payment-intent.js
++++ b/pages/api/catalogue/create-payment-intent.js
+@@ -51,2 +51,7 @@
+       return res.status(409).json({ error: DIGITAL_CHECKOUT_MESSAGE });
++    }
++    // P7: a listing priced in another currency is charged from a checkout
++    // quote, which these single-listing routes don't use.
++    if (item.listing_currency && item.listing_currency !== 'USD') {
++      return res.status(409).json({ error: 'Add this listing to your cart to pay in its currency.' });
+     }
+--- a/pages/api/catalogue/verify-order.js
++++ b/pages/api/catalogue/verify-order.js
+@@ -89,2 +89,7 @@
+     }
++    // P7: a listing priced in another currency is charged from a checkout
++    // quote, which these single-listing routes don't use.
++    if (item.listing_currency && item.listing_currency !== 'USD') {
++      return res.status(409).json({ error: 'Add this listing to your cart to pay in its currency.' });
++    }
+ 

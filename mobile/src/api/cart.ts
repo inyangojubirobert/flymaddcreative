@@ -61,6 +61,8 @@ export function createCartPaymentIntent(input: {
   lines: CartLineInput[];
   buyer_email: string;
   callback_url: string;
+  /** P7: the checkout quote being paid (required once multi-currency listings are on). */
+  quote_id?: string;
 }): Promise<{ authorization_url: string; reference: string; total_usd: number; amount_ngn: number }> {
   return apiFetch('/api/catalogue/cart-payment-intent', { method: 'POST', body: input });
 }
@@ -77,6 +79,7 @@ export function submitCartCheckout(input: {
   tx_hash?: string;
   network?: 'bsc' | 'tron';
   lines?: CartLineInput[];
+  quote_id?: string;
 }): Promise<CartCheckoutResult> {
   return apiFetch('/api/catalogue/cart-checkout', { method: 'POST', body: input });
 }

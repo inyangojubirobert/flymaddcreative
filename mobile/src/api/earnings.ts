@@ -8,6 +8,8 @@ import { ApiError, apiFetch } from '../lib/api-client';
 
 export type Source = 'gift_recipient' | 'gift_referral' | 'affiliate' | 'resale' | 'referral';
 export type Buckets = { pending: number; available: number; reserved: number; paid: number };
+export type EarningsCurrency = 'USD' | 'NGN';
+export type BalanceRow = Buckets & { source: Source; currency: EarningsCurrency };
 
 export const SOURCE_LABELS: Record<Source, string> = {
   gift_recipient: 'Gifts received',
@@ -18,10 +20,14 @@ export const SOURCE_LABELS: Record<Source, string> = {
 };
 export const MERCHANT_SOURCES: Source[] = ['gift_referral', 'referral'];
 
-export function formatMicro(micro: number | null | undefined) {
-  const usd = Number(micro || 0) / 1e6;
-  const abs = Math.abs(usd);
-  return `${usd < 0 ? '-' : ''}$${abs.toFixed(abs > 0 && abs < 0.01 ? 4 : 2)}`;
+const SYMBOLS: Record<string, string> = { USD: '$', NGN: '₦' };
+/** Ledger amounts are millionths of their currency. */
+export function formatMicro(micro: number | null | undefined, currency: string = 'USD') {
+  const value = Number(micro || 0) / 1e6;
+  const abs = Math.abs(value);
+  const digits = abs > 0 && abs < 0.01 ? 4 : 2;
+  const symbol = SYMBOLS[currency] ?? `${currency} `;
+  return `${value < 0 ? '-' : ''}${symbol}${abs.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
 }
 
 export type EarningsSummary = {
@@ -31,13 +37,13 @@ export type EarningsSummary = {
     gift_recipient_percent: number; gift_merchant_percent: number; gift_merchant_months: number; gift_value_basis: 'net' | 'gross';
     seller_funded_settlement_enabled: boolean; resale_checkout_enabled: boolean;
   };
-  balances: { participant?: Record<Source, Buckets>; merchant?: Record<Source, Buckets> };
+  balances: { participant?: BalanceRow[]; merchant?: BalanceRow[] };
   gift_earnings: { id: string; created_at: string; status: string; gift: string; quantity: number; from: string | null; recipient_micro: number; reconciled: boolean; withdrawable: boolean }[];
   gift_referrals: { id: string; created_at: string; status: string; recipient: string; merchant_micro: number; withdrawable: boolean }[];
   referred_recipients: { username: string; registered_at: string; gift_share_until: string; active: boolean }[];
-  attributions: { id: string; title: string | null; model: string; funding: string; source: string; commission_micro: number; status: string; status_reason: string | null; created_at: string }[];
-  referral_rewards: { id: string; kind: 'seller' | 'buyer'; amount_micro: number; status: string; created_at: string }[];
-  payouts: { id: string; party_type: string; source: Source; amount_micro: number; status: string; external_reference: string | null; failure_reason: string | null; created_at: string }[];
+  attributions: { id: string; title: string | null; model: string; funding: string; source: string; commission_micro: number; currency?: EarningsCurrency; status: string; status_reason: string | null; created_at: string }[];
+  referral_rewards: { id: string; kind: 'seller' | 'buyer'; amount_micro: number; currency?: EarningsCurrency; status: string; created_at: string }[];
+  payouts: { id: string; party_type: string; source: Source; amount_micro: number; currency?: EarningsCurrency; status: string; external_reference: string | null; failure_reason: string | null; created_at: string }[];
   payees: Payee[];
   ledger: { id: number; party_type: string; source: Source; bucket: string; amount_micro: number; entry_type: string; note: string | null; created_at: string }[];
 };
@@ -51,7 +57,7 @@ export type Payee = {
 export const getEarningsSummary = (token: string) => apiFetch<EarningsSummary>('/api/earnings/summary', { token });
 export const savePayee = (token: string, payee: Payee & { as?: 'participant' | 'merchant' }) =>
   apiFetch<{ payee: Payee }>('/api/earnings/payee', { method: 'POST', token, body: payee });
-export const requestPayout = (token: string, input: { source: Source; amount_usd: number; client_request_id: string; as?: string }) =>
+export const requestPayout = (token: string, input: { source: Source; currency: EarningsCurrency; amount_usd: number; client_request_id: string; as?: string }) =>
   apiFetch<{ request_id: string; status: string }>('/api/earnings/payouts', { method: 'POST', token, body: input });
 export const cancelPayout = (token: string, id: string) => apiFetch(`/api/earnings/payouts?id=${encodeURIComponent(id)}`, { method: 'DELETE', token });
 

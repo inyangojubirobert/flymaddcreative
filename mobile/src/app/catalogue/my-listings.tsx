@@ -13,6 +13,8 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { cataloguePriceLabel, getCatalogueByUsername, getCatalogueDrafts, getCategories, getCatalogueListingConfiguration, createCategory, createItem, updateItem, deleteItem, saveCatalogueDraft, publishCatalogueDraft, deleteCatalogueDraft, uploadCatalogueMedia, type CatalogueItem, type CatalogueListingDraft, type CatalogueListingType, type CatalogueProductDetails, type CatalogueServiceDetails } from '@/api/catalogue';
 import { SellerContactCard, useSellerContact } from '@/components/seller-contact';
+import { CurrencyPicker, useIndicativeUsd } from '@/components/currency-picker';
+import { setListingPrice } from '@/api/marketplace';
 import { ApiError } from '@/lib/api-client';
 import { buildCatalogueDirectory, canSell, departmentForCategory } from '@/lib/catalogue-directory';
 
@@ -26,6 +28,7 @@ type Draft = {
   categoryName: string;
   departmentSlug: string;
   price_usd: string;
+  listing_currency: string;
   price_max_usd: string;
   min_order_qty: string;
   max_order_qty: string;
@@ -49,7 +52,7 @@ type Draft = {
   attributes: { attribute_id?: string; custom_label?: string; value: unknown }[];
 };
 
-const EMPTY_DRAFT: Draft = { title: '', description: '', size: '', category_id: '', categoryName: '', departmentSlug: '', price_usd: '', price_max_usd: '', min_order_qty: '', max_order_qty: '', stock_status: null, stock_quantity: '', status: 'active', images: [], imageUrl: '', promo_video_url: '', listing_type: 'product', pricing_model: 'fixed', price_unit: '', service_scope: '', service_terms: '', service_scope_confirmed: false, condition: '', fulfillment_methods: [], service_modes: [], service_area: '', typical_duration_minutes: '', attributes: [] };
+const EMPTY_DRAFT: Draft = { title: '', description: '', size: '', category_id: '', categoryName: '', departmentSlug: '', price_usd: '', listing_currency: 'USD', price_max_usd: '', min_order_qty: '', max_order_qty: '', stock_status: null, stock_quantity: '', status: 'active', images: [], imageUrl: '', promo_video_url: '', listing_type: 'product', pricing_model: 'fixed', price_unit: '', service_scope: '', service_terms: '', service_scope_confirmed: false, condition: '', fulfillment_methods: [], service_modes: [], service_area: '', typical_duration_minutes: '', attributes: [] };
 
 export default function MyListingsScreen() {
   const { participant, token } = useAuth();
@@ -88,6 +91,8 @@ export default function MyListingsScreen() {
     queryClient.invalidateQueries({ queryKey: ['my-catalogue', participant?.username] });
     queryClient.invalidateQueries({ queryKey: ['catalogue-listing-drafts'] });
   }
+
+  const { indicativeUsd, paymentMethodsFor } = useIndicativeUsd();
 
   async function handleSave() {
     if (draft && !draft.id && !sellerContact.requireContact()) return;
@@ -172,10 +177,11 @@ export default function MyListingsScreen() {
         description: draft.description.trim(),
         size: draft.size.trim() || null,
         category_id: categoryId,
-        price_usd: price,
+        // Non-USD prices are set exactly by setListingPrice below; price_usd is only an indicative equivalent.
+        price_usd: draft.listing_currency === 'USD' ? price : (indicativeUsd(price, draft.listing_currency) ?? price),
         promo_video_url: draft.promo_video_url.trim() || null,
         images: draft.images.filter(Boolean),
-        payment_methods: ['paystack', 'usdt'] as ('paystack' | 'usdt')[],
+        payment_methods: paymentMethodsFor(draft.listing_currency),
         status: draft.status,
         listing_type: draft.listing_type,
         pricing_model: draft.pricing_model,
@@ -194,10 +200,11 @@ export default function MyListingsScreen() {
         } : undefined,
         attributes: draft.attributes,
       };
-      if (draft.id) {
-        await updateItem(token, draft.id, payload);
-      } else {
-        await createItem(token, payload);
+      const saved = draft.id ? await updateItem(token, draft.id, payload) : await createItem(token, payload);
+      const savedId = draft.id || (saved as { id?: string } | null)?.id;
+      const previousCurrency = draft.id ? (itemsQuery.data ?? []).find((i) => i.id === draft.id)?.listing_currency || 'USD' : 'USD';
+      if (savedId && (draft.listing_currency !== 'USD' || previousCurrency !== 'USD')) {
+        await setListingPrice(token, { item_id: savedId, currency: draft.listing_currency, amount: draft.price_usd.trim().replace(/,/g, '') });
       }
       setDraft(null);
       refresh();
@@ -366,7 +373,10 @@ export default function MyListingsScreen() {
       category_id: item.category_id || '',
       categoryName: '',
       departmentSlug: department?.slug || '',
-      price_usd: String(item.price_usd),
+      // Non-USD listings are edited in their own currency, at the exact price.
+      price_usd: item.listing_currency && item.listing_currency !== 'USD' && item.listing_price_minor
+        ? String(Number(item.listing_price_minor) / 100) : String(item.price_usd),
+      listing_currency: item.listing_currency || 'USD',
       price_max_usd: '',
       min_order_qty: '',
       max_order_qty: '',
@@ -652,8 +662,12 @@ export default function MyListingsScreen() {
                   maxLength={40}
                   style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
                 />
+                <CurrencyPicker
+                  value={draft?.listing_currency ?? 'USD'}
+                  onChange={(code) => setDraft((d) => d && { ...d, listing_currency: code })}
+                />
                 <TextInput
-                  placeholder={draft?.pricing_model === 'custom_quote' ? 'Starting price (optional, USD)' : draft?.listing_type === 'service' ? 'Service price (USD)' : 'Price (USD)'}
+                  placeholder={draft?.pricing_model === 'custom_quote' ? `Starting price (optional, ${draft?.listing_currency ?? 'USD'})` : draft?.listing_type === 'service' ? `Service price (${draft?.listing_currency ?? 'USD'})` : `Price (${draft?.listing_currency ?? 'USD'})`}
                   placeholderTextColor={theme.textSecondary}
                   value={draft?.price_usd ?? ''} onChangeText={(v) => setDraft((d) => d && { ...d, price_usd: v })}
                   keyboardType="decimal-pad"
