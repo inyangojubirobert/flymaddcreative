@@ -6,17 +6,17 @@ Testing is deferred to the review round. Everything below is built and deployed;
 
 ## Where things stand
 
-| Area                                         | Status                                                                                                                                                                             |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Google Play products                         | **All 58 live:** 2 AI subscriptions, 7 ad packages, 7 boosts, 17 digital price tiers, 18 creator subscriptions, and **7 Dream Coin packs** (activated 2026-10-17)                  |
-| Dream Coins                                  | **On sale:** `DREAM_COINS_ENABLED=true` in Vercel production. No purchase has been made yet                                                                                        |
-| Buying several coin packs at once            | **Ready to switch on.** Run `node scripts/enable-dream-coin-multi-quantity.mjs` yourself; it was blocked from running here (see step 1)                                            |
-| Earnings and affiliate database              | **Applied in production** (all three migrations; tables and functions checked). Every money switch is **off**: gift earnings, payouts, seller-funded commission, reseller checkout |
-| Partner programme and Earnings screens       | **Live** on the website and web app (`/app`), and in Android 1.0.18                                                                                                                |
+| Area                                         | Status                                                                                                                                                                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Google Play products                         | **All 58 live:** 2 AI subscriptions, 7 ad packages, 7 boosts, 17 digital price tiers, 18 creator subscriptions, and **7 Dream Coin packs** (activated 2026-10-17)                                                     |
+| Dream Coins                                  | **On sale:** `DREAM_COINS_ENABLED=true` in Vercel production. No purchase has been made yet                                                                                                                           |
+| Buying several coin packs at once            | **Ready to switch on.** Run `node scripts/enable-dream-coin-multi-quantity.mjs` yourself; it was blocked from running here (see step 1)                                                                               |
+| Earnings and affiliate database              | **Applied in production** (all three migrations; tables and functions checked). Every money switch is **off**: gift earnings, payouts, seller-funded commission, reseller checkout                                    |
+| Partner programme and Earnings screens       | **Live** on the website and web app (`/app`), and in Android 1.0.18                                                                                                                                                   |
 | Multi-currency listings                      | **Code live (P7 checkout + P9 naira wallet applied and deployed); switch OFF.** Database: migration + review fixes applied. **You still run P8 and P9 SQL** (step 0). Sellers list in USD only until the switch is on |
-| Android app                                  | **1.0.19 (versionCode 21)**: multi-currency cart quote, naira wallet. APK installed by adb; AAB at `mobile/android/app/build/outputs/bundle/release/app-release.aab` |
-| Protected payment changes P1, P3, P4, P5, P6 | **Prepared, not applied.** See `docs/protected-patches/README.md`. P8 replaces P1 (don't apply P1 separately)                                                                    |
-| Premier ($1,500) and Ultimate ($4,000) Boost | Card-only by design: Google Play caps one-time products at $400                                                                                                                    |
+| Android app                                  | **1.0.19 (versionCode 21)**: multi-currency cart quote, naira wallet. APK installed by adb; AAB at `mobile/android/app/build/outputs/bundle/release/app-release.aab`                                                  |
+| Protected payment changes P1, P3, P4, P5, P6 | **Prepared, not applied.** See `docs/protected-patches/README.md`. P8 replaces P1 (don't apply P1 separately)                                                                                                         |
+| Premier ($1,500) and Ultimate ($4,000) Boost | Card-only by design: Google Play caps one-time products at $400                                                                                                                                                       |
 
 ## Next steps, in order
 
@@ -48,7 +48,7 @@ Each product should print `UPDATED ... multi-quantity on`. To turn it off again:
 
 ### 2. Upload the AAB to internal testing (you)
 
-1. The file is `mobile/android/app/build/outputs/bundle/release/app-release.aab` (1.0.18).
+1. The file is `mobile/android/app/build/outputs/bundle/release/app-release.aab` (1.0.19, versionCode 21).
 2. Play Console → **Testing → Internal testing → Create new release**. Upload it and roll out.
 3. Play Console → **Setup → License testing**: add your test Google account.
 4. On the phone, install the app from the internal testing link. Play purchases don't work in a copy installed by adb.
@@ -167,6 +167,7 @@ Full detail: `docs/MULTICURRENCY_IMPLEMENTATION.md`. Steps 1-2 work now; step 3 
    - Request a ₦10,000 withdrawal. **Expect:** ₦7,100 left. Admin → Withdrawals shows "PAY ₦10,000.00 (≈ $…)". Mark it paid as usual.
    - Try ₦20,000. **Expect:** "Amount exceeds your withdrawable marketplace earnings".
 5. **Rollback drill (optional):** switch listing currencies off. **Expect:** sellers can only pick USD again. A listing already priced in another currency is never charged at its approximate dollar price: the server still requires a quote, and the app cart (which only fetches quotes while the switch is on) refuses to pay it. Move such listings back to USD, or switch on again.
+
 ---
 
 ## Planned development
@@ -197,3 +198,5 @@ Full detail: `docs/MULTICURRENCY_IMPLEMENTATION.md`. Steps 1-2 work now; step 3 
 - Tests: `npm run test:earnings` (72 tests, including multi-currency), `node --test __tests__/lib/*.test.mjs`
   xxxx
   somewhere in this project is a $10 promo for users who list to the marketplace and we pick the best video that gets to be promoted using externalk social media means , check and tell me what you found build a file let6s see what we can imporove.
+  xxxxxxxxxxxxxxxxxxx
+  check agricultural products in marketplace and listing
