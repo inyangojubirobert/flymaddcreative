@@ -484,6 +484,10 @@ export default function MyListingsScreen() {
         <Pressable onPress={() => openEditor()} style={styles.addButton}>
           <ThemedText style={styles.addButtonText}>+ New Listing</ThemedText>
         </Pressable>
+        <Pressable onPress={() => router.push('/catalogue/promotion' as never)} style={[styles.draftCard, { backgroundColor: theme.backgroundElement }]}>
+          <ThemedText type="smallBold">📣 Get featured in One Dream{'’'}s social media ads</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">With 10 active listings and a promo video, you can opt in your videos to be promoted on TikTok, Instagram, Facebook and YouTube: up to $10 of ads per selected video. Optional.</ThemedText>
+        </Pressable>
 
         {draftsQuery.isLoading ? <ActivityIndicator size="small" /> : null}
         {draftsQuery.isError ? <ThemedText type="small" style={{ color: Palette.red }}>Saved drafts could not be loaded.</ThemedText> : null}

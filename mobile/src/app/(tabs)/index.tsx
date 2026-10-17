@@ -165,7 +165,7 @@ export default function HomeScreen() {
               { icon: 'person-add' as const, title: '1. Register', text: 'Create your profile and get your unique referral link.', tint: Palette.blueSoft, ink: Palette.blue },
               { icon: 'share-social' as const, title: '2. Share', text: 'Post your link and tell your community why your dream matters.', tint: Palette.yellowSoft, ink: Palette.yellowInk },
               { icon: 'trending-up' as const, title: '3. Earn votes', text: 'Build momentum, climb the leaderboard, and unlock rewards.', tint: Palette.ashSoft, ink: Palette.slate },
-              { icon: 'storefront' as const, title: '4. Build your storefront', text: 'Build a 10-product catalogue with a promo video and unlock a $10/month promotion package — your profile gets referred to customers on flymaddcreative.online.', tint: Palette.blueSoft, ink: Palette.blueDark },
+              { icon: 'storefront' as const, title: '4. Build your storefront', text: 'Publish 10 active listings with a promo video, then opt in (My Listings) to have it featured in One Dream’s social media ads. Each selected video gets up to $10 of ads paid by One Dream, from a $1,000 promotion budget.', tint: Palette.blueSoft, ink: Palette.blueDark },
             ].map((step) => (
               <ThemedView key={step.title} type="backgroundElement" style={[styles.stepCard, { borderColor: theme.backgroundSelected }]}>
                 <View style={[styles.stepIcon, { backgroundColor: step.tint }]}>

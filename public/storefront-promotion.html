@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Storefront Promotion Terms</title>
+  <meta name="description" content="One Dream Storefront Promotion: how seller videos are featured in One Dream's social media advertising, and the terms sellers accept when they opt in.">
+  <style>
+    :root { --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #475569; --line: #e2e8f0; --accent: #1d4ed8; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #0f172a; --card: #111827; --text: #e2e8f0; --muted: #94a3b8; --line: #1f2937; --accent: #93c5fd; } }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+    h1 { font-size: 1.6rem; margin: 0 0 8px; }
+    .meta { color: var(--muted); font-size: .9rem; margin-bottom: 20px; }
+    .terms { white-space: pre-wrap; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <h1>One Dream Storefront Promotion</h1>
+      <div class="meta" id="meta">Loading the current terms…</div>
+      <div class="terms" id="terms"></div>
+      <p class="meta">To take part, open the One Dream app → My Listings → <b>Get featured in One Dream’s social media ads</b>. Taking part is optional and is chosen video by video.</p>
+      <p class="meta"><a href="/Onedream.html">Back to One Dream</a></p>
+    </div>
+  </main>
+  <script>
+    fetch('/api/promo/terms').then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (t) {
+      document.getElementById('meta').textContent = 'Version ' + t.version + ' · published ' + new Date(t.published_at).toLocaleDateString() + ' · up to US$' + t.max_ad_spend_usd + ' of advertising per selected video · US$' + Number(t.programme_budget_usd).toLocaleString() + ' programme budget';
+      document.getElementById('terms').textContent = t.body;
+    }).catch(function () {
+      document.getElementById('meta').textContent = 'The programme terms are not available right now. Please try again later.';
+    });
+  </script>
+</body>
+</html>

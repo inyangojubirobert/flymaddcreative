@@ -90,6 +90,7 @@ function RootNavigator() {
         <Stack.Screen name="catalogue/manage" options={{ headerShown: true, title: 'My Shop' }} />
         <Stack.Screen name="catalogue/my-listings" options={{ headerShown: true }} />
         <Stack.Screen name="catalogue/my-orders" options={{ headerShown: true }} />
+        <Stack.Screen name="catalogue/promotion" options={{ headerShown: true, title: 'External promotion' }} />
         <Stack.Screen name="wallet" options={{ headerShown: true }} />
         <Stack.Screen name="messages" options={{ headerShown: true, title: 'Support Messages' }} />
         <Stack.Screen name="ai" options={{ headerShown: true, title: 'Bascardo AI' }} />

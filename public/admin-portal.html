@@ -53,6 +53,7 @@
         <button onclick="switchTab('gifts')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🎁 Gifts & Rewards</button>
         <button onclick="switchTab('earnings')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🤝 Partners & Payouts</button>
         <button onclick="switchTab('currency')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">💱 Currencies</button>
+        <button onclick="switchTab('promo')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">📣 Video promotion</button>
       </div>
 
       <!-- Messages Tab -->
@@ -284,6 +285,22 @@
         </div>
       </div>
 
+      <!-- Video promotion Tab -->
+      <div id="promoTab" class="hidden space-y-4">
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+            <h2 class="text-xl font-bold">Storefront video promotion</h2>
+            <select id="promoFilter" onchange="loadPromo()" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+              <option value="submitted">Waiting for review</option><option value="selected">Selected</option>
+              <option value="not_selected">Not selected</option><option value="withdrawn">Withdrawn</option><option value="all">All</option>
+            </select>
+          </div>
+          <p class="text-xs text-slate-400 mb-3">Seller videos opted in for One Dream's external social media ads. Up to $10 of ad spend per selected video, within the programme budget. Only use a video while its consent is live; record every spend here.</p>
+          <div id="promoSummary" class="text-sm text-slate-300 mb-3">Loading…</div>
+          <div id="promoList" class="space-y-2 text-xs text-slate-300"></div>
+        </div>
+      </div>
+
       <!-- Gifts & Rewards Tab -->
       <div id="giftsTab" class="hidden space-y-4">
         <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
@@ -500,6 +517,7 @@
       if (tab === 'gifts') loadGifts();
       if (tab === 'earnings') loadEarnings();
       if (tab === 'currency') loadCurrency();
+      if (tab === 'promo') loadPromo();
     }
 
     let activeParticipantId = null;
@@ -1087,6 +1105,55 @@
       if (decision === 'rejected' && !note) return;
       try { await adminFetch('/api/admin/earnings/payouts', { method: 'POST', body: JSON.stringify({ target: 'payee', party_type: partyType, party_id: partyId, decision, note }) }); loadEarnings(); }
       catch (err) { alert(err.message); }
+    }
+
+    // --- Storefront video promotion ------------------------------------------
+    const PROMO_PLATFORMS = ['tiktok', 'instagram', 'facebook', 'youtube', 'x', 'other'];
+    async function loadPromo() {
+      const summary = document.getElementById('promoSummary');
+      summary.textContent = 'Loading…';
+      try {
+        const d = await adminFetch(`/api/admin/promo?status=${encodeURIComponent(document.getElementById('promoFilter').value)}`);
+        const t = (d.terms || []).find(x => x.is_current);
+        const spentAll = d.submissions.reduce((n, x) => n + x.spent_usd, 0);
+        summary.innerHTML = t ? `Terms v${t.version}: up to <b>$${Number(t.max_ad_spend_usd).toFixed(2)}</b> per selected video · programme budget <b>$${Number(t.programme_budget_usd).toLocaleString()}</b> · spent in this list <b>$${spentAll.toFixed(2)}</b> · needs ${t.min_active_listings} active listings` : 'Run supabase/add_storefront_promotion.sql first.';
+        document.getElementById('promoList').innerHTML = d.submissions.map(x => `<div class="rounded bg-slate-700/40 p-2 space-y-1">
+            <div class="flex flex-wrap gap-2 items-center">${x.item?.image ? `<img src="${escapeText(x.item.image)}" class="h-12 rounded">` : ''}
+              <span>@${escapeText(x.seller_username)} · ${escapeText(x.item?.title || x.item_id)} · <a href="${escapeText(x.video_url)}" target="_blank" rel="noopener" class="text-sky-300 underline">video</a>
+              · <b>${escapeText(x.status.replace('_', ' '))}</b> · consent ${when(x.consent_at)} (v${x.terms_version})${x.withdrawn_at ? ` · <span class="text-red-300">withdrawn ${when(x.withdrawn_at)}</span>` : ''}
+              ${x.item && !x.item.video_still_on_listing ? ' · <span class="text-amber-300">video changed on listing since</span>' : ''} · spent $${x.spent_usd.toFixed(2)}</span>
+              <span class="ml-auto">${x.status === 'submitted' || x.status === 'not_selected' ? `<button onclick="promoReview('${x.id}','selected')" class="bg-green-800 px-2 rounded">Select</button>` : ''}
+              ${x.status === 'submitted' || x.status === 'selected' ? ` <button onclick="promoReview('${x.id}','not_selected')" class="bg-slate-600 px-2 rounded">Not selected</button>` : ''}</span></div>
+            <div class="text-slate-400">Storefront link for ads: <span class="select-all">${escapeText(x.tracked_link)}</span></div>
+            ${x.spend.map(c => `<div>${escapeText(c.spent_on)} · ${escapeText(c.platform)} · $${Number(c.amount_usd).toFixed(2)}${c.impressions != null ? ` · ${c.impressions} impressions` : ''}${c.clicks != null ? ` · ${c.clicks} clicks` : ''}${c.campaign_url ? ` · <a href="${escapeText(c.campaign_url)}" target="_blank" rel="noopener" class="underline">post</a>` : ''}</div>`).join('')}
+            ${x.status === 'selected' ? `<div class="flex flex-wrap gap-1 items-center">
+              <select id="pp-${x.id}" class="bg-slate-700 rounded px-1">${PROMO_PLATFORMS.map(p => `<option>${p}</option>`).join('')}</select>
+              <input id="pa-${x.id}" type="number" step="0.01" placeholder="$ spent" class="bg-slate-700 rounded px-1 w-20">
+              <input id="pu-${x.id}" placeholder="post / campaign URL" class="bg-slate-700 rounded px-1 w-48">
+              <input id="pi-${x.id}" type="number" placeholder="impressions" class="bg-slate-700 rounded px-1 w-24">
+              <input id="pc-${x.id}" type="number" placeholder="clicks" class="bg-slate-700 rounded px-1 w-20">
+              <button onclick="promoSpend('${x.id}')" class="bg-green-800 px-2 rounded">Record spend</button></div>` : ''}
+          </div>`).join('') || '<div class="text-slate-500">Nothing here.</div>';
+      } catch (err) {
+        summary.innerHTML = `<span class="text-red-400">Error: ${escapeText(err.message)}</span>`;
+      }
+    }
+
+    async function promoReview(id, decision) {
+      const note = prompt(decision === 'selected' ? 'Note to the seller (optional):' : 'Reason shown to the seller (optional):') ?? null;
+      if (note === null) return;
+      try {
+        await adminFetch('/api/admin/promo', { method: 'POST', body: JSON.stringify({ action: 'review', submission_id: id, decision, note }) });
+        loadPromo();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function promoSpend(id) {
+      const v = (p) => document.getElementById(`${p}-${id}`).value.trim();
+      try {
+        await adminFetch('/api/admin/promo', { method: 'POST', body: JSON.stringify({ action: 'spend', submission_id: id, platform: v('pp'), amount_usd: Number(v('pa')), campaign_url: v('pu'), impressions: v('pi'), clicks: v('pc') }) });
+        loadPromo();
+      } catch (err) { alert(err.message); }
     }
 
     // --- Currencies ---------------------------------------------------------

@@ -179,7 +179,7 @@ export default function OneDreamIndex() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-4">4. Build Your Storefront</h3>
               <p className="text-gray-600 mb-4">
-                Build a 10-product catalogue with a promotional video and unlock a $10/month promotion package — your business profile gets referred to customers on flymaddcreative.online.
+                Publish 10 active listings with a promotional video, then opt in to have your video featured in One Dream's social media ads. Each selected video gets up to $10 of ads paid by One Dream (from a $1,000 promotion budget), sending customers to your storefront.
               </p>
               <span className="text-purple-600 font-medium">
                 Grow your business →
