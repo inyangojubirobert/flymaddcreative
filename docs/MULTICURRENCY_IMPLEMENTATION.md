@@ -43,7 +43,7 @@ This is a test in `scripts/test-multicurrency.mjs`.
 | Rates, quotes, settings | `lib/marketplaceCurrency.js`. The checkout glue for P7 is `lib/quoteCheckout.js` (not imported by any live route) |
 | Public APIs | `GET /api/marketplace/currencies`, `POST /api/marketplace/quote`, `PATCH /api/marketplace/listing-price`, `GET /api/marketplace/seller-earnings` |
 | Admin | `/api/admin/currency` and the admin portal tab **💱 Currencies**: currencies, rates, refresh, settings, the switch, quotes and snapshots |
-| Daily rates | `vercel.json` cron → `/api/admin/currency` at 03:05 UTC, authorised with `CRON_SECRET` |
+| Daily rates | `vercel.json` cron → `/api/admin/currency` at 00:30 UTC (just after the provider publishes, so rates never age past the 26-hour limit), authorised with `CRON_SECRET` |
 | App | Currency picker in My Listings; "≈ $X (approximate)" and the payment route under a listing's price; non-USD listings route to the cart; per-currency balances in Earnings |
 | Earnings ledger | `currency` on `partner_ledger`, `affiliate_attributions`, `referral_rewards`, `payout_requests`. Partner balances and payout requests are per currency |
 

@@ -61,7 +61,7 @@
     },
     {
       "path": "/api/admin/currency",
-      "schedule": "5 3 * * *"
+      "schedule": "30 0 * * *"
     }
   ]
 }

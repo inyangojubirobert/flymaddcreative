@@ -25,7 +25,7 @@ Testing is deferred to the review round. Everything below is built and deployed;
 Already done in production:
 - `supabase/add_multicurrency_listings.sql` and `supabase/fix_multicurrency_review.sql` (11/11 checks ok);
 - `docs/protected-patches/P8_usd_seller_wallet.sql` and `P9_naira_seller_wallet.sql`;
-- today's exchange rates (NGN, GBP, EUR, GHS) stored on 18 Oct. They refresh automatically every day at 03:05 UTC, or with **💱 Currencies → Refresh rates now**.
+- today's exchange rates (NGN, GBP, EUR, GHS) stored on 18 Oct. They refresh automatically every day at 00:30 UTC (just after the provider publishes, so rates never age past the 26-hour limit), or with **💱 Currencies → Refresh rates now**.
 
 **Run this one file now:** `supabase/fix_p8_p9_review.sql`. Paste it whole and run it once; every check row must say `ok = true`. It replaces three functions and changes no data:
 - a naira withdrawal is refused when no recent NGN rate exists, instead of being recorded at a made-up $0.01;
