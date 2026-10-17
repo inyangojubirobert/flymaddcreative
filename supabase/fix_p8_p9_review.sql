@@ -139,6 +139,8 @@ begin
 
   -- The USD equivalent (totals and alerts only) needs a recent NGN rate.
   -- No rate, no withdrawal: nothing is ever recorded at a made-up value.
+  -- Rounded to the cent with a $0.01 floor, so a tiny withdrawal never shows
+  -- as $0.00. amount_ngn (what is paid) is exact; amount_usd is reporting only.
   select r.rate into v_rate from currency_rates r
    where r.quote = 'NGN'
      and r.source_published_at >= now() - make_interval(secs => coalesce((select max_rate_age_seconds from currency_settings where id), 93600))

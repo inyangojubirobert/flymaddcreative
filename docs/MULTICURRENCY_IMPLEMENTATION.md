@@ -98,6 +98,10 @@ Run after the migration. It is idempotent.
 
 The replaced functions run against the full earnings, gifting and affiliate test suite (72 tests). In production all ledger, payout, attribution, quote and snapshot tables were empty and every money switch was off when this was written.
 
+## Naira withdrawal rounding
+
+`amount_ngn` is authoritative: it is what the seller is owed and what the admin pays. `amount_usd` on a naira withdrawal is a reporting figure only (totals, alerts): the naira amount at the latest rate (which must be under 26 hours old), rounded to the cent, with a floor of $0.01 so a very small withdrawal never shows as $0.00. It can overstate a withdrawal under about ₦7 by a fraction of a cent, and it never enters any balance calculation.
+
 ## While the switch is off (now)
 
 - Sellers can only list in USD. Other currency chips are shown but disabled, and `listing-price` refuses non-USD with 403.

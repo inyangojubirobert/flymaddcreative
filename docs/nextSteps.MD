@@ -13,27 +13,32 @@ Testing is deferred to the review round. Everything below is built and deployed;
 | Buying several coin packs at once            | **Ready to switch on.** Run `node scripts/enable-dream-coin-multi-quantity.mjs` yourself; it was blocked from running here (see step 1)                                                                               |
 | Earnings and affiliate database              | **Applied in production** (all three migrations; tables and functions checked). Every money switch is **off**: gift earnings, payouts, seller-funded commission, reseller checkout                                    |
 | Partner programme and Earnings screens       | **Live** on the website and web app (`/app`), and in Android 1.0.18                                                                                                                                                   |
-| Multi-currency listings                      | **Code live (P7 checkout + P9 naira wallet applied and deployed); switch OFF.** Database: migration + review fixes applied. **You still run P8 and P9 SQL** (step 0). Sellers list in USD only until the switch is on |
+| Multi-currency listings | **Code live** (commits `e16f520`, `1932d63`, `77398c2`, deployed); **switch OFF**. Database: migration, review fixes, P8 and P9 applied; rates stored. **Next: run `supabase/fix_p8_p9_review.sql`, then P7 SQL + switch on + test G** (step 0) |
 | Android app                                  | **1.0.19 (versionCode 21)**: multi-currency cart quote, naira wallet. APK installed by adb; AAB at `mobile/android/app/build/outputs/bundle/release/app-release.aab`                                                  |
 | Protected payment changes P1, P3, P4, P5, P6 | **Prepared, not applied.** See `docs/protected-patches/README.md`. P8 replaces P1 (don't apply P1 separately)                                                                                                         |
 | Premier ($1,500) and Ultimate ($4,000) Boost | Card-only by design: Google Play caps one-time products at $400                                                                                                                                                       |
 
 ## Next steps, in order
 
-### 0. Multi-currency: finish the database setup (you, Supabase SQL editor)
+### 0. Multi-currency: finish the setup and go live (you)
 
-Already done: `supabase/add_multicurrency_listings.sql` and `supabase/fix_multicurrency_review.sql` (11/11 checks ok).
+**Already done in production** (18 Oct 2026):
+- `supabase/add_multicurrency_listings.sql` and `supabase/fix_multicurrency_review.sql` (11/11 checks ok);
+- `docs/protected-patches/P8_usd_seller_wallet.sql` and `P9_naira_seller_wallet.sql`;
+- the code: commits `e16f520`, `1932d63`, `77398c2`, all deployed;
+- exchange rates for NGN, GBP, EUR and GHS (provider publish time 17 Oct, 00:02 UTC).
 
-Run these two files, in this order. Paste each whole file and run it once. Every row of the check at the end must say `ok = true`:
+**1. Run `supabase/fix_p8_p9_review.sql`** in the Supabase SQL editor. Paste it whole and run it once; all 6 check rows must say `ok = true`. It replaces three functions and changes no data:
+- a naira withdrawal is refused when no recent NGN rate exists, instead of being recorded at a made-up $0.01;
+- the seller-funded affiliate deduction in both wallets is a sum, so it can't fail on several rows or apply twice.
 
-1. `docs/protected-patches/P8_usd_seller_wallet.sql`: the USD wallet leaves out naira sales. No balance changes today (every order and withdrawal is USD).
-2. `docs/protected-patches/P9_naira_seller_wallet.sql`: the naira wallet and naira withdrawals.
+**2. Check the rates are current:** admin portal → **💱 Currencies**. The summary line shows each rate and its publish time. Quotes and naira withdrawals refuse rates older than 26 hours; the automatic refresh at 00:30 UTC every day keeps them under that. If a rate is old, press **Refresh rates now**.
 
-Until they run, the deployed wallet keeps working in USD only and simply doesn't show a naira section.
+**3. Run `docs/protected-patches/P7_multicurrency_checkout.sql`**, then switch on **💱 Currencies → Let sellers list in naira and other currencies** (type `P7_P8_APPLIED` when asked). The SQL makes every non-naira listing USDT-only, including the 2 existing USD listings, and naira listings Paystack-only.
 
-Then: admin portal → **💱 Currencies → Refresh rates now**. Rates also refresh automatically every day at 03:05 UTC.
+**4. Run test G** (below). Keep it on if it passes. If one payment route fails, see "If something fails" in test G.
 
-**Don't run yet:** `docs/protected-patches/P7_multicurrency_checkout.sql`. It makes every non-naira listing USDT-only (including the 2 existing USD listings), so it runs only at switch-on time, after test G passes. The switch itself is **💱 Currencies → Let sellers list in naira and other currencies**, and it asks you to type `P7_P8_APPLIED`.
+**Rounding policy for naira withdrawals:** the naira amount (`amount_ngn`) is what the seller is owed and what the admin pays; it's exact. The dollar figure next to it (`amount_usd`) is only for totals and admin alerts: the naira amount at the latest rate, rounded to the cent, never below $0.01 (so ₦5 shows as $0.01, not $0.00). It never affects any balance.
 
 ### 1. Switch on buying several coin packs at once (you)
 
@@ -151,7 +156,7 @@ Admin → **🤝 Partners & Payouts → Check unreturned payments**.
 
 ### G. Multi-currency listings (after step 0)
 
-Full detail: `docs/MULTICURRENCY_IMPLEMENTATION.md`. Steps 1-2 work now; step 3 needs the switch on, so do it in one sitting: run the P7 SQL, switch on, test, and switch off again if anything is wrong.
+Full detail: `docs/MULTICURRENCY_IMPLEMENTATION.md`. Steps 1-2 work now; steps 3-4 need the switch on (step 0.3). Keep it on if they pass.
 
 1. Admin → **💱 Currencies → Refresh rates now**. **Expect:** NGN, GBP, EUR and GHS rates with today's publish date. The switch shows "off (USD only)".
 2. App → My Listings → new listing. **Expect:** the USD chip is selectable, the other currencies are greyed out with "opens soon", and saving a USD listing works as before.
@@ -166,7 +171,11 @@ Full detail: `docs/MULTICURRENCY_IMPLEMENTATION.md`. Steps 1-2 work now; step 3 
    - **Expect:** "Naira earnings" with ₦17,100 withdrawable (₦18,000 less 5%), and the dollar balance unchanged.
    - Request a ₦10,000 withdrawal. **Expect:** ₦7,100 left. Admin → Withdrawals shows "PAY ₦10,000.00 (≈ $…)". Mark it paid as usual.
    - Try ₦20,000. **Expect:** "Amount exceeds your withdrawable marketplace earnings".
-5. **Rollback drill (optional):** switch listing currencies off. **Expect:** sellers can only pick USD again. A listing already priced in another currency is never charged at its approximate dollar price: the server still requires a quote, and the app cart (which only fetches quotes while the switch is on) refuses to pay it. Move such listings back to USD, or switch on again.
+5. **If something fails**, turn off only what's broken:
+   - **USDT route (GBP, EUR, GHS):** admin → 💱 Currencies → **Disable** each of those currencies. New quotes for them are refused; naira keeps working.
+   - **Naira route (Paystack):** NGN can't be disabled on its own. Switch listing currencies off (below) and move the naira listings back to USD until it's fixed.
+   - Paste what you saw; nothing already paid is lost, because every paid order keeps its frozen snapshot.
+6. **Rollback drill (optional):** switch listing currencies off. **Expect:** sellers can only pick USD again. A listing already priced in another currency is never charged at its approximate dollar price: the server still requires a quote, and the app cart (which only fetches quotes while the switch is on) refuses to pay it. Move such listings back to USD, or switch on again.
 
 ---
 
