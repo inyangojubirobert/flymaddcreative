@@ -11,6 +11,7 @@ export type PromoTerms = {
   min_active_listings: number;
   max_ad_spend_usd: number;
   programme_budget_usd: number;
+  max_selected_per_seller: number | null;
   consent: string;
 };
 

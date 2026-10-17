@@ -112,8 +112,8 @@ android {
         applicationId 'com.flymaddcreative.onedream'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 22
-        versionName "1.0.20"
+        versionCode 23
+        versionName "1.0.21"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }

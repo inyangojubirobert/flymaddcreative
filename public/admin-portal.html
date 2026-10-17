@@ -295,7 +295,7 @@
               <option value="not_selected">Not selected</option><option value="withdrawn">Withdrawn</option><option value="all">All</option>
             </select>
           </div>
-          <p class="text-xs text-slate-400 mb-3">Seller videos opted in for One Dream's external social media ads. Up to $10 of ad spend per selected video, within the programme budget. Only use a video while its consent is live; record every spend here.</p>
+          <p class="text-xs text-slate-400 mb-3">Seller videos opted in for One Dream's external social media ads. Up to $10 of ad spend per selected video, at most 3 funded videos per seller, within the programme budget. Selecting a video reserves its $10. Only use a video while its consent is live. Spend records can't be edited: record a mistake as a negative correction with a note.</p>
           <div id="promoSummary" class="text-sm text-slate-300 mb-3">Loading…</div>
           <div id="promoList" class="space-y-2 text-xs text-slate-300"></div>
         </div>
@@ -1116,7 +1116,8 @@
         const d = await adminFetch(`/api/admin/promo?status=${encodeURIComponent(document.getElementById('promoFilter').value)}`);
         const t = (d.terms || []).find(x => x.is_current);
         const spentAll = d.submissions.reduce((n, x) => n + x.spent_usd, 0);
-        summary.innerHTML = t ? `Terms v${t.version}: up to <b>$${Number(t.max_ad_spend_usd).toFixed(2)}</b> per selected video · programme budget <b>$${Number(t.programme_budget_usd).toLocaleString()}</b> · spent in this list <b>$${spentAll.toFixed(2)}</b> · needs ${t.min_active_listings} active listings` : 'Run supabase/add_storefront_promotion.sql first.';
+        const b = d.budget;
+        summary.innerHTML = t ? `Terms v${t.version}: up to <b>$${Number(t.max_ad_spend_usd).toFixed(2)}</b> per selected video · ${t.max_selected_per_seller ?? '?'} funded videos per seller · needs ${t.min_active_listings} active listings<br>Budget <b>$${Number(t.programme_budget_usd).toLocaleString()}</b>${b ? ` · committed $${b.committed_usd.toFixed(2)} (selected videos reserve $${Number(t.max_ad_spend_usd).toFixed(2)} each) · spent $${b.spent_usd.toFixed(2)} · <b class="${b.uncommitted_usd >= Number(t.max_ad_spend_usd) ? 'text-green-400' : 'text-amber-300'}">uncommitted $${b.uncommitted_usd.toFixed(2)}</b>` : ''} · spent in this list $${spentAll.toFixed(2)}` : 'Run supabase/add_storefront_promotion.sql first.';
         document.getElementById('promoList').innerHTML = d.submissions.map(x => `<div class="rounded bg-slate-700/40 p-2 space-y-1">
             <div class="flex flex-wrap gap-2 items-center">${x.item?.image ? `<img src="${escapeText(x.item.image)}" class="h-12 rounded">` : ''}
               <span>@${escapeText(x.seller_username)} · ${escapeText(x.item?.title || x.item_id)} · <a href="${escapeText(x.video_url)}" target="_blank" rel="noopener" class="text-sky-300 underline">video</a>
@@ -1125,13 +1126,14 @@
               <span class="ml-auto">${x.status === 'submitted' || x.status === 'not_selected' ? `<button onclick="promoReview('${x.id}','selected')" class="bg-green-800 px-2 rounded">Select</button>` : ''}
               ${x.status === 'submitted' || x.status === 'selected' ? ` <button onclick="promoReview('${x.id}','not_selected')" class="bg-slate-600 px-2 rounded">Not selected</button>` : ''}</span></div>
             <div class="text-slate-400">Storefront link for ads: <span class="select-all">${escapeText(x.tracked_link)}</span></div>
-            ${x.spend.map(c => `<div>${escapeText(c.spent_on)} · ${escapeText(c.platform)} · $${Number(c.amount_usd).toFixed(2)}${c.impressions != null ? ` · ${c.impressions} impressions` : ''}${c.clicks != null ? ` · ${c.clicks} clicks` : ''}${c.campaign_url ? ` · <a href="${escapeText(c.campaign_url)}" target="_blank" rel="noopener" class="underline">post</a>` : ''}</div>`).join('')}
-            ${x.status === 'selected' ? `<div class="flex flex-wrap gap-1 items-center">
+            ${x.spend.map(c => `<div>${escapeText(c.spent_on)} · ${escapeText(c.platform)} · $${Number(c.amount_usd).toFixed(2)}${c.impressions != null ? ` · ${c.impressions} impressions` : ''}${c.clicks != null ? ` · ${c.clicks} clicks` : ''}${c.campaign_url ? ` · <a href="${escapeText(c.campaign_url)}" target="_blank" rel="noopener" class="underline">post</a>` : ''}${c.notes ? ` · ${escapeText(c.notes)}` : ''}</div>`).join('')}
+            ${x.status === 'selected' || x.spent_usd > 0 ? `<div class="flex flex-wrap gap-1 items-center">
               <select id="pp-${x.id}" class="bg-slate-700 rounded px-1">${PROMO_PLATFORMS.map(p => `<option>${p}</option>`).join('')}</select>
               <input id="pa-${x.id}" type="number" step="0.01" placeholder="$ spent" class="bg-slate-700 rounded px-1 w-20">
               <input id="pu-${x.id}" placeholder="post / campaign URL" class="bg-slate-700 rounded px-1 w-48">
               <input id="pi-${x.id}" type="number" placeholder="impressions" class="bg-slate-700 rounded px-1 w-24">
               <input id="pc-${x.id}" type="number" placeholder="clicks" class="bg-slate-700 rounded px-1 w-20">
+              <input id="pn-${x.id}" placeholder="note (required for a negative correction)" class="bg-slate-700 rounded px-1 w-56">
               <button onclick="promoSpend('${x.id}')" class="bg-green-800 px-2 rounded">Record spend</button></div>` : ''}
           </div>`).join('') || '<div class="text-slate-500">Nothing here.</div>';
       } catch (err) {
@@ -1151,7 +1153,7 @@
     async function promoSpend(id) {
       const v = (p) => document.getElementById(`${p}-${id}`).value.trim();
       try {
-        await adminFetch('/api/admin/promo', { method: 'POST', body: JSON.stringify({ action: 'spend', submission_id: id, platform: v('pp'), amount_usd: Number(v('pa')), campaign_url: v('pu'), impressions: v('pi'), clicks: v('pc') }) });
+        await adminFetch('/api/admin/promo', { method: 'POST', body: JSON.stringify({ action: 'spend', submission_id: id, platform: v('pp'), amount_usd: Number(v('pa')), campaign_url: v('pu'), impressions: v('pi'), clicks: v('pc'), notes: v('pn') }) });
         loadPromo();
       } catch (err) { alert(err.message); }
     }

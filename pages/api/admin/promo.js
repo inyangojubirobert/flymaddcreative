@@ -3,8 +3,10 @@
 //   GET  ?status=submitted|selected|not_selected|withdrawn|all
 //   POST { action: 'review', submission_id, decision: 'selected'|'not_selected', note }
 //   POST { action: 'spend', submission_id, platform, amount_usd, spent_on?, campaign_ref?, campaign_url?, impressions?, clicks?, notes? }
-// Spend is limited by the database to the accepted terms' maximum (US$10)
-// and only for selected videos whose consent hasn't been withdrawn.
+//        a negative amount_usd is a correction and needs notes; spend rows are append-only
+// The database enforces: spend only on selected live videos, US$10 per video,
+// the programme budget, budget reserved at selection, and 3 funded videos per
+// seller per terms version (supabase/fix_storefront_promotion_review.sql).
 
 import { requireActiveAdmin } from '../../../lib/adminAuth';
 import { PLATFORMS, promoDb, promoErrorReply, trackedStorefrontLink } from '../../../lib/storefrontPromo';
@@ -29,11 +31,20 @@ export default async function handler(req, res) {
       const [items, spend, terms] = await Promise.all([
         subs.length ? promoDb.from('catalogue_items').select('id, title, status, images, promo_video_url').in('id', [...new Set(subs.map((s) => s.item_id))]).then(must) : [],
         ids.length ? promoDb.from('promo_campaign_spend').select('*').in('submission_id', ids).order('spent_on', { ascending: false }).then(must) : [],
-        promoDb.from('promo_programme_terms').select('version, title, max_ad_spend_usd, min_active_listings, is_current, published_at').order('version').then(must),
+        promoDb.from('promo_programme_terms').select('*').order('version').then(must),
       ]);
+      const current = (terms || []).find((t) => t.is_current);
+      let budget = null;
+      if (current) {
+        const committed = Number(must(await promoDb.rpc('promo_committed_usd', { p_terms_version: current.version })) || 0);
+        const { data: spentRows } = await promoDb.from('promo_campaign_spend').select('amount_usd, promo_video_submissions!inner(terms_version)').eq('promo_video_submissions.terms_version', current.version);
+        const spent = (spentRows || []).reduce((n, r) => n + Number(r.amount_usd), 0);
+        budget = { terms_version: current.version, total_usd: Number(current.programme_budget_usd), committed_usd: committed, spent_usd: spent, uncommitted_usd: Math.max(0, Number(current.programme_budget_usd) - committed) };
+      }
       const itemById = new Map((items || []).map((i) => [i.id, i]));
       return res.status(200).json({
-        terms,
+        terms: (terms || []).map(({ body, ...t }) => t),
+        budget,
         submissions: subs.map((s) => {
           const rows = (spend || []).filter((c) => c.submission_id === s.id);
           const item = itemById.get(s.item_id);
@@ -62,7 +73,8 @@ export default async function handler(req, res) {
       const platform = String(req.body?.platform || '').toLowerCase();
       if (!PLATFORMS.includes(platform)) return res.status(400).json({ error: `platform: ${PLATFORMS.join(', ')}` });
       const amount = Math.round(Number(req.body?.amount_usd) * 100) / 100;
-      if (!(amount >= 0)) return res.status(400).json({ error: 'Enter the amount spent in US dollars' });
+      if (!Number.isFinite(amount) || amount === 0) return res.status(400).json({ error: 'Enter the amount spent in US dollars (negative for a correction)' });
+      if (amount < 0 && !text(req.body?.notes, 500)) return res.status(400).json({ error: 'A correction needs a note explaining it' });
       const sub = must(await promoDb.from('promo_video_submissions').select('id, seller_username').eq('id', String(req.body?.submission_id || '')).maybeSingle());
       if (!sub) return res.status(404).json({ error: 'Submission not found' });
       const spentOn = /^\d{4}-\d{2}-\d{2}$/.test(String(req.body?.spent_on || '')) ? req.body.spent_on : undefined;

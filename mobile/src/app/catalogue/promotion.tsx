@@ -81,7 +81,7 @@ export default function PromotionScreen() {
         <View style={card}>
           <ThemedText type="subtitle">{terms.title}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            One Dream features selected seller videos in its own social media advertising (TikTok, Instagram, Facebook, YouTube), linking to your storefront. Each selected video may receive up to US${terms.max_ad_spend_usd.toFixed(0)} of external advertising, paid by One Dream, from a US${terms.programme_budget_usd.toLocaleString('en-US')} programme budget. Submit as many of your listing videos as you like; more than one can be selected. It isn{'’'}t cash, a wallet balance or an in-app credit, and selection isn{'’'}t guaranteed.
+            One Dream features selected seller videos in its own social media advertising (TikTok, Instagram, Facebook, YouTube), linking to your storefront. Submit your promotional videos for a chance to be featured. Selected videos may receive up to US${terms.max_ad_spend_usd.toFixed(0)} in advertising funded by One Dream (not necessarily the full amount), from a US${terms.programme_budget_usd.toLocaleString('en-US')} programme budget. Submit as many videos as you like; {terms.max_selected_per_seller ? `up to ${terms.max_selected_per_seller} of yours can be funded each round` : 'more than one can be selected'}. It isn{'’'}t cash, a wallet balance or an in-app credit, and selection isn{'’'}t guaranteed.
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">Taking part is optional. Your video shows on your storefront either way.</ThemedText>
           <Pressable onPress={() => setShowTerms((v) => !v)}>

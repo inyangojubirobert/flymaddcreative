@@ -16,6 +16,7 @@ export default async function handler(req, res) {
       min_active_listings: terms.min_active_listings,
       max_ad_spend_usd: Number(terms.max_ad_spend_usd),
       programme_budget_usd: Number(terms.programme_budget_usd),
+      max_selected_per_seller: terms.max_selected_per_seller ?? null,
       consent: consentSentence(terms.version),
       published_at: terms.published_at,
     });

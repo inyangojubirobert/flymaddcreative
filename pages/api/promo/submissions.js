@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       const ids = (submissions || []).map((s) => s.id);
       const spend = ids.length ? must(await promoDb.from('promo_campaign_spend').select('submission_id, platform, spent_on, campaign_url').in('submission_id', ids)) : [];
       return res.status(200).json({
-        terms: { version: terms.version, title: terms.title, body: terms.body, min_active_listings: terms.min_active_listings, max_ad_spend_usd: Number(terms.max_ad_spend_usd), programme_budget_usd: Number(terms.programme_budget_usd), consent: consentSentence(terms.version) },
+        terms: { version: terms.version, title: terms.title, body: terms.body, min_active_listings: terms.min_active_listings, max_ad_spend_usd: Number(terms.max_ad_spend_usd), programme_budget_usd: Number(terms.programme_budget_usd), max_selected_per_seller: terms.max_selected_per_seller ?? null, consent: consentSentence(terms.version) },
         eligibility,
         // Sellers see where their video was promoted, not One Dream's spend.
         submissions: (submissions || []).map((s) => ({ ...s, campaigns: (spend || []).filter((c) => c.submission_id === s.id).map(({ platform, spent_on, campaign_url }) => ({ platform, spent_on, campaign_url })) })),

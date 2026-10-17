@@ -40,9 +40,11 @@ Testing is deferred to the review round. Everything below is built and deployed;
 
 **Rounding policy for naira withdrawals:** the naira amount (`amount_ngn`) is what the seller is owed and what the admin pays; it's exact. The dollar figure next to it (`amount_usd`) is only for totals and admin alerts: the naira amount at the latest rate, rounded to the cent, never below $0.01 (so ₦5 shows as $0.01, not $0.00). It never affects any balance.
 
-### 0b. Storefront video promotion: create its tables (you, Supabase SQL editor)
+### 0b. Storefront video promotion (you, Supabase SQL editor)
 
-Run `supabase/add_storefront_promotion.sql` once; every check row must say `ok = true`. Until it runs, the app's **External promotion** screen and the admin **📣 Video promotion** tab show an error, and nothing else is affected. Programme: `docs/STOREFRONT_PROMO_REVIEW.md` (up to $10 of external ads per selected video, $1,000 cap, opt-in per video).
+Done: `supabase/add_storefront_promotion.sql` (18 Oct).
+
+**Run now:** `supabase/fix_storefront_promotion_review.sql` once; every check row must say `ok = true`. It makes the terms immutable, publishes terms **version 2** (clearer wording, at most 3 funded videos per seller per round), reserves $10 of budget when a video is selected, and makes spend records append-only (mistakes are fixed with a negative correction that needs a note). Programme: `docs/STOREFRONT_PROMO_REVIEW.md`.
 
 ### 1. Switch on buying several coin packs at once (you)
 
@@ -160,12 +162,15 @@ Admin → **🤝 Partners & Payouts → Check unreturned payments**.
 
 ### H. Storefront video promotion (after step 0b)
 
-1. Open `https://www.flymaddcreative.online/storefront-promotion.html`. **Expect:** the full terms, version 1, "up to US$10 … per selected video · US$1,000 programme budget".
+1. Open `https://www.flymaddcreative.online/storefront-promotion.html`. **Expect:** the full terms, **version 2**, starting "…for a chance to be featured…", and "up to US$10 … per selected video · US$1,000 programme budget".
 2. App → **My Listings → Get featured in One Dream's social media ads** with fewer than 10 active listings. **Expect:** "N of 10 active listings", and no submit form.
 3. With 10 active listings and videos on 2 of them: choose one video, leave the consent box unticked. **Expect:** the submit button stays disabled. Tick it and submit. **Expect:** "Submitted · under review". Submit the second video too. **Expect:** both listed.
 4. Admin → **📣 Video promotion**. **Expect:** both videos, with seller, consent date and terms version. **Select** one; mark the other **Not selected** with a note. **Expect:** the app shows each status and the note.
 5. Record spend on the selected video: TikTok, $6, a post URL. Then $5 more. **Expect:** "That would exceed the US$10 limit for this video". Then $4. **Expect:** accepted (total $10). The app shows "Promoted on tiktok" with the date, and no amount.
 6. Try recording spend on the not-selected video. **Expect:** "Only selected videos can have advertising spend recorded".
+   - Record **-2** on the selected video with no note. **Expect:** "A correction needs a note explaining it". With a note, it's accepted and shown with the note; the video's total is now $8.
+   - Select a 4th video from the same seller (after 3 are selected). **Expect:** "This seller already has the maximum number of funded videos this round".
+   - The summary line shows the budget: committed (each selected video reserves $10), spent and uncommitted.
 7. In the app, **Withdraw consent** on the selected video. **Expect:** "Consent withdrawn" in both the app and the admin, and no **Record spend** box any more. Submitting the same video again creates a new, fresh consent record.
 
 ### G. Multi-currency listings (after step 0)
@@ -218,7 +223,7 @@ Full detail: `docs/MULTICURRENCY_IMPLEMENTATION.md`. Steps 1-2 work now; steps 3
 - Protected changes: `docs/protected-patches/README.md`
 - Multi-currency: `docs/MULTICURRENCY_IMPLEMENTATION.md`
 - Google Play products: `docs/GOOGLE_PLAY_PRODUCTS.md`; scripts `scripts/create-google-play-products.mjs`, `scripts/create-dream-coin-products.mjs`, `scripts/enable-dream-coin-multi-quantity.mjs`
-- Tests: `npm run test:earnings` (72 tests, including multi-currency), `node --test __tests__/lib/*.test.mjs`
+- Tests: `npm run test:earnings` (77 tests, including multi-currency and video promotion), `node --test __tests__/lib/*.test.mjs`
 - Storefront video promotion (external social media ads, $10 per selected video, $1,000 cap): `docs/STOREFRONT_PROMO_REVIEW.md`
   xxxxxxxxxxxxxxxxxxx
   check agricultural products in marketplace and listing
