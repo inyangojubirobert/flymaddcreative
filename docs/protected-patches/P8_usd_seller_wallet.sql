@@ -1,5 +1,5 @@
 -- ============================================================================
--- P8 (PROTECTED - NOT APPLIED): the USD seller wallet counts USD-settled
+-- P8 (applied 2026-10-18; corrections in fix_p8_p9_review.sql): the USD seller wallet counts USD-settled
 -- orders only. Supersedes P1 (it includes P1's seller-funded deduction).
 -- ============================================================================
 -- Changes the protected function seller_earnings_summary() (from
@@ -58,7 +58,10 @@ as $$
   with o as (
     select co.status, co.amount_usd, co.commission_usd,
            co.seller_net_usd - coalesce((
-             select round(a.commission_micro / 1000000.0, 2) from affiliate_attributions a
+             -- Summed (never a scalar pick), and an order can carry only one
+             -- attribution (affiliate_attributions.order_id is unique), so
+             -- the deduction is never applied twice.
+             select round(sum(a.commission_micro) / 1000000.0, 2) from affiliate_attributions a
               where a.order_id = co.id and a.funding = 'seller' and a.source = 'affiliate'
                 and a.currency = 'USD'
                 and a.status in ('pending', 'held', 'available')), 0) as seller_net_usd

@@ -13,7 +13,7 @@ Testing is deferred to the review round. Everything below is built and deployed;
 | Buying several coin packs at once            | **Ready to switch on.** Run `node scripts/enable-dream-coin-multi-quantity.mjs` yourself; it was blocked from running here (see step 1)                                                                               |
 | Earnings and affiliate database              | **Applied in production** (all three migrations; tables and functions checked). Every money switch is **off**: gift earnings, payouts, seller-funded commission, reseller checkout                                    |
 | Partner programme and Earnings screens       | **Live** on the website and web app (`/app`), and in Android 1.0.18                                                                                                                                                   |
-| Multi-currency listings                      | **Code live (P7 checkout + P9 naira wallet applied and deployed); switch OFF.** Database: migration + review fixes applied. **You still run P8 and P9 SQL** (step 0). Sellers list in USD only until the switch is on |
+| Multi-currency listings                      | **Code live (P7 checkout + P9 naira wallet); switch OFF.** Database: migration, review fixes, P8 and P9 applied; rates stored. **Run `supabase/fix_p8_p9_review.sql`** (step 0). Sellers list in USD only until the switch is on |
 | Android app                                  | **1.0.19 (versionCode 21)**: multi-currency cart quote, naira wallet. APK installed by adb; AAB at `mobile/android/app/build/outputs/bundle/release/app-release.aab`                                                  |
 | Protected payment changes P1, P3, P4, P5, P6 | **Prepared, not applied.** See `docs/protected-patches/README.md`. P8 replaces P1 (don't apply P1 separately)                                                                                                         |
 | Premier ($1,500) and Ultimate ($4,000) Boost | Card-only by design: Google Play caps one-time products at $400                                                                                                                                                       |
@@ -22,16 +22,14 @@ Testing is deferred to the review round. Everything below is built and deployed;
 
 ### 0. Multi-currency: finish the database setup (you, Supabase SQL editor)
 
-Already done: `supabase/add_multicurrency_listings.sql` and `supabase/fix_multicurrency_review.sql` (11/11 checks ok).
+Already done in production:
+- `supabase/add_multicurrency_listings.sql` and `supabase/fix_multicurrency_review.sql` (11/11 checks ok);
+- `docs/protected-patches/P8_usd_seller_wallet.sql` and `P9_naira_seller_wallet.sql`;
+- today's exchange rates (NGN, GBP, EUR, GHS) stored on 18 Oct. They refresh automatically every day at 03:05 UTC, or with **💱 Currencies → Refresh rates now**.
 
-Run these two files, in this order. Paste each whole file and run it once. Every row of the check at the end must say `ok = true`:
-
-1. `docs/protected-patches/P8_usd_seller_wallet.sql`: the USD wallet leaves out naira sales. No balance changes today (every order and withdrawal is USD).
-2. `docs/protected-patches/P9_naira_seller_wallet.sql`: the naira wallet and naira withdrawals.
-
-Until they run, the deployed wallet keeps working in USD only and simply doesn't show a naira section.
-
-Then: admin portal → **💱 Currencies → Refresh rates now**. Rates also refresh automatically every day at 03:05 UTC.
+**Run this one file now:** `supabase/fix_p8_p9_review.sql`. Paste it whole and run it once; every check row must say `ok = true`. It replaces three functions and changes no data:
+- a naira withdrawal is refused when no recent NGN rate exists, instead of being recorded at a made-up $0.01;
+- the seller-funded affiliate deduction in both wallets is a sum, so it can't fail on several rows or apply twice.
 
 **Don't run yet:** `docs/protected-patches/P7_multicurrency_checkout.sql`. It makes every non-naira listing USDT-only (including the 2 existing USD listings), so it runs only at switch-on time, after test G passes. The switch itself is **💱 Currencies → Let sellers list in naira and other currencies**, and it asks you to type `P7_P8_APPLIED`.
 

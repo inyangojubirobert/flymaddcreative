@@ -294,6 +294,9 @@ test('P8 + P9: naira sales leave the USD wallet and are withdrawn in naira throu
   const p9 = await patch('P9_naira_seller_wallet.sql');
   await db.exec(p9);
   assert.deepEqual((await db.query(p9.slice(p9.lastIndexOf('with checks(')))).rows.filter((r) => !r.ok), []);
+  const fix = await fs.readFile(new URL('../supabase/fix_p8_p9_review.sql', import.meta.url), 'utf8');
+  await db.exec(fix);
+  assert.deepEqual((await db.query(fix.slice(fix.lastIndexOf('with checks(')))).rows.filter((r) => !r.ok), [], 'P8/P9 corrections verify');
   const ngn = await one(`select * from seller_earnings_summary_ngn('ngnseller')`);
   assert.equal(Number(ngn.available_ngn), 17100, '₦18,000 less ₦900 commission');
   await assert.rejects(one(`select * from request_seller_withdrawal_ngn($1, 17100.01, 'Bank transfer', 'GTB 0123456789')`, [id(10)]), /insufficient_balance/);
@@ -339,6 +342,8 @@ test('review fixes: naira payout minimum needs a fresh rate; ledger moves are al
   await assert.rejects(one(`select payout_request_create('participant', $1, 'affiliate', 1000000, 'po-ngn-stale', 'NGN')`, [id(11)]), /rate_unavailable/,
     'a stale rate is refused too');
   await assert.rejects(one(`select payout_request_create('participant', $1, 'affiliate', 1000000, 'po-xyz', 'GBP')`, [id(11)]), /unsupported_currency/);
+  await assert.rejects(one(`select * from request_seller_withdrawal_ngn($1, 100, 'Bank transfer', 'GTB 0123456789')`, [id(10)]), /rate_unavailable/,
+    'a naira withdrawal is refused without a recent rate, never recorded as $0.01');
 
   // A credit that can't be posted rolls back the debit.
   await db.exec(`select partner_ledger_post('participant', '${id(11)}', 'affiliate', 'available', 7, 'adjust', 'test', 't', 'clash:to')`);

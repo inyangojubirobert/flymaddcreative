@@ -1,5 +1,5 @@
 -- ============================================================================
--- P9 (PROTECTED - NOT APPLIED): naira seller wallet and naira withdrawals.
+-- P9: naira seller wallet and naira withdrawals (applied 2026-10-18; corrections in fix_p8_p9_review.sql).
 -- ============================================================================
 -- Run only with the owner's explicit approval, AFTER P8. Goes with
 -- P9_naira_seller_wallet.diff (wallet API, admin withdrawals API and portal,
@@ -51,7 +51,8 @@ as $$
            s.charged_minor / 100.0 as gross,
            s.commission_minor / 100.0 as commission,
            s.seller_earnings_minor / 100.0 - coalesce((
-             select round(a.commission_micro / 1000000.0, 2) from affiliate_attributions a
+             -- Summed, never a scalar pick; one attribution per order at most.
+             select round(sum(a.commission_micro) / 1000000.0, 2) from affiliate_attributions a
               where a.order_id = co.id and a.funding = 'seller' and a.source = 'affiliate'
                 and a.currency = 'NGN'
                 and a.status in ('pending', 'held', 'available')), 0) as net
@@ -105,10 +106,18 @@ begin
     raise exception 'insufficient_balance';
   end if;
 
-  select rate into v_rate from currency_rates where quote = 'NGN' order by source_published_at desc limit 1;
+  -- The USD equivalent (totals and alerts only) needs a recent NGN rate.
+  -- No rate, no withdrawal: nothing is ever recorded at a made-up value.
+  select r.rate into v_rate from currency_rates r
+   where r.quote = 'NGN'
+     and r.source_published_at >= now() - make_interval(secs => coalesce((select max_rate_age_seconds from currency_settings where id), 93600))
+   order by r.source_published_at desc limit 1;
+  if v_rate is null or v_rate <= 0 then
+    raise exception 'rate_unavailable';
+  end if;
 
   insert into participant_withdrawals (username, amount_usd, amount_ngn, currency, payment_method, payment_details, status, created_at, source)
-  values (v_username, case when v_rate > 0 then greatest(round(p_amount / v_rate, 2), 0.01) else 0.01 end,
+  values (v_username, greatest(round(p_amount / v_rate, 2), 0.01),
           p_amount, 'NGN', p_method, p_details, 'pending', now(), 'marketplace')
   returning id into v_id;
 

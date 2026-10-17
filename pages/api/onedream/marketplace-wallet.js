@@ -151,6 +151,9 @@ async function requestWithdrawal(req, res, participant) {
       return res.status(400).json({ error: 'Amount exceeds your withdrawable marketplace earnings' });
     }
     if (error.message?.includes('participant_not_found')) return res.status(404).json({ error: 'Account not found' });
+    if (error.message?.includes('rate_unavailable')) {
+      return res.status(503).json({ error: 'Naira withdrawals are paused while exchange rates update. Please try again shortly.' });
+    }
     throw error;
   }
   const result = Array.isArray(data) ? data[0] : data;
