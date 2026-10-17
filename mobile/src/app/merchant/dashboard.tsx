@@ -88,6 +88,9 @@ export default function MerchantDashboardScreen() {
             <Pressable onPress={() => router.push('/merchant/edit-profile')} style={[styles.actionButton, { backgroundColor: theme.backgroundElement }]}>
               <ThemedText>⚙️ Profile</ThemedText>
             </Pressable>
+            <Pressable onPress={() => router.push('/merchant/earnings' as never)} style={[styles.actionButton, { backgroundColor: theme.backgroundElement }]}>
+              <ThemedText>💰 Earnings</ThemedText>
+            </Pressable>
           </ThemedView>
 
           <ThemedView style={styles.sectionHeader}>

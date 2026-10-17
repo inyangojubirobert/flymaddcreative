@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
+import { earningsTestDb } from './lib/earnings-test-db.mjs';
 import {
   evaluateCoinPurchase, evaluateProgram, giftErrorReply, orderAllowsAppreciation, processCoinPurchase,
   recognitionBadges, reversalForVoided, validateGiftRequest,
@@ -15,13 +16,22 @@ const seller = '22222222-2222-4222-8222-222222222222';
 const other = '33333333-3333-4333-8333-333333333333';
 const LIMITS = [30, 50000];
 
-const db = new PGlite();
-await db.exec(`
-  create role anon; create role authenticated; create role service_role bypassrls;
-  create table participants (id uuid primary key, username text unique, name text);
-  insert into participants values ('${buyer}', 'buyer', 'Buyer'), ('${seller}', 'seller', 'Seller'), ('${other}', 'other', 'Other');
-`);
-await db.exec(await fs.readFile(new URL('../supabase/add_dream_coins_gifting.sql', import.meta.url), 'utf8'));
+// DREAM_COINS_STACK=full (scripts/test-dream-coins-full.mjs) runs the same tests
+// with every later migration applied and gift earnings switched on, proving
+// the replaced functions behave exactly as before for coin balances.
+let db;
+if (process.env.DREAM_COINS_STACK === 'full') {
+  ({ db } = await earningsTestDb());
+  await db.exec(`update earnings_settings set gift_earnings_enabled = true where id`);
+} else {
+  db = new PGlite();
+  await db.exec(`
+    create role anon; create role authenticated; create role service_role bypassrls;
+    create table participants (id uuid primary key, username text unique, name text);
+  `);
+  await db.exec(await fs.readFile(new URL('../supabase/add_dream_coins_gifting.sql', import.meta.url), 'utf8'));
+}
+await db.exec(`insert into participants (id, username, name) values ('${buyer}', 'buyer', 'Buyer'), ('${seller}', 'seller', 'Seller'), ('${other}', 'other', 'Other')`);
 test.after(() => db.close());
 
 const one = async (sql, params) => (await db.query(sql, params)).rows[0];

@@ -1,0 +1,14 @@
+--- a/mobile/src/api/cart.ts
++++ b/mobile/src/api/cart.ts
+@@ -61,6 +61,11 @@
+   lines: CartLineInput[];
+   buyer_email: string;
+   callback_url: string;
++  // P5 / P6 (accepted by the server once those patches are applied; ignored before)
++  affiliate_tokens?: string[];
++  buyer_name?: string;
++  buyer_whatsapp?: string;
++  delivery_address?: string;
+ }): Promise<{ authorization_url: string; reference: string; total_usd: number; amount_ngn: number }> {
+   return apiFetch('/api/catalogue/cart-payment-intent', { method: 'POST', body: input });
+ }

@@ -40,6 +40,15 @@ const nextConfig = {
         source: '/app/:path+',
         destination: '/app',
       },
+      // Partner short links and storefronts (affiliate marketplace).
+      {
+        source: '/r/:code',
+        destination: '/api/affiliate/r/:code',
+      },
+      {
+        source: '/m/:handle',
+        destination: '/app',
+      },
       // Rewrite .html requests to public folder
       {
         source: '/:path*.html',

@@ -16,6 +16,7 @@ import { cataloguePriceLabel, getCatalogueItem, createItemPaymentIntent, createO
 import { loadRemoteConfig } from '@/lib/remote-config';
 import { DigitalProductPanel, useDigitalProduct } from '@/components/digital-product';
 import { AppreciationPrompt } from '@/components/gift-art';
+import { recordAffiliateIntent, rememberAffiliateToken } from '@/lib/affiliate-attribution';
 import { ApiError } from '@/lib/api-client';
 
 type PayMethod = 'paystack' | 'usdt_bsc' | 'usdt_tron';
@@ -30,9 +31,14 @@ const STATUS_LABEL: Record<CatalogueOrder['status'], string> = {
 };
 
 export default function CatalogueItemScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, aff } = useLocalSearchParams<{ id: string; aff?: string }>();
   const theme = useTheme();
   const router = useRouter();
+
+  // Arrived through a partner's link: keep the attribution token for checkout.
+  useEffect(() => {
+    if (id && aff) void rememberAffiliateToken(id, aff);
+  }, [id, aff]);
 
   const itemQuery = useQuery({ queryKey: ['catalogue-item', id], queryFn: () => getCatalogueItem(id), enabled: !!id });
   // Digital products are bought with Google Play and delivered to the Library, not through this checkout.
@@ -70,6 +76,7 @@ export default function CatalogueItemScreen() {
     try {
       const redirectUrl = Linking.createURL('paystack-callback');
       const intent = await createItemPaymentIntent({ item_id: itemQuery.data.id, callback_url: redirectUrl });
+      recordAffiliateIntent({ paymentRef: intent.reference, method: 'paystack', itemIds: [itemQuery.data.id] });
       const result = await WebBrowser.openAuthSessionAsync(intent.authorization_url, redirectUrl);
 
       if (result.type !== 'success' || !result.url) {
@@ -102,6 +109,7 @@ export default function CatalogueItemScreen() {
     if (!itemQuery.data || !txHash.trim()) return;
     setStep('processing');
     setError(null);
+    recordAffiliateIntent({ paymentRef: txHash.trim(), method: 'usdt', itemIds: [itemQuery.data.id], buyerEmail: email.trim() });
     try {
       const created = await createOrder({
         item_id: itemQuery.data.id,

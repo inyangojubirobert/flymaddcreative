@@ -106,6 +106,12 @@ function RootNavigator() {
         <Stack.Screen name="gifts/send" options={{ headerShown: true, title: 'Send a gift' }} />
         <Stack.Screen name="gifts/recognition/[username]" options={{ headerShown: true, title: 'Appreciation' }} />
         <Stack.Screen name="rewards" options={{ headerShown: true, title: 'Rewards & Recognition' }} />
+        <Stack.Screen name="earnings" options={{ headerShown: true, title: 'Earnings & withdrawals' }} />
+        <Stack.Screen name="partner/index" options={{ headerShown: true, title: 'Partner programme' }} />
+        <Stack.Screen name="partner/discover" options={{ headerShown: true, title: 'Find listings to promote' }} />
+        <Stack.Screen name="partner/storefront" options={{ headerShown: true, title: 'My storefront' }} />
+        <Stack.Screen name="partner/seller" options={{ headerShown: true, title: 'Sell through partners' }} />
+        <Stack.Screen name="partner/engagements" options={{ headerShown: true, title: 'Creative engagements' }} />
       </Stack.Protected>
       <Stack.Protected guard={!token}>
         <Stack.Screen name="index" />
@@ -120,6 +126,7 @@ function RootNavigator() {
       <Stack.Screen name="shop/category/[id]" options={{ headerShown: true, title: 'Category' }} />
       <Stack.Screen name="shop/cart" options={{ headerShown: true, title: 'Your cart' }} />
       <Stack.Screen name="catalogue/item/[id]" options={{ headerShown: true }} />
+      <Stack.Screen name="m/[handle]" options={{ headerShown: true, title: 'Storefront' }} />
       <Stack.Screen name="merchant" options={{ headerShown: false }} />
       <Stack.Screen name="admin-alerts" options={{ headerShown: true, title: 'Admin alerts' }} />
     </Stack>

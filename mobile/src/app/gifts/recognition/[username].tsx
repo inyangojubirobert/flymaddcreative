@@ -44,6 +44,11 @@ export default function RecognitionScreen() {
               <Stat label="Supporters" value={data.supporters} />
             </View>
             <ThemedText type="small" themeColor="textSecondary">Recognition points show appreciation only. They are not money, cannot be withdrawn, and never decide prizes.</ThemedText>
+            {isMe ? (
+              <Pressable onPress={() => router.push('/earnings' as never)}>
+                <ThemedText type="small" style={{ color: Palette.blue }}>Gift earnings, when switched on, are shown separately under Earnings & withdrawals</ThemedText>
+              </Pressable>
+            ) : null}
 
             {data.badges.length ? (
               <View style={styles.badges}>

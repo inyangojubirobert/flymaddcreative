@@ -12,6 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { SellerLink } from '@/components/listing-card';
 import { AppreciationPrompt } from '@/components/gift-art';
+import { recordAffiliateIntent } from '@/lib/affiliate-attribution';
 import { createCartPaymentIntent, getCartQuote, submitCartCheckout, type CartCheckoutResult, type CartQuoteLine } from '@/api/cart';
 import { orderAction, type CatalogueOrder } from '@/api/catalogue';
 import { Palette, Spacing } from '@/constants/theme';
@@ -139,6 +140,7 @@ export default function CartScreen() {
     try {
       const redirectUrl = Linking.createURL('paystack-callback');
       const intent = await createCartPaymentIntent({ lines: requestLines, buyer_email: email.trim(), callback_url: redirectUrl });
+      recordAffiliateIntent({ paymentRef: intent.reference, method: 'paystack', itemIds: requestLines.map((line) => line.item_id) });
       setPendingPayment({ reference: intent.reference, returned: false });
       const browser = await WebBrowser.openAuthSessionAsync(intent.authorization_url, redirectUrl);
       if (browser.type !== 'success' || !browser.url) {
@@ -163,6 +165,7 @@ export default function CartScreen() {
     setProcessing(true);
     setError(null);
     setNotice(null);
+    recordAffiliateIntent({ paymentRef: txHash.trim(), method: 'usdt', itemIds: requestLines.map((line) => line.item_id), buyerEmail: email.trim() });
     try {
       const done = await submitCartCheckout({
         payment_method: 'usdt',

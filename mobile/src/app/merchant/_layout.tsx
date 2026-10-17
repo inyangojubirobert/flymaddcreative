@@ -33,6 +33,7 @@ function MerchantNavigator() {
         <Stack.Screen name="dashboard" options={{ title: 'Merchant Dashboard' }} />
         <Stack.Screen name="withdraw" options={{ title: 'Withdraw Tokens' }} />
         <Stack.Screen name="edit-profile" options={{ title: 'Edit Profile' }} />
+        <Stack.Screen name="earnings" options={{ title: 'Earnings' }} />
       </Stack.Protected>
       <Stack.Protected guard={!token}>
         <Stack.Screen name="login" options={{ title: 'Merchant Login' }} />

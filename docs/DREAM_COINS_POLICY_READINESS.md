@@ -39,3 +39,17 @@ Labels: **[DESIGN]** means enforced in code or schema, **[OPEN]** means a decisi
 - Recipient withdrawals, cash tipping and creator payouts: **not built.** These need a separate design and a compliance review.
 - Monetary reward programmes: blocked by a database constraint.
 - `affiliate_performance` programme: seeded **inactive** until affiliate agreements are approved.
+
+## 5. Gift revenue sharing (added 17 October 2026: built, switched off)
+
+The owner decided that gifts should earn money: **50% to the recipient, 10% to the merchant who referred the recipient (for 12 months), 40% to One Dream**, valued from Google's actual proceeds. This is built behind `gift_earnings_enabled` (off) and `payouts_enabled` (off). See [EARNINGS_AND_AFFILIATE_IMPLEMENTATION.md](EARNINGS_AND_AFFILIATE_IMPLEMENTATION.md).
+
+It changes this assessment:
+- **Question 3 (peer-to-peer payment):** recipients now earn money from coins other users bought, paid outside Google Play. Before switching it on, confirm that Google Play's Payments and creator-monetisation policies are met, including how the app describes it.
+- **Questions 4 and 5:** the earnings are real monetary value, but **coins themselves are still never redeemable** by the buyer.
+- **New requirements before switching on:**
+  - payee identity checks and a minimum age of 18 (built as manual admin verification);
+  - tax and money-transmission advice for each country paid;
+  - Terms covering creator earnings, reversals after refunds, and recovery of negative balances;
+  - updated in-app wording. The coin purchase sheet stays as it is: coins have no cash value to the buyer.
+- **Unchanged:** gifts still never decide votes, prizes or rankings that carry money, and the anti-gambling rules stay.

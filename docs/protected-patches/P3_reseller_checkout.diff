@@ -1,0 +1,178 @@
+--- a/lib/catalogueCart.js
++++ b/lib/catalogueCart.js
+@@ -16,12 +16,21 @@
+   for (const line of raw) {
+     const itemId = typeof line?.item_id === 'string' ? line.item_id.trim() : '';
+     const quantity = Number(line?.quantity ?? 1);
++    // P3: optional authorised-reseller membership the line is bought through.
++    const resale = typeof line?.resale_membership_id === 'string' && /^[0-9a-f-]{36}$/i.test(line.resale_membership_id)
++      ? line.resale_membership_id : '';
+     if (!itemId || !Number.isInteger(quantity) || quantity < 1 || quantity > MAX_LINE_QUANTITY) {
+       return { error: 'Invalid cart line' };
+     }
+-    merged.set(itemId, Math.min(MAX_LINE_QUANTITY, (merged.get(itemId) || 0) + quantity));
++    const key = `${itemId}|${resale}`;
++    merged.set(key, Math.min(MAX_LINE_QUANTITY, (merged.get(key) || 0) + quantity));
+   }
+-  return { lines: [...merged].map(([item_id, quantity]) => ({ item_id, quantity })) };
++  return {
++    lines: [...merged].map(([key, quantity]) => {
++      const [item_id, resale] = key.split('|');
++      return resale ? { item_id, quantity, resale_membership_id: resale } : { item_id, quantity };
++    }),
++  };
+ }
+ 
+ /**
+@@ -57,14 +66,17 @@
+   if (error) throw error;
+   const byId = new Map((data || []).map((item) => [String(item.id), item]));
+   const digital = await digitalItemIds(supabase, lines.map((line) => line.item_id));
++  const resale = await resaleTerms(supabase, lines);
+ 
+   let subtotalCents = 0;
+   let methods = ['paystack', 'usdt'];
+   const priced = lines.map((line) => {
+     const item = byId.get(line.item_id);
+-    const unitCents = item ? toCents(item.price_usd) : 0;
++    const terms = line.resale_membership_id ? resale.get(line.resale_membership_id) : null;
++    const unitCents = terms ? toCents(terms.price_usd) : item ? toCents(item.price_usd) : 0;
+     let problem = null;
+-    if (!item || item.status !== 'active') problem = 'No longer available';
++    if (line.resale_membership_id && (!terms || terms.item_id !== line.item_id)) problem = 'This reseller offer is no longer available';
++    else if (!item || item.status !== 'active') problem = 'No longer available';
+     else if (digital.has(String(item.id))) problem = DIGITAL_CHECKOUT_MESSAGE;
+     else if (!(unitCents > 0)) problem = 'No fixed price - message the seller';
+     else if (item.stock_status === 'out_of_stock') problem = 'Out of stock';
+@@ -90,6 +102,9 @@
+       max_order_qty: item?.max_order_qty || null,
+       unit_price_usd: fromCents(unitCents),
+       line_total_usd: fromCents(lineCents),
++      // P3: sold by an authorised reseller (the floor never goes to the client).
++      resale_membership_id: terms ? line.resale_membership_id : null,
++      sold_by: terms ? terms.sold_by : null,
+       problem,
+     };
+   });
+@@ -118,6 +133,37 @@
+   };
+ }
+ 
++/**
++ * P3: live reseller terms for the lines bought through a reseller. Only
++ * approved resale memberships on active offers, and only while
++ * earnings_settings.resale_checkout_enabled is on.
++ */
++async function resaleTerms(supabase, lines) {
++  const ids = [...new Set(lines.map((line) => line.resale_membership_id).filter(Boolean))];
++  if (!ids.length) return new Map();
++  const { data: settings } = await supabase.from('earnings_settings').select('resale_checkout_enabled').eq('id', true).maybeSingle();
++  if (!settings?.resale_checkout_enabled) return new Map();
++  const { data, error } = await supabase.from('affiliate_memberships')
++    .select('id, model, status, resale_price_usd, partner:affiliate_partners(display_name, status), offer:affiliate_offers(item_id, status, allow_resale, resale_floor_usd, resale_ceiling_usd)')
++    .in('id', ids);
++  if (error) throw error;
++  const out = new Map();
++  for (const m of data || []) {
++    const o = m.offer;
++    const price = Number(m.resale_price_usd);
++    if (m.model !== 'resale' || m.status !== 'approved' || m.partner?.status !== 'active' || !o || o.status !== 'active' || !o.allow_resale) continue;
++    if (!(price >= Number(o.resale_floor_usd)) || (o.resale_ceiling_usd && price > Number(o.resale_ceiling_usd))) continue;
++    out.set(m.id, { item_id: o.item_id, price_usd: price, floor_usd: Number(o.resale_floor_usd), sold_by: m.partner.display_name });
++  }
++  return out;
++}
++
++/** P3: the floor for a resale line (server only - used when the order is written). */
++export async function resaleFloorFor(supabase, membershipId) {
++  const { data } = await supabase.from('affiliate_memberships').select('offer:affiliate_offers(resale_floor_usd)').eq('id', membershipId).maybeSingle();
++  return data?.offer ? Number(data.offer.resale_floor_usd) : null;
++}
++
+ let readyCache = false;
+ 
+ /**
+--- a/pages/api/catalogue/cart-payment-intent.js
++++ b/pages/api/catalogue/cart-payment-intent.js
+@@ -67,6 +67,7 @@
+             quantity: line.quantity,
+             unit_price_usd: line.unit_price_usd,
+             line_total_usd: line.line_total_usd,
++            ...(line.resale_membership_id ? { resale_membership_id: line.resale_membership_id } : {}),
+           })),
+           subtotal_usd: quote.subtotal_usd,
+           service_fee_usd: quote.service_fee_usd,
+--- a/pages/api/catalogue/cart-checkout.js
++++ b/pages/api/catalogue/cart-checkout.js
+@@ -24,6 +24,8 @@
+ import { cartCheckoutReady, normalizeCartLines, priceCart } from '../../../lib/catalogueCart';
+ import { toCents } from '../../../lib/marketplaceFees';
+ import { commissionFields, sellerCommissionPercent } from '../../../lib/sellerEarnings';
++import { resaleFloorFor } from '../../../lib/catalogueCart';
++import { resaleSplit, fromMicro } from '../../../lib/earningsRules';
+ 
+ const supabase = createClient(
+   process.env.SUPABASE_URL || '',
+@@ -166,7 +168,8 @@
+         payment_ref: txHash,
+         payment_method,
+         network: String(network).toLowerCase(),
+-        lines: quote.lines.map(({ item_id, quantity, unit_price_usd, line_total_usd }) => ({ item_id, quantity, unit_price_usd, line_total_usd })),
++        lines: quote.lines.map(({ item_id, quantity, unit_price_usd, line_total_usd, resale_membership_id }) => (
++          resale_membership_id ? { item_id, quantity, unit_price_usd, line_total_usd, resale_membership_id } : { item_id, quantity, unit_price_usd, line_total_usd })),
+         subtotal_usd: quote.subtotal_usd,
+         service_fee_usd: quote.service_fee_usd,
+         total_usd: quote.total_usd,
+@@ -214,6 +217,7 @@
+     quantity: Number(line?.quantity),
+     unit_price_usd: Number(line?.unit_price_usd),
+     line_total_usd: Number(line?.line_total_usd),
++    ...(typeof line?.resale_membership_id === 'string' ? { resale_membership_id: line.resale_membership_id } : {}),
+   }));
+   const valid = lines.every((line) => line.item_id && Number.isInteger(line.quantity) && line.quantity > 0 && line.line_total_usd > 0);
+   if (!valid) return null;
+@@ -259,6 +263,12 @@
+   if (itemsError) throw itemsError;
+   const sellerByItem = new Map((items || []).map((item) => [String(item.id), item.seller_username]));
+   const commissionPercent = await sellerCommissionPercent(supabase);
++
++  // P3: floors are read on the server, never from metadata or the client.
++  const floors = new Map();
++  for (const line of lines) {
++    if (line.resale_membership_id && !floors.has(line.resale_membership_id)) floors.set(line.resale_membership_id, await resaleFloorFor(supabase, line.resale_membership_id));
++  }
+ 
+   const now = new Date().toISOString();
+   return lines.map((line, index) => {
+@@ -274,7 +284,9 @@
+       delivery_address: checkout.delivery_address,
+       amount_usd: line.line_total_usd,
+       // Seller commission fixed at purchase time (seller earnings ledger).
+-      ...commissionFields(line.line_total_usd, commissionPercent),
++      // P3: a reseller sale pays the seller the floor (less commission) and
++      // the reseller the margin (less commission), recorded on the order.
++      ...resaleOrderFields(line, floors.get(line.resale_membership_id), commissionPercent),
+       unit_price_usd: line.unit_price_usd,
+       quantity: line.quantity,
+       payment_method: checkout.payment_method,
+@@ -292,6 +304,20 @@
+   });
+ }
+ 
++function resaleOrderFields(line, floorUsd, commissionPercent) {
++  if (!line.resale_membership_id || !(floorUsd > 0)) return commissionFields(line.line_total_usd, commissionPercent);
++  const split = resaleSplit({ resalePriceUsd: line.unit_price_usd, floorUsd, quantity: line.quantity, platformPercent: commissionPercent });
++  return {
++    commission_percent: commissionPercent,
++    commission_usd: fromMicro(split.platform_micro),
++    seller_net_usd: fromMicro(split.seller_receives_micro),
++    resale_membership_id: line.resale_membership_id,
++    resale_price_usd: line.unit_price_usd,
++    resale_floor_usd: floorUsd,
++    resale_platform_fee_usd: fromMicro(split.margin_fee_micro),
++  };
++}
++
+ function publicCheckout(checkout) {
+   return {
+     id: checkout.id,

@@ -51,6 +51,7 @@
         <button onclick="switchTab('ads')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">📣 Ads</button>
         <button onclick="switchTab('digital')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">📚 Digital</button>
         <button onclick="switchTab('gifts')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🎁 Gifts & Rewards</button>
+        <button onclick="switchTab('earnings')" class="tab-button px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">🤝 Partners & Payouts</button>
       </div>
 
       <!-- Messages Tab -->
@@ -181,6 +182,74 @@
           <div id="digitalSubs" class="space-y-1 text-xs text-slate-300"></div>
           <h3 class="text-sm font-semibold mt-5 mb-2">Recent website (Paystack) payments</h3>
           <div id="digitalPayments" class="space-y-1 text-xs text-slate-300"></div>
+        </div>
+      </div>
+
+      <!-- Partners & Payouts Tab -->
+      <div id="earningsTab" class="hidden space-y-4">
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+            <h2 class="text-xl font-bold">Partner &amp; creator earnings</h2>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="runEarningsJobs()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Run matching jobs</button>
+              <button onclick="checkOrphans()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Check unreturned payments</button>
+              <select id="earnExportType" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
+                <option value="ledger">Ledger</option><option value="gift_earnings">Gift earnings</option><option value="lots">Coin lots</option>
+                <option value="settlement">Google settlement</option><option value="attributions">Attributions</option>
+                <option value="referral_rewards">Referral rewards</option><option value="payouts">Payouts</option>
+              </select>
+              <button onclick="exportEarnings()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Export CSV</button>
+              <button onclick="loadEarnings()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Refresh</button>
+            </div>
+          </div>
+          <div id="earnSummary" class="text-sm text-slate-300"></div>
+          <div id="earnOrphans" class="text-xs mt-2"></div>
+          <h3 class="text-sm font-semibold mt-3 mb-1">Signals to review</h3>
+          <div id="earnSignals" class="space-y-1 text-xs"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-1">Activation switches &amp; settings</h2>
+          <p class="text-xs text-slate-400 mb-3">Owner-controlled. Seller-funded settlement needs patch P1 and reseller checkout needs P3 applied first. Payouts also need PAYOUTS_PROVIDER_LIVE=true in Vercel. Changes apply to new records only.</p>
+          <div id="earnSettings" class="grid gap-2 text-xs md:grid-cols-2"></div>
+          <button onclick="saveEarningsSettings()" class="mt-3 text-xs bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Save settings</button>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-1">Google Play settlement (Dream Coin gifts)</h2>
+          <p class="text-xs text-slate-400 mb-3">1) Import the monthly Play Console earnings report (Financial &gt; Earnings, USD CSV) - lots are re-valued at the real fee and tax. 2) When Google's payout for that month reaches the bank, mark it: gift earnings funded by it become withdrawable.</p>
+          <div class="flex flex-wrap gap-2 items-center">
+            <input id="earnReportMonth" placeholder="YYYY-MM" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 w-24">
+            <input id="earnReportFile" type="file" accept=".csv,text/csv" class="text-xs">
+            <button onclick="importPlayReport()" class="text-xs bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Import report</button>
+          </div>
+          <div id="earnBatches" class="space-y-1 text-xs text-slate-300 mt-3"></div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Recent earning coin lots</h3>
+          <div id="earnLots" class="space-y-1 text-xs text-slate-300"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-2">Payout queue</h2>
+          <div id="earnPayouts" class="space-y-1 text-xs text-slate-300"></div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Payee verification</h3>
+          <div id="earnPayees" class="space-y-1 text-xs text-slate-300"></div>
+        </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-lg font-bold mb-2">Affiliate marketplace</h2>
+          <h3 class="text-sm font-semibold mb-1">Creatives awaiting review</h3>
+          <div id="earnCreatives" class="space-y-2 text-xs"></div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Attributions</h3>
+          <div id="earnAttributions" class="space-y-1 text-xs text-slate-300"></div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Partners</h3>
+          <div id="earnPartners" class="space-y-1 text-xs text-slate-300"></div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Offers</h3>
+          <div id="earnOffers" class="space-y-1 text-xs text-slate-300"></div>
+          <div class="flex flex-wrap gap-2 mt-2">
+            <input id="earnPromoItem" placeholder="listing id" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 w-72">
+            <input id="earnPromoPct" type="number" placeholder="%" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1 w-16">
+            <button onclick="createPlatformOffer()" class="text-xs bg-green-700 hover:bg-green-600 px-3 py-1 rounded">Start One Dream-funded promotion</button>
+          </div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Referral rewards</h3>
+          <div id="earnRewards" class="space-y-1 text-xs text-slate-300"></div>
+          <h3 class="text-sm font-semibold mt-4 mb-1">Admin audit</h3>
+          <div id="earnAudit" class="space-y-1 text-xs text-slate-400"></div>
         </div>
       </div>
 
@@ -398,6 +467,7 @@
       if (tab === 'ads') loadAds();
       if (tab === 'digital') { loadDigital(); loadDigitalSubs(false); }
       if (tab === 'gifts') loadGifts();
+      if (tab === 'earnings') loadEarnings();
     }
 
     let activeParticipantId = null;
@@ -870,6 +940,165 @@
       } catch (err) { alert(err.message); }
     }
 
+
+    // ---------------------------------------------------------------------
+    // Partner & creator earnings, affiliate marketplace, settlement, payouts
+    // ---------------------------------------------------------------------
+    const usdMicro = (m) => `${Number(m) < 0 ? '-' : ''}$${(Math.abs(Number(m || 0)) / 1e6).toFixed(Math.abs(Number(m || 0)) > 0 && Math.abs(Number(m || 0)) < 10000 ? 4 : 2)}`;
+    const EARN_SWITCHES = [
+      ['gift_earnings_enabled', 'Gift earnings (50/40/10) recorded as money'],
+      ['payouts_enabled', 'Payout requests open'],
+      ['seller_funded_settlement_enabled', 'Seller-funded commission settles (P1 applied)'],
+      ['resale_checkout_enabled', 'Reseller checkout live (P3 applied)'],
+    ];
+    const EARN_FIELDS = [
+      ['gift_value_basis', 'Gift value basis (net | gross)', 'text'],
+      ['gift_recipient_percent', 'Gift recipient %', 'number'], ['gift_merchant_percent', 'Referring merchant %', 'number'],
+      ['gift_merchant_months', 'Merchant entitlement months', 'number'], ['gift_provisional_fee_percent', 'Provisional Google fee % (until report)', 'number'],
+      ['affiliate_max_commission_percent', 'Max seller commission %', 'number'], ['affiliate_attribution_days', 'Attribution window (days)', 'number'],
+      ['platform_share_max_percent', 'Max share of platform commission %', 'number'], ['platform_monthly_budget_usd', 'Platform monthly budget (USD)', 'number', 'platform_monthly_budget_micro'],
+      ['partner_monthly_cap_usd', 'Partner monthly cap (USD, blank = none)', 'number', 'partner_monthly_cap_micro'],
+      ['seller_referral_percent', 'Seller referral % of platform commission', 'number'], ['seller_referral_months', 'Seller referral months', 'number'],
+      ['buyer_referral_reward_usd', 'Buyer referral reward (USD)', 'number', 'buyer_referral_reward_micro'], ['min_payout_usd', 'Minimum payout (USD)', 'number', 'min_payout_micro'],
+    ];
+
+    async function loadEarnings() {
+      const summary = document.getElementById('earnSummary');
+      summary.textContent = 'Loading…';
+      try {
+        const d = await adminFetch('/api/admin/earnings');
+        const s = d.settings;
+        summary.innerHTML = `Ledger: pending <b>${usdMicro(d.totals.pending)}</b> · withdrawable <b>${usdMicro(d.totals.available)}</b> · in withdrawal ${usdMicro(d.totals.reserved)} · paid ${usdMicro(d.totals.paid)}
+          · payout provider live: <b class="${d.payouts_provider_live ? 'text-green-400' : 'text-amber-300'}">${d.payouts_provider_live ? 'yes' : 'no'}</b>`;
+        document.getElementById('earnSignals').innerHTML = d.signals.map(x => `<div class="rounded bg-slate-700/50 border border-amber-600/50 p-2"><span class="text-amber-200">${escapeText(x.type.replace(/_/g, ' '))}</span> · ${escapeText(x.detail)}</div>`).join('') || '<p class="text-green-400">Nothing unusual.</p>';
+
+        document.getElementById('earnSettings').innerHTML =
+          EARN_SWITCHES.map(([k, label]) => `<label class="flex items-center gap-2"><input type="checkbox" data-earn="${k}" ${s[k] ? 'checked' : ''}> ${escapeText(label)}</label>`).join('') +
+          EARN_FIELDS.map(([k, label, type, micro]) => {
+            const v = micro ? (s[micro] === null ? '' : Number(s[micro]) / 1e6) : s[k];
+            return `<label class="flex items-center gap-2"><span class="w-64">${escapeText(label)}</span><input data-earn="${k}" type="${type}" value="${escapeText(v ?? '')}" class="bg-slate-700 rounded px-1 w-28"></label>`;
+          }).join('');
+
+        document.getElementById('earnBatches').innerHTML = d.batches.map(b => `<div class="flex flex-wrap gap-2 items-center">${escapeText(b.report_month)} · ${b.rows_imported} rows · imported ${when(b.imported_at)}
+          ${b.funds_available_at ? `<span class="text-green-400">paid out ${when(b.funds_available_at)} (${escapeText(b.payout_reference || '')})</span>` : `<button onclick="markFunds('${b.id}')" class="ml-auto bg-green-800 hover:bg-green-700 px-2 rounded">Google payout received</button>`}</div>`).join('') || '<div class="text-slate-500">No reports imported yet.</div>';
+        document.getElementById('earnLots').innerHTML = d.lots.map(l => `<div>${when(l.created_at)} · ${escapeText(l.order_id || '-')} · ${l.coins_total} coins (${l.coins_remaining} left${l.coins_refunded ? `, ${l.coins_refunded} refunded` : ''}) · gross ${usdMicro(l.gross_micro)} · est. net ${usdMicro(l.provisional_net_micro)}${l.settled_net_micro !== null ? ` · settled ${usdMicro(l.settled_net_micro)}` : ''} · ${escapeText(l.settlement_status)}${l.buyer_region ? ` · ${escapeText(l.buyer_region)}` : ''}</div>`).join('') || '<div class="text-slate-500">No earning lots yet.</div>';
+
+        document.getElementById('earnPayouts').innerHTML = d.payouts.map(p => {
+          const pay = p.payee_snapshot || {};
+          const act = p.status === 'requested' ? `<button onclick="decidePayout('${p.id}','approve')" class="bg-green-800 px-2 rounded">Approve</button> <button onclick="decidePayout('${p.id}','reject')" class="bg-red-900 px-2 rounded">Reject</button>`
+            : p.status === 'approved' ? `<button onclick="decidePayout('${p.id}','mark_paid')" class="bg-green-800 px-2 rounded">Mark paid</button> <button onclick="decidePayout('${p.id}','mark_failed')" class="bg-red-900 px-2 rounded">Failed</button>` : '';
+          return `<div class="flex flex-wrap gap-2 items-center">${when(p.created_at)} · ${escapeText(p.party_type)} ${escapeText(String(p.party_id).slice(0, 8))} · ${escapeText(p.source)} · <b>${usdMicro(p.amount_micro)}</b> · ${escapeText(pay.legal_name || '')} ${escapeText(pay.country || '')} ${escapeText(pay.payout_method || '')} ${escapeText(JSON.stringify(pay.payout_details || {}))} · ${escapeText(p.status)}${p.external_reference ? ` · ref ${escapeText(p.external_reference)}` : ''} <span class="ml-auto">${act}</span></div>`;
+        }).join('') || '<div class="text-slate-500">No payout requests.</div>';
+        document.getElementById('earnPayees').innerHTML = d.payees.map(p => `<div class="flex flex-wrap gap-2 items-center">${escapeText(p.party_type)} ${escapeText(String(p.party_id).slice(0, 8))} · ${escapeText(p.legal_name)} · ${escapeText(p.country)} · born ${escapeText(p.date_of_birth)} · ${escapeText(p.payout_method)} ${escapeText(JSON.stringify(p.payout_details))} · <b>${escapeText(p.kyc_status)}</b>
+          ${p.kyc_status !== 'verified' ? `<button onclick="decidePayee('${p.party_type}','${p.party_id}','verified')" class="ml-auto bg-green-800 px-2 rounded">Verify</button>` : ''} <button onclick="decidePayee('${p.party_type}','${p.party_id}','rejected')" class="bg-red-900 px-2 rounded">Reject</button></div>`).join('') || '<div class="text-slate-500">No payees yet.</div>';
+
+        document.getElementById('earnCreatives').innerHTML = d.creatives.map(c => `<div class="rounded bg-slate-700/40 p-2 flex flex-wrap gap-2 items-center">
+          ${c.media_url && c.kind === 'image' ? `<img src="${escapeText(c.media_url)}" class="h-20 rounded">` : ''}${c.media_url && c.kind === 'video' ? `<video src="${escapeText(c.media_url)}" class="h-20" controls preload="none"></video>` : ''}
+          <span>@${escapeText(c.membership?.partner?.handle || '?')} · ${escapeText(c.membership?.offer?.item?.title || '')} · ${escapeText(c.kind)} ${escapeText(c.title || '')} ${escapeText(c.body || '')}</span>
+          <span class="ml-auto"><button onclick="earnAction('approve_creative',{creative_id:'${c.id}'})" class="bg-green-800 px-2 rounded">Approve</button> <button onclick="earnAction('reject_creative',{creative_id:'${c.id}'},true)" class="bg-red-900 px-2 rounded">Reject</button></span></div>`).join('') || '<div class="text-slate-500">Nothing waiting.</div>';
+        document.getElementById('earnAttributions').innerHTML = d.attributions.map(a => `<div class="flex flex-wrap gap-2 items-center">${when(a.created_at)} · @${escapeText(a.partner?.handle || '?')} · ${escapeText(a.model)} · ${escapeText(a.funding)}-funded · order ${escapeText(String(a.order_id).slice(0, 8))} · ${usdMicro(a.commission_micro)} · ${escapeText(a.status)}${a.status_reason ? ` (${escapeText(a.status_reason)})` : ''}
+          <span class="ml-auto">${a.status === 'held' ? `<button onclick="earnAction('release_held',{attribution_id:'${a.id}'},true)" class="bg-green-800 px-2 rounded">Release</button>` : ''}${['pending', 'held', 'available'].includes(a.status) ? ` <button onclick="earnAction('reverse_attribution',{attribution_id:'${a.id}'},true)" class="bg-red-900 px-2 rounded">Reverse</button>` : ''}</span></div>`).join('') || '<div class="text-slate-500">None yet.</div>';
+        document.getElementById('earnPartners').innerHTML = d.partners.map(p => `<div class="flex flex-wrap gap-2 items-center">@${escapeText(p.handle)} · ${escapeText(p.display_name)} · ${escapeText(p.participant?.username || '')} · ${escapeText(p.status)}${p.suspended_reason ? ` (${escapeText(p.suspended_reason)})` : ''}
+          <button onclick="earnAction('${p.status === 'active' ? 'suspend_partner' : 'restore_partner'}',{partner_id:'${p.id}'},${p.status === 'active'})" class="ml-auto ${p.status === 'active' ? 'bg-red-900' : 'bg-green-800'} px-2 rounded">${p.status === 'active' ? 'Suspend' : 'Restore'}</button></div>`).join('') || '<div class="text-slate-500">No partners yet.</div>';
+        document.getElementById('earnOffers').innerHTML = d.offers.map(o => `<div class="flex flex-wrap gap-2 items-center">${escapeText(o.item?.title || o.item_id)} · @${escapeText(o.seller_username)} · ${escapeText(o.funding)} ${o.commission_percent}%${o.allow_resale ? ` · resale from $${o.resale_floor_usd}` : ''} · ${escapeText(o.status)}
+          <button onclick="earnAction('${o.status === 'active' ? 'pause_offer' : 'resume_offer'}',{offer_id:'${o.id}'})" class="ml-auto bg-slate-600 px-2 rounded">${o.status === 'active' ? 'Pause' : 'Resume'}</button></div>`).join('') || '<div class="text-slate-500">No offers yet.</div>';
+        document.getElementById('earnRewards').innerHTML = d.rewards.map(r => `<div>${when(r.created_at)} · ${escapeText(r.kind)} referral · ${escapeText(r.merchant?.merchant_name || r.merchant_id)} · ${usdMicro(r.amount_micro)} · ${escapeText(r.status)}</div>`).join('') || '<div class="text-slate-500">None yet.</div>';
+        document.getElementById('earnAudit').innerHTML = d.audit.map(a => `<div>${when(a.created_at)} · ${escapeText(a.action)} · ${escapeText(a.target_type)} ${escapeText(a.target_id || '')} · ${escapeText(JSON.stringify(a.details))}</div>`).join('') || '<div>No admin actions yet.</div>';
+      } catch (err) {
+        summary.innerHTML = `<span class="text-red-400">Error: ${escapeText(err.message)}</span>`;
+      }
+    }
+
+    async function saveEarningsSettings() {
+      const body = {};
+      document.querySelectorAll('[data-earn]').forEach(input => {
+        const k = input.dataset.earn;
+        if (input.type === 'checkbox') body[k] = input.checked;
+        else if (k === 'gift_value_basis') body[k] = input.value.trim();
+        else if (k === 'partner_monthly_cap_usd' && input.value.trim() === '') body[k] = null;
+        else body[k] = Number(input.value);
+      });
+      const turningOn = EARN_SWITCHES.filter(([k]) => body[k]).map(([, l]) => l);
+      if (turningOn.length && !confirm(`These activation switches will be ON:\n- ${turningOn.join('\n- ')}\n\nContinue?`)) return;
+      try { await adminFetch('/api/admin/earnings/settings', { method: 'PATCH', body: JSON.stringify(body) }); alert('Saved'); loadEarnings(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function importPlayReport() {
+      const file = document.getElementById('earnReportFile').files[0];
+      const month = document.getElementById('earnReportMonth').value.trim();
+      if (!file || !/^\d{4}-\d{2}$/.test(month)) { alert('Choose the CSV and enter the report month (YYYY-MM)'); return; }
+      try {
+        const r = await adminFetch('/api/admin/earnings/settlement', { method: 'POST', body: JSON.stringify({ action: 'import', report_month: month, csv: await file.text(), source_name: file.name }) });
+        alert(`Imported ${r.rows_imported} new Dream Coin rows (of ${r.coin_rows}); ${r.lots_reconciled} lot(s) reconciled.${r.warnings?.length ? `\nWarnings:\n${r.warnings.join('\n')}` : ''}`);
+        loadEarnings();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function markFunds(batchId) {
+      const reference = prompt('Bank / Google payout reference for this report');
+      if (!reference || reference.trim().length < 3) return;
+      try { const r = await adminFetch('/api/admin/earnings/settlement', { method: 'POST', body: JSON.stringify({ action: 'mark_funds', batch_id: batchId, payout_reference: reference }) }); alert(`${r.components_released} gift earning(s) are now withdrawable.`); loadEarnings(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function decidePayout(id, action) {
+      const body = { target: 'payout', request_id: id, action };
+      if (action === 'mark_paid') { body.reference = prompt('Transfer reference from the payout provider'); if (!body.reference) return; }
+      if (action === 'reject' || action === 'mark_failed') { body.reason = prompt('Reason (shown to the payee)'); if (!body.reason) return; }
+      try { await adminFetch('/api/admin/earnings/payouts', { method: 'POST', body: JSON.stringify(body) }); loadEarnings(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function decidePayee(partyType, partyId, decision) {
+      const note = decision === 'rejected' ? prompt('What needs fixing?') : '';
+      if (decision === 'rejected' && !note) return;
+      try { await adminFetch('/api/admin/earnings/payouts', { method: 'POST', body: JSON.stringify({ target: 'payee', party_type: partyType, party_id: partyId, decision, note }) }); loadEarnings(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function earnAction(action, ids, needsReason) {
+      const reason = needsReason ? prompt('Reason') : 'admin';
+      if (needsReason && (!reason || reason.trim().length < 3)) return;
+      try { await adminFetch('/api/admin/earnings/affiliate', { method: 'POST', body: JSON.stringify({ action, ...ids, reason }) }); loadEarnings(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function createPlatformOffer() {
+      const reason = prompt('Why is One Dream funding this promotion?');
+      if (!reason) return;
+      try {
+        await adminFetch('/api/admin/earnings/affiliate', { method: 'POST', body: JSON.stringify({ action: 'platform_offer', item_id: document.getElementById('earnPromoItem').value.trim(), commission_percent: Number(document.getElementById('earnPromoPct').value), reason }) });
+        loadEarnings();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function runEarningsJobs() {
+      try { const r = await adminFetch('/api/admin/earnings/jobs', { method: 'POST', body: '{}' }); alert(JSON.stringify(r)); loadEarnings(); }
+      catch (err) { alert(err.message); }
+    }
+
+    async function checkOrphans() {
+      const box = document.getElementById('earnOrphans');
+      box.textContent = 'Checking Paystack…';
+      try {
+        const r = await adminFetch('/api/admin/earnings/orphans?days=14');
+        box.innerHTML = r.orphans.length
+          ? `<p class="text-amber-300">${r.orphans.length} paid marketplace payment(s) with no order (last ${r.days} days):</p>` + r.orphans.map(o => `<div>${escapeText(o.reference)} · ${escapeText(o.type)} · ₦${(o.amount_kobo / 100).toLocaleString()} · ${when(o.paid_at)} · ${escapeText(o.customer_email || '')}${o.recoverable_automatically ? ' · recoverable with P6' : ' · contact the buyer'}</div>`).join('')
+          : `<p class="text-green-400">Checked ${r.checked} paid marketplace payments: every one has its order.</p>`;
+      } catch (err) { box.innerHTML = `<span class="text-red-400">${escapeText(err.message)}</span>`; }
+    }
+
+    async function exportEarnings() {
+      const type = document.getElementById('earnExportType').value;
+      try {
+        const response = await fetch(`/api/admin/earnings/export?type=${encodeURIComponent(type)}&days=365`, { headers: { Authorization: `Bearer ${state.token}` } });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || 'Export failed');
+        const url = URL.createObjectURL(await response.blob());
+        Object.assign(document.createElement('a'), { href: url, download: `earnings-${type}.csv` }).click();
+        URL.revokeObjectURL(url);
+      } catch (err) { alert(err.message); }
+    }
 
     // ---------------------------------------------------------------------
     // Dream Coins, gifts & recognition

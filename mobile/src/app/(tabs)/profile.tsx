@@ -186,6 +186,24 @@ export default function ProfileScreen() {
             />
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
             <ProfileAction
+              icon="people"
+              iconBackground={Palette.blueSoft}
+              iconColor={Palette.blue}
+              title="Partner programme"
+              subtitle="Earn by promoting or reselling other sellers' listings"
+              onPress={() => router.push('/partner' as never)}
+            />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <ProfileAction
+              icon="cash"
+              iconBackground="#ECFCCB"
+              iconColor="#3F6212"
+              title="Earnings & withdrawals"
+              subtitle="Gifts, commissions, referrals and payouts"
+              onPress={() => router.push('/earnings' as never)}
+            />
+            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+            <ProfileAction
               icon="chatbubbles"
               iconBackground={Palette.ashSoft}
               iconColor={Palette.slate}

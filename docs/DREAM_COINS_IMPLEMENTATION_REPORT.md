@@ -2,7 +2,7 @@
 
 17 October 2026. Branch `web-app-apk-parity-ad-tiers`. Companion: [DREAM_COINS_POLICY_READINESS.md](DREAM_COINS_POLICY_READINESS.md).
 
-**State:** built and tested locally. Nothing has been deployed, no SQL has run against production, and no Play Console products have been created. Coin sales are off by default.
+**State (17 October 2026):** migration applied and verified in production; API and web app deployed; the seven Play products are created but **inactive**, with multi-quantity off. Coin sales stay off until `DREAM_COINS_ENABLED=true`. The Android APK with the new screens is not built yet.
 
 ## 1. Repository audit (Phase 1)
 
@@ -67,7 +67,7 @@ Environment variables: `DREAM_COINS_ENABLED` (default off), `VIRTUAL_GIFT_MAX_PE
 
 ## 4. Google Play configuration
 
-`scripts/create-dream-coin-products.mjs` (`--dry-run`, `--activate`, `--multi-quantity`) creates the seven consumables: `dream_coins_100` $0.99, `_250` $1.99, `_600` $4.99, `_1300` $9.99, `_2800` $19.99, `_7500` $49.99, `_16000` $99.99. By default they are created **inactive and single-quantity**, with Google's regional price conversion and the US price kept exact. The script has **not been run**.
+`scripts/create-dream-coin-products.mjs` (`--dry-run`, `--activate`, `--multi-quantity`) creates the seven consumables: `dream_coins_100` $0.99, `_250` $1.99, `_600` $4.99, `_1300` $9.99, `_2800` $19.99, `_7500` $49.99, `_16000` $99.99. By default they are created **inactive and single-quantity**, with Google's regional price conversion and the US price kept exact. It was run on 17 October 2026: all seven exist in Play Console, inactive.
 
 ## 5. Mobile and web
 
@@ -87,7 +87,7 @@ Environment variables: `DREAM_COINS_ENABLED` (default off), `VIRTUAL_GIFT_MAX_PE
 - Rankings: `leaderboard.js`, `vote-stats.js`, milestones.
 - Prize copy: `public/Onedream.html`, `vote.html`, `leadershipBoard.html`.
 - App: `app/vote/[username].tsx`, the "Buy Votes" button on profiles, the leaderboard tab.
-- Per `docs/PRIZE_POOL_THRESHOLD_REVIEW.md`, no code holds a prize pool or selects winners.
+- No code holds a prize pool, enforces a vote threshold or selects winners. The only threshold is the 1,000,000-vote progress bar on the website (`public/Onedream.html`, `leadershipBoard.html`), which triggers nothing.
 
 **Proposed plan (needs owner approval):**
 1. Remove "Buy Votes" from the Android app first. This is the Play-policy exposure.
@@ -158,4 +158,4 @@ Historical records stay intact throughout.
 
 - **B1. One-time-product RTDN.** Handling coin notifications in real time would mean editing the subscription RTDN endpoint, which is protected. Without it, coins are credited when the app reports the purchase, pending purchases are picked up on the next app open, and refunds are applied by the daily sync. Authorise this only if real-time crediting is needed.
 - **B2. Paid voting in the Android app.** This is a policy risk that exists already (section 6). It needs an owner decision.
-- **B3. Merchant-referral and affiliate metrics.** Merchant accounts are separate from participants, and affiliate attribution does not exist. These programmes stay "coming soon" or inactive until the data is defined.
+- **B3. Merchant-referral and affiliate metrics.** Merchant accounts are separate from participants, and affiliate attribution does not exist yet. These programmes stay "coming soon" or inactive until the affiliate engine ([MERCHANT_AFFILIATE_FRAMEWORK.md](MERCHANT_AFFILIATE_FRAMEWORK.md)) supplies the data.
