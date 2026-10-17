@@ -14,7 +14,7 @@ Testing is deferred to the review round. Everything below is built and deployed;
 | Earnings and affiliate database              | **Applied in production** (all three migrations; tables and functions checked). Every money switch is **off**: gift earnings, payouts, seller-funded commission, reseller checkout                                    |
 | Partner programme and Earnings screens       | **Live** on the website and web app (`/app`), and in Android 1.0.18                                                                                                                                                   |
 | Multi-currency listings | **Code live** (commits `e16f520`, `1932d63`, `77398c2`, deployed); **switch OFF**. Database: migration, review fixes, P8 and P9 applied; rates stored. **Next: run `supabase/fix_p8_p9_review.sql`, then P7 SQL + switch on + test G** (step 0) |
-| Android app                                  | **1.0.19 (versionCode 21)**: multi-currency cart quote, naira wallet. APK installed by adb; AAB at `mobile/android/app/build/outputs/bundle/release/app-release.aab`                                                  |
+| Android app                                  | **1.0.20 (versionCode 22)**: multi-currency cart quote, naira wallet, external video promotion. APK installed by adb; AAB at `mobile/android/app/build/outputs/bundle/release/app-release.aab`                                                  |
 | Protected payment changes P1, P3, P4, P5, P6 | **Prepared, not applied.** See `docs/protected-patches/README.md`. P8 replaces P1 (don't apply P1 separately)                                                                                                         |
 | Premier ($1,500) and Ultimate ($4,000) Boost | Card-only by design: Google Play caps one-time products at $400                                                                                                                                                       |
 
@@ -57,7 +57,7 @@ Each product should print `UPDATED ... multi-quantity on`. To turn it off again:
 
 ### 2. Upload the AAB to internal testing (you)
 
-1. The file is `mobile/android/app/build/outputs/bundle/release/app-release.aab` (1.0.19, versionCode 21).
+1. The file is `mobile/android/app/build/outputs/bundle/release/app-release.aab` (1.0.20, versionCode 22).
 2. Play Console → **Testing → Internal testing → Create new release**. Upload it and roll out.
 3. Play Console → **Setup → License testing**: add your test Google account.
 4. On the phone, install the app from the internal testing link. Play purchases don't work in a copy installed by adb.
