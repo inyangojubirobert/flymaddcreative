@@ -4,9 +4,13 @@
 //   GET ?placement=home|shop|search|category&ads=1&boosts=4[&category_id=]
 // Selection is randomised, weighted by package priority, and capped so
 // sponsored content never crowds out regular listings.
+// House ads (One Dream's own, admin-uploaded; lib/houseAds.js) use the same
+// slots: 'rotate' ones compete by weight, 'fill' ones only take slots no
+// paid campaign fills.
 
 import { adsDb } from '../../../lib/ads';
 import { adDeliveryUrl } from '../../../lib/cloudinaryAds';
+import { liveHouseAds, servedHouseAd } from '../../../lib/houseAds';
 
 const PLACEMENTS = new Set(['home', 'shop', 'search', 'category']);
 
@@ -40,7 +44,11 @@ export default async function handler(req, res) {
       .contains('placements', [placement])
       .limit(60);
 
-    const [ads, boosts] = await Promise.all([adLimit ? live('ad') : { data: [] }, boostLimit ? live('boost') : { data: [] }]);
+    const [ads, boosts, house] = await Promise.all([
+      adLimit ? live('ad') : { data: [] },
+      boostLimit ? live('boost') : { data: [] },
+      adLimit ? liveHouseAds(placement) : [],
+    ]);
     if (ads.error) throw ads.error;
     if (boosts.error) throw boosts.error;
 
@@ -54,10 +62,21 @@ export default async function handler(req, res) {
     const boostRows = (boosts.data || []).filter((b) => b.catalogue_items?.status === 'active'
       && (!categoryId || b.catalogue_items.category_id === categoryId));
 
+    // Paid ads plus 'rotate' house ads compete for the slots; 'fill' house
+    // ads then take any slot still empty.
+    const pool = [
+      ...adRows.map((c) => ({ priority: c.priority, paid: c })),
+      ...house.filter((h) => h.mode === 'rotate').map((h) => ({ priority: h.weight, house: h })),
+    ];
+    const picked = weightedPick(pool, adLimit);
+    if (picked.length < adLimit) {
+      picked.push(...weightedPick(house.filter((h) => h.mode !== 'rotate').map((h) => ({ priority: h.weight, house: h })), adLimit - picked.length));
+    }
+
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
       placement,
-      ads: weightedPick(adRows, adLimit).map((c) => ({
+      ads: picked.map((slot) => (slot.house ? servedHouseAd(slot.house) : slot.paid)).map((c) => (c.house ? c : {
         id: c.id,
         title: c.title,
         body: c.body,

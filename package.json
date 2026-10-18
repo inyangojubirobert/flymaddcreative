@@ -17,7 +17,7 @@
     "check:google-play": "node scripts/check-google-play-readiness.mjs",
     "migrate:add-password-hash": "node scripts/add-password-hash-column.mjs",
     "test:dream-coins": "node --test scripts/test-dream-coins.mjs",
-    "test:earnings": "node --test scripts/test-earnings.mjs scripts/test-dream-coins.mjs scripts/test-dream-coins-full.mjs scripts/test-multicurrency.mjs scripts/test-storefront-promo.mjs"
+    "test:earnings": "node --test scripts/test-earnings.mjs scripts/test-dream-coins.mjs scripts/test-dream-coins-full.mjs scripts/test-multicurrency.mjs scripts/test-storefront-promo.mjs scripts/test-house-ads.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",

@@ -1,4 +1,4 @@
-// Records an impression or click for a live campaign. De-duplicated per
+// Records an impression or click for a live campaign or house ad. De-duplicated per
 // viewer, campaign and hour in the database (ads_record_event), so refreshing
 // or tapping repeatedly does not inflate the numbers.
 
@@ -11,6 +11,20 @@ export default async function handler(req, res) {
   if (!/^[0-9a-f-]{36}$/i.test(campaignId) || !['impression', 'click'].includes(kind)) {
     return res.status(400).json({ error: 'campaign_id and kind are required' });
   }
+  // House ads (One Dream's own) are served with the same id field, so every
+  // app version reports them here; count them separately from paid campaigns.
+  const { data: houseAd } = await adsDb.from('house_ads').select('id').eq('id', campaignId).maybeSingle();
+  if (houseAd) {
+    const { data: counted, error: houseError } = await adsDb.rpc('house_ads_record_event', {
+      p_house_ad_id: campaignId,
+      p_kind: kind,
+      p_placement: typeof req.body?.placement === 'string' ? req.body.placement : null,
+      p_viewer_key: viewerKey(req),
+    });
+    if (houseError) console.error('ads/event house error:', houseError.message);
+    return res.status(200).json({ recorded: !!counted });
+  }
+
   const { data, error } = await adsDb.rpc('ads_record_event', {
     p_campaign_id: campaignId,
     p_kind: kind,

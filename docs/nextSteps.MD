@@ -52,6 +52,10 @@ Run `supabase/add_agriculture_categories.sql` once; every check row must say `ok
 
 **Check:** app → Shop → the new department appears; search "cassava" or "fingerlings" and the matching category comes up; My Listings → New listing → pick Livestock (product) or Veterinary Services (service).
 
+### 0d. House ads: create the tables (you, Supabase SQL editor)
+
+Run `supabase/add_house_ads.sql` once; every check row must say `ok = true`. Then admin portal → **🏠 House ads** → upload an image or video, add a link (for example your Play Store link) and publish. It appears in the app's ad slots (home, shop, search, category) with no package or subscription. See `docs/HOUSE_ADS.md`. Until the SQL runs, ads keep working exactly as before.
+
 ### 1. Switch on buying several coin packs at once (you)
 
 This was blocked from running here, so run it yourself from the repo folder:
@@ -179,6 +183,14 @@ Admin → **🤝 Partners & Payouts → Check unreturned payments**.
    - The summary line shows the budget: committed (each selected video reserves $10), spent and uncommitted.
 7. In the app, **Withdraw consent** on the selected video. **Expect:** "Consent withdrawn" in both the app and the admin, and no **Record spend** box any more. Submitting the same video again creates a new, fresh consent record.
 
+### I. House ads (after step 0d)
+
+1. Admin → **🏠 House ads**: upload an image, title "Get the One Dream app", link `https://play.google.com/store/apps/details?id=com.flymaddcreative.onedream`, all placements, **Fill**. **Expect:** "Published", and it appears in the list with a preview.
+2. Open the app's home screen (pull to refresh, or wait a minute). **Expect:** the ad shows where sponsored ads appear; tapping it asks to open the link. If a paid ad is live in that slot, the paid one shows instead (that's **Fill** working).
+3. Upload a short video the same way. **Expect:** it plays in the ad card.
+4. Back in the admin list after viewing and tapping. **Expect:** impressions and clicks go up (once per device per hour).
+5. **Pause** one. **Expect:** it stops showing in the app within a minute. Try a link starting `http://`. **Expect:** "Links must start with https://".
+
 ### G. Multi-currency listings (after step 0)
 
 Full detail: `docs/MULTICURRENCY_IMPLEMENTATION.md`. Steps 1-2 work now; steps 3-4 need the switch on (step 0.3). Keep it on if they pass.
@@ -229,6 +241,7 @@ Full detail: `docs/MULTICURRENCY_IMPLEMENTATION.md`. Steps 1-2 work now; steps 3
 - Protected changes: `docs/protected-patches/README.md`
 - Multi-currency: `docs/MULTICURRENCY_IMPLEMENTATION.md`
 - Google Play products: `docs/GOOGLE_PLAY_PRODUCTS.md`; scripts `scripts/create-google-play-products.mjs`, `scripts/create-dream-coin-products.mjs`, `scripts/enable-dream-coin-multi-quantity.mjs`
-- Tests: `npm run test:earnings` (77 tests, including multi-currency and video promotion), `node --test __tests__/lib/*.test.mjs`
+- Tests: `npm run test:earnings` (80 tests, including multi-currency, video promotion and house ads), `node --test __tests__/lib/*.test.mjs`
 - Storefront video promotion (external social media ads, $10 per selected video, $1,000 cap): `docs/STOREFRONT_PROMO_REVIEW.md`
 - Agriculture & Farming department: `supabase/add_agriculture_categories.sql`
+- House ads (admin-uploaded One Dream ads): `docs/HOUSE_ADS.md`
