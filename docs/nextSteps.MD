@@ -46,6 +46,12 @@ Done: `supabase/add_storefront_promotion.sql` (18 Oct).
 
 **Run now:** `supabase/fix_storefront_promotion_review.sql` once; every check row must say `ok = true`. It makes the terms immutable, publishes terms **version 2** (clearer wording, at most 3 funded videos per seller per round), reserves $10 of budget when a video is selected, and makes spend records append-only (mistakes are fixed with a negative correction that needs a note). Programme: `docs/STOREFRONT_PROMO_REVIEW.md`.
 
+### 0c. Agriculture & Farming department (you, Supabase SQL editor)
+
+Run `supabase/add_agriculture_categories.sql` once; every check row must say `ok = true`. It adds a new **Agriculture & Farming** department with 15 categories (crops and grains, tubers, farm fruits and vegetables, cash crops, livestock, poultry and eggs, fish farming, seeds, fertilisers and agrochemicals, animal feed, farm tools, tractor hire, veterinary services, agronomy consulting, agro-processing and storage), moves **Agricultural Equipment** into it, and adds about 95 search words (maize, cassava, goats, catfish, NPK, tractor hire…). Farm Produce and Meat & Seafood stay under Food & Grocery for shoppers. No listings or payments change.
+
+**Check:** app → Shop → the new department appears; search "cassava" or "fingerlings" and the matching category comes up; My Listings → New listing → pick Livestock (product) or Veterinary Services (service).
+
 ### 1. Switch on buying several coin packs at once (you)
 
 This was blocked from running here, so run it yourself from the repo folder:
@@ -225,7 +231,4 @@ Full detail: `docs/MULTICURRENCY_IMPLEMENTATION.md`. Steps 1-2 work now; steps 3
 - Google Play products: `docs/GOOGLE_PLAY_PRODUCTS.md`; scripts `scripts/create-google-play-products.mjs`, `scripts/create-dream-coin-products.mjs`, `scripts/enable-dream-coin-multi-quantity.mjs`
 - Tests: `npm run test:earnings` (77 tests, including multi-currency and video promotion), `node --test __tests__/lib/*.test.mjs`
 - Storefront video promotion (external social media ads, $10 per selected video, $1,000 cap): `docs/STOREFRONT_PROMO_REVIEW.md`
-  xxxxxxxxxxxxxxxxxxx
-  check agricultural products in marketplace and listing
-  xxxxxxxxxxxxxxxxxxxx
-  does it mean since my app has passed the closed test its available to me for testing since i am part of the closed test
+- Agriculture & Farming department: `supabase/add_agriculture_categories.sql`
