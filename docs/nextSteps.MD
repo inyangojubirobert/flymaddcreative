@@ -1,6 +1,6 @@
 # One Dream: next steps
 
-_Last updated 2026-10-18. Branch: `web-app-apk-parity-ad-tiers`, pushed. Latest commit `e793b82` (house ads), deployed to production. Android **1.0.21 (versionCode 23)**._
+_Last updated 2026-10-18. Branch: `web-app-apk-parity-ad-tiers`, pushed. Latest commit `e793b82` (house ads), deployed to production. Android **1.0.22 (versionCode 24)**._
 
 Everything below is built and deployed. Part 1 is the setup still to do. Part 2 is Google Play work. Part 3 is the full test checklist, one section per feature. If anything doesn't match, paste what you see.
 
@@ -9,7 +9,7 @@ Everything below is built and deployed. Part 1 is the setup still to do. Part 2 
 | Area | Status |
 |---|---|
 | Website, API, web app (`/app`) | **Live**, commit `e793b82` |
-| Android app | **1.0.21 (versionCode 23)** installed on your phone by adb. AAB ready for Play internal testing |
+| Android app | **1.0.22 (versionCode 24)**: paid voting removed, Recognition tab. AAB ready for Play internal testing; not yet installed on your phone |
 | Google Play products | **58 live:** 2 AI subscriptions, 7 ad packages, 7 boosts, 17 digital price tiers, 18 creator subscriptions, 7 Dream Coin packs |
 | Dream Coins | **On sale** (`DREAM_COINS_ENABLED=true`). No purchase made yet. Multi-quantity not switched on yet |
 | Earnings, affiliate marketplace, gift sharing | Database applied. Every money switch **off** |
@@ -52,7 +52,7 @@ Confirmed applied: the multi-currency migration and its review fixes, P8, P9, st
 ## Part 2: Google Play work (you, Play Console)
 
 1. **Upload the AAB to internal testing:**
-   - the file is `mobile/android/app/build/outputs/bundle/release/app-release.aab` (1.0.21, versionCode 23);
+   - the file is `mobile/android/app/build/outputs/bundle/release/app-release.aab` (1.0.22, versionCode 24);
    - **Testing → Internal testing → Create new release** → upload → roll out.
 2. **License testers:** **Setup → License testing**, add your Google account and every tester's. Their test purchases aren't charged.
 3. **Install from Play:** on the phone, open the internal testing opt-in link and install from Play.
