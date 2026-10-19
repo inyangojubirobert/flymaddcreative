@@ -11,7 +11,7 @@ Everything below is built and deployed. Part 1 is the setup still to do. Part 2 
 | Website, API, web app (`/app`) | **Live**, commit `e793b82` |
 | Android app | **1.0.22 (versionCode 24)**: paid voting removed, Recognition tab. AAB ready for Play internal testing; not yet installed on your phone |
 | Google Play products | **58 live:** 2 AI subscriptions, 7 ad packages, 7 boosts, 17 digital price tiers, 18 creator subscriptions, 7 Dream Coin packs |
-| Dream Coins | **On sale** (`DREAM_COINS_ENABLED=true`). No purchase made yet. Multi-quantity not switched on yet |
+| Dream Coins | **On sale** (`DREAM_COINS_ENABLED=true`). No purchase made yet. Multi-quantity **on** for all 7 packs (19 Oct 2026) |
 | Earnings, affiliate marketplace, gift sharing | Database applied. Every money switch **off** |
 | Multi-currency listings | Code live; database applied (migration, review fixes, P8, P9); rates refresh daily. Switch **off** |
 | Storefront video promotion | **Live**: terms v2, $10 per selected video, $1,000 cap, 3 funded videos per seller |
@@ -36,13 +36,7 @@ Confirmed applied: the multi-currency migration and its review fixes, P8, P9, st
 ## Part 1: setup still to do (you)
 
 1. **Supabase SQL editor:** run `supabase/fix_p8_p9_review.sql` (above).
-2. **Dream Coins multi-quantity** (it was blocked from running here), from the repo folder:
-   ```
-   node scripts/enable-dream-coin-multi-quantity.mjs --dry-run
-   node scripts/enable-dream-coin-multi-quantity.mjs
-   ```
-   - **Expect:** `UPDATED ... multi-quantity on` for each of the 7 packs.
-   - **Undo:** `--disable`.
+2. ~~Dream Coins multi-quantity~~ **Done 19 Oct 2026**: all 7 packs on (undo: `node scripts/enable-dream-coin-multi-quantity.mjs --disable`).
 3. **Upload your first house ad:** admin portal → **🏠 House ads** (test I).
 4. **Multi-currency go-live:** when you're ready, run test G in one sitting.
 5. **Vercel env check:**
@@ -81,7 +75,7 @@ Run these on the app installed from internal testing, with a license-tester acco
 1. **Dream Coins, one pack:** Profile → **Dream Coins & gifts** → buy 100 coins.
    - **Expect:** +100.
    - **Admin → 🎁 Gifts & Rewards:** quantity 1, 100 coins, "consumed".
-2. **Dream Coins, several packs** (after Part 1 step 2): buy 3 × 600 in one purchase. **Expect:** exactly 1,800 coins, and quantity 3 in the admin.
+2. **Dream Coins, several packs:** buy 3 × 600 in one purchase. **Expect:** exactly 1,800 coins, and quantity 3 in the admin.
 3. **Retry safety:** close the app mid-purchase and reopen Dream Coins. **Expect:** credited once.
 4. **Advertising package:** Promote → buy **Starter Ads** with Google Play.
    - **Expect:** the package appears as available.
