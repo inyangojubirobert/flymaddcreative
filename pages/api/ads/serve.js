@@ -7,12 +7,31 @@
 // House ads (One Dream's own, admin-uploaded; lib/houseAds.js) use the same
 // slots: 'rotate' ones compete by weight, 'fill' ones only take slots no
 // paid campaign fills.
+// Frequency cap: a paid banner this viewer has already seen in
+// FREQUENCY_CAP_PER_DAY separate hours today steps aside for other ads (it
+// still shows when nothing else can fill the slot).
+// Premium positions: Bronze, Silver and Gold campaigns (package priority
+// FEATURED_PRIORITY and up) take the first, featured slot when one is live.
 
-import { adsDb } from '../../../lib/ads';
+import { adsDb, viewerKey } from '../../../lib/ads';
 import { adDeliveryUrl } from '../../../lib/cloudinaryAds';
 import { liveHouseAds, servedHouseAd } from '../../../lib/houseAds';
 
 const PLACEMENTS = new Set(['home', 'shop', 'search', 'category']);
+const FREQUENCY_CAP_PER_DAY = 6;
+const FEATURED_PRIORITY = 50; // bronze_ads; silver 65, gold 80
+
+/** Paid campaigns this viewer has seen in at least FREQUENCY_CAP_PER_DAY hours of the last day. */
+async function cappedCampaigns(req, campaignIds) {
+  if (!campaignIds.length || !(String(req.headers['x-ad-viewer'] || '').length >= 16)) return new Set();
+  const { data, error } = await adsDb.from('advertising_events').select('campaign_id')
+    .eq('viewer_key', viewerKey(req)).eq('kind', 'impression').in('campaign_id', campaignIds)
+    .gte('created_at', new Date(Date.now() - 86400e3).toISOString()).limit(1000);
+  if (error) return new Set(); // never block ads because of the cap
+  const seen = new Map();
+  for (const row of data || []) seen.set(row.campaign_id, (seen.get(row.campaign_id) || 0) + 1);
+  return new Set([...seen].filter(([, count]) => count >= FREQUENCY_CAP_PER_DAY).map(([id]) => id));
+}
 
 function weightedPick(rows, count) {
   const pool = [...rows];
@@ -58,19 +77,25 @@ export default async function handler(req, res) {
         .map((row) => row.advertising_media)
         .filter((m) => m && m.status === 'approved' && m.delivery_type === 'upload'),
     })).filter((c) => c.media.length);
+    const capped = await cappedCampaigns(req, adRows.map((c) => c.id));
 
     const boostRows = (boosts.data || []).filter((b) => b.catalogue_items?.status === 'active'
       && (!categoryId || b.catalogue_items.category_id === categoryId));
 
     // Paid ads plus 'rotate' house ads compete for the slots; 'fill' house
     // ads then take any slot still empty.
+    const open = adRows.filter((c) => !capped.has(c.id));
+    const picked = weightedPick(open.filter((c) => c.priority >= FEATURED_PRIORITY).map((c) => ({ priority: c.priority, paid: c })), Math.min(1, adLimit));
     const pool = [
-      ...adRows.map((c) => ({ priority: c.priority, paid: c })),
+      ...open.filter((c) => !picked.some((slot) => slot.paid === c)).map((c) => ({ priority: c.priority, paid: c })),
       ...house.filter((h) => h.mode === 'rotate').map((h) => ({ priority: h.weight, house: h })),
     ];
-    const picked = weightedPick(pool, adLimit);
+    picked.push(...weightedPick(pool, adLimit - picked.length));
     if (picked.length < adLimit) {
       picked.push(...weightedPick(house.filter((h) => h.mode !== 'rotate').map((h) => ({ priority: h.weight, house: h })), adLimit - picked.length));
+    }
+    if (picked.length < adLimit) {
+      picked.push(...weightedPick(adRows.filter((c) => capped.has(c.id)).map((c) => ({ priority: c.priority, paid: c })), adLimit - picked.length));
     }
 
     res.setHeader('Cache-Control', 'no-store');

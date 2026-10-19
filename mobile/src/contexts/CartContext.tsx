@@ -19,7 +19,12 @@ export type CartLine = {
   title?: string;
   seller_username?: string;
   image?: string | null;
+  /** P3: bought through an authorised reseller's storefront, at their price. */
+  resale_membership_id?: string;
 };
+
+/** A reseller's offer from a partner storefront (/m/<handle>). */
+export type ResaleCartItem = { item_id: string; membership_id: string; price_usd: number; title?: string; image?: string | null };
 
 type CartContextValue = {
   lines: CartLine[];
@@ -28,6 +33,8 @@ type CartContextValue = {
   isFull: boolean;
   has: (itemId: string) => boolean;
   toggle: (item: CatalogueItem) => boolean;
+  /** Adds (or switches an existing line to) a reseller's offer. False only when the cart is full. */
+  addResale: (item: ResaleCartItem) => boolean;
   setQuantity: (itemId: string, quantity: number) => void;
   remove: (itemId: string) => void;
   clear: () => void;
@@ -39,7 +46,7 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 // Only ids, quantities and prices are persisted - keeps the value well under
 // SecureStore's ~2 KB comfort limit at MAX_CART_LINES.
 const STORAGE_KEY = 'onedream_cart_v1';
-type StoredLine = { i: string; q: number; p: number };
+type StoredLine = { i: string; q: number; p: number; r?: string };
 
 const cartStorage = {
   async get(): Promise<StoredLine[]> {
@@ -52,7 +59,7 @@ const cartStorage = {
     }
   },
   async set(lines: CartLine[]) {
-    const raw = JSON.stringify(lines.map((line): StoredLine => ({ i: line.item_id, q: line.quantity, p: line.price_usd })));
+    const raw = JSON.stringify(lines.map((line): StoredLine => ({ i: line.item_id, q: line.quantity, p: line.price_usd, ...(line.resale_membership_id ? { r: line.resale_membership_id } : {}) })));
     try {
       if (Platform.OS === 'web') globalThis.localStorage?.setItem(STORAGE_KEY, raw);
       else await SecureStore.setItemAsync(STORAGE_KEY, raw);
@@ -73,7 +80,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return stored
           .filter((line) => typeof line?.i === 'string' && line.q > 0)
           .slice(0, MAX_CART_LINES)
-          .map((line) => ({ item_id: line.i, quantity: Math.min(MAX_LINE_QUANTITY, Math.floor(line.q)), price_usd: Number(line.p) || 0 }));
+          .map((line) => ({
+            item_id: line.i,
+            quantity: Math.min(MAX_LINE_QUANTITY, Math.floor(line.q)),
+            price_usd: Number(line.p) || 0,
+            ...(typeof line.r === 'string' ? { resale_membership_id: line.r } : {}),
+          }));
       });
       hydrated.current = true;
     });
@@ -100,6 +112,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         seller_username: item.seller_username,
         image: item.images?.[0] ?? null,
       }];
+    });
+    return true;
+  }, [lines]);
+
+  const addResale = useCallback((item: ResaleCartItem) => {
+    const inCart = lines.some((line) => line.item_id === item.item_id);
+    if (!inCart && lines.length >= MAX_CART_LINES) return false;
+    setLines((current) => {
+      const line: CartLine = {
+        item_id: item.item_id,
+        quantity: current.find((l) => l.item_id === item.item_id)?.quantity ?? 1,
+        price_usd: Number(item.price_usd) || 0,
+        title: item.title,
+        image: item.image ?? null,
+        resale_membership_id: item.membership_id,
+      };
+      return current.some((l) => l.item_id === item.item_id)
+        ? current.map((l) => (l.item_id === item.item_id ? { ...l, ...line } : l))
+        : [...current, line];
     });
     return true;
   }, [lines]);
@@ -138,11 +169,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     isFull: lines.length >= MAX_CART_LINES,
     has,
     toggle,
+    addResale,
     setQuantity,
     remove,
     clear,
     syncFromQuote,
-  }), [lines, has, toggle, setQuantity, remove, clear, syncFromQuote]);
+  }), [lines, has, toggle, addResale, setQuantity, remove, clear, syncFromQuote]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

@@ -115,17 +115,17 @@ export async function uploadCreative(
   file: { uri: string; mimeType?: string | null; fileName?: string | null; type: 'image' | 'video'; file?: Blob | null },
   title?: string,
 ) {
-  const signed = await apiFetch<{ upload_url: string; api_key: string; signature: string; allowed_formats: string; folder: string; public_id: string; timestamp: number }>(
-    '/api/affiliate/creatives', { method: 'POST', token, body: { action: 'sign', resource_type: file.type } });
+  const signed = await apiFetch<{ upload_url: string; api_key: string; signature: string; allowed_formats: string; folder: string; public_id: string; timestamp: number; type?: string }>(
+    '/api/affiliate/creatives', { method: 'POST', token, body: { action: 'sign', resource_type: file.type, delivery: 'authenticated' } });
   const name = file.fileName || `creative-${Date.now()}.${file.type === 'video' ? 'mp4' : 'jpg'}`;
   const form = new FormData();
   if (Platform.OS === 'web') form.append('file', file.file ?? await (await fetch(file.uri)).blob(), name);
   else form.append('file', { uri: file.uri, name, type: file.mimeType || (file.type === 'video' ? 'video/mp4' : 'image/jpeg') } as never);
-  for (const key of ['api_key', 'signature', 'allowed_formats', 'folder', 'public_id', 'timestamp'] as const) form.append(key, String(signed[key]));
+  for (const key of ['api_key', 'signature', 'allowed_formats', 'folder', 'public_id', 'timestamp', 'type'] as const) if (signed[key] !== undefined) form.append(key, String(signed[key]));
   const response = await fetch(signed.upload_url, { method: 'POST', body: form });
   const uploaded = await response.json().catch(() => ({})) as { public_id?: string; error?: { message?: string } };
   if (!response.ok || !uploaded.public_id) throw new ApiError(uploaded.error?.message || 'Upload failed', response.status, uploaded);
-  return apiFetch('/api/affiliate/creatives', { method: 'POST', token, body: { membership_id: membershipId, kind: file.type, public_id: uploaded.public_id, title } });
+  return apiFetch('/api/affiliate/creatives', { method: 'POST', token, body: { membership_id: membershipId, kind: file.type, public_id: uploaded.public_id, title, delivery: signed.type === 'authenticated' ? 'authenticated' : undefined } });
 }
 export const addTextCreative = (token: string, membershipId: string, title: string, body: string) =>
   apiFetch('/api/affiliate/creatives', { method: 'POST', token, body: { membership_id: membershipId, kind: 'text', title, body } });
@@ -166,6 +166,8 @@ export const updateEngagement = (token: string, input: { id: string; status?: st
 export type StorefrontItem = {
   membership_id: string; item_id: string; title: string; description: string | null; image: string | null; listing_type: string;
   price_usd: number; sold_by: string; fulfilled_by: string;
+  /** P3: sold by the partner at their own price, through the cart. */
+  resale?: boolean;
   creatives: { kind: string; media_url: string | null; title: string | null; body: string | null }[];
 };
 export type Storefront = {

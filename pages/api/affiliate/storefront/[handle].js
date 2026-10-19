@@ -45,6 +45,7 @@ export default async function handler(req, res) {
         price_usd: resale ? Number(m.resale_price_usd) : Number(m.offer.item.price_usd),
         sold_by: resale ? partner.display_name : m.offer.item.seller_username,
         fulfilled_by: m.offer.fulfilment === 'reseller' && resale ? partner.display_name : m.offer.item.seller_username,
+        resale,
         creatives: creatives.filter((c) => c.membership_id === m.id),
       };
     });

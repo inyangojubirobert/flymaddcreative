@@ -62,6 +62,10 @@
     {
       "path": "/api/admin/currency",
       "schedule": "30 0 * * *"
+    },
+    {
+      "path": "/api/admin/earnings/complete-unreturned",
+      "schedule": "50 3 * * *"
     }
   ]
 }

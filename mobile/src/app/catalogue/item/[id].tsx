@@ -16,7 +16,7 @@ import { cataloguePriceLabel, getCatalogueItem, createItemPaymentIntent, createO
 import { loadRemoteConfig } from '@/lib/remote-config';
 import { DigitalProductPanel, useDigitalProduct } from '@/components/digital-product';
 import { AppreciationPrompt } from '@/components/gift-art';
-import { recordAffiliateIntent, rememberAffiliateToken } from '@/lib/affiliate-attribution';
+import { affiliateTokensFor, recordAffiliateIntent, rememberAffiliateToken } from '@/lib/affiliate-attribution';
 import { PriceEquivalent } from '@/components/price-equivalent';
 import { ApiError } from '@/lib/api-client';
 import { useCart } from '@/contexts/CartContext';
@@ -78,7 +78,7 @@ export default function CatalogueItemScreen() {
     setError(null);
     try {
       const redirectUrl = Linking.createURL('paystack-callback');
-      const intent = await createItemPaymentIntent({ item_id: itemQuery.data.id, callback_url: redirectUrl });
+      const intent = await createItemPaymentIntent({ item_id: itemQuery.data.id, callback_url: redirectUrl, affiliate_tokens: await affiliateTokensFor([itemQuery.data.id]) });
       recordAffiliateIntent({ paymentRef: intent.reference, method: 'paystack', itemIds: [itemQuery.data.id] });
       const result = await WebBrowser.openAuthSessionAsync(intent.authorization_url, redirectUrl);
 

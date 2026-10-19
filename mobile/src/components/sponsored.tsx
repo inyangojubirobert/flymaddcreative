@@ -50,7 +50,7 @@ export function SponsoredAdCard({ ad, placement }: { ad: ServedAd; placement: Ad
       const url = destination.url;
       let host = url;
       try { host = new URL(url).hostname; } catch { /* keep full url */ }
-      Alert.alert('Leaving One Dream', `This sponsored link opens ${host} in your browser.`, [
+      Alert.alert('Leaving One Dream', `This ${ad.house ? '' : 'sponsored '}link opens ${host} in your browser.`, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Open', onPress: () => void Linking.openURL(url) },
       ]);
@@ -67,14 +67,14 @@ export function SponsoredAdCard({ ad, placement }: { ad: ServedAd; placement: Ad
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]} accessibilityLabel={`Sponsored: ${ad.title}`}>
+    <View style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]} accessibilityLabel={`${ad.house ? 'From One Dream' : 'Sponsored'}: ${ad.title}`}>
       {media ? (
         <Pressable onPress={playVideo} style={styles.mediaWrap}>
           <Image source={{ uri: media.type === 'video' ? media.poster || media.url : media.url }} style={styles.media} resizeMode="cover" />
           {media.type === 'video' ? (
             <View style={styles.play}><Ionicons name="play" size={22} color="#fff" /></View>
           ) : null}
-          <View style={styles.badge}><ThemedText style={styles.badgeText}>Sponsored</ThemedText></View>
+          <View style={styles.badge}><ThemedText style={styles.badgeText}>{ad.house ? 'From One Dream' : 'Sponsored'}</ThemedText></View>
         </Pressable>
       ) : null}
       <View style={styles.copy}>

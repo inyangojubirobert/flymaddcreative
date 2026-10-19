@@ -15,6 +15,7 @@ import { DIGITAL_CHECKOUT_MESSAGE, digitalItemIds } from '../../../lib/digitalGu
 import { getUsdToNgnRate, usdToKobo, usdToNgn } from '../../../lib/currency';
 import { resolveCallbackUrl } from '../../../lib/paystackCallbackUrl';
 import { singleItemPurchaseProblem } from '../../../lib/catalogueCart';
+import { recordIntentFromTokens } from '../../../lib/earnings';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -99,6 +100,12 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
+    // P5: tie any affiliate attribution to this reference on the server,
+    // before the buyer pays. Best effort: never blocks or changes the payment.
+    if (Array.isArray(req.body?.affiliate_tokens) && req.body.affiliate_tokens.length) {
+      await recordIntentFromTokens({ paymentRef: data.data.reference, method: 'paystack', buyerEmail: null, tokens: req.body.affiliate_tokens })
+        .catch((error) => console.error('[affiliate] intent not recorded:', error.message || error));
+    }
 
     return res.status(200).json({
       authorization_url: data.data.authorization_url,

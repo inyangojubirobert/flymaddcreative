@@ -371,6 +371,8 @@ export async function deleteCatalogueDraft(token: string, id: string): Promise<v
 export async function createItemPaymentIntent(input: {
   item_id: string;
   callback_url: string;
+  /** P5: partner-link attribution tokens this device holds for the listing. */
+  affiliate_tokens?: string[];
 }): Promise<{ authorization_url: string; reference: string; amount_usd: number }> {
   return apiFetch('/api/catalogue/create-payment-intent', { method: 'POST', body: input });
 }

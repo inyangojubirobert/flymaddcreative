@@ -12,6 +12,7 @@ import {
   type AdEntitlement, type CampaignInput,
 } from '@/api/ads';
 import { getCatalogueByUsername } from '@/api/catalogue';
+import { getMemberships } from '@/api/earnings';
 import { Palette, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/use-theme';
@@ -32,6 +33,13 @@ export default function CampaignEditorScreen() {
     queryKey: ['my-catalogue', participant?.username],
     queryFn: () => getCatalogueByUsername(participant!.username),
     enabled: !!participant?.username,
+  });
+  // P4: partners can also promote listings they are an approved partner for.
+  const partnerQuery = useQuery({
+    queryKey: ['affiliate-memberships'],
+    queryFn: () => getMemberships(token!),
+    enabled: !!token,
+    retry: false,
   });
 
   const campaign = adsQuery.data?.campaigns.find((c) => c.id === params.campaignId) ?? null;
@@ -69,7 +77,11 @@ export default function CampaignEditorScreen() {
   }, [adsQuery.data, campaign, pkg, loaded]);
 
   const editable = !campaign || ['draft', 'rejected', 'pending_review', 'paused'].includes(campaign.status) || (campaign.status === 'active' && !isBoost && campaign.state !== 'completed');
-  const liveListings = (listingsQuery.data ?? []).filter((item) => item.status === 'active');
+  const ownListings = (listingsQuery.data ?? []).filter((item) => item.status === 'active');
+  const partnerListings = (partnerQuery.data?.memberships ?? [])
+    .filter((m) => m.status === 'approved' && m.offer?.status === 'active' && m.offer.item && !ownListings.some((item) => item.id === m.offer.item.id))
+    .map((m) => ({ id: m.offer.item.id, title: `${m.offer.item.title} · partner listing`, images: m.offer.item.images }));
+  const liveListings: { id: string; title: string; images?: string[] | null }[] = [...ownListings, ...partnerListings];
   const library = (mediaQuery.data ?? []).filter((m) => m.status !== 'rejected');
   const maxCreatives = pkg?.max_creatives ?? 0;
 

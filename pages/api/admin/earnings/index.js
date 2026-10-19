@@ -10,6 +10,7 @@
 //   self_referral      attribution excluded because the partner was the buyer or the seller
 
 import { requireActiveAdmin } from '../../../../lib/adminAuth';
+import { creativeViewUrl } from '../../../../lib/cloudinaryAds';
 import { earningsDb, getEarningsSettings, must, payoutsLiveInDeployment } from '../../../../lib/earnings';
 
 const daysAgo = (d) => new Date(Date.now() - d * 86400e3).toISOString();
@@ -74,7 +75,9 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       settings, payouts_provider_live: payoutsLiveInDeployment(), totals, signals,
-      payouts, payees, batches, lots, partners, offers, creatives, attributions, rewards, engagements, audit,
+      payouts, payees, batches, lots, partners, offers, attributions, rewards, engagements, audit,
+      // Private (pending) creative media is shown to admins through signed links.
+      creatives: (creatives || []).map((c) => ({ ...c, media_url: creativeViewUrl(c) })),
     });
   } catch (error) {
     console.error('admin/earnings error:', error);

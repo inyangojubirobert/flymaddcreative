@@ -10,6 +10,7 @@ import { getUsdToNgnRate, usdToKobo, usdToNgn } from '../../../lib/currency';
 import { resolveCallbackUrl } from '../../../lib/paystackCallbackUrl';
 import { QuoteError, bindQuotePayment, loadQuoteForPayment, multiCurrencyCheckoutActive, quotePaystackMetadata } from '../../../lib/quoteCheckout';
 import { cartCheckoutReady, normalizeCartLines, priceCart } from '../../../lib/catalogueCart';
+import { recordIntentFromTokens } from '../../../lib/earnings';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -55,6 +56,21 @@ export default async function handler(req, res) {
     const amountKobo = mcQuote ? Number(mcQuote.total_minor) : usdToKobo(totalUsd, rate);
     const reference = `CART_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`;
     if (mcQuote) await bindQuotePayment(mcQuote.id, reference);
+    // P6: the buyer's contact and delivery details stay on our server (not in
+    // Paystack metadata) so pages/api/admin/earnings/complete-unreturned.js can
+    // finish the checkout if the buyer pays and never comes back.
+    const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
+    const { error: pendingError } = await supabase.from('catalogue_pending_checkouts').insert({
+      payment_ref: reference,
+      buyer: {
+        buyer_name: text(req.body?.buyer_name, 120),
+        buyer_email: text(buyer_email, 200).toLowerCase(),
+        buyer_whatsapp: text(req.body?.buyer_whatsapp, 40),
+        delivery_address: text(req.body?.delivery_address, 500) || null,
+        notes: text(req.body?.notes, 500) || null,
+      },
+    });
+    if (pendingError) console.error('[cart] pending checkout not stored:', pendingError.message);
 
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -74,6 +90,7 @@ export default async function handler(req, res) {
             quantity: line.quantity,
             unit_price_usd: line.unit_price_usd,
             line_total_usd: line.line_total_usd,
+            ...(line.resale_membership_id ? { resale_membership_id: line.resale_membership_id } : {}),
           })),
           subtotal_usd: quote.subtotal_usd,
           service_fee_usd: quote.service_fee_usd,
@@ -93,6 +110,12 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
+    // P5: tie any affiliate attribution to this reference on the server,
+    // before the buyer pays. Best effort: never blocks or changes the payment.
+    if (Array.isArray(req.body?.affiliate_tokens) && req.body.affiliate_tokens.length) {
+      await recordIntentFromTokens({ paymentRef: data.data.reference, method: 'paystack', buyerEmail: buyer_email, tokens: req.body.affiliate_tokens })
+        .catch((error) => console.error('[affiliate] intent not recorded:', error.message || error));
+    }
     return res.status(200).json({
       authorization_url: data.data.authorization_url,
       reference: data.data.reference,

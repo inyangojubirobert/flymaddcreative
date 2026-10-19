@@ -24,6 +24,8 @@ import { verifyAndRecordUsdtPayment } from '../../../lib/verifyCryptoTx';
 import { cartCheckoutReady, normalizeCartLines, priceCart } from '../../../lib/catalogueCart';
 import { toCents } from '../../../lib/marketplaceFees';
 import { commissionFields, sellerCommissionPercent } from '../../../lib/sellerEarnings';
+import { resaleFloorFor } from '../../../lib/catalogueCart';
+import { resaleSplit, fromMicro } from '../../../lib/earningsRules';
 import {
   QuoteError, applyQuoteToOrders, bindQuotePayment, freezeByPaymentRef, loadQuoteForPayment,
   multiCurrencyCheckoutActive, paymentMatchesQuote, quoteCheckoutRecord,
@@ -192,7 +194,8 @@ export default async function handler(req, res) {
         payment_ref: txHash,
         payment_method,
         network: String(network).toLowerCase(),
-        lines: quote.lines.map(({ item_id, quantity, unit_price_usd, line_total_usd }) => ({ item_id, quantity, unit_price_usd, line_total_usd })),
+        lines: quote.lines.map(({ item_id, quantity, unit_price_usd, line_total_usd, resale_membership_id }) => (
+          resale_membership_id ? { item_id, quantity, unit_price_usd, line_total_usd, resale_membership_id } : { item_id, quantity, unit_price_usd, line_total_usd })),
         subtotal_usd: quote.subtotal_usd,
         service_fee_usd: quote.service_fee_usd,
         total_usd: quote.total_usd,
@@ -246,6 +249,7 @@ function validMetadataLines(meta) {
     quantity: Number(line?.quantity),
     unit_price_usd: Number(line?.unit_price_usd),
     line_total_usd: Number(line?.line_total_usd),
+    ...(typeof line?.resale_membership_id === 'string' ? { resale_membership_id: line.resale_membership_id } : {}),
   }));
   const valid = lines.every((line) => line.item_id && Number.isInteger(line.quantity) && line.quantity > 0 && line.line_total_usd > 0);
   if (!valid) return null;
@@ -294,6 +298,12 @@ async function buildOrderRows(checkout) {
   const sellerByItem = new Map((items || []).map((item) => [String(item.id), item.seller_username]));
   const commissionPercent = await sellerCommissionPercent(supabase);
 
+  // P3: floors are read on the server, never from metadata or the client.
+  const floors = new Map();
+  for (const line of lines) {
+    if (line.resale_membership_id && !floors.has(line.resale_membership_id)) floors.set(line.resale_membership_id, await resaleFloorFor(supabase, line.resale_membership_id));
+  }
+
   const now = new Date().toISOString();
   return lines.map((line, index) => {
     const seller = sellerByItem.get(String(line.item_id));
@@ -308,7 +318,9 @@ async function buildOrderRows(checkout) {
       delivery_address: checkout.delivery_address,
       amount_usd: line.line_total_usd,
       // Seller commission fixed at purchase time (seller earnings ledger).
-      ...commissionFields(line.line_total_usd, commissionPercent),
+      // P3: a reseller sale pays the seller the floor (less commission) and
+      // the reseller the margin (less commission), recorded on the order.
+      ...resaleOrderFields(line, floors.get(line.resale_membership_id), commissionPercent),
       unit_price_usd: line.unit_price_usd,
       quantity: line.quantity,
       payment_method: checkout.payment_method,
@@ -324,6 +336,20 @@ async function buildOrderRows(checkout) {
       created_at: now,
     };
   });
+}
+
+function resaleOrderFields(line, floorUsd, commissionPercent) {
+  if (!line.resale_membership_id || !(floorUsd > 0)) return commissionFields(line.line_total_usd, commissionPercent);
+  const split = resaleSplit({ resalePriceUsd: line.unit_price_usd, floorUsd, quantity: line.quantity, platformPercent: commissionPercent });
+  return {
+    commission_percent: commissionPercent,
+    commission_usd: fromMicro(split.platform_micro),
+    seller_net_usd: fromMicro(split.seller_receives_micro),
+    resale_membership_id: line.resale_membership_id,
+    resale_price_usd: line.unit_price_usd,
+    resale_floor_usd: floorUsd,
+    resale_platform_fee_usd: fromMicro(split.margin_fee_micro),
+  };
 }
 
 function publicCheckout(checkout) {

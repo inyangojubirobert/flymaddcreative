@@ -12,7 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { SellerLink } from '@/components/listing-card';
 import { AppreciationPrompt } from '@/components/gift-art';
-import { recordAffiliateIntent } from '@/lib/affiliate-attribution';
+import { affiliateTokensFor, recordAffiliateIntent } from '@/lib/affiliate-attribution';
 import { createCartPaymentIntent, getCartQuote, submitCartCheckout, type CartCheckoutResult, type CartQuoteLine } from '@/api/cart';
 import { orderAction, type CatalogueOrder } from '@/api/catalogue';
 import { getQuote, useCurrencies, type Quote } from '@/api/marketplace';
@@ -58,8 +58,10 @@ export default function CartScreen() {
   // back, i.e. the buyer has paid: never offer a second charge, only retries.
   const [pendingPayment, setPendingPayment] = useState<{ reference: string; returned: boolean } | null>(null);
 
-  const requestLines = useMemo(() => cart.lines.map((line) => ({ item_id: line.item_id, quantity: line.quantity })), [cart.lines]);
-  const quoteKey = requestLines.map((line) => `${line.item_id}:${line.quantity}`).join(',');
+  const requestLines = useMemo(() => cart.lines.map((line) => (line.resale_membership_id
+    ? { item_id: line.item_id, quantity: line.quantity, resale_membership_id: line.resale_membership_id }
+    : { item_id: line.item_id, quantity: line.quantity })), [cart.lines]);
+  const quoteKey = requestLines.map((line) => `${line.item_id}:${line.quantity}:${line.resale_membership_id ?? ''}`).join(',');
   const quoteQuery = useQuery({
     queryKey: ['cart-quote', quoteKey],
     queryFn: () => getCartQuote(requestLines),
@@ -165,7 +167,16 @@ export default function CartScreen() {
     setNotice(null);
     try {
       const redirectUrl = Linking.createURL('paystack-callback');
-      const intent = await createCartPaymentIntent({ lines: requestLines, buyer_email: email.trim(), callback_url: redirectUrl, quote_id: fixed?.id });
+      const intent = await createCartPaymentIntent({
+        lines: requestLines,
+        buyer_email: email.trim(),
+        callback_url: redirectUrl,
+        quote_id: fixed?.id,
+        affiliate_tokens: await affiliateTokensFor(requestLines.map((line) => line.item_id)),
+        buyer_name: name.trim(),
+        buyer_whatsapp: whatsapp.trim(),
+        delivery_address: needsDelivery ? deliveryAddress.trim() : undefined,
+      });
       recordAffiliateIntent({ paymentRef: intent.reference, method: 'paystack', itemIds: requestLines.map((line) => line.item_id) });
       setPendingPayment({ reference: intent.reference, returned: false });
       const browser = await WebBrowser.openAuthSessionAsync(intent.authorization_url, redirectUrl);
@@ -416,6 +427,7 @@ function CartRow({ line, quoted, onOpen, onQuantity, onRemove }: {
           <ThemedText type="smallBold" numberOfLines={2}>{quoted?.title || line.title || 'Listing'}</ThemedText>
         </Pressable>
         <ThemedText type="small" themeColor="textSecondary">{usd(unit)} each</ThemedText>
+        {quoted?.sold_by ? <ThemedText type="small" themeColor="textSecondary">Sold through {quoted.sold_by}</ThemedText> : null}
         {quoted?.problem ? <ThemedText type="small" style={styles.error}>{quoted.problem}</ThemedText> : null}
         <View style={styles.rowActions}>
           <View style={[styles.stepper, { borderColor: theme.backgroundSelected }]}>

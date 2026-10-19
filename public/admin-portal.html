@@ -196,6 +196,7 @@
             <div class="flex flex-wrap gap-2">
               <button onclick="runEarningsJobs()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Run matching jobs</button>
               <button onclick="checkOrphans()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Check unreturned payments</button>
+              <button onclick="completeUnreturned()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded">Complete unreturned carts</button>
               <select id="earnExportType" class="text-xs bg-slate-700 border border-slate-600 rounded px-2 py-1">
                 <option value="ledger">Ledger</option><option value="gift_earnings">Gift earnings</option><option value="lots">Coin lots</option>
                 <option value="settlement">Google settlement</option><option value="attributions">Attributions</option>
@@ -1368,6 +1369,16 @@
         box.innerHTML = r.orphans.length
           ? `<p class="text-amber-300">${r.orphans.length} paid marketplace payment(s) with no order (last ${r.days} days):</p>` + r.orphans.map(o => `<div>${escapeText(o.reference)} · ${escapeText(o.type)} · ₦${(o.amount_kobo / 100).toLocaleString()} · ${when(o.paid_at)} · ${escapeText(o.customer_email || '')}${o.recoverable_automatically ? ' · recoverable with P6' : ' · contact the buyer'}</div>`).join('')
           : `<p class="text-green-400">Checked ${r.checked} paid marketplace payments: every one has its order.</p>`;
+      } catch (err) { box.innerHTML = `<span class="text-red-400">${escapeText(err.message)}</span>`; }
+    }
+
+    async function completeUnreturned() {
+      const box = document.getElementById('earnOrphans');
+      box.textContent = 'Completing paid carts whose buyer never returned…';
+      try {
+        const r = await adminFetch('/api/admin/earnings/complete-unreturned', { method: 'POST', body: '{}' });
+        box.innerHTML = !r.active ? `<span class="text-amber-300">${escapeText(r.note || 'Not active')}</span>`
+          : `<p class="text-green-400">Checked ${r.checked}, completed ${r.completed}.</p>` + (r.results || []).map(x => `<div>${escapeText(x.payment_ref)} · ${escapeText(x.outcome)}${x.detail ? ' · ' + escapeText(x.detail) : ''}</div>`).join('');
       } catch (err) { box.innerHTML = `<span class="text-red-400">${escapeText(err.message)}</span>`; }
     }
 

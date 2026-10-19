@@ -8,6 +8,7 @@
 
 import { requireActiveAdmin } from '../../../../lib/adminAuth';
 import { auditEarnings, earningsDb, getEarningsSettings, must } from '../../../../lib/earnings';
+import { cloudinaryConfig, publishAdAsset } from '../../../../lib/cloudinaryAds';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -29,9 +30,24 @@ export default async function handler(req, res) {
     }
     if (action === 'approve_creative' || action === 'reject_creative') {
       if (action === 'reject_creative' && reason.length < 3) return res.status(400).json({ error: 'Give a reason' });
+      // A privately uploaded creative becomes public only when approved.
+      let mediaUrl;
+      if (action === 'approve_creative') {
+        const creative = must(await earningsDb.from('affiliate_creatives').select('kind, media_url, cloudinary_public_id').eq('id', String(body.creative_id || '')).maybeSingle());
+        if (!creative) return res.status(404).json({ error: 'Creative not found' });
+        if (creative.media_url?.includes('/authenticated/') && creative.cloudinary_public_id) {
+          try {
+            await publishAdAsset(creative.kind, creative.cloudinary_public_id);
+          } catch (error) {
+            console.error('creative publish failed:', error.message);
+            return res.status(502).json({ error: 'Could not publish the media file. Try again.' });
+          }
+          mediaUrl = `https://res.cloudinary.com/${cloudinaryConfig().cloudName}/${creative.kind}/upload/${creative.cloudinary_public_id}`;
+        }
+      }
       must(await earningsDb.from('affiliate_creatives').update({
         status: action === 'approve_creative' ? 'approved' : 'rejected', reject_reason: action === 'reject_creative' ? reason : null,
-        reviewed_by: admin.id, reviewed_at: now,
+        reviewed_by: admin.id, reviewed_at: now, ...(mediaUrl ? { media_url: mediaUrl } : {}),
       }).eq('id', String(body.creative_id || '')));
       await auditEarnings(admin.id, action, 'affiliate_creative', body.creative_id, { reason });
       return res.status(200).json({ success: true });

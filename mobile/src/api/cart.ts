@@ -5,7 +5,8 @@ import type { CatalogueOrder } from './catalogue';
 // service charge are always computed server-side; the client sends only
 // listing ids and quantities.
 
-export type CartLineInput = { item_id: string; quantity: number };
+/** resale_membership_id: bought through an authorised reseller's storefront (P3). */
+export type CartLineInput = { item_id: string; quantity: number; resale_membership_id?: string };
 
 export type CartQuoteLine = {
   item_id: string;
@@ -21,6 +22,9 @@ export type CartQuoteLine = {
   listing_currency?: string;
   unit_price_usd: number;
   line_total_usd: number;
+  /** P3: set when the line is sold by an authorised reseller at their price. */
+  resale_membership_id?: string | null;
+  sold_by?: string | null;
   problem: string | null;
 };
 
@@ -64,6 +68,12 @@ export function createCartPaymentIntent(input: {
   callback_url: string;
   /** P7: the checkout quote being paid (required once multi-currency listings are on). */
   quote_id?: string;
+  /** P5: partner-link attribution tokens this device holds for the cart's listings. */
+  affiliate_tokens?: string[];
+  /** P6: kept on the server so a paid cart can be completed if the buyer never returns. */
+  buyer_name?: string;
+  buyer_whatsapp?: string;
+  delivery_address?: string;
 }): Promise<{ authorization_url: string; reference: string; total_usd: number; amount_ngn: number }> {
   return apiFetch('/api/catalogue/cart-payment-intent', { method: 'POST', body: input });
 }

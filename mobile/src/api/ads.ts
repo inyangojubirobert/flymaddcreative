@@ -84,6 +84,8 @@ export type AdCampaign = {
 
 export type ServedAd = {
   id: string;
+  /** One Dream's own ad (admin-uploaded house ad), labelled "From One Dream". */
+  house?: boolean;
   title: string;
   body: string | null;
   cta_label: string;
@@ -266,7 +268,8 @@ export async function getSponsored(placement: AdPlacement, options: { ads?: numb
   const query = new URLSearchParams({ placement, ads: String(options.ads ?? 0), boosts: String(options.boosts ?? 0) });
   if (options.categoryId) query.set('category_id', options.categoryId);
   try {
-    return await apiFetch(`/api/ads/serve?${query}`);
+    // The viewer id lets the server apply its per-viewer frequency cap.
+    return await apiFetch(`/api/ads/serve?${query}`, { headers: { 'X-Ad-Viewer': await getAdViewerId() } });
   } catch {
     return { ads: [], boosted: [] };
   }

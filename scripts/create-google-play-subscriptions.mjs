@@ -13,10 +13,10 @@ import dotenv from 'dotenv';
 import { GoogleAuth } from 'google-auth-library';
 dotenv.config({ path: '.env.local', quiet: true });
 
-// digital_sub_products: 3 slots per monthly price (one live subscription per
+// digital_sub_products: 6 slots per monthly price (one live subscription per
 // product per user, so each slot lets a user follow one more creator).
 const PRICES = ['1.99', '2.99', '4.99', '7.99', '9.99', '19.99'];
-const SUBSCRIPTIONS = PRICES.flatMap((usd) => ['s1', 's2', 's3'].map((slot) => ({
+const SUBSCRIPTIONS = PRICES.flatMap((usd) => ['s1', 's2', 's3', 's4', 's5', 's6'].map((slot) => ({
   id: `onedream_creator_${usd.replace('.', '').padStart(4, '0')}_${slot}`,
   usd,
   title: `Creator subscription — $${usd}/month`,

@@ -1,6 +1,6 @@
-# Protected changes awaiting authorisation (P1-P9)
+# Protected changes (P1-P9)
 
-17 October 2026. **P7 and P9 code changes are applied** (owner authorised, 17 Oct 2026; the switch stays off until test G in `docs/nextSteps.MD` passes); their SQL (P8, P9, then P7 at switch-on) is run by the owner. **None of the others is applied.** Each one touches protected payment code or data: Paystack, checkout, seller settlement or advertising. Apply them one at a time, and only with explicit owner approval.
+**19 October 2026: every patch is applied in code** (owner: "execute all proposals"). P3, P5 and P6 no longer matched the checkout after P7, so they were rebased onto it by hand; P4 applied as written. All their SQL, with `fix_p8_p9_review.sql` and P7's activation, is bundled in `supabase/activate_all_2026_10_19.sql` (one transaction, 16 checks, tested in `scripts/test-multicurrency.mjs`). P1 is superseded by P8. P3 now works with multi-currency on: a reseller line is US-dollar only and refuses to share a cart with a listing in another currency. The `.diff` files below are kept as a record of the original proposals and no longer apply.
 
 The diffs are generated against the current files. `git apply --check` passes for every one of them, and applied together in the order below they apply with `patch -p1` and bundle cleanly.
 

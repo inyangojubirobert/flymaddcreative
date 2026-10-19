@@ -11,10 +11,12 @@ import { useTheme } from '@/hooks/use-theme';
 import { getAdViewerId } from '@/lib/ad-viewer';
 import { rememberAffiliateToken } from '@/lib/affiliate-attribution';
 import { getStorefront, recordClick, type StorefrontItem } from '@/api/earnings';
+import { useCart } from '@/contexts/CartContext';
 
 // Public partner storefront (/m/<handle>). Listings belong to their sellers:
 // price, specs, stock and delivery come from the seller's listing. Opening a
 // listing records the partner's click so a purchase is attributed to them.
+// A reseller's own-price offer (P3) is bought through the cart at that price.
 
 export default function StorefrontScreen() {
   const { handle, via } = useLocalSearchParams<{ handle: string; via?: string }>();
@@ -22,7 +24,20 @@ export default function StorefrontScreen() {
   const router = useRouter();
   const query = useQuery({ queryKey: ['storefront', handle], queryFn: () => getStorefront(String(handle)), enabled: !!handle });
   const [opening, setOpening] = useState<string | null>(null);
+  const cart = useCart();
   const data = query.data;
+
+  function addResale(item: StorefrontItem) {
+    const added = cart.addResale({ item_id: item.item_id, membership_id: item.membership_id, price_usd: item.price_usd, title: item.title, image: item.image });
+    if (!added) {
+      Alert.alert('Cart is full', 'Check out or remove a listing first.');
+      return;
+    }
+    Alert.alert('Added to cart', `${item.title} at $${item.price_usd.toFixed(2)}, sold by ${item.sold_by}.`, [
+      { text: 'Keep browsing', style: 'cancel' },
+      { text: 'Open cart', onPress: () => router.push('/shop/cart' as never) },
+    ]);
+  }
 
   async function open(item: StorefrontItem) {
     if (!data) return;
@@ -73,6 +88,11 @@ export default function StorefrontScreen() {
                       <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
                         Sold by {item.sold_by}{item.fulfilled_by !== item.sold_by ? ` · ships from ${item.fulfilled_by}` : ''}
                       </ThemedText>
+                      {item.resale ? (
+                        <Pressable onPress={() => addResale(item)} style={[styles.addButton, { backgroundColor: Palette.blue }]} accessibilityLabel={`Add ${item.title} to cart`}>
+                          <ThemedText type="smallBold" style={{ color: '#fff' }}>Add to cart</ThemedText>
+                        </Pressable>
+                      ) : null}
                       {opening === item.membership_id ? <ActivityIndicator /> : null}
                     </Pressable>
                   );
@@ -99,4 +119,5 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   card: { width: '47%', flexGrow: 1, borderWidth: 1, borderRadius: 14, padding: Spacing.two, gap: 4 },
   image: { width: '100%', aspectRatio: 1, borderRadius: 10 },
+  addButton: { borderRadius: 8, paddingVertical: 6, alignItems: 'center' },
 });

@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { createParticipant, getParticipantByEmail, getParticipantByUsername, getReferralLink } from '../../src/backend/supabase.js';
+import { createParticipant, getParticipantByEmail, getParticipantByUsername } from '../../src/backend/supabase.js';
 import { getJwtSecret } from '../../lib/jwtSecret';
 
 export default async function handler(req, res) {
@@ -32,10 +32,9 @@ export default async function handler(req, res) {
         const hash = await bcrypt.hash(password, 12);
         const participant = await createParticipant(name, normalizedEmail, normalizedUsername, hash);
         
-        // Get referral link
-        await new Promise(r => setTimeout(r, 300));
-        const voteLink = await getReferralLink(participant.id) 
-            || `https://www.flymaddcreative.online/app/profile/${encodeURIComponent(normalizedUsername)}`;
+        // Profile link (src/backend/supabase.js has no getReferralLink export:
+        // calling it threw after the account was created).
+        const voteLink = `https://www.flymaddcreative.online/app/profile/${encodeURIComponent(normalizedUsername)}`;
         
         // JWT
         const token = jwt.sign({ userId: participant.id, email: participant.email, type: 'onedream' }, getJwtSecret(), { expiresIn: '7d' });

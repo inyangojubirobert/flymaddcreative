@@ -1,76 +1,69 @@
 # One Dream: next steps
 
-_Last updated 2026-10-18. Branch: `web-app-apk-parity-ad-tiers`, pushed. Latest commit `e793b82` (house ads), deployed to production. Android **1.0.23 (versionCode 25)**._
+_Last updated 2026-10-19. Branch: `web-app-apk-parity-ad-tiers`. Android **1.0.24 (versionCode 26)**. Code below is committed; **you deploy it** (step 1)._
 
-Everything below is built and deployed. Part 1 is the setup still to do. Part 2 is Google Play work. Part 3 is the full test checklist, one section per feature. If anything doesn't match, paste what you see.
+Everything below is built. Part 1 is what only you can do (deploy, SQL, switches). Part 2 is Google Play work. Part 3 is the full test checklist, one section per feature. If anything doesn't match, paste what you see.
 
 ## Where things stand
 
 | Area | Status |
 |---|---|
-| Website, API, web app (`/app`) | **Live**, commit `e793b82` |
-| Android app | **1.0.23 (versionCode 25)**: paid voting removed, Recognition tab, USD carts keep card under multi-currency. Installed by adb; AAB ready for Play internal testing |
-| Google Play products | **58 live:** 2 AI subscriptions, 7 ad packages, 7 boosts, 17 digital price tiers, 18 creator subscriptions, 7 Dream Coin packs |
-| Dream Coins | **On sale** (`DREAM_COINS_ENABLED=true`). No purchase made yet. Multi-quantity **on** for all 7 packs (19 Oct 2026) |
-| Earnings, affiliate marketplace, gift sharing | Database applied. Every money switch **off** |
-| Multi-currency listings | Code live; database applied (migration, review fixes, P8, P9); rates refresh daily. Switch **off** |
-| Storefront video promotion | **Live**: terms v2, $10 per selected video, $1,000 cap, 3 funded videos per seller |
-| Agriculture & Farming department | **Live**: 15 categories, about 95 search words |
-| Security & Tracking, Rentals & Hire departments | **Live**: 16 categories, 107 search words |
-| House ads (admin-uploaded One Dream ads) | **Live**: tables created; upload your first ad (test I) |
-| Protected changes P3, P4, P5, P6 | Prepared, not applied (`docs/protected-patches/README.md`). P1 isn't needed: P8 includes it |
+| Website, API, web app (`/app`) | Built and committed (19 Oct 2026); **waiting for your `vercel deploy --prod`**. Web app re-exported |
+| Android app | **1.0.24 (versionCode 26)**: reseller add-to-cart, P5/P6 checkout data, "From One Dream" house-ad label, private partner creatives, ad frequency cap. AAB + APK built from `mobile/android` (Gradle cache now on `D:\Gradle` only) |
+| Google Play products | **58 live:** 2 AI subscriptions, 7 ad packages, 7 boosts, 17 digital price tiers, 18 creator subscriptions, 7 Dream Coin packs. Ad and boost Play prices **match** the database (checked 19 Oct 2026) |
+| Dream Coins | **On sale** (`DREAM_COINS_ENABLED=true`). Multi-quantity **on** for all 7 packs. No purchase made yet |
+| Earnings, affiliate marketplace, gift sharing | Database applied. Switches **off** until Part 1 step 4 |
+| Multi-currency listings | Code live; P8, P9 applied. P7 activation SQL in the bundle (step 2). Switch **off** until step 3 |
+| Protected changes P3, P4, P5, P6 | **Rewritten on top of P7 and applied in code** (19 Oct 2026). Their SQL is in the bundle (step 2) |
+| Storefront video promotion, Agriculture, Security & Rentals, House ads | **Live** |
+| New (19 Oct 2026) | Bronze/Silver/Gold take the featured (first) ad slot; per-viewer frequency cap (6 hours a day per paid banner); ads on `Onedream.html`, `search.html`, `catalogue-product.html`, `blogs.html`; house ads labelled "From One Dream"; partner creatives private until approved; daily job completes paid carts whose buyer never returned |
 
-### SQL status (checked in production on 18 Oct 2026)
+### SQL status
 
-Every SQL file has been run, except these two:
+Run **one file**: `supabase/activate_all_2026_10_19.sql` (step 2). It contains, in the required order, `fix_p8_p9_review.sql`, P6, P3, P4, P7 and an ads index, in one transaction, and ends with 16 checks that must all say `ok = true`. It is safe to run again. Tested on the in-memory database (`npm run test:earnings`, 81 tests).
 
-| File | Status | Action |
-|---|---|---|
-| `supabase/fix_p8_p9_review.sql` | **Can't be confirmed from here** (it only replaces function bodies) | Run it once now. It's safe to run again: 6 rows, all `ok = true` |
-| `docs/protected-patches/P7_multicurrency_checkout.sql` | Not run, **on purpose** | Run only when you switch multi-currency on (test G) |
-
-Confirmed applied: the multi-currency migration and its review fixes, P8, P9, storefront promotion and its review fixes (terms v2 current), agriculture categories, security & rentals categories, house ads, and every earlier migration.
+Later, only after step 6 below: `supabase/add_creator_sub_slots_4_6.sql`.
 
 ---
 
-## Part 1: setup still to do (you)
+## Part 1: what you do (owner, 19 Oct 2026)
 
-### Activate everything (owner, 19 Oct 2026)
+Do these in order.
 
-Do these in order. Nothing else is needed from you.
-
-1. **Supabase SQL editor**, run each file and check every row says `ok = true`:
-   1. `supabase/fix_p8_p9_review.sql`
-   2. `docs/protected-patches/P7_multicurrency_checkout.sql` (USD listings keep card and USDT)
-2. **Admin portal → 💱 Currencies:** switch on "Let sellers list in naira and other currencies", type `P7_P8_APPLIED`.
-3. **Admin portal → 🤝 Partners & Payouts:** switch on **Gift earnings**, **Payouts** and **Seller-funded commission**. Leave **Reseller checkout** off (see below).
-4. **Vercel**, from the repo folder: `vercel env add PAYOUTS_PROVIDER_LIVE production`, enter `true`, then `vercel deploy --prod`.
+1. **Vercel**, from the repo folder:
+   1. `vercel env add PAYOUTS_PROVIDER_LIVE production` → enter `true` (payouts are paid by hand from Admin → Partners & Payouts; this only opens requests);
+   2. `vercel deploy --prod`.
+   - `CRON_SECRET` is already set (checked 19 Oct 2026), so the daily jobs run, including the new **complete unreturned carts** job (03:50 UTC).
+2. **Supabase SQL editor:** paste and run `supabase/activate_all_2026_10_19.sql`. Every row must say `ok = true`.
+3. **Admin portal → 💱 Currencies:** switch on "Let sellers list in naira and other currencies", type `P7_P8_APPLIED`. Then run test G.
+4. **Admin portal → 🤝 Partners & Payouts:** switch on **Gift earnings**, **Payouts**, **Seller-funded commission** and **Reseller checkout**. The last two now refuse with a message if their SQL is missing.
 5. **Optional:** set a **platform monthly budget** in Partners & Payouts if One Dream should fund affiliate offers (it is $0).
+6. **Optional, more creator subscription slots (3 → 6 per price):**
+   1. give the Play service account **Manage store presence** for a moment;
+   2. `node scripts/create-google-play-subscriptions.mjs` (creates the 18 new `_s4`–`_s6` subscriptions; existing ones are skipped);
+   3. remove the permission again;
+   4. run `supabase/add_creator_sub_slots_4_6.sql`. The app offers the new slots on its own; no app update needed.
+7. **Upload your first house ad:** Admin → **🏠 House ads** (test I).
 
-Removed or held back as flawed:
-- **USD listings becoming USDT-only under multi-currency:** removed. USD-only carts keep card and USDT.
-- **P3 reseller checkout, P5 and P6:** their patches no longer match the checkout code (written before P7). Not applied; they need rewriting first.
-- **P4 partner boosts:** applies cleanly; ask to have it applied (SQL + code) when wanted.
-
-1. **Supabase SQL editor:** run `supabase/fix_p8_p9_review.sql` (above).
-2. ~~Dream Coins multi-quantity~~ **Done 19 Oct 2026**: all 7 packs on (undo: `node scripts/enable-dream-coin-multi-quantity.mjs --disable`).
-3. **Upload your first house ad:** admin portal → **🏠 House ads** (test I).
-4. **Multi-currency go-live:** when you're ready, run test G in one sitting.
-5. **Vercel env check:**
-   - `CRON_SECRET` must be set, or the daily jobs (refund syncs, rate refresh, matching jobs) don't run.
-   - `PAYOUTS_PROVIDER_LIVE` stays unset until you have a payout provider.
+Changes on 19 Oct 2026:
+- **P3 reseller checkout** works alongside multi-currency: reseller offers are US-dollar lines, so a cart mixing one with a naira/GBP/EUR/GHS listing shows "check out separately" and takes no payment. Buyers add a reseller's offer from the partner storefront (`/m/<handle>` → **Add to cart**).
+- **P5:** the payment-intent routes record partner attribution themselves (the app sends its tokens).
+- **P6:** buyer details are stored when the cart payment reference is created; the daily job (or **Complete unreturned carts** in Partners & Payouts) finishes paid carts whose buyer never came back.
+- **P4:** partners can boost a listing they are an approved partner for.
+- **Fixed:** `pages/api/register-participant.js` called a function that doesn't exist (`getReferralLink`) after creating the account, so that route returned an error; the old Jest test now runs under `node --test`.
+- **Not doable from here:** automatic social posting of promotion videos needs TikTok/Meta business API credentials; send them when you want it built.
 
 ## Part 2: Google Play work (you, Play Console)
 
 1. **Upload the AAB to internal testing:**
-   - the file is `mobile/android/app/build/outputs/bundle/release/app-release.aab` (1.0.23, versionCode 25);
+   - the file is `mobile/android/app/build/outputs/bundle/release/app-release.aab` (1.0.24, versionCode 26);
    - **Testing → Internal testing → Create new release** → upload → roll out.
 2. **License testers:** **Setup → License testing**, add your Google account and every tester's. Their test purchases aren't charged.
 3. **Install from Play:** on the phone, open the internal testing opt-in link and install from Play.
    - The copy installed by adb can't make Play purchases.
    - If the adb copy blocks the install, uninstall it first. Its data is on the server, so nothing is lost.
 4. **Closed testing and production access** (new personal developer accounts): you need at least **12 testers opted in for 14 days in a row** on a closed test. After that, **apply for production access** in the Dashboard. Being a tester yourself doesn't publish the app; each new version reaches testers only when you upload its AAB to that track.
-5. **Ad and boost prices:** all 14 were saved in Play at .99 below the database price (e.g. $9.99 vs $10). Either change each Play US price to the whole dollar, or set the database prices to .99 in Admin → Ads → Packages. Then **Check Google Play** shows no warnings.
+5. ~~Ad and boost prices~~ **Checked 19 Oct 2026:** all 14 Play US prices equal the database prices. Nothing to do.
 6. **Service account permissions:** **Users and permissions** → the service account →
    - remove **Manage store presence** (only needed while creating products);
    - keep **Manage orders and subscriptions**, **View app information** and **View financial data**.
@@ -79,7 +72,7 @@ Removed or held back as flawed:
    - **Paid voting is retired** (19 October 2026): removed from Android 1.0.22, the web app and the website; vote APIs return 410.
    - **Data safety form:** declare payment info (Paystack and USDT are handled outside Play), contact details (phone, WhatsApp, address for delivery), and photos and videos (listings and promotion videos).
    - **Content rating** questionnaire, **target audience** (18+ for selling and withdrawals), and a privacy policy URL.
-   - **Gift earnings:** before switching it on, check Google Play's rules on paying users from in-app purchases (step 3 of Part 3B).
+   - **Gift earnings:** coins are bought only through Play Billing and recipients are paid from One Dream's own revenue share, the same model Play allows for creator tipping apps. Keep it described that way in the store listing and Data safety form.
 
 ---
 
@@ -131,6 +124,7 @@ Run these on the app installed from internal testing, with a license-tester acco
 7. **Seller withdrawal:** request a USD withdrawal. **Expect:** it's reserved at once, appears in Admin → Withdrawals, and is marked paid by admin.
 8. **Order chat:** Message the Seller from an order. **Expect:** both sides see the messages.
 9. **Unreturned payments:** Admin → 🤝 Partners & Payouts → **Check unreturned payments**. **Expect:** "every one has its order".
+10. **Buyer never returns:** pay a cart by card, then close the app before it returns. Wait 30 minutes, then **Complete unreturned carts**. **Expect:** "completed 1", and the orders appear for buyer and seller.
 
 ### D. Agriculture & Farming
 
@@ -157,6 +151,9 @@ Run these on the app installed from internal testing, with a license-tester acco
 7. **Storefront:** open `/m/<handle>`. **Expect:** approved creatives, and never the seller's minimum resale price.
 8. **Self-purchase:** the partner buys through their own link. **Expect:** "Not eligible".
 9. **Creative engagement:** the seller hires, the partner delivers, and the seller completes it.
+10. **Private creatives:** before approval, the creative's image opens for the partner and in the admin list, but its plain `res.cloudinary.com/.../upload/...` link doesn't. After **Approve**, the storefront shows it.
+11. **Reseller checkout** (Reseller checkout switch on): the seller allows resale with a floor; the partner sets a price above it and is approved. On `/m/<handle>`, **Add to cart** → the cart shows the partner's price and "Sold through <partner>"; pay by card. **Expect:** the order's seller net is the floor less commission and the partner is credited the margin less commission (Admin → Run matching jobs). Add a naira listing to the same cart. **Expect:** "Reseller offers are paid in US dollars…", and no payment.
+12. **Partner boost:** the partner buys **Quick Boost** and boosts the listing they partner on. **Expect:** it's accepted and goes live.
 
 ### F. Partner payouts (only once the payout switch is on)
 
@@ -220,6 +217,8 @@ Details: `docs/MULTICURRENCY_IMPLEMENTATION.md`.
 3. Upload a short video. **Expect:** it plays in the ad card.
 4. **Counts:** after viewing and tapping, the admin counts go up (once per device per hour).
 5. **Pause:** pause one. **Expect:** it disappears within a minute. An `http://` link is refused.
+6. **Label:** on 1.0.24 the badge reads **From One Dream** (paid ads still say Sponsored).
+7. **Website:** open `Onedream.html` and `search.html`. **Expect:** the same ad card near the bottom.
 
 ### J. Advertising (paid campaigns)
 
@@ -240,20 +239,12 @@ Details: `docs/MULTICURRENCY_IMPLEMENTATION.md`.
 
 ## Planned development
 
-- **Premium advertising positions:** featured slots for Bronze, Silver and Gold.
-- **Ads on public website pages:** decide which pages and positions; house ads can use them too.
-- **House ads label:** an app update could show "From One Dream" instead of "Sponsored".
-- **Protected changes P3 to P6:** apply each one as you approve it.
-- **Later / optional:**
-  - per-viewer ad frequency cap;
-  - more creator subscription slots;
-  - automatic social posting for promotion videos;
-  - authenticated delivery for partner creatives.
+Done 19 Oct 2026: premium (featured) ad slot for Bronze/Silver/Gold, ads on public website pages, "From One Dream" house-ad label, P3–P6, per-viewer ad frequency cap, creator slots 4–6 (script + SQL ready, Part 1 step 6), private partner creatives until approval.
+
+- **Automatic social posting** of promotion videos: needs your TikTok / Meta business API credentials.
 
 ## Known issues
 
-- **`__tests__/lib/onedreamHelpers.test.js` doesn't run.** It's written for Jest; rewrite it for `node --test`.
-- **A `getReferralLink` import warning** in `pages/api/register-participant.js` shows on every build. It's harmless.
 - **The branch is pushed but not merged:** open a PR to `main` when you're ready.
 
 ## Reference
@@ -266,4 +257,4 @@ Details: `docs/MULTICURRENCY_IMPLEMENTATION.md`.
 - House ads: `docs/HOUSE_ADS.md`
 - Security & Tracking, Rentals & Hire departments: `supabase/add_security_rentals_categories.sql`
 - Protected changes: `docs/protected-patches/README.md`
-- Tests: `npm run test:earnings` (80 tests)
+- Tests: `npm run test:earnings` (81 tests), `node --test __tests__/lib/*.test.mjs` (53 tests)

@@ -121,8 +121,19 @@ async function buildFields(body, participant, snapshot, existing = null) {
     const listingId = body.listing_id !== undefined ? body.listing_id : existing?.listing_id;
     const { data: listing } = await adsDb.from('catalogue_items').select('id, seller_username, status')
       .eq('id', String(listingId || '')).maybeSingle();
-    if (!listing || listing.seller_username !== participant.username || listing.status !== 'active') {
-      return { error: 'Choose one of your own live listings' };
+    // P4: partners may also boost a listing they hold an approved affiliate
+    // partnership for (the boost then drives attributed sales to the seller).
+    const ownListing = listing && listing.seller_username === participant.username;
+    let partnerListing = false;
+    if (listing && !ownListing) {
+      const { data: membership } = await adsDb.from('affiliate_memberships')
+        .select('id, partner:affiliate_partners!inner(participant_id, status), offer:affiliate_offers!inner(item_id, status)')
+        .eq('status', 'approved').eq('offer.item_id', listing.id).eq('offer.status', 'active')
+        .eq('partner.participant_id', participant.id).eq('partner.status', 'active').limit(1).maybeSingle();
+      partnerListing = !!membership;
+    }
+    if (!listing || listing.status !== 'active' || (!ownListing && !partnerListing)) {
+      return { error: 'Choose one of your own live listings, or one you are an approved partner for' };
     }
     fields.listing_id = listing.id;
   } else if (destinationType === 'profile') {

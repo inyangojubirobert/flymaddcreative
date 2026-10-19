@@ -359,3 +359,22 @@ test('review fixes: naira payout minimum needs a fresh rate; ledger moves are al
   await assert.rejects(db.query(`insert into affiliate_offers (item_id, seller_username, funding, commission_percent, allow_resale, resale_floor_usd, amount_currency)
     values ($1, 'ngnseller', 'platform', 10, true, 10, 'NGN')`, [id(20)]), /affiliate_offers_resale_usd/);
 });
+
+test('activation bundle (supabase/activate_all_2026_10_19.sql) applies in one transaction, verifies, and runs again', async () => {
+  const fs = await import('node:fs/promises');
+  const bundle = await fs.readFile(new URL('../supabase/activate_all_2026_10_19.sql', import.meta.url), 'utf8');
+  // Tables the bundle touches that this in-memory copy doesn't otherwise model.
+  await db.exec(`
+    create table if not exists catalogue_checkouts (id uuid primary key default gen_random_uuid(), payment_ref text unique);
+    alter table catalogue_items add column if not exists payment_methods jsonb not null default '["paystack", "usdt"]';
+    alter table catalogue_orders add column if not exists checkout_id uuid;
+    create table if not exists advertising_campaigns (id uuid primary key default gen_random_uuid());
+    create table if not exists advertising_entitlements (id uuid primary key default gen_random_uuid());
+    create table if not exists advertising_events (id bigint generated always as identity primary key, campaign_id uuid, kind text, viewer_key text, created_at timestamptz default now());
+  `);
+  const verification = bundle.slice(bundle.lastIndexOf('with checks('));
+  for (let run = 1; run <= 2; run++) {
+    await db.exec(bundle.slice(0, bundle.lastIndexOf('with checks(')));
+    assert.deepEqual((await db.query(verification)).rows.filter((r) => !r.ok), [], `every check ok (run ${run})`);
+  }
+});

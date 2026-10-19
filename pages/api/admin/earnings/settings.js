@@ -47,6 +47,15 @@ export default async function handler(req, res) {
   if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to change' });
 
   try {
+    // Activation switches refuse until the protected SQL they depend on is live.
+    if (patch.resale_checkout_enabled === true) {
+      const { error: p3 } = await earningsDb.from('catalogue_orders').select('resale_membership_id').limit(1);
+      if (p3) return res.status(409).json({ error: 'Run docs/protected-patches/P3_reseller_checkout.sql first' });
+    }
+    if (patch.seller_funded_settlement_enabled === true) {
+      const { error: p8 } = await earningsDb.from('participant_withdrawals').select('currency').limit(1);
+      if (p8) return res.status(409).json({ error: 'Run docs/protected-patches/P8_usd_seller_wallet.sql first' });
+    }
     const before = await getEarningsSettings();
     if ((patch.gift_recipient_percent ?? before.gift_recipient_percent) + (patch.gift_merchant_percent ?? before.gift_merchant_percent) > 100) {
       return res.status(400).json({ error: 'Recipient and merchant shares cannot exceed 100%' });
