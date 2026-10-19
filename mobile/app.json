@@ -2,7 +2,7 @@
   "expo": {
     "name": "One Dream Initiative",
     "slug": "onedream-mobile",
-    "version": "1.0.24",
+    "version": "1.0.25",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "flymaddcreative",
@@ -13,7 +13,8 @@
     },
     "android": {
       "package": "com.flymaddcreative.onedream",
-      "versionCode": 26,
+      "versionCode": 27,
+      "blockedPermissions": ["android.permission.READ_MEDIA_IMAGES", "android.permission.READ_MEDIA_VIDEO"],
       "adaptiveIcon": {
         "backgroundColor": "#04457B",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
