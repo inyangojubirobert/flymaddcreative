@@ -12,6 +12,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { creditPaidVotes, VOTE_VALUE_USD, verifyPaystackVote, verifyUsdtVote } from '../../../lib/voteCredits';
+import { refuseRetiredVoting } from '../../../lib/paidVoting';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -19,6 +20,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  if (refuseRetiredVoting(res)) return;
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

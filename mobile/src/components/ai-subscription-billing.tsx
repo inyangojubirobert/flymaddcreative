@@ -17,7 +17,7 @@ import { googleSubscriptionManagementUrl, googleSubscriptionRequest, monthlyGoog
 
 const PLAN_FEATURES: Record<AiPlan['id'], string[]> = {
   free: ['App and project questions', 'Catalogue guidance', 'Basic recommendations'],
-  pro: ['Everything in Free', 'Sales and catalogue analysis', 'Vote and leaderboard insights', 'Marketing recommendations'],
+  pro: ['Everything in Free', 'Sales and catalogue analysis', 'Customer and growth insights', 'Marketing recommendations'],
   business: ['Everything in Pro', 'Higher monthly allowance', 'Deeper business strategy', 'Frequent performance reports'],
 };
 
@@ -204,7 +204,7 @@ export default function AiSubscriptionScreen() {
             </View>
             <ThemedText type="title" style={styles.heroTitle}>Choose your AI allowance</ThemedText>
             <ThemedText style={styles.heroText}>
-              Bascardo AI understands your FlyMadd catalogue sales, votes, and leaderboard position while keeping each account&apos;s data private.
+              Bascardo AI understands your FlyMadd catalogue sales and customers while keeping each account&apos;s data private.
             </ThemedText>
           </View>
 

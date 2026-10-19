@@ -148,7 +148,7 @@
                 <h1 class="text-4xl font-bold mb-4">
                     📝 <span class="gradient-text">Join One Dream Initiative</span>
                 </h1>
-                <p class="text-xl text-slate-300">Register to participate in the community voting and compete for top positions!</p>
+                <p class="text-xl text-slate-300">Register to build your profile, open your storefront and receive gifts from supporters.</p>
             </div>
 
             <form id="registrationForm" class="space-y-6" autocomplete="on">
@@ -174,7 +174,7 @@
                            autocomplete="username"
                            class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500 focus:border-transparent transition-colors"
                            placeholder="Choose a unique username">
-                    <p class="text-sm text-slate-400 mt-1">This will be used in your voting link</p>
+                    <p class="text-sm text-slate-400 mt-1">This will be used in your profile link</p>
                 </div>
 
                 <div>
@@ -276,10 +276,10 @@
 
             <!-- User Code Sharing -->
             <div class="bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg p-6 mb-6">
-                <h3 class="text-xl font-bold mb-4 text-white">🎯 Easy Voting with Your Code</h3>
+                <h3 class="text-xl font-bold mb-4 text-white">🎯 Easy Sharing with Your Code</h3>
                 <div class="bg-black bg-opacity-20 rounded-lg p-4 mb-4">
                     <div class="text-center">
-                        <div class="text-sm text-white/80 mb-2">Share this code for easy voting:</div>
+                        <div class="text-sm text-white/80 mb-2">Share this code so supporters can find you:</div>
                         <div class="text-3xl font-mono font-bold text-yellow-300 tracking-widest" id="displayShareCode">ABC123XY</div>
                         <div class="text-sm text-white/80 mt-2">People can search for you using this code</div>
                     </div>
@@ -294,16 +294,16 @@
                 </p>
             </div>
 
-            <!-- Voting Link -->
+            <!-- Profile Link -->
             <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-6 mb-6">
-                <h3 class="text-xl font-bold mb-4 text-black">🔗 Your One Dream Voting Link</h3>
+                <h3 class="text-xl font-bold mb-4 text-black">🔗 Your One Dream Profile Link</h3>
                 <div class="bg-black bg-opacity-20 rounded-lg p-4">
                     <div class="flex items-center justify-between">
-                        <code class="text-sm text-white font-mono break-all" id="displayVoteLink">onedream vote support(username)</code>
+                        <code class="text-sm text-white font-mono break-all" id="displayVoteLink">https://www.flymaddcreative.online/app/profile/username</code>
                         <button onclick="copyToClipboard('displayVoteLink', 'copyLinkBtn')" id="copyLinkBtn"
                                 class="copy-button ml-3 p-2 bg-black bg-opacity-30 hover:bg-opacity-50 rounded transition-colors"
-                                title="Copy voting link"
-                                aria-label="Copy voting link to clipboard">
+                                title="Copy profile link"
+                                aria-label="Copy profile link to clipboard">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                             </svg>
@@ -311,15 +311,15 @@
                     </div>
                 </div>
                 <p class="text-black text-sm mt-3">
-                    <strong>Share this One Dream support command with others to get votes!</strong> People can type this command to vote for you and help you climb the leaderboard.
+                    <strong>Share your profile link with your community.</strong> Supporters can visit your shop and send you Dream Coin gifts.
                 </p>
             </div>
 
             <!-- Action Buttons -->
             <div class="flex flex-col sm:flex-row gap-4">
-                <button onclick="window.location.href='leadershipBoard.html'" 
+                <button onclick="window.location.href='/app/leaderboard'" 
                         class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-                    🏆 View Leaderboard
+                    🏅 Recognition Boards
                 </button>
                 <button onclick="shareVotingLink()" 
                         class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
@@ -521,7 +521,7 @@
             if (!currentParticipant) return;
             
             const voteLink = currentParticipant.voteLink;
-            const shareText = `🌟 Vote for me in the One Dream Initiative! ${voteLink}`;
+            const shareText = `🌟 Visit my One Dream profile and shop! ${voteLink}`;
             
             if (navigator.share) {
                 navigator.share({ title: 'One Dream Initiative', text: shareText, url: voteLink });

@@ -40,7 +40,7 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        const voteLink = `https://www.flymaddcreative.online/vote.html?user=${user.username}`;
+        const voteLink = `https://www.flymaddcreative.online/app/profile/${encodeURIComponent(user.username)}`;
 
         // Generate JWT token
         const token = jwt.sign(

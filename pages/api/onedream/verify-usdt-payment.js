@@ -5,8 +5,10 @@
 // wallet, token must be USDT, confirmations enforced.
 
 import { VOTE_VALUE_USD, verifyUsdtVote } from '../../../lib/voteCredits';
+import { refuseRetiredVoting } from '../../../lib/paidVoting';
 
 export default async function handler(req, res) {
+  if (refuseRetiredVoting(res)) return;
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

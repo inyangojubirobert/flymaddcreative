@@ -11,6 +11,7 @@ import { BASCARDO_LOGO_URL } from '@/constants/bascardo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/use-theme';
 import { getCatalogueByUsername } from '@/api/catalogue';
+import { getRecognition } from '@/api/gifts';
 
 type ProfileActionProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -29,6 +30,11 @@ export default function ProfileScreen() {
   const shopQuery = useQuery({
     queryKey: ['my-catalogue', participant?.username],
     queryFn: () => getCatalogueByUsername(participant!.username),
+    enabled: !!participant,
+  });
+  const recognitionQuery = useQuery({
+    queryKey: ['recognition', participant?.username],
+    queryFn: () => getRecognition(participant!.username),
     enabled: !!participant,
   });
 
@@ -82,20 +88,20 @@ export default function ProfileScreen() {
 
           <View style={styles.summaryRow}>
             <View style={[styles.summaryCard, styles.votesCard]}>
-              <Ionicons name="heart" size={22} color={Palette.blue} />
-              <ThemedText type="title" style={styles.summaryValue}>{participant.total_votes.toLocaleString()}</ThemedText>
-              <ThemedText type="small" style={styles.summaryLabel}>Total votes</ThemedText>
+              <Ionicons name="ribbon" size={22} color={Palette.blue} />
+              <ThemedText type="title" style={styles.summaryValue}>{(recognitionQuery.data?.recognition_points ?? 0).toLocaleString()}</ThemedText>
+              <ThemedText type="small" style={styles.summaryLabel}>Recognition points</ThemedText>
             </View>
             <View style={[styles.summaryCard, styles.codeCard]}>
               <Ionicons name="key" size={22} color={Palette.yellowInk} />
               <ThemedText type="title" style={styles.codeValue} numberOfLines={1} adjustsFontSizeToFit>{participant.user_code}</ThemedText>
-              <ThemedText type="small" style={styles.codeLabel}>Voting code</ThemedText>
+              <ThemedText type="small" style={styles.codeLabel}>Profile code</ThemedText>
             </View>
           </View>
 
           <View style={styles.tipCard}>
             <Ionicons name="bulb" size={22} color={Palette.yellowInk} />
-            <ThemedText type="small" style={styles.tipText}>Share your voting code so supporters can quickly find your profile.</ThemedText>
+            <ThemedText type="small" style={styles.tipText}>Share your profile code so supporters can quickly find you and send a gift.</ThemedText>
           </View>
 
           <ThemedText type="smallBold" style={styles.sectionLabel}>YOUR SPACE</ThemedText>
@@ -136,7 +142,7 @@ export default function ProfileScreen() {
               iconBackground={Palette.yellowSoft}
               iconColor={Palette.yellowInk}
               title="Bascardo AI adviser"
-              subtitle="Analyse your sales, catalogue, votes, and position"
+              subtitle="Analyse your sales, catalogue, and customers"
               onPress={() => router.push('/ai' as never)}
             />
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
@@ -150,20 +156,11 @@ export default function ProfileScreen() {
             />
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
             <ProfileAction
-              icon="trophy"
-              iconBackground={Palette.yellowSoft}
-              iconColor={Palette.yellowInk}
-              title="Leaderboard"
-              subtitle="See rankings and creator momentum"
-              onPress={() => router.push('/leaderboard' as never)}
-            />
-            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
-            <ProfileAction
               icon="wallet"
               iconBackground={Palette.blueSoft}
               iconColor={Palette.blue}
               title="Wallet"
-              subtitle="View rewards and withdrawal activity"
+              subtitle="View earnings and withdrawal activity"
               onPress={() => router.push('/wallet' as never)}
             />
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
@@ -226,7 +223,7 @@ export default function ProfileScreen() {
               iconBackground={Palette.yellowSoft}
               iconColor={Palette.yellowInk}
               title="Help & FAQ"
-              subtitle="Guides for catalogues, votes, and payments"
+              subtitle="Guides for catalogues, gifts, and payments"
               onPress={() => router.push('/faq' as never)}
             />
           </View>

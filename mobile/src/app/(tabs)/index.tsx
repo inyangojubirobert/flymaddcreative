@@ -12,17 +12,8 @@ import { BASCARDO_LOGO_URL } from '@/constants/bascardo';
 import { useTheme } from '@/hooks/use-theme';
 import { getCategories } from '@/api/catalogue';
 import { homeShortcuts } from '@/lib/catalogue-directory';
-import { getLeaderboard } from '@/api/participants';
-import { apiFetch } from '@/lib/api-client';
+import { getLeaderboard } from '@/api/gifts';
 import { useAuth } from '@/contexts/AuthContext';
-
-type VoteStats = {
-  stats: {
-    totalVotes: number;
-    goalVotes: number;
-    progressPercent: number;
-  };
-};
 
 const APP_LOGO_URL =
   'https://res.cloudinary.com/dljcj00ht/image/upload/v1751137778/90639762_2872585919484791_7377249381973491712_n_swlodr.jpg';
@@ -33,8 +24,8 @@ export default function HomeScreen() {
   const { token } = useAuth();
 
   const leaderboardQuery = useQuery({
-    queryKey: ['leaderboard'],
-    queryFn: () => getLeaderboard(5),
+    queryKey: ['reward-board', 'most_appreciated'],
+    queryFn: () => getLeaderboard('most_appreciated'),
   });
 
   const categoriesQuery = useQuery({
@@ -42,20 +33,14 @@ export default function HomeScreen() {
     queryFn: getCategories,
   });
 
-  const statsQuery = useQuery({
-    queryKey: ['vote-stats'],
-    queryFn: () => apiFetch<VoteStats>('/api/onedream/vote-stats'),
-  });
-
-  const isRefreshing = leaderboardQuery.isFetching || statsQuery.isFetching || categoriesQuery.isFetching;
+  const isRefreshing = leaderboardQuery.isFetching || categoriesQuery.isFetching;
 
   function refresh() {
     leaderboardQuery.refetch();
-    statsQuery.refetch();
     categoriesQuery.refetch();
   }
 
-  const topLeaderboard = leaderboardQuery.data ?? [];
+  const topLeaderboard = (leaderboardQuery.data?.entries ?? []).slice(0, 5);
 
   return (
     <ThemedView style={styles.container}>
@@ -98,27 +83,13 @@ export default function HomeScreen() {
             </View>
           </ThemedView>
 
-          {statsQuery.data && (
-            <ThemedView style={styles.statsCard}>
-              <View style={styles.statsIcon}><Ionicons name="heart" size={22} color={Palette.yellowInk} /></View>
-              <View style={styles.statsCopy}>
-                <ThemedText type="smallBold" style={styles.statsValue}>
-                  {statsQuery.data.stats.totalVotes.toLocaleString()} / {statsQuery.data.stats.goalVotes.toLocaleString()} votes
-                </ThemedText>
-                <ThemedText type="small" style={styles.statsLabel}>
-                  {Number(statsQuery.data.stats.progressPercent ?? 0).toFixed(1)}% of the community goal
-                </ThemedText>
-              </View>
-            </ThemedView>
-          )}
-
           <Pressable onPress={() => router.push('/ai' as never)} style={styles.aiCard}>
             <View style={styles.aiCardIcon}>
               <Image source={{ uri: BASCARDO_LOGO_URL }} style={styles.aiCardLogo} resizeMode="contain" accessibilityLabel="Bascardo AI logo" />
             </View>
             <View style={styles.aiCardCopy}>
               <ThemedText type="smallBold" style={styles.aiCardTitle}>Bascardo AI business adviser</ThemedText>
-              <ThemedText type="small" style={styles.aiCardText}>Ask about catalogue sales, votes, and your leaderboard position.</ThemedText>
+              <ThemedText type="small" style={styles.aiCardText}>Ask about catalogue sales, customers, and how to grow your shop.</ThemedText>
             </View>
             <Ionicons name="arrow-forward" size={20} color={Palette.yellowInk} />
           </Pressable>
@@ -164,7 +135,7 @@ export default function HomeScreen() {
             {[
               { icon: 'person-add' as const, title: '1. Register', text: 'Create your profile and get your unique referral link.', tint: Palette.blueSoft, ink: Palette.blue },
               { icon: 'share-social' as const, title: '2. Share', text: 'Post your link and tell your community why your dream matters.', tint: Palette.yellowSoft, ink: Palette.yellowInk },
-              { icon: 'trending-up' as const, title: '3. Earn votes', text: 'Build momentum, climb the leaderboard, and unlock rewards.', tint: Palette.ashSoft, ink: Palette.slate },
+              { icon: 'gift' as const, title: '3. Get appreciated', text: 'Supporters send Dream Coin gifts. Earn recognition points, badges and a place on the recognition boards.', tint: Palette.ashSoft, ink: Palette.slate },
               { icon: 'storefront' as const, title: '4. Build your storefront', text: 'Publish 10 active listings with a promo video, then opt in (My Listings) to have it featured in One Dream’s social media ads. Each selected video gets up to $10 of ads paid by One Dream, from a $1,000 promotion budget.', tint: Palette.blueSoft, ink: Palette.blueDark },
             ].map((step) => (
               <ThemedView key={step.title} type="backgroundElement" style={[styles.stepCard, { borderColor: theme.backgroundSelected }]}>
@@ -180,19 +151,22 @@ export default function HomeScreen() {
           </ThemedView>
 
           <ThemedView style={styles.sectionTitleWrap}>
-            <View style={[styles.sectionIcon, { backgroundColor: Palette.yellowSoft }]}><Ionicons name="trophy" size={18} color={Palette.yellowInk} /></View>
-            <ThemedText type="smallBold" style={styles.sectionTitle}>Top supporters</ThemedText>
+            <View style={[styles.sectionIcon, { backgroundColor: Palette.yellowSoft }]}><Ionicons name="ribbon" size={18} color={Palette.yellowInk} /></View>
+            <ThemedText type="smallBold" style={styles.sectionTitle}>Most appreciated</ThemedText>
           </ThemedView>
 
           {leaderboardQuery.isLoading ? (
             <ActivityIndicator size="large" style={styles.loading} />
           ) : leaderboardQuery.isError ? (
-            <ThemedText style={styles.error}>Couldn&apos;t load the leaderboard. Pull to retry.</ThemedText>
+            <ThemedText style={styles.error}>Couldn&apos;t load recognition. Pull to retry.</ThemedText>
           ) : (
             <ThemedView style={styles.list}>
+              {topLeaderboard.length === 0 ? (
+                <ThemedText type="small" themeColor="textSecondary">No gifts yet. Open a creator&apos;s profile and send the first one.</ThemedText>
+              ) : null}
               {topLeaderboard.map((item, index) => (
                 <Pressable
-                  key={item.id}
+                  key={item.username}
                   onPress={() => router.push(`/profile/${item.username}` as never)}
                   style={[styles.row, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
                 >
@@ -203,7 +177,7 @@ export default function HomeScreen() {
                     <ThemedText type="default" style={styles.personName}>{item.name}</ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">@{item.username}</ThemedText>
                   </View>
-                  <ThemedText type="smallBold" style={styles.rowVotes}>{item.total_votes.toLocaleString()}</ThemedText>
+                  <ThemedText type="smallBold" style={styles.rowVotes}>{(item.recognition_points ?? 0).toLocaleString()} pts</ThemedText>
                   <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
                 </Pressable>
               ))}
@@ -211,8 +185,8 @@ export default function HomeScreen() {
           )}
 
           <Pressable onPress={() => router.push('/leaderboard' as never)} style={styles.leaderboardButton}>
-            <Ionicons name="trophy" size={19} color={Palette.blue} style={styles.leaderboardIcon} />
-            <ThemedText style={styles.leaderboardButtonText}>View Full Leaderboard</ThemedText>
+            <Ionicons name="ribbon" size={19} color={Palette.blue} style={styles.leaderboardIcon} />
+            <ThemedText style={styles.leaderboardButtonText}>View recognition boards</ThemedText>
           </Pressable>
         </ScrollView>
       </SafeAreaView>
@@ -235,7 +209,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
   // The Android tab bar floats over the screen. Reserve its full height plus
-  // a little breathing room so the final "View Full Leaderboard" button is
+  // a little breathing room so the final "View recognition boards" button is
   // never hidden behind it in APK and AAB builds.
   content: { paddingHorizontal: Spacing.three, paddingBottom: BottomTabInset + Spacing.four, gap: Spacing.three },
   heroCard: { borderRadius: 24, padding: Spacing.three, marginTop: Spacing.two, gap: Spacing.two, backgroundColor: Palette.blueDark, shadowColor: Palette.slateDark, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.18, shadowRadius: 16, elevation: 6 },
@@ -265,11 +239,6 @@ const styles = StyleSheet.create({
   categoryTile: { width: 88, alignItems: 'center', gap: 8 },
   categoryIcon: { width: 64, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   categoryName: { fontSize: 12, lineHeight: 15, textAlign: 'center' },
-  statsCard: { borderRadius: 18, padding: Spacing.three, gap: Spacing.two, backgroundColor: Palette.yellowSoft, borderWidth: 1, borderColor: '#FDE68A', flexDirection: 'row', alignItems: 'center' },
-  statsIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: '#FDE68A', alignItems: 'center', justifyContent: 'center' },
-  statsCopy: { flex: 1 },
-  statsValue: { color: Palette.yellowInk },
-  statsLabel: { color: '#92400E' },
   aiCard: { minHeight: 86, borderRadius: 18, padding: Spacing.three, backgroundColor: Palette.yellowSoft, borderWidth: 1, borderColor: '#FDE68A', flexDirection: 'row', alignItems: 'center', gap: 12 },
   aiCardIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: Palette.white, alignItems: 'center', justifyContent: 'center' },
   aiCardLogo: { width: 42, height: 42, borderRadius: 13 },

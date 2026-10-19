@@ -35,7 +35,7 @@ export default async function handler(req, res) {
         // Get referral link
         await new Promise(r => setTimeout(r, 300));
         const voteLink = await getReferralLink(participant.id) 
-            || `https://www.flymaddcreative.online/vote.html?user=${normalizedUsername}`;
+            || `https://www.flymaddcreative.online/app/profile/${encodeURIComponent(normalizedUsername)}`;
         
         // JWT
         const token = jwt.sign({ userId: participant.id, email: participant.email, type: 'onedream' }, getJwtSecret(), { expiresIn: '7d' });

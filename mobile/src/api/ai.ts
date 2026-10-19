@@ -39,15 +39,6 @@ export type AiMetrics = {
     topProducts: { itemId: string; title: string; units: number; revenueUsd: number }[];
     unsoldListings: { id: string; title: string; priceUsd: number }[];
   };
-  votes: {
-    total: number;
-    last30Days: number | null;
-    previous30Days: number | null;
-  };
-  leadership: {
-    position: number | null;
-    currentStage: string | null;
-  };
 };
 
 export type AiOverview = {

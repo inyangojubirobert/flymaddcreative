@@ -12,22 +12,21 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   getMarketplaceWallet,
-  getWalletSummary,
   requestMarketplaceWithdrawal,
-  requestWithdrawal,
   type LedgerState,
   type MarketplaceSale,
 } from '@/api/wallet';
 import { ApiError } from '@/lib/api-client';
 import { DigitalEarningsPanel } from '@/components/digital-earnings';
 
-// Two balances, kept separate in accounting and shown side by side:
+// Balances, kept separate in accounting and shown side by side:
 //   Marketplace earnings - sales after One Dream's commission; withdrawable
 //                          only once the buyer confirms delivery.
-//   Vote rewards         - $1 per vote received.
+//   Digital earnings     - Google Play digital product sales.
+// Vote rewards were retired with paid voting.
 // The server recomputes every balance before accepting a withdrawal.
 
-type Tab = 'marketplace' | 'digital' | 'votes';
+type Tab = 'marketplace' | 'digital';
 
 const usd = (value: number) => `$${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const ngn = (value: number) => `₦${(Number(value) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -56,9 +55,8 @@ export default function WalletScreen() {
         <View style={styles.tabs}>
           <TabButton label="Marketplace" icon="storefront" selected={tab === 'marketplace'} onPress={() => setTab('marketplace')} />
           <TabButton label="Digital" icon="library" selected={tab === 'digital'} onPress={() => setTab('digital')} />
-          <TabButton label="Votes" icon="trophy" selected={tab === 'votes'} onPress={() => setTab('votes')} />
         </View>
-        {tab === 'marketplace' ? <MarketplaceWallet /> : tab === 'digital' ? <DigitalEarningsPanel /> : <VoteWallet />}
+        {tab === 'marketplace' ? <MarketplaceWallet /> : <DigitalEarningsPanel />}
       </SafeAreaView>
     </ThemedView>
   );
@@ -200,46 +198,6 @@ function SaleRow({ sale }: { sale: MarketplaceSale }) {
   );
 }
 
-function VoteWallet() {
-  const { token } = useAuth();
-  const theme = useTheme();
-  const query = useQuery({
-    queryKey: ['wallet'],
-    queryFn: () => getWalletSummary(token!),
-    enabled: !!token,
-  });
-  const data = query.data;
-  if (query.isLoading) return <ActivityIndicator size="large" style={styles.loading} />;
-
-  return (
-    <ScrollView
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={<RefreshControl refreshing={query.isFetching} onRefresh={() => void query.refetch()} />}
-    >
-      <View style={[styles.hero, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-        <ThemedText type="small" themeColor="textSecondary">Available vote rewards</ThemedText>
-        <ThemedText type="title" style={styles.heroAmountBlue}>{usd(data?.available_balance ?? 0)}</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">Earned {usd(data?.earned ?? 0)} · Withdrawn {usd(data?.withdrawn ?? 0)}</ThemedText>
-      </View>
-
-      <WithdrawForm
-        available={data?.available_balance ?? 0}
-        queryKey="wallet"
-        submit={(input) => requestWithdrawal(token!, input)}
-        emptyText="You earn $1 for every vote you receive."
-      />
-
-      <ThemedText type="smallBold" style={styles.sectionTitle}>Withdrawal history</ThemedText>
-      {(data?.withdrawals ?? []).length ? data!.withdrawals.map((item) => (
-        <View key={item.id} style={[styles.historyRow, { backgroundColor: theme.backgroundElement }]}>
-          <ThemedText type="small">{usd(item.amount_usd)} · {item.payment_method}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">{WITHDRAWAL_LABEL[item.status] || item.status}</ThemedText>
-        </View>
-      )) : <ThemedText type="small" themeColor="textSecondary">No withdrawals yet.</ThemedText>}
-    </ScrollView>
-  );
-}
-
 function WithdrawForm({ available, queryKey, submit, emptyText, format = usd, currencyLabel = 'USD' }: {
   available: number;
   queryKey: string;
@@ -351,7 +309,6 @@ const styles = StyleSheet.create({
   loading: { marginTop: Spacing.six, textAlign: 'center' },
   hero: { borderRadius: 18, borderWidth: 1, padding: Spacing.three, gap: 4 },
   heroAmount: { fontSize: 34, lineHeight: 40, color: Palette.green },
-  heroAmountBlue: { fontSize: 34, lineHeight: 40, color: Palette.blue },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   divider: { height: 1, marginVertical: Spacing.two },
   pendingText: { color: Palette.yellowInk },

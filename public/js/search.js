@@ -78,12 +78,10 @@ function showParticipantFound() {
     document.getElementById('foundParticipantName').textContent = foundParticipant.name;
     document.getElementById('foundParticipantUsername').textContent = foundParticipant.username;
     document.getElementById('foundParticipantEmail').textContent = foundParticipant.email;
-    document.getElementById('foundParticipantVotes').textContent = foundParticipant.total_votes.toLocaleString();
-    document.getElementById('foundParticipantRank').textContent = `#${foundParticipant.rank}`;
     const initials = foundParticipant.name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2);
     document.getElementById('foundParticipantInitials').textContent = initials;
     document.getElementById('voteForParticipant').onclick = function() {
-        window.location.href = `vote.html?username=${foundParticipant.username}`;
+        window.location.href = `/app/profile/${encodeURIComponent(foundParticipant.username)}`;
     };
     document.getElementById('searchResults').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }

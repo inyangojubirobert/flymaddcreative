@@ -78,7 +78,11 @@ Environment variables: `DREAM_COINS_ENABLED` (default off), `VIRTUAL_GIFT_MAX_PE
 - Entry points: Profile tab ("Dream Coins & gifts", "Rewards & recognition"), public profile ("Appreciation & gifts"), and an optional thank-you prompt on delivered orders in the cart's order list and the listing screen. The prompt is shown only to signed-in buyers, and only after `buyer_confirmed` or `released`.
 - Web app (/app): the same screens. The store reads "buy in the Android app". There is no web checkout for coins.
 
-## 6. Paid voting: inventory and retirement plan (no changes made)
+## 6. Paid voting: inventory and retirement plan
+
+**Resolved 19 October 2026: paid voting is retired.** The owner decided to remove it and keep Dream Coins and gifts. Production had no real vote sales (0 `votes` rows, 0 `payments`, 0 withdrawals; the 179 `total_votes` on 20 accounts are seed data from 4 January 2026). Every vote purchase, crediting and vote-withdrawal route now returns 410 (`lib/paidVoting.js`). Buy Votes, the vote screen, the vote leaderboard, cash prizes and the 1,000,000-vote bar are gone from Android 1.0.22, the web app and the website. Old vote links redirect to the creator's profile. Vote records are kept as history.
+
+The inventory and plan below are kept for reference.
 
 **Inventory:**
 - Vote sales: `pages/api/onedream/{vote, create-payment-intent, init-crypto-payment, finalize-payment, verify-usdt-payment, paymentWebhook}.js`, `lib/voteCredits.js`.
@@ -157,5 +161,5 @@ Historical records stay intact throughout.
 ## 10. Blockers and decisions needed
 
 - **B1. One-time-product RTDN.** Handling coin notifications in real time would mean editing the subscription RTDN endpoint, which is protected. Without it, coins are credited when the app reports the purchase, pending purchases are picked up on the next app open, and refunds are applied by the daily sync. Authorise this only if real-time crediting is needed.
-- **B2. Paid voting in the Android app.** This is a policy risk that exists already (section 6). It needs an owner decision.
+- **B2. Paid voting in the Android app.** Resolved 19 October 2026: retired (section 6).
 - **B3. Merchant-referral and affiliate metrics.** Merchant accounts are separate from participants, and affiliate attribution does not exist yet. These programmes stay "coming soon" or inactive until the affiliate engine ([MERCHANT_AFFILIATE_FRAMEWORK.md](MERCHANT_AFFILIATE_FRAMEWORK.md)) supplies the data.

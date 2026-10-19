@@ -1,6 +1,5 @@
 // Must be the first import in the app: Hermes doesn't have a full `URL`
-// implementation, and both @supabase/supabase-js and the Paystack callback
-// parsing in vote/[username].tsx rely on the global URL constructor.
+// implementation, and @supabase/supabase-js relies on the global URL constructor.
 import 'react-native-url-polyfill/auto';
 
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-router';
@@ -84,7 +83,6 @@ function RootNavigator() {
       <Stack.Protected guard={!!token}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="profile/[username]" options={{ headerShown: true, title: '' }} />
-        <Stack.Screen name="vote/[username]" options={{ headerShown: true, presentation: 'modal' }} />
         <Stack.Screen name="catalogue/[username]" options={{ headerShown: true }} />
         <Stack.Screen name="catalogue/order-chat" options={{ headerShown: true }} />
         <Stack.Screen name="catalogue/manage" options={{ headerShown: true, title: 'My Shop' }} />

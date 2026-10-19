@@ -16,6 +16,7 @@ Everything below is built and deployed. Part 1 is the setup still to do. Part 2 
 | Multi-currency listings | Code live; database applied (migration, review fixes, P8, P9); rates refresh daily. Switch **off** |
 | Storefront video promotion | **Live**: terms v2, $10 per selected video, $1,000 cap, 3 funded videos per seller |
 | Agriculture & Farming department | **Live**: 15 categories, about 95 search words |
+| Security & Tracking, Rentals & Hire departments | **Live**: 16 categories, 107 search words |
 | House ads (admin-uploaded One Dream ads) | **Live**: tables created; upload your first ad (test I) |
 | Protected changes P3, P4, P5, P6 | Prepared, not applied (`docs/protected-patches/README.md`). P1 isn't needed: P8 includes it |
 
@@ -28,7 +29,7 @@ Every SQL file has been run, except these two:
 | `supabase/fix_p8_p9_review.sql` | **Can't be confirmed from here** (it only replaces function bodies) | Run it once now. It's safe to run again: 6 rows, all `ok = true` |
 | `docs/protected-patches/P7_multicurrency_checkout.sql` | Not run, **on purpose** | Run only when you switch multi-currency on (test G) |
 
-Confirmed applied: the multi-currency migration and its review fixes, P8, P9, storefront promotion and its review fixes (terms v2 current), agriculture categories, house ads, and every earlier migration.
+Confirmed applied: the multi-currency migration and its review fixes, P8, P9, storefront promotion and its review fixes (terms v2 current), agriculture categories, security & rentals categories, house ads, and every earlier migration.
 
 ---
 
@@ -64,7 +65,7 @@ Confirmed applied: the multi-currency migration and its review fixes, P8, P9, st
    - keep **Manage orders and subscriptions**, **View app information** and **View financial data**.
 7. **Real-time notifications:** **Monetisation setup → Real-time developer notifications** must point to the existing AI subscription Pub/Sub topic. It already does; just check it.
 8. **Policy before production:**
-   - **Paid voting ("Buy Votes")** is the main Google Play policy risk. Decide whether to remove it from the Android app before applying for production (`docs/DREAM_COINS_POLICY_READINESS.md`).
+   - **Paid voting is retired** (19 October 2026): removed from Android 1.0.22, the web app and the website; vote APIs return 410.
    - **Data safety form:** declare payment info (Paystack and USDT are handled outside Play), contact details (phone, WhatsApp, address for delivery), and photos and videos (listings and promotion videos).
    - **Content rating** questionnaire, **target audience** (18+ for selling and withdrawals), and a privacy policy URL.
    - **Gift earnings:** before switching it on, check Google Play's rules on paying users from in-app purchases (step 3 of Part 3B).
@@ -126,6 +127,13 @@ Run these on the app installed from internal testing, with a license-tester acco
 2. Search "cassava", "fingerlings", "NPK" and "tractor hire". **Expect:** the matching agricultural category comes up for each.
 3. New listing in **Livestock**. **Expect:** product only. New listing in **Veterinary Services**. **Expect:** service only.
 4. Search "tomatoes". **Expect:** both Farm Fruits & Vegetables (farmers) and Farm Produce (Food & Grocery) can be found.
+
+### D2. Security & Tracking, Rentals & Hire
+
+1. App → Shop. **Expect:** a **Security & Tracking** department (7 categories: guards, bodyguards, event security, training, equipment and alarms, vehicle and fleet tracking, phone and number tracking) and a **Rentals & Hire** department (9 categories: event and party, generator, sound and stage, camera and studio, furniture and appliances, wedding decor, costumes and outfits, tools, electronics).
+2. Search "number tracking", "phone tracker", "bouncer", "canopy" and "generator hire". **Expect:** the matching new category comes first.
+3. New listing in **Security Guards**. **Expect:** service only.
+4. Phone & Number Tracking is for the seller's own or customers' own devices, consented family locators, stolen-phone recovery and business call tracking. Remove any listing that offers to locate someone else's phone or number.
 
 ### E. Affiliate marketplace
 
@@ -245,5 +253,6 @@ Details: `docs/MULTICURRENCY_IMPLEMENTATION.md`.
 - Multi-currency: `docs/MULTICURRENCY_IMPLEMENTATION.md`
 - Storefront video promotion: `docs/STOREFRONT_PROMO_REVIEW.md`
 - House ads: `docs/HOUSE_ADS.md`
+- Security & Tracking, Rentals & Hire departments: `supabase/add_security_rentals_categories.sql`
 - Protected changes: `docs/protected-patches/README.md`
 - Tests: `npm run test:earnings` (80 tests)

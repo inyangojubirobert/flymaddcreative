@@ -30,7 +30,7 @@ const FALLBACK_PROJECT_KNOWLEDGE = [
   {
     category: 'One Dream Initiative',
     question: 'What is the One Dream Initiative?',
-    answer: 'It is FlyMadd Creative’s referral and voting rewards programme. Participants share their profile or referral link, build support through votes, progress through stages, and can request withdrawals of their available earnings.'
+    answer: 'It is FlyMadd Creative’s creator commerce programme. Participants build a profile and storefront, share their profile link, sell to their audience, and receive Dream Coin gifts that earn recognition points and badges. Paid voting has ended.'
   },
   {
     category: 'Support',

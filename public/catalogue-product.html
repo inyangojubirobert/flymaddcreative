@@ -36,7 +36,7 @@
 <nav class="bg-black/30 border-b border-white/10 sticky top-0 z-50" style="backdrop-filter:blur(12px)">
     <div class="max-w-5xl mx-auto px-4 flex items-center justify-between h-14">
         <a href="Onedream.html" class="font-bold gradient-text text-lg">🌟 One Dream Initiative</a>
-        <a href="vote.html" class="text-sm text-slate-300 hover:text-white transition-colors">← Back</a>
+        <a href="/app/shop" class="text-sm text-slate-300 hover:text-white transition-colors">← Back</a>
     </div>
 </nav>
 
@@ -120,7 +120,7 @@
                 <div class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center font-bold text-black text-sm" id="sellerAvatar">?</div>
                 <div>
                     <p class="text-sm font-semibold" id="sellerName">Seller</p>
-                    <a id="sellerVoteLink" href="#" class="text-xs text-yellow-400 hover:underline">View vote profile →</a>
+                    <a id="sellerVoteLink" href="#" class="text-xs text-yellow-400 hover:underline">View profile →</a>
                 </div>
                 <button onclick="copyProductLink()" class="ml-auto text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg transition-colors">🔗 Share</button>
             </div>
@@ -414,8 +414,8 @@ function renderProduct(item) {
     const seller = item.seller_username;
     document.getElementById('sellerAvatar').textContent = seller.charAt(0).toUpperCase();
     document.getElementById('sellerName').textContent   = '@' + seller;
-    document.getElementById('sellerVoteLink').href      = `${BASE_URL}/vote.html?user=${seller}`;
-    document.getElementById('sellerVoteLinkSuccess').href = `${BASE_URL}/vote.html?user=${seller}`;
+    document.getElementById('sellerVoteLink').href      = `${BASE_URL}/app/profile/${encodeURIComponent(seller)}`;
+    document.getElementById('sellerVoteLinkSuccess').href = `${BASE_URL}/app/profile/${encodeURIComponent(seller)}`;
 
     // Method cards
     buildMethodCards(methods);
@@ -651,7 +651,7 @@ async function showOrderConfirm(orderId, token) {
                 </button>
                 <p class="text-xs text-slate-500 text-center">Only confirm after you've received and inspected your order.</p>`;
         } else if (order.status === 'buyer_confirmed') {
-            actions.innerHTML = `<p class="text-green-400 text-sm">Thank you! Funds will be released to the seller. You can contact them via their <a href="${BASE_URL}/vote.html?user=${item?.seller_username}" class="underline">vote profile</a>.</p>`;
+            actions.innerHTML = `<p class="text-green-400 text-sm">Thank you! Funds will be released to the seller. You can contact them via their <a href="${BASE_URL}/app/profile/${encodeURIComponent(item?.seller_username || '')}" class="underline">profile</a>.</p>`;
         } else if (order.status === 'disputed') {
             actions.innerHTML = `<p class="text-orange-400 text-sm">Your dispute is active. The seller has been notified. Please contact support or the seller directly to resolve the issue before funds can be released.</p>`;
         } else if (order.status === 'released') {

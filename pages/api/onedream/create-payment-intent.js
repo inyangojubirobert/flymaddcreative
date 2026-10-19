@@ -5,6 +5,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { quoteVotesNgn, recordVoteIntent } from '../../../lib/voteCredits';
 import { resolveCallbackUrl } from '../../../lib/paystackCallbackUrl';
+import { refuseRetiredVoting } from '../../../lib/paidVoting';
 
 // Initialize Supabase
 const supabase = createClient(
@@ -15,6 +16,7 @@ const supabase = createClient(
 const VOTE_VALUE = 2; // $2 per vote
 
 export default async function handler(req, res) {
+  if (refuseRetiredVoting(res)) return;
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

@@ -12,7 +12,6 @@
     <link href="./dist/output.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="./js/supabase-config.js"></script>
-    <script src="./js/progress-bar.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -171,7 +170,7 @@
                 <span class="text-2xl mr-3">🎉</span>
                 <div>
                     <p class="font-bold">Welcome to One Dream Initiative!</p>
-                    <p class="text-sm text-green-100">Your registration was successful. Start sharing your link to get votes!</p>
+                    <p class="text-sm text-green-100">Your registration was successful. Start sharing your link to find supporters and customers!</p>
                 </div>
             </div>
             <button onclick="dismissWelcome()" class="text-green-100 hover:text-white">
@@ -225,8 +224,8 @@
                 
                 <!-- Quick Stats -->
                 <div class="text-center">
-                    <div class="text-4xl font-bold text-yellow-400" id="totalVotes">0</div>
-                    <div class="text-sm text-slate-400">Total Votes</div>
+                    <div class="text-4xl font-bold text-yellow-400" id="recognitionPoints">0</div>
+                    <div class="text-sm text-slate-400">Recognition points</div>
                 </div>
             </div>
         </div>
@@ -234,99 +233,16 @@
         <!-- Stats Grid -->
         <div class="grid grid-cols-3 gap-4 mb-8">
             <div class="stat-card rounded-xl p-4 text-center">
-                <div class="text-2xl font-bold text-green-400" id="statVotes">0</div>
-                <div class="text-xs text-slate-400">Total Votes</div>
+                <div class="text-2xl font-bold text-green-400" id="statGifts">0</div>
+                <div class="text-xs text-slate-400">Gifts received</div>
             </div>
             <div class="stat-card rounded-xl p-4 text-center">
-                <div class="text-2xl font-bold text-purple-400" id="statRank">#-</div>
-                <div class="text-xs text-slate-400">Position</div>
+                <div class="text-2xl font-bold text-purple-400" id="statSupporters">0</div>
+                <div class="text-xs text-slate-400">Supporters</div>
             </div>
             <div class="stat-card rounded-xl p-4 text-center">
                 <div class="text-2xl font-bold text-orange-400" id="statStage">Bronze</div>
                 <div class="text-xs text-slate-400">Stage</div>
-            </div>
-        </div>
-
-        <!-- ═══════════════════════════════════════════════════════════
-             EARNINGS & REWARDS
-             ═══════════════════════════════════════════════════════════ -->
-        <div class="dashboard-card rounded-2xl p-6 mb-8" style="background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(5,150,105,0.08)); border-color: rgba(16,185,129,0.25);">
-            <div class="flex items-center justify-between mb-1">
-                <h2 class="text-xl font-bold flex items-center gap-2">💰 My Earnings & Rewards</h2>
-                <span class="text-xs px-3 py-1 rounded-full bg-green-900/50 text-green-300 border border-green-700/50">50/50 Split</span>
-            </div>
-            <p class="text-slate-400 text-sm mb-5">You earn <strong class="text-green-400">$1.00 per vote</strong> — 50% of every $2 vote goes directly to you. Withdraw anytime you want.</p>
-
-            <!-- Earnings Cards -->
-            <div class="grid grid-cols-3 gap-3 mb-5">
-                <div class="bg-black/30 rounded-xl p-4 text-center">
-                    <div class="text-2xl font-bold text-green-400" id="earningsTotal">$0.00</div>
-                    <div class="text-xs text-slate-400 mt-1">Total Earned</div>
-                </div>
-                <div class="bg-black/30 rounded-xl p-4 text-center">
-                    <div class="text-2xl font-bold text-slate-400" id="earningsWithdrawn">$0.00</div>
-                    <div class="text-xs text-slate-400 mt-1">Withdrawn</div>
-                </div>
-                <div class="bg-black/30 rounded-xl p-4 text-center">
-                    <div class="text-2xl font-bold text-yellow-400" id="earningsAvailable">$0.00</div>
-                    <div class="text-xs text-slate-400 mt-1">Available</div>
-                </div>
-            </div>
-
-            <!-- Withdrawal Window Status -->
-            <div id="withdrawalWindowBanner" class="rounded-xl p-4 mb-5 text-sm flex items-center gap-3">
-                <span class="text-2xl" id="withdrawalWindowIcon">⏳</span>
-                <div>
-                    <p class="font-semibold" id="withdrawalWindowTitle">Loading…</p>
-                    <p class="text-xs text-slate-400" id="withdrawalWindowSub"></p>
-                </div>
-            </div>
-
-            <!-- Withdrawal Form (shown when window is open) -->
-            <div id="withdrawalForm" class="hidden bg-black/30 rounded-xl p-5 mb-5 border border-green-800/40">
-                <h3 class="font-semibold text-green-300 mb-4 text-sm">Request Withdrawal</h3>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Amount (USD) *</label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-                            <input type="number" id="withdrawAmount" min="1" step="0.01" placeholder="0.00"
-                                   class="w-full bg-slate-800 border border-slate-600 rounded-lg pl-7 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:border-green-500 focus:outline-none">
-                        </div>
-                        <p class="text-xs text-slate-500 mt-1">Available: <span id="withdrawMaxHint" class="text-green-400 font-semibold">$0.00</span></p>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Payment Method *</label>
-                        <select id="withdrawMethod" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white focus:border-green-500 focus:outline-none">
-                            <option value="">Select method…</option>
-                            <option value="paystack">🏦 Bank / Paystack</option>
-                            <option value="usdt_bsc">💎 USDT BEP-20 (BSC)</option>
-                            <option value="usdt_trc">💎 USDT TRC-20 (Tron)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-400 mb-1">Payment Details *</label>
-                        <textarea id="withdrawDetails" rows="2" maxlength="300"
-                                  placeholder="Bank name + account number, or your USDT wallet address…"
-                                  class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-green-500 focus:outline-none resize-none"></textarea>
-                    </div>
-                    <button onclick="submitWithdrawal()" id="withdrawBtn"
-                            class="w-full bg-green-700 hover:bg-green-600 text-white font-semibold py-3 rounded-lg transition-colors text-sm">
-                        💸 Submit Withdrawal Request
-                    </button>
-                    <div id="withdrawMsg" class="hidden p-3 rounded-lg text-sm text-center"></div>
-                </div>
-            </div>
-
-            <!-- Transaction History -->
-            <div>
-                <h3 class="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-                    📋 Withdrawal History
-                    <button onclick="loadWithdrawals()" class="text-xs text-slate-500 hover:text-slate-300 transition-colors">(refresh)</button>
-                </h3>
-                <div id="withdrawalHistory" class="space-y-2 max-h-64 overflow-y-auto">
-                    <p class="text-xs text-slate-500 text-center py-4">Loading history…</p>
-                </div>
             </div>
         </div>
 
@@ -398,15 +314,7 @@
             </div>
         </div>
 
-        <!-- User Stage Progress Bar -->
-        <div class="mb-8" id="userProgress">
-            <!-- Progress bar will be rendered here -->
-        </div>
 
-        <!-- Campaign Progress Bar -->
-        <div class="mb-8" id="campaignProgress">
-            <!-- Campaign progress bar will be rendered here -->
-        </div>
 
         <!-- User Code Section -->
         <div class="dashboard-card rounded-2xl p-6 mb-8 bg-gradient-to-r from-purple-900/50 to-blue-900/50">
@@ -414,11 +322,11 @@
                 <span class="mr-2">🎯</span> Your Unique Code
             </h2>
             <div class="bg-black/30 rounded-xl p-6 text-center mb-4">
-                <div class="text-sm text-slate-400 mb-2">Share this code for easy voting:</div>
+                <div class="text-sm text-slate-400 mb-2">Share this code so supporters can find you:</div>
                 <div class="text-4xl font-mono font-bold text-yellow-300 tracking-widest mb-2" id="userCode">
                     ABC123XY
                 </div>
-                <div class="text-sm text-slate-400">People can search and vote for you using this code</div>
+                <div class="text-sm text-slate-400">People can search for your profile using this code</div>
             </div>
             <div class="flex gap-3">
                 <button onclick="copyUserCode()" id="copyCodeBtn" 
@@ -437,14 +345,14 @@
             </div>
         </div>
 
-        <!-- Vote Link Section -->
+        <!-- Profile Link Section -->
         <div class="dashboard-card rounded-2xl p-6 mb-8 bg-gradient-to-r from-yellow-900/50 to-orange-900/50">
             <h2 class="text-xl font-bold mb-4 flex items-center">
-                <span class="mr-2">🔗</span> Your Voting Link
+                <span class="mr-2">🔗</span> Your Profile Link
             </h2>
             <div class="bg-black/30 rounded-xl p-4 mb-4">
                 <code class="text-sm text-yellow-300 break-all block" id="voteLink">
-                    https://www.flymaddcreative.online/vote.html?user=username
+                    https://www.flymaddcreative.online/app/profile/username
                 </code>
             </div>
             <div class="flex gap-3">
@@ -464,14 +372,14 @@
                 </button>
             </div>
             <p class="text-sm text-slate-400 mt-4">
-                Share this link on social media, WhatsApp, or anywhere to get votes!
+                Share this link on social media, WhatsApp, or anywhere. Supporters can visit your shop and send you gifts.
             </p>
         </div>
 
-        <!-- How to Get Votes Section -->
+        <!-- How to Grow Your Supporters Section -->
         <div class="dashboard-card rounded-2xl p-6 mb-8">
             <h2 class="text-xl font-bold mb-4 flex items-center">
-                <span class="mr-2">📈</span> How to Get More Votes
+                <span class="mr-2">📈</span> How to Grow Your Supporters
             </h2>
             <div class="grid md:grid-cols-3 gap-4">
                 <div class="bg-slate-800/50 rounded-xl p-4">
@@ -500,7 +408,7 @@
                 <h2 class="text-xl font-bold flex items-center gap-2">🎭 My Public Profile</h2>
                 <span id="profileActiveBadge" class="hidden text-xs px-2 py-1 rounded-full bg-green-900/50 text-green-300 border border-green-700/50">✓ Active</span>
             </div>
-            <p class="text-slate-400 text-sm mb-5">What voters see on your vote page — media, bio, and contact info.</p>
+            <p class="text-slate-400 text-sm mb-5">What supporters see on your profile — media, bio, and contact info.</p>
 
             <!-- Loading spinner -->
             <div id="profileLoading" class="text-center py-6">
@@ -607,7 +515,7 @@
                         <span class="text-xs text-slate-500"><span id="bioCharCount">0</span> / 500</span>
                     </div>
                     <textarea id="bioInput" rows="6" maxlength="500"
-                              placeholder="Tell voters about yourself — your talent, background, dreams, and why you deserve to win…"
+                              placeholder="Tell supporters about yourself — your talent, background, and dreams…"
                               class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-yellow-500 focus:outline-none transition-colors resize-none mb-4"></textarea>
                     <button onclick="saveBio()" id="saveBioBtn"
                             class="w-full bg-yellow-600 hover:bg-yellow-500 text-black font-semibold py-3 rounded-lg transition-colors">
@@ -665,7 +573,7 @@
                         </div>
                         <div>
                             <p class="text-sm font-medium">Make contact info public</p>
-                            <p class="text-xs text-slate-400 mt-0.5">When enabled, voters can see your details on your vote page</p>
+                            <p class="text-xs text-slate-400 mt-0.5">When enabled, supporters can see your details on your profile</p>
                         </div>
                     </label>
 
@@ -689,7 +597,7 @@
                     🔗 Share Catalogue
                 </button>
             </div>
-            <p class="text-slate-400 text-sm mb-5">List products for sale — shoppers can find and buy from your vote page.</p>
+            <p class="text-slate-400 text-sm mb-5">List products for sale — shoppers can find and buy from your profile.</p>
 
             <!-- Tabs -->
             <div class="flex rounded-lg overflow-hidden mb-5 bg-slate-800/50 border border-slate-700/50">
@@ -721,11 +629,11 @@
 
         <!-- Quick Actions -->
         <div class="flex flex-col sm:flex-row gap-4">
-            <a href="leadershipBoard.html" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-4 px-6 rounded-xl transition-colors text-center">
-                🏆 View Leaderboard
+            <a href="/app/leaderboard" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-4 px-6 rounded-xl transition-colors text-center">
+                🏅 Recognition Boards
             </a>
-            <a href="vote.html" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-4 px-6 rounded-xl transition-colors text-center">
-                ✅ Vote for Others
+            <a href="/app/gifts" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-4 px-6 rounded-xl transition-colors text-center">
+                🎁 Dream Coins &amp; Gifts
             </a>
         </div>
 
@@ -980,8 +888,6 @@
                 <div class="grid grid-cols-4 md:grid-cols-2 gap-2 mb-4">
                     <div class="rounded-xl bg-slate-800/80 border border-slate-700 p-2.5"><span class="text-xs text-slate-400">Sales · 30d</span><strong id="aiMetricSales" class="block text-sm text-yellow-300 mt-1">$0.00</strong></div>
                     <div class="rounded-xl bg-slate-800/80 border border-slate-700 p-2.5"><span class="text-xs text-slate-400">Orders</span><strong id="aiMetricOrders" class="block text-sm text-blue-300 mt-1">0</strong></div>
-                    <div class="rounded-xl bg-slate-800/80 border border-slate-700 p-2.5"><span class="text-xs text-slate-400">Votes</span><strong id="aiMetricVotes" class="block text-sm text-green-300 mt-1">0</strong></div>
-                    <div class="rounded-xl bg-slate-800/80 border border-slate-700 p-2.5"><span class="text-xs text-slate-400">Position</span><strong id="aiMetricRank" class="block text-sm text-purple-300 mt-1">#—</strong></div>
                 </div>
 
                 <div class="flex items-center justify-between gap-2 mb-2">
@@ -1014,7 +920,7 @@
                 <div id="aiChatList" class="ai-chat-list flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-3" aria-live="polite">
                     <div class="ai-message ai-message-assistant">
                         <p class="text-xs font-extrabold text-yellow-800 mb-1">Bascardo AI</p>
-                        <p>Ask a question or analyze your business performance. I can use your catalogue sales, products, votes, and leadership position to give you practical next steps.</p>
+                        <p>Ask a question or analyze your business performance. I can use your catalogue sales, products, and customers to give you practical next steps.</p>
                     </div>
                 </div>
 
@@ -1200,32 +1106,9 @@
             document.getElementById('userUsername').textContent = user.username;
             document.getElementById('userCode').textContent = user.user_code || 'N/A';
             
-            // Stats
-            const votes = user.total_votes || 0;
-            document.getElementById('totalVotes').textContent = votes.toLocaleString();
-            document.getElementById('statVotes').textContent = votes.toLocaleString();
-            
-            // Get user stage from progress bar system
-            if (window.OneDreamProgress) {
-                const stage = window.OneDreamProgress.getUserStage(votes);
-                document.getElementById('statStage').textContent = stage.name;
-                
-                // Stage badge
-                const stageBadge = document.getElementById('stageBadge');
-                stageBadge.textContent = stage.name;
-                stageBadge.className = 'stage-badge px-3 py-1 rounded-full text-sm font-medium text-black';
-                if (stage.name === 'Silver') stageBadge.classList.add('silver');
-                if (stage.name === 'Gold') stageBadge.classList.add('gold');
-                if (stage.name === 'Platinum') stageBadge.classList.add('platinum');
-                if (stage.name === 'Diamond') stageBadge.classList.add('diamond');
-                
-                // Render user progress bar
-                window.OneDreamProgress.renderUserProgress('userProgress', votes);
-            } else {
-                document.getElementById('statStage').textContent = user.current_stage || 'Bronze';
-                const stageBadge = document.getElementById('stageBadge');
-                stageBadge.textContent = user.current_stage || 'Bronze';
-            }
+            // Stage
+            document.getElementById('statStage').textContent = user.current_stage || 'Bronze';
+            document.getElementById('stageBadge').textContent = user.current_stage || 'Bronze';
             
             // Join date
             if (user.created_at) {
@@ -1237,14 +1120,12 @@
                 });
             }
             
-            // Vote link
-            const voteLink = `https://www.flymaddcreative.online/vote.html?user=${user.username}`;
+            // Profile link
+            const voteLink = `https://www.flymaddcreative.online/app/profile/${encodeURIComponent(user.username)}`;
             document.getElementById('voteLink').textContent = voteLink;
 
             // Load public profile section
             loadProfile();
-            // Load earnings & rewards
-            loadEarnings();
             // Load support messages
             loadSupportMessages();
             // Load sales catalogue
@@ -1252,32 +1133,16 @@
         }
 
         async function fetchUserRank() {
+            // Recognition from Dream Coin gifts (replaces the paid-vote ranking).
             try {
-                // Get full leaderboard sorted by votes (highest first)
-                const leaderboard = await window.SupabaseAPI.getLeaderboard(1000);
-                
-                // Sort by total_votes descending to ensure correct ranking
-                leaderboard.sort((a, b) => (b.total_votes || 0) - (a.total_votes || 0));
-                
-                // Find user's position (1-based)
-                const rank = leaderboard.findIndex(p => p.username === currentUser.username) + 1;
-                const totalParticipants = leaderboard.length;
-                
-                // Display rank with total participants
-                if (rank > 0) {
-                    document.getElementById('statRank').textContent = `#${rank}`;
-                    document.getElementById('statRank').title = `Position ${rank} of ${totalParticipants} participants`;
-                } else {
-                    document.getElementById('statRank').textContent = '#-';
-                }
-                
-                // Render campaign progress bar with total votes from all participants
-                if (window.OneDreamProgress && leaderboard.length > 0) {
-                    const totalVotes = leaderboard.reduce((sum, p) => sum + (p.total_votes || 0), 0);
-                    window.OneDreamProgress.renderCampaignProgress('campaignProgress', totalVotes);
-                }
+                const res = await fetch(`/api/onedream/gifts/received?username=${encodeURIComponent(currentUser.username)}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                document.getElementById('recognitionPoints').textContent = Number(data.recognition_points || 0).toLocaleString();
+                document.getElementById('statGifts').textContent = Number(data.gifts_received || 0).toLocaleString();
+                document.getElementById('statSupporters').textContent = Number(data.supporters || 0).toLocaleString();
             } catch (err) {
-                console.error('Error fetching rank:', err);
+                console.error('Error fetching recognition:', err);
             }
         }
 
@@ -1319,7 +1184,7 @@
 
         function shareVoteLink() {
             const link = document.getElementById('voteLink').textContent;
-            const text = `🌟 Vote for me in the One Dream Initiative! ${link}`;
+            const text = `🌟 Visit my One Dream profile and shop! ${link}`;
             
             if (navigator.share) {
                 navigator.share({ title: 'One Dream Initiative', text, url: link });
@@ -1599,118 +1464,6 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // 💰 EARNINGS & REWARDS
-        // ═══════════════════════════════════════════════════════════════════
-        let _withdrawals = [];
-        let _availableBalance = 0;
-
-        async function loadEarnings() {
-            if (!currentUser) return;
-            const votes = currentUser.total_votes || 0;
-            _withdrawals = await window.SupabaseAPI.getWithdrawalsByUsername(currentUser.username);
-
-            const earned    = window.SupabaseAPI.calcEarnings(votes);
-            const withdrawn = window.SupabaseAPI.calcTotalWithdrawn(_withdrawals);
-            _availableBalance = Math.max(0, parseFloat((earned - withdrawn).toFixed(2)));
-
-            document.getElementById('earningsTotal').textContent     = '$' + earned.toFixed(2);
-            document.getElementById('earningsWithdrawn').textContent = '$' + withdrawn.toFixed(2);
-            document.getElementById('earningsAvailable').textContent = '$' + _availableBalance.toFixed(2);
-            document.getElementById('withdrawMaxHint').textContent   = '$' + _availableBalance.toFixed(2);
-
-            renderWithdrawalWindow();
-            renderWithdrawalHistory(_withdrawals);
-        }
-
-        function renderWithdrawalWindow() {
-            const banner   = document.getElementById('withdrawalWindowBanner');
-            const form     = document.getElementById('withdrawalForm');
-
-            if (_availableBalance > 0) {
-                banner.className = 'rounded-xl p-4 mb-5 text-sm flex items-center gap-3 bg-green-900/30 border border-green-700/40';
-                document.getElementById('withdrawalWindowIcon').textContent  = '✅';
-                document.getElementById('withdrawalWindowTitle').textContent = 'Ready to withdraw!';
-                document.getElementById('withdrawalWindowSub').textContent   = 'You can withdraw your earnings anytime. Process your request below.';
-                form.classList.remove('hidden');
-            } else {
-                banner.className = 'rounded-xl p-4 mb-5 text-sm flex items-center gap-3 bg-slate-800/50 border border-slate-700/40';
-                document.getElementById('withdrawalWindowIcon').textContent  = '💸';
-                document.getElementById('withdrawalWindowTitle').textContent = 'No balance available yet.';
-                document.getElementById('withdrawalWindowSub').textContent   = 'Keep collecting votes to build your earnings!';
-                form.classList.add('hidden');
-            }
-        }
-
-        function renderWithdrawalHistory(withdrawals) {
-            const container = document.getElementById('withdrawalHistory');
-            if (!withdrawals.length) {
-                container.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No withdrawals yet.</p>';
-                return;
-            }
-            const statusStyle = {
-                pending:    'bg-yellow-900/40 text-yellow-300',
-                processing: 'bg-blue-900/40 text-blue-300',
-                paid:       'bg-green-900/40 text-green-300',
-                rejected:   'bg-red-900/40 text-red-300',
-            };
-            const statusLabel = { pending:'⏳ Pending', processing:'🔄 Processing', paid:'✅ Paid', rejected:'❌ Rejected' };
-            container.innerHTML = withdrawals.map(w => {
-                const date = new Date(w.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                const sl   = statusLabel[w.status] || w.status;
-                const sc   = statusStyle[w.status] || 'bg-slate-700 text-slate-300';
-                return `<div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3 text-sm">
-                    <div>
-                        <p class="font-semibold text-white">$${parseFloat(w.amount_usd).toFixed(2)} <span class="text-xs text-slate-400 font-normal">via ${w.payment_method}</span></p>
-                        <p class="text-xs text-slate-500 mt-0.5">${date}</p>
-                    </div>
-                    <span class="text-xs px-2 py-1 rounded-full ${sc}">${sl}</span>
-                </div>`;
-            }).join('');
-        }
-
-        async function loadWithdrawals() {
-            if (!currentUser) return;
-            _withdrawals = await window.SupabaseAPI.getWithdrawalsByUsername(currentUser.username);
-            renderWithdrawalHistory(_withdrawals);
-        }
-
-        async function submitWithdrawal() {
-            const amount  = parseFloat(document.getElementById('withdrawAmount').value);
-            const method  = document.getElementById('withdrawMethod').value;
-            const details = document.getElementById('withdrawDetails').value.trim();
-
-            if (!amount || amount <= 0)         { showWithdrawMsg('Enter a valid amount.', 'error'); return; }
-            if (amount > _availableBalance)      { showWithdrawMsg(`Max available is $${_availableBalance.toFixed(2)}.`, 'error'); return; }
-            if (!method)                         { showWithdrawMsg('Select a payment method.', 'error'); return; }
-            if (!details)                        { showWithdrawMsg('Enter your payment details.', 'error'); return; }
-            // Withdrawals are always open now
-
-            const btn = document.getElementById('withdrawBtn');
-            btn.disabled = true; btn.textContent = '⏳ Submitting…';
-            try {
-                await window.SupabaseAPI.requestWithdrawal(currentUser.username, amount, method, details);
-                showWithdrawMsg('Withdrawal request submitted! We will process it shortly.', 'success');
-                document.getElementById('withdrawAmount').value  = '';
-                document.getElementById('withdrawDetails').value = '';
-                await loadEarnings();
-            } catch (e) {
-                showWithdrawMsg(e.message || 'Submission failed.', 'error');
-            } finally {
-                btn.disabled = false; btn.textContent = '💸 Submit Withdrawal Request';
-            }
-        }
-
-        function showWithdrawMsg(msg, type) {
-            const el = document.getElementById('withdrawMsg');
-            el.textContent = msg;
-            el.className = `p-3 rounded-lg text-sm text-center ${type === 'success'
-                ? 'bg-green-900/50 text-green-300 border border-green-700/50'
-                : 'bg-red-900/50 text-red-300 border border-red-700/50'}`;
-            el.classList.remove('hidden');
-            setTimeout(() => el.classList.add('hidden'), 6000);
-        }
-
-        // ═══════════════════════════════════════════════════════════════════
         // 💬 SUPPORT MESSAGES
         // ═══════════════════════════════════════════════════════════════════
         function renderSupportMessageBody(body) {
@@ -1857,7 +1610,7 @@
 
         const aiWelcomeMessage = {
             role: 'assistant',
-            content: 'Ask a question or analyze your business performance. I can use your catalogue sales, products, votes, and leadership position to give you practical next steps.'
+            content: 'Ask a question or analyze your business performance. I can use your catalogue sales, products, and customers to give you practical next steps.'
         };
 
         function syncBascardoViewport() {
@@ -1918,8 +1671,6 @@
             const metrics = aiOverview.metrics || {};
             document.getElementById('aiMetricSales').textContent = `$${Number(metrics.catalogue?.revenue30DaysUsd || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             document.getElementById('aiMetricOrders').textContent = Number(metrics.catalogue?.orders30Days || 0).toLocaleString();
-            document.getElementById('aiMetricVotes').textContent = Number(metrics.votes?.total || 0).toLocaleString();
-            document.getElementById('aiMetricRank').textContent = metrics.leadership?.position ? `#${metrics.leadership.position}` : '#—';
             renderAiPlanCards();
         }
 
@@ -2061,7 +1812,7 @@
             const prompts = {
                 sales: 'Analyze my catalogue sales for the last 30 days, compare them with the previous 30 days, identify trends and opportunities, and recommend my next actions.',
                 products: 'Review my current catalogue performance and recommend specific improvements to my product titles, descriptions, prices, and product mix using only the data available.',
-                marketing: 'Give me practical marketing ideas for my FlyMadd catalogue based on my products, recent sales, votes, stage, and leaderboard position.'
+                marketing: 'Give me practical marketing ideas for my FlyMadd catalogue based on my products, recent sales, customers, and stage.'
             };
             if (action === 'ask') {
                 const input = document.getElementById('aiChatInput');
@@ -3240,7 +2991,7 @@
 
         function copyCatalogueLink() {
             if (!currentUser) return;
-            const link = `${BASE_URL}/vote.html?user=${currentUser.username}#catalogue`;
+            const link = `${BASE_URL}/app/catalogue/${encodeURIComponent(currentUser.username)}`;
             navigator.clipboard.writeText(link).then(() => alert('Catalogue link copied!\n' + link));
         }
 

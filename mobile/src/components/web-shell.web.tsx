@@ -18,7 +18,7 @@ const SIGNED_IN: NavItem[] = [
   { label: 'Home', path: '/', match: (p) => p === '/' },
   { label: 'Shop', path: '/shop', match: (p) => p.startsWith('/shop') && p !== '/shop/cart' || p.startsWith('/catalogue/item') },
   { label: 'Search', path: '/search', match: (p) => p === '/search' },
-  { label: 'Leaderboard', path: '/leaderboard', match: (p) => p === '/leaderboard' },
+  { label: 'Recognition', path: '/leaderboard', match: (p) => p === '/leaderboard' },
   { label: 'Library', path: '/library', match: (p) => p.startsWith('/library') },
   { label: 'Promote', path: '/promote', match: (p) => p.startsWith('/promote') },
   { label: 'Bascardo AI', path: '/ai', match: (p) => p.startsWith('/ai') },

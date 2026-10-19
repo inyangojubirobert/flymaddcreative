@@ -11,6 +11,7 @@
 
 import crypto from 'crypto';
 import { creditPaidVotes, verifyPaystackVote } from '../../../lib/voteCredits';
+import { PAID_VOTING_RETIRED } from '../../../lib/paidVoting';
 
 export const config = { api: { bodyParser: false } };
 
@@ -47,6 +48,11 @@ export default async function handler(req, res) {
     }
     if (event !== 'charge.success' || meta?.type !== 'onedream_votes' || !meta?.participant_id || !data?.reference) {
       return res.status(200).json({ received: true, ignored: true });
+    }
+    if (PAID_VOTING_RETIRED) {
+      // No vote intents can be created any more; acknowledge so Paystack stops retrying.
+      console.error('[webhook] vote charge received after paid voting was retired', data.reference);
+      return res.status(200).json({ received: true, credited: false, retired: true });
     }
 
     const verified = await verifyPaystackVote(data.reference, meta.participant_id);

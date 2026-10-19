@@ -26,9 +26,9 @@ const FALLBACK_PROJECT_KNOWLEDGE = [
     answer: 'Open Profile, choose My Listings, then select + New Listing. Add a title, description, USD price, product image, payment methods, and publish it when ready.',
   },
   {
-    category: 'Voting',
-    question: 'How do voting and the leaderboard work?',
-    answer: 'Supporters use a participant profile or voting code to vote. Confirmed votes increase the participant total and leaderboard position. Higher totals can unlock new One Dream stages.',
+    category: 'Gifts',
+    question: 'How do Dream Coins and gifts work?',
+    answer: 'Supporters buy Dream Coins in the Android app and send virtual gifts to creators and sellers. Gifts add recognition points and badges to the profile and appear on the recognition boards. Coins have no cash value. Paid voting has ended.',
   },
   {
     category: 'Orders',
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
   if (!participant) return;
 
   const action = req.body?.action === 'business_analysis' ? 'business_analysis' : 'chat';
-  const defaultAnalysisQuestion = 'Analyse my FlyMadd business performance for the last 30 days. Explain my catalogue sales, products, votes, and leaderboard position, then give me practical next actions.';
+  const defaultAnalysisQuestion = 'Analyse my FlyMadd business performance for the last 30 days. Explain my catalogue sales, products, and orders, then give me practical next actions.';
   const question = cleanQuestion(req.body?.question) || (action === 'business_analysis' ? defaultAnalysisQuestion : '');
   const conversationId = req.body?.conversation_id ? String(req.body.conversation_id) : null;
   if (!question) return res.status(400).json({ error: 'Ask Bascardo a question first.' });
@@ -152,7 +152,7 @@ export default async function handler(req, res) {
 
     const systemPrompt = `You are "Bascardo AI", FlyMadd Creative's private AI business adviser and app assistant. Bascardo AI analyzes the participant's sales and business activity to reveal trends, identify opportunities, and recommend actions to help them grow.
 Rules:
-- Use only the requesting participant's metrics below for account-specific answers. Never invent sales, views, votes, ranks, prices, or another user's data.
+- Use only the requesting participant's metrics below for account-specific answers. Never invent sales, views, ranks, prices, or another user's data. Paid voting has ended; never suggest buying or selling votes.
 - Revenue includes paid, buyer-confirmed, and released catalogue orders. Do not call pending or disputed orders completed sales.
 - A null growth percentage means there was no previous-period revenue; explain that plainly instead of claiming 100% growth.
 - Unsold listings only means no completed order for those listings in the last 30 days. It does not prove that nobody viewed them.

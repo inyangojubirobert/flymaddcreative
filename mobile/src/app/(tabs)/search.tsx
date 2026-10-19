@@ -124,10 +124,6 @@ export default function SearchScreen() {
                 <ThemedText type="default" style={styles.personName}>{item.name}</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">@{item.username}</ThemedText>
               </View>
-              <View style={styles.voteCount}>
-                <Ionicons name="heart" size={14} color={Palette.yellow} />
-                <ThemedText type="smallBold" style={styles.voteText}>{item.total_votes.toLocaleString()}</ThemedText>
-              </View>
               <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
             </Pressable>
           )}
@@ -173,8 +169,6 @@ const styles = StyleSheet.create({
   personIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: Palette.blueSoft, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, gap: 1 },
   personName: { fontWeight: '700' },
-  voteCount: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  voteText: { color: Palette.blue },
   pressed: { opacity: 0.72 },
   emptyCard: { minHeight: 240, alignItems: 'center', justifyContent: 'center', gap: Spacing.one },
   promptCard: { marginTop: Spacing.four, backgroundColor: Palette.yellowSoft, borderColor: '#FDE68A', borderWidth: 1, borderRadius: 20, minHeight: 190, alignItems: 'center', justifyContent: 'center', gap: Spacing.one, padding: Spacing.four },

@@ -1,4 +1,6 @@
+import { refuseRetiredVoting } from '../../../lib/paidVoting';
 export default async function handler(req, res) {
+    if (refuseRetiredVoting(res)) return;
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method not allowed' });
     }

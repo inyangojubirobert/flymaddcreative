@@ -1,5 +1,6 @@
 // Initialize crypto payment - returns wallet address for THIS transaction only
 import { createClient } from '@supabase/supabase-js';
+import { refuseRetiredVoting } from '../../../lib/paidVoting';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -7,6 +8,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  if (refuseRetiredVoting(res)) return;
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

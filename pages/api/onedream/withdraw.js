@@ -8,6 +8,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { requireParticipant } from '../../../lib/participantAuth';
 import { alertAdminsOfWithdrawal } from '../../../lib/withdrawalAlerts';
+import { refuseRetiredVoting } from '../../../lib/paidVoting';
 
 const supabase = createClient(
   process.env.SUPABASE_URL || '',
@@ -24,6 +25,10 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Vote earnings are retired with paid voting: no real vote was ever sold,
+  // so participants.total_votes is history only and is not withdrawable.
+  if (refuseRetiredVoting(res)) return;
 
   const participant = await requireParticipant(req, res);
   if (!participant) return; // response already sent

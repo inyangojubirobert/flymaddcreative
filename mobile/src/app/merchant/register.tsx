@@ -66,7 +66,7 @@ export default function MerchantRegisterScreen() {
             <View style={styles.form}>
             <ThemedText type="title" style={styles.title}>Become a Merchant</ThemedText>
             <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
-              Earn tokens for every confirmed vote from participants you refer.
+              Earn a share of the gifts received by creators you refer.
             </ThemedText>
 
             {error && <ThemedText style={styles.error}>{error}</ThemedText>}

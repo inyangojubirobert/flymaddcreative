@@ -35,7 +35,7 @@ export default function FaqScreen() {
           <ThemedView style={[styles.hero, { backgroundColor: '#172554' }]}>
             <ThemedText type="subtitle" style={styles.heroTitle}>How can we help?</ThemedText>
             <ThemedText type="small" style={styles.heroText}>
-              Clear guides for the One Dream Initiative, your catalogue, votes, payments, and account support.
+              Clear guides for the One Dream Initiative, your catalogue, Dream Coins and gifts, payments, and account support.
             </ThemedText>
             <Pressable onPress={() => router.push('/ai' as never)} style={styles.askButton}>
               <ThemedText style={styles.askButtonText}>Ask Bascardo AI</ThemedText>

@@ -264,7 +264,7 @@ export default function AiScreen() {
                       tint="#DCFCE7"
                       ink={Palette.green}
                       disabled={isBusy}
-                      onPress={() => void runAi('chat', 'Give me practical marketing ideas for my FlyMadd catalogue based on my products, recent sales, votes, stage, and leaderboard position.')}
+                      onPress={() => void runAi('chat', 'Give me practical marketing ideas for my FlyMadd catalogue based on my products, recent sales, customers, and stage.')}
                     />
                     <QuickAction
                       icon="chatbubble-ellipses"
@@ -287,8 +287,6 @@ export default function AiScreen() {
                     <View style={styles.metricsGrid}>
                       <MetricCard icon="cash" label="Sales" value={money(metrics.catalogue.revenue30DaysUsd)} tint={Palette.blueSoft} ink={Palette.blueDark} />
                       <MetricCard icon="bag-check" label="Orders" value={String(metrics.catalogue.orders30Days)} tint={Palette.yellowSoft} ink={Palette.yellowInk} />
-                      <MetricCard icon="heart" label="New votes" value={metrics.votes.last30Days === null ? '—' : metrics.votes.last30Days.toLocaleString()} tint={Palette.ashSoft} ink={Palette.slateDark} />
-                      <MetricCard icon="trophy" label="Position" value={metrics.leadership.position ? `#${metrics.leadership.position}` : '—'} tint="#DCFCE7" ink={Palette.green} />
                     </View>
                     <View style={styles.metricNote}>
                       <ThemedText type="small" themeColor="textSecondary">
@@ -377,7 +375,7 @@ export default function AiScreen() {
                   <View style={styles.emptyIcon}><Ionicons name="sparkles" size={26} color={Palette.yellowInk} /></View>
                   <ThemedText type="smallBold">Start a clean AI chat</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary" style={styles.emptyText}>
-                    Ask which product to promote, how to improve sales, or what your votes and leaderboard position mean.
+                    Ask which product to promote, how to improve sales, or how to grow your audience.
                   </ThemedText>
                 </View>
               )

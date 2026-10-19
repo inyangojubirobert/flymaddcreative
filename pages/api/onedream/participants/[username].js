@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         res.status(200).json({
             participant: {
                 ...data,
-                voteLink: `https://www.flymaddcreative.online/vote.html?user=${data.username}`
+                voteLink: `https://www.flymaddcreative.online/app/profile/${encodeURIComponent(data.username)}`
             }
         });
     } catch (err) {
