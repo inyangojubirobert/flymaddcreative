@@ -18,6 +18,7 @@ export type CartQuoteLine = {
   price_unit: string | null;
   min_order_qty: number | null;
   max_order_qty: number | null;
+  listing_currency?: string;
   unit_price_usd: number;
   line_total_usd: number;
   problem: string | null;

@@ -60,7 +60,7 @@ Order when applying several: **P5 → P6 → P3 → P8 → P7 → P9**. P3, P5, 
 - **Rollback:** revert the diff and drop `catalogue_pending_checkouts`.
 
 **P7**
-- **Effect:** with the switch on, cart checkout requires a quote. All non-naira listings become USDT-only (activation SQL), including the existing USD listings. Single-listing purchase of a non-USD listing is refused with "add it to your cart".
+- **Effect:** with the switch on, a cart holding a non-USD listing pays from a quote. Naira listings become Paystack-only and GBP, EUR and GHS listings USDT-only (activation SQL). **USD listings are untouched (19 Oct 2026): USD-only carts keep card and USDT without a quote.** Single-listing purchase of a non-USD listing is refused with "add it to your cart".
 - **Payments already made:** a Paystack payment without `quote_id` (made before the switch) still completes the old way; an expired quote that was paid is honoured.
 - **Not combined with P3:** keep `resale_checkout_enabled` off while listing currencies are on.
 - **Rollback:** switch listing currencies off, revert both diffs, restore `payment_methods` (see the SQL file). Orders already frozen keep their snapshots.

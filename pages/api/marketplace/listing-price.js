@@ -49,7 +49,8 @@ export default async function handler(req, res) {
       updated_at: new Date().toISOString(),
     };
     // The payment route follows the currency once multi-currency checkout is live.
-    if (settings.listing_currencies_enabled) update.payment_methods = [currency.checkout_route];
+    // USD listings keep card and USDT.
+    if (settings.listing_currencies_enabled) update.payment_methods = currency.code === 'USD' ? ['paystack', 'usdt'] : [currency.checkout_route];
     const { data, error: updateError } = await currencyDb.from('catalogue_items').update(update).eq('id', item.id)
       .select('id, listing_currency, listing_price_minor, price_usd, payment_methods').single();
     if (updateError) throw updateError;

@@ -35,6 +35,23 @@ Confirmed applied: the multi-currency migration and its review fixes, P8, P9, st
 
 ## Part 1: setup still to do (you)
 
+### Activate everything (owner, 19 Oct 2026)
+
+Do these in order. Nothing else is needed from you.
+
+1. **Supabase SQL editor**, run each file and check every row says `ok = true`:
+   1. `supabase/fix_p8_p9_review.sql`
+   2. `docs/protected-patches/P7_multicurrency_checkout.sql` (USD listings keep card and USDT)
+2. **Admin portal → 💱 Currencies:** switch on "Let sellers list in naira and other currencies", type `P7_P8_APPLIED`.
+3. **Admin portal → 🤝 Partners & Payouts:** switch on **Gift earnings**, **Payouts** and **Seller-funded commission**. Leave **Reseller checkout** off (see below).
+4. **Vercel**, from the repo folder: `vercel env add PAYOUTS_PROVIDER_LIVE production`, enter `true`, then `vercel deploy --prod`.
+5. **Optional:** set a **platform monthly budget** in Partners & Payouts if One Dream should fund affiliate offers (it is $0).
+
+Removed or held back as flawed:
+- **USD listings becoming USDT-only under multi-currency:** removed. USD-only carts keep card and USDT.
+- **P3 reseller checkout, P5 and P6:** their patches no longer match the checkout code (written before P7). Not applied; they need rewriting first.
+- **P4 partner boosts:** applies cleanly; ask to have it applied (SQL + code) when wanted.
+
 1. **Supabase SQL editor:** run `supabase/fix_p8_p9_review.sql` (above).
 2. ~~Dream Coins multi-quantity~~ **Done 19 Oct 2026**: all 7 packs on (undo: `node scripts/enable-dream-coin-multi-quantity.mjs --disable`).
 3. **Upload your first house ad:** admin portal → **🏠 House ads** (test I).

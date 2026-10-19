@@ -68,11 +68,13 @@ export default function CartScreen() {
   });
   const quote = quoteQuery.data;
 
-  // P7: with multi-currency listings on, the buyer pays one stored quote in
-  // one currency (naira by Paystack, or US dollars in USDT), fixed until it
-  // expires. It is refreshed shortly before then, but not while a payment
-  // made from it is being confirmed.
-  const multiCurrency = !!useCurrencies().data?.listing_currencies_enabled;
+  // P7: with multi-currency listings on, a cart holding a non-USD listing pays
+  // one stored quote in one currency (naira by Paystack, or US dollars in
+  // USDT), fixed until it expires. It is refreshed shortly before then, but
+  // not while a payment made from it is being confirmed. USD-only carts keep
+  // the normal checkout (card or USDT).
+  const multiCurrency = !!useCurrencies().data?.listing_currencies_enabled
+    && !!quote?.lines.some((line) => (line.listing_currency ?? 'USD') !== 'USD');
   const fixedQuery = useQuery({
     queryKey: ['checkout-quote', quoteKey],
     queryFn: async () => (await getQuote({

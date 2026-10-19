@@ -6,17 +6,11 @@
 -- and P7_client_cart_quote.diff are deployed and P8 is applied, immediately
 -- before switching listing_currencies_enabled on (admin portal, Currencies).
 --
--- Effect on EXISTING listings (2 in production at the time of writing, both
--- USD with ["paystack","usdt"]): every non-naira listing becomes USDT-only,
--- because only naira is paid through Paystack. Tell sellers first; a seller
--- who wants card/bank payments relists in naira.
+-- Effect on EXISTING listings: naira listings pay by Paystack only; GBP, EUR
+-- and GHS listings pay in USDT only. USD listings are left alone and keep
+-- card and USDT (changed 19 Oct 2026: USD-only carts don't use quotes).
 --
--- The single-listing routes (create-payment-intent.js, verify-order.js and
--- the website popup that uses verify-order) check payment_methods, so after
--- this they stop offering Paystack for USD listings without any code change.
---
--- Rollback: update catalogue_items set payment_methods = '["paystack","usdt"]'
--- where listing_currency = 'USD'; (after switching listing currencies off).
+-- Rollback: switch listing currencies off; USD listings were never changed.
 -- ============================================================================
 
 update catalogue_items ci
@@ -24,12 +18,14 @@ update catalogue_items ci
   from marketplace_currencies mc
  where mc.code = ci.listing_currency
    and ci.status <> 'deleted'
+   and ci.listing_currency <> 'USD'
    and ci.payment_methods is distinct from to_jsonb(array[mc.checkout_route]);
 
 -- Verification - every row must be ok = true
 with checks(check_name, ok) as (
   select 'naira listings pay by Paystack only', not exists (select 1 from catalogue_items where listing_currency = 'NGN' and status <> 'deleted' and payment_methods <> '["paystack"]'::jsonb)
-  union all select 'other listings pay in USDT only', not exists (select 1 from catalogue_items where listing_currency <> 'NGN' and status <> 'deleted' and payment_methods <> '["usdt"]'::jsonb)
+  union all select 'GBP, EUR and GHS listings pay in USDT only', not exists (select 1 from catalogue_items where listing_currency not in ('NGN', 'USD') and status <> 'deleted' and payment_methods <> '["usdt"]'::jsonb)
+  union all select 'USD listings still offer card', not exists (select 1 from catalogue_items where listing_currency = 'USD' and status <> 'deleted' and not (payment_methods ? 'paystack'))
   union all select 'P8 applied', exists (select 1 from information_schema.columns where table_name = 'participant_withdrawals' and column_name = 'currency')
 )
 select * from checks order by ok, check_name;
