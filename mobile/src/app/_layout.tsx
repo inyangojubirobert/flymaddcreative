@@ -6,11 +6,10 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter } from 'expo-r
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
-import { ActivityIndicator, Platform } from 'react-native';
+import { ActivityIndicator, Image, Platform, StyleSheet, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
-import { ThemedView } from '@/components/themed-view';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { WebAlertHost } from '@/components/web-alert-host';
 import { WebShell } from '@/components/web-shell';
@@ -70,11 +69,14 @@ function RootNavigator() {
     return () => subscription.remove();
   }, [router]);
 
+  // Continues the native splash (same logo and #04457B background from
+  // app.json) while the saved session is verified, instead of a blank screen.
   if (isLoading) {
     return (
-      <ThemedView style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
-      </ThemedView>
+      <View style={styles.loading}>
+        <Image source={require('@/assets/images/_source-logo.jpg')} style={styles.loadingLogo} resizeMode="contain" accessibilityLabel="One Dream logo" />
+        <ActivityIndicator size="large" color="#FFFFFF" />
+      </View>
     );
   }
 
@@ -131,3 +133,8 @@ function RootNavigator() {
     </Stack>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 32, backgroundColor: '#04457B' },
+  loadingLogo: { width: 160, height: 178, borderRadius: 28 },
+});

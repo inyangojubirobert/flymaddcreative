@@ -3,7 +3,7 @@
 The backend notification route is:
 
 ```text
-https://www.flymaddcreative.online/api/onedream/ai-subscription/google-play-notification
+https://flymaddcreative.vercel.app/api/onedream/ai-subscription/google-play-notification
 ```
 
 ## Verified setup status
@@ -29,7 +29,7 @@ The Vercel CLI login was found in its Windows `xdg.data/com.vercel.cli` director
 Both notification variables were saved and verified in Production. The existing
 successful Production source was redeployed as
 `dpl_CzPJhu72GToC4MCteo1NdvQkXwVy`; it reached READY and was assigned to
-`www.flymaddcreative.online`, `flymaddcreative.online`, and `flymaddcreative.vercel.app`.
+`flymaddcreative.vercel.app` (and the custom domain `flymaddcreative.online`, which expired on 2026-10-21).
 The three existing Google credential variables were preserved.
 
 Both notification variables have been added to the root `.env.local`. A successful
@@ -41,7 +41,7 @@ Keep the three existing Google API credential variables. These two notification
 variables have already been added to the Vercel project's **Production** environment:
 
 ```ini
-GOOGLE_PLAY_PUBSUB_AUDIENCE=https://www.flymaddcreative.online/api/onedream/ai-subscription/google-play-notification
+GOOGLE_PLAY_PUBSUB_AUDIENCE=https://flymaddcreative.vercel.app/api/onedream/ai-subscription/google-play-notification
 GOOGLE_PLAY_PUBSUB_SERVICE_ACCOUNT_EMAIL=flymaddcreative-google-play@project-473bc27d-3cf6-4b56-a17.iam.gserviceaccount.com
 ```
 

@@ -84,3 +84,8 @@ supabase/functions/_shared/
 # Expo web build (served at /app); its bundled icons and fonts live under assets/node_modules
 !public/app/assets/node_modules/
 !public/app/assets/node_modules/**/build/
+
+# Signing material and security notes must never reach the public repo
+supabase/keystore.properties
+supabase/*.jks
+docs/PAYMENT_SECURITY_FINDINGS.md

@@ -49,7 +49,7 @@ async function ensureReferralLink(merchant) {
   if (fetchError) console.error('Error fetching referral link:', fetchError);
   if (existing) return existing;
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.flymaddcreative.online';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app';
 
   // Retry on the (unlikely) chance of a link_code collision.
   for (let attempt = 0; attempt < 3; attempt++) {

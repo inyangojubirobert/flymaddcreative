@@ -15,7 +15,7 @@ import { ApiError, apiFetch } from '@/lib/api-client';
 import { isPushSupportedInThisClient, loadPushNotifications } from '@/lib/push-notifications';
 
 const ADMIN_TOKEN_KEY = 'admin_alert_token';
-const ADMIN_INBOX_URL = 'https://www.flymaddcreative.online/admin-portal.html';
+const ADMIN_INBOX_URL = 'https://flymaddcreative.vercel.app/admin-portal.html';
 
 function expoProjectId() {
   const extra = Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined;

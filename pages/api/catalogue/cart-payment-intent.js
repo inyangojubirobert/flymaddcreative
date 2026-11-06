@@ -99,7 +99,7 @@ export default async function handler(req, res) {
           fee_cap_usd: quote.fee_policy.cap_usd,
           exchange_rate: rate,
         },
-        callback_url: resolveCallbackUrl(callback_url, `${process.env.NEXT_PUBLIC_SITE_URL}/app`),
+        callback_url: resolveCallbackUrl(callback_url, `${process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app'}/app`),
       }),
     });
 

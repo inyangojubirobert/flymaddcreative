@@ -33,7 +33,7 @@ export default function Dashboard() {
   // Get user referral URL
   const getReferralUrl = () => {
     if (!user?.referralToken) return '';
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app';
     return `${baseUrl}/onedream/ref/${user.referralToken}`;
   };
 

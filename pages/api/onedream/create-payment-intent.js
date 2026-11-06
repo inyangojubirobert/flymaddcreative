@@ -127,7 +127,7 @@ async function createPaystackPayment(voteCount, participant, callbackUrl) {
         exchange_rate: rate,
         type: 'onedream_votes'
       },
-      callback_url: resolveCallbackUrl(callbackUrl, `${process.env.NEXT_PUBLIC_SITE_URL}/vote.html?user=${participant.username}&payment_success=true`)
+      callback_url: resolveCallbackUrl(callbackUrl, `${process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app'}/vote.html?user=${participant.username}&payment_success=true`)
     })
   });
 

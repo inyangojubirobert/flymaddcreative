@@ -45,7 +45,7 @@ if (process.argv.includes('--remote')) {
     const { error } = await db.rpc('get_ai_subscription_entitlement', { p_participant_id: '00000000-0000-0000-0000-000000000000' });
     result('database entitlement function', !error, error ? `error ${error.code || 'connection'}` : 'read-only probe');
   }
-  const origin = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.flymaddcreative.online').replace(/\/$/, '');
+  const origin = (process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app').replace(/\/$/, '');
   for (const endpoint of ['google-play', 'google-play-notification']) {
     try {
       const response = await fetch(`${origin}/api/onedream/ai-subscription/${endpoint}`, { signal: AbortSignal.timeout(15000) });

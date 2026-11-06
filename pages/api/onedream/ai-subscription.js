@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const defaultCallback = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.flymaddcreative.online'}/user-dashboard.html?view=ai&ai_subscription=verify`;
+    const defaultCallback = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app'}/user-dashboard.html?view=ai&ai_subscription=verify`;
     const callbackUrl = resolveCallbackUrl(req.body?.callback_url, defaultCallback);
     const checkout = await initializePaystackAiSubscription(supabase, participant, requestedPlan, callbackUrl);
     return res.status(200).json({

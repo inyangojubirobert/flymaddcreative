@@ -34,7 +34,7 @@ export default async function handler(req, res) {
         
         // Profile link (src/backend/supabase.js has no getReferralLink export:
         // calling it threw after the account was created).
-        const voteLink = `https://www.flymaddcreative.online/app/profile/${encodeURIComponent(normalizedUsername)}`;
+        const voteLink = `https://flymaddcreative.vercel.app/app/profile/${encodeURIComponent(normalizedUsername)}`;
         
         // JWT
         const token = jwt.sign({ userId: participant.id, email: participant.email, type: 'onedream' }, getJwtSecret(), { expiresIn: '7d' });

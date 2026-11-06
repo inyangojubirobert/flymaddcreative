@@ -60,7 +60,7 @@ curl -X POST https://flymaddcreative.vercel.app/api/admin/register \
 
 #### **Website Admin Portal**
 
-- **URL:** `https://flymaddcreative.online/admin-portal.html`
+- **URL:** `https://flymaddcreative.vercel.app/admin-portal.html`
 - **Access:** Email + Password
 - **Features:**
   - View all support messages from participants
@@ -70,7 +70,7 @@ curl -X POST https://flymaddcreative.vercel.app/api/admin/register \
 
 #### **Web Dashboard (admin.html)**
 
-- **URL:** `https://flymaddcreative.online/admin.html`
+- **URL:** `https://flymaddcreative.vercel.app/admin.html`
 - **Same features as admin-portal.html** (older interface)
 
 #### **Mobile App (AAB/APK)**

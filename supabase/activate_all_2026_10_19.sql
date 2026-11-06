@@ -335,7 +335,7 @@ grant execute on function create_cart_checkout(jsonb, jsonb) to service_role;
 --
 -- Advertising a partner STOREFRONT or a partner LINK needs no change at all:
 -- ad packages that allow external links can already point to
--- https://www.flymaddcreative.online/m/<handle> or /r/<code>, and the link
+-- https://flymaddcreative.vercel.app/m/<handle> or /r/<code>, and the link
 -- checker follows the redirect. P4 is only for BOOSTS of someone else's
 -- listing, which today must be the advertiser's own.
 --

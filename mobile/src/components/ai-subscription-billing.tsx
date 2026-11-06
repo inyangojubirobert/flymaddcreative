@@ -117,10 +117,7 @@ export default function AiSubscriptionScreen() {
     const product = storeProductForPlan(plan);
     const offer = monthlyGoogleOffer(product);
     if (!connected || !product || !offer) {
-      Alert.alert(
-        'Plan unavailable',
-        'This monthly subscription is currently unavailable. Please try again later.',
-      );
+      showStoreUnavailable();
       return;
     }
     markPurchase(product.id);
@@ -157,6 +154,27 @@ export default function AiSubscriptionScreen() {
     }
   }
 
+  // Google Play returns no products when the device has no signed-in Play
+  // account (or billing is unreachable). Explain that instead of a dead button.
+  function showStoreUnavailable() {
+    const message = 'Google Play could not load this plan. Make sure you are signed in to a Google account in the Play Store app, then try again.';
+    if (!connected || !storeProductIds.length) {
+      Alert.alert('Google Play unavailable', message);
+      return;
+    }
+    Alert.alert('Plan unavailable', message, [
+      { text: 'Close', style: 'cancel' },
+      {
+        text: 'Retry',
+        onPress: () => {
+          void fetchProducts({ skus: storeProductIds, type: 'subs' }).catch(() => {
+            Alert.alert('Plans unavailable', 'Google Play could not load prices. Please try again.');
+          });
+        },
+      },
+    ]);
+  }
+
   async function manageGooglePlaySubscription() {
     const googleSubscriptions = overviewQuery.data?.billing?.subscriptions.filter((subscription) => subscription.provider === 'google_play') || [];
     const productId = googleSubscriptions.length === 1 ? googleSubscriptions[0].product_id : null;
@@ -168,7 +186,11 @@ export default function AiSubscriptionScreen() {
   }
 
   async function restoreGooglePlayPurchases() {
-    if (!token || !connected || !storeProductIds.length || purchaseBusy.current || isRestoring) return;
+    if (!token || purchaseBusy.current || isRestoring) return;
+    if (!connected || !storeProductIds.length) {
+      Alert.alert('Google Play unavailable', 'Google Play is not connected. Make sure you are signed in to a Google account in the Play Store app, then try again.');
+      return;
+    }
     setIsRestoring(true);
     try {
       const activeSubscriptions = await getActiveSubscriptions(storeProductIds);
@@ -248,6 +270,7 @@ export default function AiSubscriptionScreen() {
                   const monthlyOffer = monthlyGoogleOffer(storeProduct);
                   const storePrice = plan.id === 'free' ? 'Free' : monthlyOffer?.pricingPhases.pricingPhaseList[0].formattedPrice || 'Unavailable';
                   const isPurchasingThisPlan = purchasingProductId === storeProduct?.id;
+                  const isUnavailable = plan.id !== 'free' && !isCurrent && !monthlyOffer;
                   return (
                     <View key={plan.id} style={[styles.planCard, isRecommended && styles.recommendedCard]}>
                       <View style={styles.planHeader}>
@@ -282,17 +305,17 @@ export default function AiSubscriptionScreen() {
 
                       <Pressable
                         onPress={() => void confirmPlan(plan)}
-                        disabled={isCurrent || plan.id === 'free' || !monthlyOffer || verificationMutation.isPending || !!purchasingProductId || isRestoring}
+                        disabled={isCurrent || plan.id === 'free' || verificationMutation.isPending || !!purchasingProductId || isRestoring}
                         style={[
                           styles.planButton,
-                          isCurrent ? styles.currentButton : plan.id === 'free' ? styles.unavailableButton : styles.upgradeButton,
+                          isCurrent ? styles.currentButton : plan.id === 'free' || isUnavailable ? styles.unavailableButton : styles.upgradeButton,
                         ]}
                       >
                         {isPurchasingThisPlan || (verificationMutation.isPending && plan.id !== 'free' && !isCurrent) ? (
                           <ActivityIndicator color={Palette.white} />
                         ) : (
-                          <ThemedText style={[styles.planButtonText, (isCurrent || plan.id === 'free') && styles.planButtonTextMuted]}>
-                            {isCurrent ? 'Current plan' : plan.id === 'free' ? 'Included' : `Subscribe with Google Play`}
+                          <ThemedText style={[styles.planButtonText, (isCurrent || plan.id === 'free' || isUnavailable) && styles.planButtonTextMuted]}>
+                            {isCurrent ? 'Current plan' : plan.id === 'free' ? 'Included' : isUnavailable ? 'Unavailable · tap for details' : `Subscribe with Google Play`}
                           </ThemedText>
                         )}
                       </Pressable>
@@ -306,8 +329,8 @@ export default function AiSubscriptionScreen() {
           <View style={styles.costCard}>
             <Ionicons name="information-circle" size={22} color={Palette.blue} />
             <View style={styles.costCopy}>
-              <ThemedText type="smallBold">How credits work</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.costText}>Normal AI chat costs 1 credit. A full business analysis costs 5 credits. Deleting chats does not reset usage.</ThemedText>
+              <ThemedText type="smallBold" style={styles.costTitle}>How credits work</ThemedText>
+              <ThemedText type="small" style={styles.costText}>Normal AI chat costs 1 credit. A full business analysis costs 5 credits. Deleting chats does not reset usage.</ThemedText>
             </View>
           </View>
 
@@ -330,7 +353,7 @@ export default function AiSubscriptionScreen() {
             <ThemedText style={styles.restoreButtonText}>Manage subscription / Cancel</ThemedText>
           </Pressable>
 
-          <Pressable onPress={() => void restoreGooglePlayPurchases()} disabled={!connected || isRestoring || !!purchasingProductId} style={styles.restoreButton}>
+          <Pressable onPress={() => void restoreGooglePlayPurchases()} disabled={isRestoring || !!purchasingProductId} style={styles.restoreButton}>
             {isRestoring ? <ActivityIndicator color={Palette.blueDark} /> : <Ionicons name="refresh" size={18} color={Palette.blueDark} />}
             <ThemedText style={styles.restoreButtonText}>{isRestoring ? 'Restoring…' : 'Restore Google Play purchase'}</ThemedText>
           </Pressable>
@@ -389,7 +412,8 @@ const styles = StyleSheet.create({
   planButtonTextMuted: { color: Palette.slate },
   costCard: { borderRadius: 17, padding: Spacing.three, backgroundColor: Palette.blueSoft, flexDirection: 'row', gap: 12 },
   costCopy: { flex: 1, gap: 3 },
-  costText: { lineHeight: 19 },
+  costTitle: { color: Palette.blueDark },
+  costText: { color: Palette.slateDark, lineHeight: 19 },
   safetyCard: { borderRadius: 17, padding: Spacing.three, backgroundColor: '#DCFCE7', flexDirection: 'row', gap: 12 },
   safetyTitle: { color: '#166534' },
   safetyText: { color: '#166534', lineHeight: 19 },

@@ -29,7 +29,7 @@ export default async function handler(req, res) {
             return res.status(404).json({ success: false, error: 'Merchant not found' });
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.flymaddcreative.online';
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app';
         const linkCode = 'MERCH-' + Math.random().toString(36).substring(2, 10).toUpperCase();
         const fullLink = `${baseUrl}/registration.html?ref=${linkCode}`;
 

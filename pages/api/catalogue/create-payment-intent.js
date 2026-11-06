@@ -88,7 +88,7 @@ export default async function handler(req, res) {
         },
         callback_url: resolveCallbackUrl(
           callback_url,
-          `${process.env.NEXT_PUBLIC_SITE_URL}/catalogue-product.html?item=${item.id}&payment_success=true`
+          `${process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app'}/catalogue-product.html?item=${item.id}&payment_success=true`
         ),
       }),
     });

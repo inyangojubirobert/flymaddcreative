@@ -11,7 +11,7 @@ export default function handler(req, res) {
     const config = {
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-      siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app',
       environment: process.env.NODE_ENV || 'development',
       version: '1.0.0',
 

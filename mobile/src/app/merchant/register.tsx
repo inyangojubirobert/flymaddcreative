@@ -79,9 +79,9 @@ export default function MerchantRegisterScreen() {
 
             <ThemedText type="small" themeColor="textSecondary" style={styles.subtitle}>
               By creating an account you agree to the{' '}
-              <ExternalLink href="https://www.flymaddcreative.online/merchant-program.html"><ThemedText type="small" style={styles.inlineLink}>Merchant Program Rules</ThemedText></ExternalLink>
+              <ExternalLink href="https://flymaddcreative.vercel.app/merchant-program.html"><ThemedText type="small" style={styles.inlineLink}>Merchant Program Rules</ThemedText></ExternalLink>
               {' '}and{' '}
-              <ExternalLink href="https://www.flymaddcreative.online/privacy-policy.html"><ThemedText type="small" style={styles.inlineLink}>Privacy Policy</ThemedText></ExternalLink>.
+              <ExternalLink href="https://flymaddcreative.vercel.app/privacy-policy.html"><ThemedText type="small" style={styles.inlineLink}>Privacy Policy</ThemedText></ExternalLink>.
             </ThemedText>
 
             <Pressable onPress={handleSubmit} disabled={isSubmitting} style={[styles.button, { opacity: isSubmitting ? 0.6 : 1 }]}>

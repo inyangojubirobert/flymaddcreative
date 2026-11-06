@@ -191,7 +191,7 @@ Details: `docs/MULTICURRENCY_IMPLEMENTATION.md`.
 
 ### H. Storefront video promotion
 
-1. Open `https://www.flymaddcreative.online/storefront-promotion.html`. **Expect:** terms **version 2**, "…for a chance to be featured…", $10 per selected video, $1,000 budget.
+1. Open `https://flymaddcreative.vercel.app/storefront-promotion.html`. **Expect:** terms **version 2**, "…for a chance to be featured…", $10 per selected video, $1,000 budget.
 2. App → My Listings → **Get featured in One Dream's social media ads** with fewer than 10 active listings. **Expect:** "N of 10 active listings", and no submit form.
 3. **With 10 active listings and 2 videos:**
    - with the consent box unticked, the button is disabled;

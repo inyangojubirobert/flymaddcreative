@@ -120,7 +120,7 @@ export default function ReferralLanding() {
         <meta property="og:title" content={`Support ${referrer?.name} in the One Dream Initiative`} />
         <meta property="og:description" content="Help them win by voting through their unique link. Every vote counts!" />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${process.env.NEXT_PUBLIC_SITE_URL}/onedream/ref/${token}`} />
+        <meta property="og:url" content={`${process.env.NEXT_PUBLIC_SITE_URL || 'https://flymaddcreative.vercel.app'}/onedream/ref/${token}`} />
         
         {/* Twitter Card tags */}
         <meta name="twitter:card" content="summary_large_image" />

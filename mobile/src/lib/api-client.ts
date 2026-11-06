@@ -3,7 +3,7 @@
 // Deliberately not a heavier HTTP client: this app's needs are plain
 // JSON in/out plus an optional bearer token, which is all `fetch` needs.
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://www.flymaddcreative.online';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://flymaddcreative.vercel.app';
 
 export class ApiError extends Error {
   status: number;

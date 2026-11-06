@@ -5,7 +5,7 @@ set -euo pipefail
 
 FLYMADD_PROJECT_ID='project-473bc27d-3cf6-4b56-a17'
 FLYMADD_PUSH_EMAIL='flymaddcreative-google-play@project-473bc27d-3cf6-4b56-a17.iam.gserviceaccount.com'
-FLYMADD_ENDPOINT='https://www.flymaddcreative.online/api/onedream/ai-subscription/google-play-notification'
+FLYMADD_ENDPOINT='https://flymaddcreative.vercel.app/api/onedream/ai-subscription/google-play-notification'
 FLYMADD_TOPIC_ID='flymadd-google-play-rtdn'
 FLYMADD_SUBSCRIPTION_ID='flymadd-google-play-rtdn-push'
 FLYMADD_TOPIC="projects/${FLYMADD_PROJECT_ID}/topics/${FLYMADD_TOPIC_ID}"

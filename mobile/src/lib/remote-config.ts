@@ -21,7 +21,7 @@ export type RemoteConfig = {
 const FALLBACK_CONFIG: RemoteConfig = {
   supabaseUrl: 'https://pjtuisyvpvoswmcgxsfs.supabase.co',
   supabaseAnonKey: 'sb_publishable_Tt2LJZ8itium6JTt9PQyrQ_SZHiRW_m',
-  siteUrl: 'https://www.flymaddcreative.online',
+  siteUrl: 'https://flymaddcreative.vercel.app',
   paystack: { publicKey: 'pk_live_689666a376853473f2945d2032123db6cd53239d' },
   crypto: {
     networks: ['bsc', 'tron'],

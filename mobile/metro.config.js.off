@@ -1,0 +1,18 @@
+const { getDefaultConfig } = require('expo/metro-config');
+
+const config = getDefaultConfig(__dirname);
+
+// npm writes node_modules/.safe-push-apply-* while installing, then deletes it.
+// Metro's Windows fallback watcher crashes with ENOENT if it watches that tree.
+const npmSafePush = /\/\.safe-push-apply-[^/]+(?:\/|$)/;
+
+config.resolver.blockList = [
+  ...(Array.isArray(config.resolver.blockList)
+    ? config.resolver.blockList
+    : config.resolver.blockList
+      ? [config.resolver.blockList]
+      : []),
+  npmSafePush,
+];
+
+module.exports = config;

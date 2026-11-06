@@ -1,7 +1,7 @@
 # Release report — Seller earnings ledger, marketplace withdrawals, private order contacts
 
 **Date:** 2026-10-11 · **Commit:** `08c6f51` · **App:** 1.0.16 (versionCode 18)
-**Status:** ✅ Live on www.flymaddcreative.online, the web app (`/app`) and Android.
+**Status:** ✅ Live on flymaddcreative.vercel.app, the web app (`/app`) and Android.
 
 ---
 

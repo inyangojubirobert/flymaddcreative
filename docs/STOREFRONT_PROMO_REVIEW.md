@@ -47,7 +47,7 @@ The full text is stored in the database, versioned with a SHA-256 hash. It's sho
 | Website copy | The old "$10/month promotion package" promise is replaced in `public/Onedream.html`, `pages/onedream/index.jsx` and the app home screen |
 | Tests | `scripts/test-storefront-promo.mjs`: consent immutability, several videos per seller, withdrawal, selected-only spend, $10 per video, $1,000 cap |
 
-**Tracked link:** each selected video gets a storefront link with campaign tags, for example `https://www.flymaddcreative.online/app/catalogue/<seller>?utm_source=tiktok&utm_medium=paid_social&utm_campaign=storefront_promo_<id>`. Use it in the ad so visits can be traced back to the video.
+**Tracked link:** each selected video gets a storefront link with campaign tags, for example `https://flymaddcreative.vercel.app/app/catalogue/<seller>?utm_source=tiktok&utm_medium=paid_social&utm_campaign=storefront_promo_<id>`. Use it in the ad so visits can be traced back to the video.
 
 ## Admin workflow
 

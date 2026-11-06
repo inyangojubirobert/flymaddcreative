@@ -90,7 +90,7 @@ export default function PartnerHubScreen() {
               <ThemedText type="smallBold">Become a partner</ThemedText>
               <TextInput value={handle} onChangeText={(v) => setHandle(v.toLowerCase())} placeholder="storefront handle" placeholderTextColor={Palette.slate}
                 autoCapitalize="none" style={[styles.input, { color: theme.text }]} />
-              <ThemedText type="small" themeColor="textSecondary">Your storefront: flymaddcreative.online/m/{handle || 'yourname'}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">Your storefront: flymaddcreative.vercel.app/m/{handle || 'yourname'}</ThemedText>
               <TextInput value={name} onChangeText={setName} placeholder="Display name" placeholderTextColor={Palette.slate} style={[styles.input, { color: theme.text }]} />
               <TextInput value={bio} onChangeText={setBio} placeholder="Short bio (optional)" placeholderTextColor={Palette.slate} multiline style={[styles.input, { color: theme.text, minHeight: 60 }]} />
               <Pressable onPress={enrol} disabled={busy} style={[styles.primary, busy && styles.disabled]}>
