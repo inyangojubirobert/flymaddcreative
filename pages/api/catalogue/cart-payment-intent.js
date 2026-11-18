@@ -79,7 +79,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: typeof buyer_email === 'string' && EMAIL_RE.test(buyer_email.trim()) ? buyer_email.trim() : 'support@flymaddcreative.online',
+        email: typeof buyer_email === 'string' && EMAIL_RE.test(buyer_email.trim()) ? buyer_email.trim() : 'flymaddcreative@gmail.com',
         amount: amountKobo,
         currency: 'NGN',
         reference,

@@ -74,7 +74,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        email: 'support@flymaddcreative.online',
+        email: 'flymaddcreative@gmail.com',
         amount: amountKobo,
         currency: 'NGN',
         reference: uniqueRef,

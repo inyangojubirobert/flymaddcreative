@@ -113,7 +113,7 @@ async function createPaystackPayment(voteCount, participant, callbackUrl) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      email: 'support@flymaddcreative.online', // Default email for anonymous payments
+      email: 'flymaddcreative@gmail.com', // Default email for anonymous payments
       amount: amountKobo,
       currency: 'NGN',
       reference: uniqueRef,
