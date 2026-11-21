@@ -334,6 +334,43 @@
           <h3 class="text-sm font-semibold mt-6 mb-2">Current house ads</h3>
           <div id="haList" class="space-y-2 text-xs text-slate-300">Loading…</div>
         </div>
+        <div class="bg-slate-800/50 rounded-xl p-6 border border-slate-700/50">
+          <h2 class="text-xl font-bold mb-1">Our products (brand network)</h2>
+          <p class="text-xs text-slate-400 mb-3">Ads for our products that run in all our apps (One Dream, Book of Memes, TaskMaster, Oxygen), kept on the Book of Memes hub. Each app shows the other products, never its own; in One Dream they fill ad slots after our own house ads, labelled "From One Dream". Needs <code>BRAND_NETWORK_KEY</code> in the server settings. Links must be https.</p>
+          <div class="grid md:grid-cols-2 gap-2 text-xs">
+            <label class="flex flex-col gap-1">Product name<input id="bnName" maxlength="60" class="bg-slate-700 rounded px-2 py-1" placeholder="One Dream"></label>
+            <label class="flex flex-col gap-1">Product app
+              <select id="bnApp" class="bg-slate-700 rounded px-2 py-1"><option value="onedream">One Dream</option><option value="bookofmemes">Book of Memes</option><option value="taskmaster">Bascardo TaskMaster</option><option value="oxygen">Bascardo Oxygen</option><option value="">Marketplace product (no app)</option></select></label>
+            <label class="flex flex-col gap-1 md:col-span-2">Headline<input id="bnHeadline" maxlength="80" class="bg-slate-700 rounded px-2 py-1" placeholder="Shop, sell and get gifts for your dreams"></label>
+            <label class="flex flex-col gap-1 md:col-span-2">Text (optional)<input id="bnBody" maxlength="300" class="bg-slate-700 rounded px-2 py-1"></label>
+            <label class="flex flex-col gap-1">Picture or video file (or paste a link)<input id="bnFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" class="text-xs"></label>
+            <label class="flex flex-col gap-1">Media link (https, optional)<input id="bnMediaUrl" class="bg-slate-700 rounded px-2 py-1" placeholder="https://res.cloudinary.com/....mp4"></label>
+            <label class="flex flex-col gap-1">Android link<input id="bnAndroid" class="bg-slate-700 rounded px-2 py-1" placeholder="https://play.google.com/store/apps/details?id=..."></label>
+            <label class="flex flex-col gap-1">iOS link<input id="bnIos" class="bg-slate-700 rounded px-2 py-1"></label>
+            <label class="flex flex-col gap-1 md:col-span-2">Website link<input id="bnWeb" class="bg-slate-700 rounded px-2 py-1" placeholder="https://flymaddcreative.vercel.app"></label>
+            <div class="flex flex-wrap gap-3 items-center md:col-span-2">Show in:
+              <label><input type="checkbox" class="bnShow" value="bookofmemes" checked> Book of Memes</label>
+              <label><input type="checkbox" class="bnShow" value="onedream" checked> One Dream</label>
+              <label><input type="checkbox" class="bnShow" value="taskmaster" checked> TaskMaster</label>
+              <label><input type="checkbox" class="bnShow" value="oxygen" checked> Oxygen</label>
+            </div>
+            <div class="flex flex-wrap gap-3 items-center md:col-span-2">Placements:
+              <label><input type="checkbox" class="bnPlace" value="home" checked> home</label>
+              <label><input type="checkbox" class="bnPlace" value="explore" checked> explore</label>
+              <label><input type="checkbox" class="bnPlace" value="feed" checked> feed</label>
+              <label><input type="checkbox" class="bnPlace" value="search" checked> search</label>
+              <label><input type="checkbox" class="bnPlace" value="games" checked> games</label>
+            </div>
+            <label class="flex flex-col gap-1">Mode<select id="bnMode" class="bg-slate-700 rounded px-2 py-1"><option value="fill">Fill empty slots</option><option value="rotate">Rotate with paid ads</option></select></label>
+            <label class="flex flex-col gap-1">Weight (1-100)<input id="bnWeight" type="number" min="1" max="100" value="10" class="bg-slate-700 rounded px-2 py-1"></label>
+            <label class="flex flex-col gap-1">Start (optional)<input id="bnStart" type="datetime-local" class="bg-slate-700 rounded px-2 py-1"></label>
+            <label class="flex flex-col gap-1">End (optional)<input id="bnEnd" type="datetime-local" class="bg-slate-700 rounded px-2 py-1"></label>
+          </div>
+          <button id="bnSubmit" onclick="brandCreate()" class="mt-3 text-sm bg-green-700 hover:bg-green-600 px-4 py-2 rounded">Add product ad</button>
+          <span id="bnStatus" class="ml-2 text-xs text-slate-300"></span>
+          <h3 class="text-sm font-semibold mt-6 mb-2">Current product ads (last 30 days)</h3>
+          <div id="bnList" class="space-y-2 text-xs text-slate-300">Loading…</div>
+        </div>
       </div>
 
       <!-- Gifts & Rewards Tab -->
@@ -553,7 +590,7 @@
       if (tab === 'earnings') loadEarnings();
       if (tab === 'currency') loadCurrency();
       if (tab === 'promo') loadPromo();
-      if (tab === 'house') loadHouseAds();
+      if (tab === 'house') { loadHouseAds(); loadBrandAds(); }
     }
 
     let activeParticipantId = null;
@@ -1214,6 +1251,90 @@
       try {
         await adminFetch('/api/admin/house-ads', { method: 'PATCH', body: JSON.stringify({ id, status }) });
         loadHouseAds();
+      } catch (err) { alert(err.message); }
+    }
+
+    // --- Brand network (our products across all our apps) -----------------------
+    async function loadBrandAds() {
+      const list = document.getElementById('bnList');
+      try {
+        const d = await adminFetch('/api/admin/brand/products');
+        const rows = Array.isArray(d.data) ? d.data : Array.isArray(d.products) ? d.products : [];
+        list.innerHTML = rows.filter(p => p.status !== 'archived').map(p => {
+          const media = p.video_url
+            ? `<video src="${escapeText(p.video_url)}" class="h-24 rounded" controls preload="none"></video>`
+            : p.image_url ? `<img src="${escapeText(p.image_url)}" class="h-24 rounded">` : '';
+          const views = p.views ?? p.impressions ?? p.stats?.impressions ?? 0;
+          const taps = p.taps ?? p.clicks ?? p.stats?.clicks ?? 0;
+          const links = [p.android_url, p.ios_url, p.web_url].filter(Boolean).map(escapeText).join(' · ');
+          const id = /^[0-9a-f-]{36}$/i.test(String(p.id || '')) ? p.id : ''; // goes inside onclick
+          return `<div class="rounded bg-slate-700/40 p-2 flex flex-wrap gap-3 items-center">${media}
+            <div class="space-y-1"><div><b>${escapeText(p.name || '')}</b>: ${escapeText(p.headline || p.title || '')} · ${escapeText(p.status || '')} · ${escapeText(p.mode || 'fill')} · weight ${escapeText(String(p.weight ?? ''))}</div>
+              <div>${escapeText(p.body || '')}</div>
+              <div class="text-slate-400">${links}</div>
+              <div class="text-slate-400">product: ${escapeText(p.product_app || 'marketplace')} · shows in ${escapeText((p.show_in || []).join(', ') || 'all')} · ${escapeText((p.placements || []).join(', ') || 'all placements')}</div>
+              <div>${escapeText(String(views))} views · ${escapeText(String(taps))} taps</div></div>
+            <span class="ml-auto">${p.status === 'active' ? `<button onclick="brandStatus('${id}','paused')" class="bg-slate-600 px-2 rounded">Pause</button>` : `<button onclick="brandStatus('${id}','active')" class="bg-green-800 px-2 rounded">Activate</button>`}
+              <button onclick="brandStatus('${id}','archived')" class="bg-red-900 px-2 rounded">Archive</button></span></div>`;
+        }).join('') || '<div class="text-slate-500">No product ads yet.</div>';
+      } catch (err) {
+        list.innerHTML = `<span class="text-red-400">Error: ${escapeText(err.message)}</span>`;
+      }
+    }
+
+    async function brandCreate() {
+      const status = document.getElementById('bnStatus');
+      const button = document.getElementById('bnSubmit');
+      const val = (id) => document.getElementById(id).value.trim();
+      const opt = (v) => v || undefined;
+      const local = (id) => { const v = document.getElementById(id).value; return v ? new Date(v).toISOString() : undefined; };
+      const file = document.getElementById('bnFile').files[0];
+      let mediaUrl = val('bnMediaUrl');
+      let mediaType = /\.(mp4|mov|webm)(\?|$)/i.test(mediaUrl) || /\/video\/upload\//.test(mediaUrl) ? 'video' : 'image';
+      if (!file && !mediaUrl) { status.textContent = 'Add a picture or video (file or link).'; return; }
+      button.disabled = true;
+      try {
+        if (file) {
+          // Same signed Cloudinary upload as house ads.
+          mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+          status.textContent = 'Uploading…';
+          const { upload } = await adminFetch('/api/admin/house-ads', { method: 'POST', body: JSON.stringify({ action: 'sign', resource_type: mediaType }) });
+          if (file.size > upload.max_bytes) throw new Error(`File is larger than ${Math.round(upload.max_bytes / 1048576)} MB`);
+          const form = new FormData();
+          form.append('file', file);
+          for (const key of ['api_key', 'timestamp', 'signature', 'folder', 'public_id', 'type', 'allowed_formats']) form.append(key, upload[key]);
+          const sent = await fetch(upload.upload_url, { method: 'POST', body: form });
+          const result = await sent.json().catch(() => ({}));
+          if (!sent.ok || result.error || !result.secure_url) throw new Error(result.error?.message || 'Upload to Cloudinary failed');
+          mediaUrl = result.secure_url;
+        }
+        status.textContent = 'Saving…';
+        await adminFetch('/api/admin/brand/products', { method: 'POST', body: JSON.stringify({
+          name: val('bnName'), headline: val('bnHeadline'), body: opt(val('bnBody')),
+          video_url: mediaType === 'video' ? mediaUrl : undefined,
+          image_url: mediaType === 'image' ? mediaUrl : undefined,
+          android_url: opt(val('bnAndroid')), ios_url: opt(val('bnIos')), web_url: opt(val('bnWeb')),
+          product_app: document.getElementById('bnApp').value || null,
+          show_in: [...document.querySelectorAll('.bnShow:checked')].map(x => x.value),
+          placements: [...document.querySelectorAll('.bnPlace:checked')].map(x => x.value),
+          mode: document.getElementById('bnMode').value, weight: Number(document.getElementById('bnWeight').value),
+          starts_at: local('bnStart'), ends_at: local('bnEnd'),
+        }) });
+        status.textContent = 'Added. Apps show it on their next refresh (One Dream within a minute).';
+        document.getElementById('bnFile').value = '';
+        loadBrandAds();
+      } catch (err) {
+        status.textContent = `Error: ${err.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function brandStatus(id, status) {
+      if (status === 'archived' && !confirm('Archive this product ad? It stops showing in every app.')) return;
+      try {
+        await adminFetch(`/api/admin/brand/products/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+        loadBrandAds();
       } catch (err) { alert(err.message); }
     }
 

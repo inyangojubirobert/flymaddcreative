@@ -9,6 +9,8 @@ import { useEffect } from 'react';
 import { ActivityIndicator, Image, Platform, StyleSheet, View } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AdminProvider, useAdmin } from '@/contexts/AdminContext';
+import { AdminAlarm } from '@/components/admin-alarm';
 import { CartProvider } from '@/contexts/CartContext';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { WebAlertHost } from '@/components/web-alert-host';
@@ -42,13 +44,16 @@ export default function RootLayout() {
     <ThemeProvider value={navigationTheme}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <CartProvider>
-            <WebShell>
-              <RootNavigator />
-            </WebShell>
-            <UpdateBanner />
-            <WebAlertHost />
-          </CartProvider>
+          <AdminProvider>
+            <CartProvider>
+              <WebShell>
+                <RootNavigator />
+              </WebShell>
+              <UpdateBanner />
+              <WebAlertHost />
+              <AdminAlarm />
+            </CartProvider>
+          </AdminProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
@@ -57,6 +62,7 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { token, isLoading } = useAuth();
+  const { isAdmin } = useAdmin();
   const router = useRouter();
 
   useEffect(() => {
@@ -64,10 +70,10 @@ function RootNavigator() {
     if (!notifications) return;
     const subscription = notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as { type?: string };
-      if (data?.type === 'admin_support') router.push('/admin-alerts' as never);
+      if (data?.type === 'admin_support') router.push((isAdmin ? '/admin/inbox' : '/admin-alerts') as never);
     });
     return () => subscription.remove();
-  }, [router]);
+  }, [router, isAdmin]);
 
   // Continues the native splash (same logo and #04457B background from
   // app.json) while the saved session is verified, instead of a blank screen.
@@ -113,6 +119,10 @@ function RootNavigator() {
         <Stack.Screen name="partner/storefront" options={{ headerShown: true, title: 'My storefront' }} />
         <Stack.Screen name="partner/seller" options={{ headerShown: true, title: 'Sell through partners' }} />
         <Stack.Screen name="partner/engagements" options={{ headerShown: true, title: 'Creative engagements' }} />
+        <Stack.Screen name="admin/inbox" options={{ headerShown: true, title: 'Admin inbox' }} />
+        <Stack.Screen name="admin/thread" options={{ headerShown: true, title: 'Conversation' }} />
+        <Stack.Screen name="admin/withdrawals" options={{ headerShown: true, title: 'Withdrawals' }} />
+        <Stack.Screen name="admin/alerts" options={{ headerShown: true, title: 'Alerts & reminders' }} />
       </Stack.Protected>
       <Stack.Protected guard={!token}>
         <Stack.Screen name="index" />
@@ -130,6 +140,7 @@ function RootNavigator() {
       <Stack.Screen name="m/[handle]" options={{ headerShown: true, title: 'Storefront' }} />
       <Stack.Screen name="merchant" options={{ headerShown: false }} />
       <Stack.Screen name="admin-alerts" options={{ headerShown: true, title: 'Admin alerts' }} />
+      <Stack.Screen name="brand-promo" options={{ headerShown: true, title: 'Brand promotion' }} />
     </Stack>
   );
 }

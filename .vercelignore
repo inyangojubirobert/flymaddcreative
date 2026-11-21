@@ -14,3 +14,8 @@ mobile/
 tmp/
 build.log
 tsconfig.tsbuildinfo
+
+# Secrets live in Vercel environment variables, never in the upload.
+
+.env
+.env.*

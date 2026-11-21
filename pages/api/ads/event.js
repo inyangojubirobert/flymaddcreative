@@ -3,6 +3,7 @@
 // or tapping repeatedly does not inflate the numbers.
 
 import { adsDb, viewerKey } from '../../../lib/ads';
+import { recordBrandEvent } from '../../../lib/brandNetwork';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -13,7 +14,12 @@ export default async function handler(req, res) {
   }
   // House ads (One Dream's own) are served with the same id field, so every
   // app version reports them here; count them separately from paid campaigns.
-  const { data: houseAd } = await adsDb.from('house_ads').select('id').eq('id', campaignId).maybeSingle();
+  // Brand network ads (lib/brandNetwork.js) are neither; their counts live
+  // on the Book of Memes hub.
+  const [{ data: houseAd }, { data: campaign, error: campaignError }] = await Promise.all([
+    adsDb.from('house_ads').select('id').eq('id', campaignId).maybeSingle(),
+    adsDb.from('advertising_campaigns').select('id').eq('id', campaignId).maybeSingle(),
+  ]);
   if (houseAd) {
     const { data: counted, error: houseError } = await adsDb.rpc('house_ads_record_event', {
       p_house_ad_id: campaignId,
@@ -23,6 +29,9 @@ export default async function handler(req, res) {
     });
     if (houseError) console.error('ads/event house error:', houseError.message);
     return res.status(200).json({ recorded: !!counted });
+  }
+  if (!campaign && !campaignError) {
+    return res.status(200).json({ recorded: await recordBrandEvent(campaignId, kind) });
   }
 
   const { data, error } = await adsDb.rpc('ads_record_event', {

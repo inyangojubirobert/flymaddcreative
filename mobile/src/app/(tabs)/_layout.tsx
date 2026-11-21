@@ -5,11 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Palette } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useIsDesktopWeb } from '@/hooks/use-content-width';
+import { useAdmin } from '@/contexts/AdminContext';
 
 export default function TabsLayout() {
   const theme = useTheme();
   // Desktop web uses the top navigation (components/web-shell.web.tsx) instead.
   const desktopWeb = useIsDesktopWeb();
+  // Admin tab: only for accounts linked to an admin (contexts/AdminContext.tsx).
+  const { isAdmin } = useAdmin();
 
   return (
     <Tabs
@@ -60,6 +63,14 @@ export default function TabsLayout() {
         options={{
           title: 'Recognition',
           tabBarIcon: ({ color, size }) => <Ionicons name="ribbon" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Admin',
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => <Ionicons name="shield-checkmark" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

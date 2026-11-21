@@ -7,6 +7,8 @@
 // House ads (One Dream's own, admin-uploaded; lib/houseAds.js) use the same
 // slots: 'rotate' ones compete by weight, 'fill' ones only take slots no
 // paid campaign fills.
+// Brand network ads (our other apps, from the Book of Memes hub;
+// lib/brandNetwork.js) are served as house ads and fill after One Dream's own.
 // Frequency cap: a paid banner this viewer has already seen in
 // FREQUENCY_CAP_PER_DAY separate hours today steps aside for other ads (it
 // still shows when nothing else can fill the slot).
@@ -16,6 +18,7 @@
 import { adsDb, viewerKey } from '../../../lib/ads';
 import { adDeliveryUrl } from '../../../lib/cloudinaryAds';
 import { liveHouseAds, servedHouseAd } from '../../../lib/houseAds';
+import { brandPlatform, liveBrandAds } from '../../../lib/brandNetwork';
 
 const PLACEMENTS = new Set(['home', 'shop', 'search', 'category']);
 const FREQUENCY_CAP_PER_DAY = 6;
@@ -32,6 +35,9 @@ async function cappedCampaigns(req, campaignIds) {
   for (const row of data || []) seen.set(row.campaign_id, (seen.get(row.campaign_id) || 0) + 1);
   return new Set([...seen].filter(([, count]) => count >= FREQUENCY_CAP_PER_DAY).map(([id]) => id));
 }
+
+/** Brand ads already have the served shape; drop the selection-only fields. */
+const servedBrand = ({ mode, weight, ...ad }) => ad; // eslint-disable-line no-unused-vars
 
 function weightedPick(rows, count) {
   const pool = [...rows];
@@ -63,10 +69,11 @@ export default async function handler(req, res) {
       .contains('placements', [placement])
       .limit(60);
 
-    const [ads, boosts, house] = await Promise.all([
+    const [ads, boosts, house, brand] = await Promise.all([
       adLimit ? live('ad') : { data: [] },
       boostLimit ? live('boost') : { data: [] },
       adLimit ? liveHouseAds(placement) : [],
+      adLimit ? liveBrandAds(placement, brandPlatform(req)) : [],
     ]);
     if (ads.error) throw ads.error;
     if (boosts.error) throw boosts.error;
@@ -89,10 +96,14 @@ export default async function handler(req, res) {
     const pool = [
       ...open.filter((c) => !picked.some((slot) => slot.paid === c)).map((c) => ({ priority: c.priority, paid: c })),
       ...house.filter((h) => h.mode === 'rotate').map((h) => ({ priority: h.weight, house: h })),
+      ...brand.filter((b) => b.mode === 'rotate').map((b) => ({ priority: b.weight, brand: b })),
     ];
     picked.push(...weightedPick(pool, adLimit - picked.length));
     if (picked.length < adLimit) {
       picked.push(...weightedPick(house.filter((h) => h.mode !== 'rotate').map((h) => ({ priority: h.weight, house: h })), adLimit - picked.length));
+    }
+    if (picked.length < adLimit) {
+      picked.push(...weightedPick(brand.filter((b) => b.mode !== 'rotate').map((b) => ({ priority: b.weight, brand: b })), adLimit - picked.length));
     }
     if (picked.length < adLimit) {
       picked.push(...weightedPick(adRows.filter((c) => capped.has(c.id)).map((c) => ({ priority: c.priority, paid: c })), adLimit - picked.length));
@@ -101,7 +112,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
       placement,
-      ads: picked.map((slot) => (slot.house ? servedHouseAd(slot.house) : slot.paid)).map((c) => (c.house ? c : {
+      ads: picked.map((slot) => (slot.brand ? servedBrand(slot.brand) : slot.house ? servedHouseAd(slot.house) : slot.paid)).map((c) => (c.house ? c : {
         id: c.id,
         title: c.title,
         body: c.body,

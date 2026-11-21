@@ -9,6 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { BottomTabInset, Palette, Spacing } from '@/constants/theme';
 import { BASCARDO_LOGO_URL } from '@/constants/bascardo';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/contexts/AdminContext';
 import { useTheme } from '@/hooks/use-theme';
 import { getCatalogueByUsername } from '@/api/catalogue';
 import { getRecognition } from '@/api/gifts';
@@ -25,6 +26,7 @@ type ProfileActionProps = {
 
 export default function ProfileScreen() {
   const { participant, logout } = useAuth();
+  const { isAdmin } = useAdmin();
   const router = useRouter();
   const theme = useTheme();
   const shopQuery = useQuery({
@@ -208,15 +210,19 @@ export default function ProfileScreen() {
               subtitle="Chat privately with FlyMadd Support"
               onPress={() => router.push('/messages' as never)}
             />
-            <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
-            <ProfileAction
-              icon="notifications"
-              iconBackground={Palette.yellowSoft}
-              iconColor={Palette.yellowInk}
-              title="Admin alerts"
-              subtitle="Phone alert when someone messages support"
-              onPress={() => router.push('/admin-alerts' as never)}
-            />
+            {isAdmin ? (
+              <>
+                <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
+                <ProfileAction
+                  icon="shield-checkmark"
+                  iconBackground={Palette.redSoft}
+                  iconColor={Palette.red}
+                  title="Admin"
+                  subtitle="Inbox, withdrawals, alerts and brand promotion"
+                  onPress={() => router.push('/admin' as never)}
+                />
+              </>
+            ) : null}
             <View style={[styles.divider, { backgroundColor: theme.backgroundSelected }]} />
             <ProfileAction
               icon="help-circle"

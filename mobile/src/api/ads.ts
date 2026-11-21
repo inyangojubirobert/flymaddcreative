@@ -265,7 +265,8 @@ export function verifyAdPurchase(token: string, input: { productId: string; purc
 }
 
 export async function getSponsored(placement: AdPlacement, options: { ads?: number; boosts?: number; categoryId?: string | null } = {}): Promise<{ ads: ServedAd[]; boosted: ServedBoost[] }> {
-  const query = new URLSearchParams({ placement, ads: String(options.ads ?? 0), boosts: String(options.boosts ?? 0) });
+  // platform picks the best Download link for brand-network ads (lib/brandNetwork.js).
+  const query = new URLSearchParams({ placement, ads: String(options.ads ?? 0), boosts: String(options.boosts ?? 0), platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web' });
   if (options.categoryId) query.set('category_id', options.categoryId);
   try {
     // The viewer id lets the server apply its per-viewer frequency cap.
